@@ -390,7 +390,7 @@ html, body { height: auto; } body { display: block; margin: 0; }
     }
   };
   v.addEventListener('timeupdate', tick); v.addEventListener('seeked', tick);
-  const raf = () => { if (!v.paused) tick(); requestAnimationFrame(raf); }; requestAnimationFrame(raf);
+  let lastTick = 0; const raf = (now) => { if (!v.paused && now - lastTick > 100) { lastTick = now; tick(); } requestAnimationFrame(raf); }; requestAnimationFrame(raf);
   tick();
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-go]'); if (a && a.dataset.go !== 'demo' && !v.paused) v.pause(); });
 })();

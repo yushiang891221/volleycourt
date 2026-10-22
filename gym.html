@@ -48,8 +48,8 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .insp.on .ring { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .insp .tagname { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 14px); transform: translate(-50%, 6px); background: #F2B705; color: #13233A; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .35s .55s, transform .35s .55s; white-space: nowrap; }
 .insp.on .tagname { opacity: 1; transform: translate(-50%, 0); }
-.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(780px, 56vw); display: flex; flex-direction: column; pointer-events: auto;
-  background: rgba(14,23,36,.86); backdrop-filter: blur(18px) saturate(1.2); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; color: #ECE7DC;
+.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(780px, 56vw); display: flex; flex-direction: column; pointer-events: auto; will-change: transform, opacity;
+  background: rgba(14,23,36,.97); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; color: #ECE7DC;
   opacity: 0; transform: translateX(60px) scale(.98); transition: opacity .45s .15s ease, transform .6s .15s cubic-bezier(.2,.8,.2,1); }
 .insp.on .sheet { opacity: 1; transform: none; }
 .insp .sh-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
@@ -458,7 +458,7 @@ const fmt1 = (n) => (Math.round(n * 10) / 10).toLocaleString('zh-TW');
 // ---------------------------------------------------------------- three.js setup
 const host = $('canvas-host');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 host.appendChild(renderer.domElement);
 const labelRenderer = new CSS2DRenderer();
@@ -1327,7 +1327,7 @@ function undo() {
 }
 let draftTimer = 0;
 function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
-function commit() { syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
+function commit() { window.wakeRender && window.wakeRender(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); }
 
 // ---------------------------------------------------------------- camera
@@ -1446,9 +1446,19 @@ function resize() {
 }
 new ResizeObserver(resize).observe(host);
 const tmp = new THREE.Vector3();
+let renderUntil = 0, lastCamKey = '', frameNo = 0;
+window.wakeRender = (ms = 700) => { renderUntil = Math.max(renderUntil, performance.now() + ms); };
+for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'click', 'touchmove']) addEventListener(ev, () => window.wakeRender(), { passive: true, capture: true });
+addEventListener('resize', () => window.wakeRender(400));
 function tick() {
   requestAnimationFrame(tick);
   controls.update();
+  frameNo++;
+  const e = camera.matrixWorld.elements, pr = camera.projectionMatrix.elements;
+  const key = e[12].toFixed(3) + e[13].toFixed(3) + e[14].toFixed(3) + e[8].toFixed(4) + e[9].toFixed(4) + e[10].toFixed(4) + pr[8].toFixed(4) + pr[9].toFixed(4) + pr[0].toFixed(4);
+  const camMoved = key !== lastCamKey; lastCamKey = key;
+  const spinning = !reduceMotion && spinners.some((s) => s.parent && s.parent.parent);
+  if (!camMoved && performance.now() > renderUntil && !(spinning && frameNo % 2 === 0)) return;
   const cp = camera.position;
   const { H } = state.building;
   for (const wl of walls) {

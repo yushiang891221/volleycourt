@@ -223,7 +223,7 @@ function makeArena(scene) {
 // ---------------------------------------------------------------- player
 export function playSpike3D(canvas, onPhase, done, opts = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -231,7 +231,7 @@ export function playSpike3D(canvas, onPhase, done, opts = {}) {
   scene.background = new THREE.Color(0x1A2230); scene.fog = new THREE.Fog(0x1A2230, 24, 48);
   scene.add(new THREE.HemisphereLight(0xFFFFFF, 0x2A4A50, 0.9));
   const sun = new THREE.DirectionalLight(0xFFFFFF, 2.2); sun.position.set(4, 12, 6); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 }); sun.shadow.bias = -0.0005; scene.add(sun);
+  sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 }); sun.shadow.bias = -0.0005; scene.add(sun);
   const rim = new THREE.DirectionalLight(0x9FC4FF, 0.8); rim.position.set(-6, 6, -10); scene.add(rim);
   makeArena(scene);
   const A = makeAthlete(); scene.add(A.root);
@@ -251,7 +251,7 @@ export function playSpike3D(canvas, onPhase, done, opts = {}) {
   const setFrom = new THREE.Vector3(2.8, 2.3, -0.9), T_SET = 0.45;
   const apex = new THREE.Vector3((setFrom.x + contact.x) / 2, Math.max(contact.y + 1.6, 4.6), -0.9);
   const setAt = (u) => { const a = setFrom.clone().lerp(apex, u), b = apex.clone().lerp(contact, u); return a.lerp(b, u); };
-  const camFront = () => camAt.clone().add(new THREE.Vector3().subVectors(contact, camAt).normalize().multiplyScalar(0.06));
+  const camFront = () => camAt.clone().add(new THREE.Vector3().subVectors(contact, camAt).normalize().multiplyScalar(0.17));   // stop just short of the lens so the ball fills the frame (never clips inside it)
   const T_END = T_CONTACT + 0.62;
   const look = new THREE.Vector3();
   let t0 = 0; let lastPhase = -1; let shake = 0;
