@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>開館清單｜新竹排球館企劃</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<style>
+.sitebar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: #0B1626; color: #F3EFE6; }
+.sitebar a { color: #F3EFE6; text-decoration: none; }
+.sitebar .brand { display: flex; gap: 10px; align-items: center; font-weight: 900; font-size: 15px; white-space: nowrap; }
+.sitebar .dot { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 28%, #F2B705 30% 100%); }
+.sitebar nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #A9B4C2; }
+.sitebar nav a, .sitebar nav span { padding: 4px 10px; border-radius: 999px; }
+.sitebar nav .on { background: #F2B705; color: #13233A; font-weight: 700; }
+.sitebar nav a:hover { background: rgba(255,255,255,.08); }
+.sitebar .grow { flex: 1; }
+.sitebar .back { font-size: 13px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; white-space: nowrap; }
+@media (max-width: 760px) { .sitebar nav { display: none; } }
+
+:root { --bg: #0E1724; --panel: #152132; --ink: #ECE7DC; --muted: #A2ACB9; --line: #2A3A50; --gold: #F2B705; color-scheme: dark; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Noto Sans TC', system-ui, sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { margin: 0 0 6px; font-size: 26px; } .lead { margin: 0 0 6px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.sync { font-size: 12px; color: #6CC793; margin-bottom: 18px; } .sync.off { color: var(--muted); }
+.bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0 18px; font-size: 13px; color: var(--muted); }
+.bar b { color: var(--ink); } .prog { flex: 1; min-width: 160px; height: 8px; background: #24344A; border-radius: 8px; overflow: hidden; } .prog i { display: block; height: 100%; background: var(--gold); }
+.grp { margin-bottom: 22px; } .grp h2 { font-size: 16px; color: var(--gold); margin: 0 0 8px; letter-spacing: .04em; }
+.it { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 10px 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin-bottom: 8px; }
+.it .t { font-weight: 800; font-size: 15px; } .it .w { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.6; }
+.it .go { font-size: 12px; color: #8FC1FF; text-decoration: none; margin-left: 8px; font-weight: 500; }
+.it select { font: inherit; font-size: 13px; color: var(--ink); background: #1C2A3D; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; height: 34px; }
+.it textarea { grid-column: 1 / -1; font: inherit; font-size: 13px; color: var(--ink); background: #111C2B; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 38px; resize: vertical; }
+.it[data-s="done"] { border-color: #2E9E5B; } .it[data-s="doing"] { border-color: #E08A2E; } .it[data-s="na"] { opacity: .55; }
+.add { display: flex; gap: 8px; margin-top: 6px; } .add input { flex: 1; font: inherit; font-size: 13px; color: var(--ink); background: #111C2B; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.add button, .del { font: inherit; font-size: 13px; font-weight: 700; border: 0; border-radius: 8px; padding: 7px 12px; background: var(--gold); color: #13233A; cursor: pointer; }
+.del { background: none; color: var(--muted); padding: 0; font-weight: 400; font-size: 12px; text-decoration: underline; justify-self: start; }
+@media (max-width: 640px) { .it { grid-template-columns: 1fr; } }
+</style></head><body><header class="sitebar"><a class="brand" href="index.html#intro" title="回首頁"><span class="dot"></span>新竹排球館企劃</a><nav aria-label="流程"><a href="index.html#map" class="" data-nav="map">1 選場地</a><span>→</span><a href="gym.html" class="" data-nav="gym">2 3D 球館</a><span>→</span><a href="demo.html" class="" data-nav="demo">3 智慧球場</a></nav><span class="grow"></span><a class="back" href="index.html#intro" title="回到開場，可以再按一次「開始企劃」">⌂ 回首頁</a><a class="back" href="#" id="goback">← 上一頁</a></header>
+<main>
+<h1>開館清單</h1>
+<p class="lead">開一間排球館要想清楚的事，分成七大類。每一項可以標狀態、寫筆記；右邊的連結是網站上已經有內容的地方，還沒有的之後再一項項做進 3D 球館或評估頁。</p>
+<div class="sync off" id="sync">讀取中…</div>
+<div class="bar"><span>完成 <b id="n-done">0</b>・進行中 <b id="n-doing">0</b>・待研究 <b id="n-todo">0</b></span><div class="prog"><i id="pg"></i></div></div>
+<div id="list"></div>
+</main>
+<script>
+(() => {
+  const G = [{"g": "law", "gt": "法規與許可", "items": [{"id": "zone", "t": "土地使用分區", "why": "工業區／農業區能不能做運動場館；都市計畫或非都市土地的容許用途", "link": ""}, {"id": "use", "t": "建物使用類組變更（室內運動場 D-1）", "why": "廠房（C 類）改運動場通常要辦變更使用執照，需要建築師", "link": ""}, {"id": "fire", "t": "消防設備與消防安檢", "why": "滅火器、警報、避難指標、緊急照明；變更使用時一起審查", "link": ""}, {"id": "pubsafe", "t": "建築物公共安全檢查申報", "why": "營業後定期申報", "link": ""}, {"id": "access", "t": "無障礙設施", "why": "坡道、無障礙廁所（變更使用可能要求）", "link": ""}, {"id": "biz", "t": "公司或商業登記、統一發票", "why": "營業項目、稅務", "link": ""}, {"id": "noise", "t": "噪音與鄰居", "why": "球聲、音樂、夜間時段", "link": ""}]}, {"g": "safety", "gt": "安全、保險與救護", "items": [{"id": "insure", "t": "公共意外責任險", "why": "保額依地方規定與業者建議；比較幾家保費", "link": ""}, {"id": "aed", "t": "AED 與緊急救護", "why": "AED、急救箱、CPR 訓練、緊急應變流程、就近醫院", "link": "eval.html#eval/aed"}, {"id": "waiver", "t": "使用規章與切結", "why": "受傷責任、未成年、器材損壞", "link": ""}, {"id": "pad", "t": "防撞與防滑", "why": "柱子、牆面防撞墊；地板止滑與保養", "link": ""}, {"id": "cctv", "t": "監視器與門禁", "why": "安全紀錄、無人時段管理", "link": "eval.html#eval/camera"}]}, {"g": "money", "gt": "財務", "items": [{"id": "capex", "t": "初期資本支出", "why": "裝修、地板、設備、押金、設計、開辦費加總", "link": "gym.html"}, {"id": "opex", "t": "定期營運成本", "why": "租金、電費、水費、人事、清潔、保險、系統、維修、行銷", "link": ""}, {"id": "revenue", "t": "時段與收入結構", "why": "尖峰／離峰、平日／假日、包場／臨打／月租／課程", "link": ""}, {"id": "multi", "t": "綜合球場的場地規劃與收費", "why": "排球、羽球、匹克球怎麼排時段、各自訂價，讓使用率最高", "link": "eval.html#eval/floor"}, {"id": "breakeven", "t": "損益平衡與回本時間", "why": "每月要賣幾個時段才打平", "link": ""}, {"id": "capital", "t": "資金來源與合夥協議", "why": "出資比例、分紅、退出機制", "link": ""}]}, {"g": "facility", "gt": "硬體與設施", "items": [{"id": "floor", "t": "地板材質（木地板／PVC／PU）", "why": "運動傷害、保養、多功能畫線", "link": "eval.html#eval/floor"}, {"id": "light", "t": "照明", "why": "照度、眩光、燈具位置", "link": "eval.html#eval/light"}, {"id": "air", "t": "冷氣、通風與用電量", "why": "冷氣噸數、吊扇、契約容量、電費試算", "link": "eval.html#eval/fan"}, {"id": "water", "t": "廁所、淋浴、更衣與水電管線", "why": "給排水、熱水器、化糞池；原廠房有沒有管線", "link": "eval.html#eval/room"}, {"id": "height", "t": "淨高與場地尺寸", "why": "7 m 以上；緩衝區是否足夠", "link": "index.html#map"}, {"id": "storage", "t": "儲藏與休息區", "why": "器材室、櫃台、休息區、飲水機", "link": "eval.html#eval/service"}]}, {"g": "ops", "gt": "營運", "items": [{"id": "booking", "t": "預約、金流與會員系統", "why": "線上訂場、付款、取消規則", "link": ""}, {"id": "staff", "t": "人力與排班", "why": "櫃台、清潔、夜間；或無人化", "link": ""}, {"id": "clean", "t": "清潔與器材維護", "why": "每日清潔、地板保養、球網球柱", "link": ""}, {"id": "program", "t": "課程、營隊與賽事", "why": "教練合作、聯賽、企業包場", "link": ""}, {"id": "smart", "t": "智慧球場服務", "why": "自動錄影、計分、精華，可以當加值收費", "link": "demo.html"}]}, {"g": "market", "gt": "市場與位置", "items": [{"id": "compete", "t": "競品與價格調查", "why": "附近球館的價格、時段、滿場率", "link": "index.html#map"}, {"id": "demand", "t": "需求調查", "why": "問卷：誰會來、願意付多少", "link": "plan/index.html#docs"}, {"id": "parking", "t": "交通與停車", "why": "機車、汽車、大眾運輸", "link": ""}, {"id": "brand", "t": "品牌與開幕行銷", "why": "名字、社群、開幕活動", "link": ""}]}, {"g": "lease", "gt": "租約", "items": [{"id": "term", "t": "租期與續約", "why": "回本需要幾年、能不能簽長約", "link": ""}, {"id": "freerent", "t": "裝修免租期", "why": "施工期間不付租金", "link": ""}, {"id": "restore", "t": "原狀回復與修繕責任", "why": "退租時要不要拆地板、誰修屋頂漏水", "link": ""}]}];
+  const ST = [['todo', '待研究'], ['doing', '進行中'], ['done', '已決定'], ['na', '不適用']];
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let S = { st: {}, note: {}, extra: {} }, shared = false, timer = null;
+  try { const v = JSON.parse(localStorage.getItem('vb.checklist') || 'null'); if (v) S = { st: v.st || {}, note: v.note || {}, extra: v.extra || {} }; } catch (e) {}
+  const items = (g) => g.items.concat((S.extra[g.g] || []).map((x) => ({ ...x, mine: true })));
+  function render() {
+    document.getElementById('list').innerHTML = G.map((g) => `<section class="grp"><h2>${esc(g.gt)}</h2>${items(g).map((it) => `
+      <div class="it" data-id="${esc(it.id)}" data-s="${S.st[it.id] || 'todo'}"><div><span class="t">${esc(it.t)}</span>${it.link ? `<a class="go" href="${esc(it.link)}">網站上的內容 →</a>` : ''}<div class="w">${esc(it.why || '')}</div></div>
+      <select aria-label="狀態" data-id="${esc(it.id)}">${ST.map(([k, l]) => `<option value="${k}" ${(S.st[it.id] || 'todo') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <textarea data-id="${esc(it.id)}" placeholder="筆記：查到的資料、報價、決定…">${esc(S.note[it.id] || '')}</textarea>
+      ${it.mine ? `<button type="button" class="del" data-del="${esc(it.id)}" data-g="${g.g}">移除這項</button>` : ''}</div>`).join('')}
+      <form class="add" data-g="${g.g}"><input placeholder="加一項到「${esc(g.gt)}」" maxlength="60"><button type="submit">加入</button></form></section>`).join('');
+    count();
+  }
+  function count() {
+    const all = G.flatMap(items).filter((it) => (S.st[it.id] || 'todo') !== 'na');
+    const n = (k) => all.filter((it) => (S.st[it.id] || 'todo') === k).length;
+    document.getElementById('n-done').textContent = n('done'); document.getElementById('n-doing').textContent = n('doing'); document.getElementById('n-todo').textContent = n('todo');
+    document.getElementById('pg').style.width = (all.length ? (n('done') / all.length) * 100 : 0) + '%';
+  }
+  const sync = (t, on) => { const el = document.getElementById('sync'); el.textContent = t; el.className = 'sync' + (on ? '' : ' off'); };
+  function save() {
+    try { localStorage.setItem('vb.checklist', JSON.stringify(S)); } catch (e) {}
+    if (!shared) return;
+    clearTimeout(timer); sync('☁️ 同步中…', true);
+    timer = setTimeout(async () => {
+      try {
+        const r = await fetch('api/hall', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-edit-key': localStorage.getItem('vb.editKey') || '' }, body: JSON.stringify({ site: 'checklist', name: '開館清單', data: { items: [S] } }) });
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json(); sync(`☁️ 大家共用這份清單・已同步 ${new Date(j.savedAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`, true);
+      } catch (e) { sync('⚠️ 同步失敗，先存在這台裝置', false); }
+    }, 900);
+  }
+  const L = document.getElementById('list');
+  L.addEventListener('change', (e) => { const s = e.target.closest('select'); if (s) { S.st[s.dataset.id] = s.value; s.closest('.it').dataset.s = s.value; count(); save(); } });
+  L.addEventListener('input', (e) => { const t = e.target.closest('textarea'); if (t) { S.note[t.dataset.id] = t.value; save(); } });
+  L.addEventListener('submit', (e) => { const f = e.target.closest('form.add'); if (!f) return; e.preventDefault(); const v = f.querySelector('input').value.trim(); if (!v) return;
+    (S.extra[f.dataset.g] = S.extra[f.dataset.g] || []).push({ id: 'x' + Date.now().toString(36), t: v, why: '', link: '' }); render(); save(); });
+  L.addEventListener('click', (e) => { const b = e.target.closest('[data-del]'); if (!b) return; S.extra[b.dataset.g] = (S.extra[b.dataset.g] || []).filter((x) => x.id !== b.dataset.del); delete S.st[b.dataset.del]; delete S.note[b.dataset.del]; render(); save(); });
+  render();
+  fetch('api/hall?site=checklist', { cache: 'no-store' }).then(async (r) => {
+    const json = (r.headers.get('content-type') || '').includes('json');
+    if (r.status === 501 || !json) { sync('💾 存在這台裝置（共用功能沒開）', false); return; }
+    shared = true;
+    if (r.ok) { const j = await r.json(); const v = j.data && j.data.items && j.data.items[0]; if (v) { S = { st: v.st || {}, note: v.note || {}, extra: v.extra || {} }; render(); } sync(`☁️ 大家共用這份清單・最新 ${new Date(j.savedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`, true); }
+    else sync('☁️ 大家共用這份清單（還沒有人填）', true);
+  }).catch(() => sync('💾 存在這台裝置', false));
+})();
+</script><script src="allnav.js" defer></script>
+<script>
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
+document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
+</script>
+</body>
+</html>
