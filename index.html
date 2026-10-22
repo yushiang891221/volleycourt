@@ -1031,7 +1031,7 @@ const PING = 3.3058, PL = 25 * 18 / PING, PS = 24 * 15 / PING, COMMON = 40;
 // courts laid out in a grid of rows × cols (rotated 90°) plus a 5 m service strip; used by the 3D generator too
 function layoutCourts(ping) {
   const A = ping * PING, MAXN = 16, MAXD = 160;
-  for (const [type, cw, cd, label] of [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
+  for (const [type, cw, cd, label] of [['vb', 25, 18, '標準規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
     const cap = Math.min(MAXN, Math.floor((A - COMMON * PING) / (cw * cd)));
     if (cap < 1) continue;
     let best = null;
