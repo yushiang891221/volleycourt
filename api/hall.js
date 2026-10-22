@@ -4,8 +4,12 @@
 //   GET  /api/hall?site=<id>   → { site, data, picks, savedAt, name, courts, total, by }
 //   GET  /api/hall?all=1       → { halls: { <id>: { savedAt, name, courts, total } } }
 //   POST /api/hall  { site, data, picks, savedAt, name, courts, total }   (header x-edit-key when EDIT_KEY is set)
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// the Vercel integration may add a custom prefix (e.g. STORAGE_KV_REST_API_URL), so look for any matching pair
+const envKey = (suffixes) => Object.keys(process.env).find((k) => suffixes.some((x) => k === x || k.endsWith('_' + x)) && process.env[k]);
+const uKey = envKey(['KV_REST_API_URL', 'UPSTASH_REDIS_REST_URL']);
+const tKey = uKey && (uKey.endsWith('KV_REST_API_URL') ? uKey.replace(/URL$/, 'TOKEN') : uKey.replace(/URL$/, 'TOKEN'));
+const URL_ = uKey && process.env[uKey];
+const TOKEN = tKey && process.env[tKey];
 const EDIT_KEY = process.env.EDIT_KEY || '';
 const ID_RE = /^[a-z0-9-]{1,64}$/;
 
@@ -30,7 +34,7 @@ async function readBody(req) {
 }
 
 module.exports = async (req, res) => {
-  if (!URL_ || !TOKEN) return send(res, 501, { error: 'shared storage not configured' });
+  if (!URL_ || !TOKEN) return send(res, 501, { error: 'shared storage not configured', seen: Object.keys(process.env).filter((k) => /KV|REDIS|UPSTASH/.test(k)) });
   try {
     if (req.method === 'GET') {
       const q = new URL(req.url, 'http://x').searchParams;
