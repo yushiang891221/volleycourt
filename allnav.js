@@ -27,7 +27,6 @@
       ['plan/index.html#sheets', '試算表', '預算、報價比價、候選場地'],
       ['plan/index.html#design', '3D 配置（舊版）', ''],
       ['plan/index.html#docs', '問卷與資料', ''],
-      ['plan/map.html', '衛星地圖', '新竹球館分布、範圍圈'],
     ]],
     ['檔案下載', [
       ['plan/files/排球館報價比價清單.xlsx', '報價比價清單.xlsx', ''],
