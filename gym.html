@@ -2267,7 +2267,7 @@ function pickBuilding(list, lat, lng) {
 }
 function toLocalAt(ring, lat0, lng0) { const kx = 111320 * Math.cos(lat0 * Math.PI / 180); return ring.map(([la, ln]) => [(ln - lng0) * kx, -(la - lat0) * 110540]); }
 async function geocode(addr) {
-  const r = await fetch('api/geocode?q=' + encodeURIComponent(addr)); if (!r.ok) return null;
+  const r = await fetch('api/geocode?v=2&q=' + encodeURIComponent(addr)); if (!r.ok) return null;
   const j = await r.json(); const g = (j.results || [])[0]; return g ? { ...g, precision: j.precision, road: j.road } : null;
 }
 async function autoOutline(lat, lng, how, opts = {}) {
