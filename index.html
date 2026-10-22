@@ -1265,6 +1265,7 @@ $('#start').addEventListener('click', () => go(true));
 $('#ball').addEventListener('click', () => go(true));
 $('#skip').addEventListener('click', () => go(false));
 // back to the start screen (ball + 開始企劃) without reloading
+window.goHome = () => goHome();
 function goHome() {
   map.closePopup();
   $('#panel').classList.add('away'); $('#panel').classList.remove('mini');
@@ -1292,5 +1293,6 @@ if (location.hash === '#map' || sessionStorage.getItem('vb.seenIntro') === '1' &
 document.addEventListener('click', (e) => { if (e.target.closest('.enter')) { try { sessionStorage.setItem('vb.seenIntro', '1'); } catch (er) {} } });
 })();
 </script>
+<script src="allnav.js" defer></script>
 </body>
 </html>

@@ -1963,6 +1963,7 @@ window.__siteId = SITE_ID;
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 if (SITE_ID) generateFromSite(SITE_ID);
 </script>
+<script src="allnav.js" defer></script>
 <script>
 document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });

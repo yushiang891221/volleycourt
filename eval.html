@@ -483,6 +483,7 @@ html, body { height: auto; } body { display: block; margin: 0; }
   let tries = 0; const wait = setInterval(() => { if (sheets() || ++tries > 40) { clearInterval(wait); show(cur, $('#ev-from').hidden ? null : $('#ev-from-name').textContent, !panel.hidden); } }, 250);
 })();
 </script>
+<script src="allnav.js" defer></script>
 <script>
 document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
