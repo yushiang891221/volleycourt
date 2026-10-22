@@ -7,6 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style id="app-style">
 .sitebar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: #0B1626; color: #F3EFE6; }
 .sitebar a { color: #F3EFE6; text-decoration: none; }
@@ -19,6 +21,20 @@
 .sitebar .grow { flex: 1; }
 .sitebar .back { font-size: 13px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; white-space: nowrap; }
 @media (max-width: 760px) { .sitebar nav { display: none; } }
+
+.outline { position: fixed; inset: 0; z-index: 80; background: rgba(6,12,22,.72); display: grid; place-items: center; padding: 16px; }
+.outline[hidden] { display: none; }
+.outline .ol-card { width: min(1100px, 100%); height: min(820px, 100%); background: #0E1724; color: #ECE7DC; border-radius: 18px; border: 1px solid rgba(255,255,255,.12); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+.outline .ol-head { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); flex-wrap: wrap; }
+.outline .ol-head h3 { margin: 0; font-size: 16px; flex: 1; min-width: 200px; }
+.outline button, .outline .ol-link { font: 600 13px var(--font-body); color: #ECE7DC; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 7px 12px; cursor: pointer; text-decoration: none; }
+.outline button.pri { background: #F2B705; color: #13233A; border-color: #F2B705; } .outline button:disabled { opacity: .45; cursor: not-allowed; }
+.outline #ol-map { width: 100%; height: 100%; background: #06101C; }
+.outline .ol-foot { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 10px 16px 14px; border-top: 1px solid rgba(255,255,255,.08); font-size: 13px; }
+.outline .ol-foot label { display: flex; gap: 6px; align-items: center; color: #A9B4C2; }
+.outline .ol-foot input { width: 70px; font: inherit; color: #ECE7DC; background: #111C2B; border: 1px solid rgba(255,255,255,.18); border-radius: 6px; padding: 4px 6px; }
+.outline #ol-info { font-weight: 700; color: #F2B705; } .outline #ol-osm { color: #A9B4C2; flex-basis: 100%; }
+.ol-pt { background: #F2B705; border: 2px solid #13233A; border-radius: 50%; box-shadow: 0 0 0 2px #F2B705; }
 
 body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 #app { flex: 1; min-height: 0; height: auto; }
@@ -316,6 +332,11 @@ button.danger { color: var(--warn); }
         <div class="sh-body"><div class="loading"><div><i></i>載入中…</div></div><iframe id="insp-frame" title="物件詳細內容"></iframe></div>
       </section>
     </div>
+    <div class="outline" id="outline" hidden role="dialog" aria-modal="true" aria-labelledby="ol-title"><div class="ol-card">
+      <div class="ol-head"><h3 id="ol-title">描建物外框</h3><button type="button" id="ol-find">🔎 自動找建物（OpenStreetMap）</button><button type="button" id="ol-clear">清除重描</button><a class="ol-link" id="ol-ge" target="_blank" rel="noopener">在 Google Earth 量高度 ↗</a><a class="ol-link" href="https://3dmaps.nlsc.gov.tw/FrontMap/" target="_blank" rel="noopener">國土測繪 3D 地圖 ↗</a><button type="button" id="ol-close" aria-label="關閉">×</button></div>
+      <div id="ol-map"></div>
+      <div class="ol-foot"><span id="ol-info"></span><label>淨高（樑下）<input id="ol-h" type="number" min="4" max="15" step="0.1"> m</label><label>屋頂外觀高度（選填）<input id="ol-roof" type="number" min="0" max="40" step="0.1"> m</label><span style="flex:1"></span><button type="button" class="pri" id="ol-ok" disabled>用這個外框生成球館</button><span id="ol-osm"></span></div>
+    </div></div>
     <div class="camtip" id="camtip" hidden>點球場邊的攝影機，看智慧球場怎麼自動算分 →</div>
   </main>
 </div>
@@ -390,7 +411,7 @@ const CAT = {
   ballcart: { label: '球車', group: '比賽設備', w: 1, d: 0.6, h: 1, color: '#E0B33A' },
   bleacher: { label: '觀眾席', group: '比賽設備', w: 6, d: 2.4, h: 1.2, color: '#8D99A6', resize: true, tag: true },
   netwall: { label: '隔網', group: '比賽設備', w: 18, d: 0.1, h: 5, color: '#1F2933', resize: 'w', tag: true },
-  aircon: { label: '冷氣（掛牆）', group: '牆面、消防與安全', w: 1.2, d: 0.32, h: 0.42, mountY: 2.8, color: '#F2F4F6', wall: true, zoneOK: true, tag: true },
+  aircon: { label: '冷氣（掛牆）', group: '牆面、消防與安全', w: 1.2, d: 0.32, h: 0.42, mountY: 2.8, color: '#F2F4F6', wall: true, zoneOK: true },
   extinguisher: { label: '滅火器', group: '牆面、消防與安全', w: 0.35, d: 0.3, h: 0.6, mountY: 0, color: '#D7262B', wall: true, zoneOK: true },
   emlight: { label: '緊急照明燈', group: '牆面、消防與安全', w: 0.4, d: 0.12, h: 0.15, mountY: 2.6, color: '#F4F4F2', wall: true, zoneOK: true },
   exitsign: { label: '避難方向指示燈', group: '牆面、消防與安全', w: 0.45, d: 0.06, h: 0.2, mountY: 2.3, color: '#1E9E4A', wall: true, zoneOK: true },
@@ -474,7 +495,7 @@ function sanitize(raw) {
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'blue',
     net: NETS[s.net] ? s.net : 'men',
     items: [],
@@ -858,6 +879,7 @@ function disposeGroup(g) {
 function buildBuilding() {
   disposeGroup(buildingGroup);
   walls = [];
+  if (state.building.poly && typeof buildPolyBuilding === 'function') { buildPolyBuilding(); return; }
   const { L, W, H } = state.building;
   const sc = SCHEMES[state.floor];
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W), new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.92 }));
@@ -1053,11 +1075,11 @@ function initBuildingInputs() {
     if (!Number.isFinite(v)) return;
     const nv = clamp(Math.round(v * 2) / 2, min, max);
     if (nv === state.building[key]) return;
-    pushHistory(); state.building[key] = nv;
+    pushHistory(); if (key !== 'H' && state.building.poly) { delete state.building.poly; delete state.building.geo; toast('改了長寬，外框改回長方形；要真實形狀請再描一次外框'); } state.building[key] = nv;
     buildBuilding(); if (key === 'H') renderItems(); commit();
   };
-  $('b-L').addEventListener('change', dimChange('L', 10, 80));
-  $('b-W').addEventListener('change', dimChange('W', 10, 80));
+  $('b-L').addEventListener('change', dimChange('L', 10, 160));
+  $('b-W').addEventListener('change', dimChange('W', 10, 160));
   $('b-H').addEventListener('change', dimChange('H', 4, 15));
   fs.addEventListener('change', () => { pushHistory(); state.floor = fs.value; buildBuilding(); renderItems(); commit(); });
   ns.addEventListener('change', () => { pushHistory(); state.net = ns.value; renderItems(); commit(); });
@@ -1583,6 +1605,15 @@ function cameraFor(c, n) {
   snapCamera(cam); return cam;
 }
 function snapCamera(it) {
+  if (state.building.poly && typeof snapToPoly === 'function') {
+    const e = snapToPoly(it, 0.4), inx = -e.nx, inz = -e.nz;
+    let tx = null, tz = null, td = Infinity;
+    for (const c of state.items) if (CAT[c.type] && CAT[c.type].court === 'vb') { const dd = Math.hypot(c.x - it.x, c.z - it.z); if (dd < td) { td = dd; tx = c.x; tz = c.z; } }
+    let dx = tx == null ? inx : tx - it.x, dz = tx == null ? inz : tz - it.z;
+    if (dx * inx + dz * inz <= 0.2) { dx = inx; dz = inz; }
+    it.rot = Math.round((Math.atan2(-dz, dx) * 180) / Math.PI); it.wallYaw = Math.atan2(-inz, inx);
+    return;
+  }
   const { L, W } = state.building, m = 0.4;
   const d = [it.x + L / 2, L / 2 - it.x, it.z + W / 2, W / 2 - it.z], k = d.indexOf(Math.min(...d));
   if (k === 0) it.x = -L / 2 + m; else if (k === 1) it.x = L / 2 - m; else if (k === 2) it.z = -W / 2 + m; else it.z = W / 2 - m;
@@ -1691,7 +1722,8 @@ async function generateFromSite(id, opts = {}) {
     generateFromSite(id, { fresh: true });
   });
   const memo = document.createElement('span'); memo.className = 'memo';
-  row.append(back, regen); info.append(b, sp, sp2, memo, row);
+  const olb = document.createElement('button'); olb.type = 'button'; olb.textContent = state.building.poly ? '🛰 調整建物外框' : '🛰 描真實建物外框'; olb.addEventListener('click', () => window.openOutline && window.openOutline());
+  row.append(back, olb, regen); info.append(b, sp, sp2, memo, row);
   const showMemo = (t) => { memo.textContent = t ? `💾 這個場館有自己的記憶：改過的配置會自動存起來，下次進來接著用（上次存：${new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}）` : '💾 這個場館有自己的記憶：改過的配置會自動存起來，下次進來接著用'; };
   window.__hallMemo = showMemo;
   if (!opts.fresh) {
@@ -1901,6 +1933,7 @@ document.addEventListener('visibilitychange', async () => {
 
 // ---------------------------------------------------------------- wall-mounted / safety items (aircon, fire equipment, pads…)
 function snapWallItem(it) {
+  if (state.building.poly && typeof snapToPoly === 'function') { const e = snapToPoly(it, (CAT[it.type].d || 0.2) / 2 + 0.06); it.rot = Math.round((Math.atan2(-e.nx, -e.nz) * 180) / Math.PI); return; }
   const { L, W } = state.building, def = CAT[it.type];
   const d = [it.x + L / 2, L / 2 - it.x, it.z + W / 2, W / 2 - it.z], k = d.indexOf(Math.min(...d));
   const depth = (def.d || 0.2) / 2 + 0.06;
@@ -1950,6 +1983,232 @@ function buildWallItem(g, it, w, d, def) {
   }
   if (def.tag) tag(g, labelOf(it), (t === 'smoke' ? state.building.H - 0.2 : Math.max(y + 0.6, (def.h || 0.5) + 0.3)));
 }
+
+// ---------------------------------------------------------------- real building outline (traced on the NLSC satellite map or taken from OpenStreetMap)
+// state.building.poly = [[x, z], …] in metres around the bbox centre (x = east, z = south); geo = [[lat, lng], …] to re-edit.
+function polyArea(P) { let a = 0; for (let i = 0; i < P.length; i++) { const [x1, z1] = P[i], [x2, z2] = P[(i + 1) % P.length]; a += x1 * z2 - x2 * z1; } return a / 2; }
+function pip(x, z, P) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, zi] = P[i], [xj, zj] = P[j]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
+function edgesOf(P) {
+  const ccw = polyArea(P) > 0;   // with x east / z south, positive area means clockwise on the map
+  return P.map((a, i) => {
+    const b = P[(i + 1) % P.length], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz) || 1;
+    let nx = dz / len, nz = -dx / len;            // one of the two normals
+    const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+    if (pip(mx + nx * 0.3, mz + nz * 0.3, P)) { nx = -nx; nz = -nz; }   // make it point outward
+    return { a, b, dx: dx / len, dz: dz / len, len, nx, nz, mx, mz, ccw };
+  });
+}
+function nearestEdge(x, z, P) {
+  let best = null;
+  for (const e of edgesOf(P)) {
+    const t = Math.max(0, Math.min(e.len, (x - e.a[0]) * e.dx + (z - e.a[1]) * e.dz));
+    const px = e.a[0] + e.dx * t, pz = e.a[1] + e.dz * t, d = Math.hypot(x - px, z - pz);
+    if (!best || d < best.d) best = { e, t, px, pz, d };
+  }
+  return best;
+}
+// scan-line clip: segments of the line (const coordinate) that lie inside the polygon
+function clipLine(P, axis, c) {
+  const xs = [];
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length];
+    const [a0, a1] = axis === 'z' ? [a[1], a[0]] : [a[0], a[1]], [b0, b1] = axis === 'z' ? [b[1], b[0]] : [b[0], b[1]];
+    if ((a0 > c) !== (b0 > c)) xs.push(a1 + ((c - a0) / (b0 - a0)) * (b1 - a1));
+  }
+  xs.sort((p, q) => p - q); const out = [];
+  for (let i = 0; i + 1 < xs.length; i += 2) out.push([xs[i], xs[i + 1]]);
+  return out;
+}
+function buildPolyBuilding() {
+  const { H } = state.building, P = state.building.poly, sc = SCHEMES[state.floor];
+  const shape = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.92 }));
+  floor.rotation.x = -Math.PI / 2; buildingGroup.add(floor);
+  const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]);
+  const minor = [], major = [];
+  for (let x = Math.ceil(Math.min(...xs)); x <= Math.max(...xs); x += 1) for (const [z1, z2] of clipLine(P, 'x', x)) (x % 5 === 0 ? major : minor).push(x, 0.003, z1, x, 0.003, z2);
+  for (let z = Math.ceil(Math.min(...zs)); z <= Math.max(...zs); z += 1) for (const [x1, x2] of clipLine(P, 'z', z)) (z % 5 === 0 ? major : minor).push(x1, 0.003, z, x2, 0.003, z);
+  for (const [arr, op] of [[minor, 0.08], [major, 0.2]]) {
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    buildingGroup.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: op })));
+  }
+  const eave = H + 1.0, t = 0.25;
+  for (const e of edgesOf(P)) {
+    const ang = Math.atan2(-e.dz, e.dx);
+    const cx = e.mx + e.nx * t / 2, cz = e.mz + e.nz * t / 2;
+    const m = box(buildingGroup, e.len + t, eave, t, '#E6EAEE', 0, 0, 0); m.position.x = cx; m.position.z = cz; m.rotation.y = ang;
+    m.userData.normal = [e.nx, e.nz]; m.userData.center = [cx, cz]; walls.push(m);
+    const sk = box(buildingGroup, e.len + t, 0.35, t, '#AEB7C1', 0, 0, 0); sk.position.x = cx; sk.position.z = cz; sk.rotation.y = ang;
+    // steel columns along the wall every ~6 m
+    const n = Math.max(1, Math.round(e.len / 6));
+    for (let i = 0; i <= n; i++) {
+      const px = e.a[0] + e.dx * (e.len * i / n) - e.nx * 0.2, pz = e.a[1] + e.dz * (e.len * i / n) - e.nz * 0.2;
+      box(buildingGroup, 0.35, eave, 0.35, '#5C6773', px, 0, pz);
+    }
+  }
+  // flat roof following the outline (hidden from above like the rectangular roof)
+  roof = new THREE.Group();
+  const rm = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ color: '#B4BEC9', side: THREE.DoubleSide, roughness: 0.6, metalness: 0.2 }));
+  rm.rotation.x = -Math.PI / 2; rm.position.y = eave + 0.3; roof.add(rm); buildingGroup.add(roof);
+  const { L, W } = state.building;
+  const mk = (text, x, y, z, cls = '') => { const el = document.createElement('div'); el.className = 'dim ' + cls; el.textContent = text; const o = new CSS2DObject(el); o.position.set(x, y, z); buildingGroup.add(o); };
+  mk(`外框 ${fmt1(L)}×${fmt1(W)} m・${Math.round(Math.abs(polyArea(P)) / 3.3058).toLocaleString('zh-TW')} 坪`, 0, 0.2, Math.max(...zs) + 1.4);
+  mk(`淨高 ${fmt1(H)} m`, P[0][0], H, P[0][1], 'h');
+}
+// wall-mounted things slide along the real walls
+function snapToPoly(it, depth) {
+  const P = state.building.poly, ne = nearestEdge(it.x, it.z, P), e = ne.e;
+  const t = Math.max(0.3, Math.min(e.len - 0.3, ne.t));
+  it.x = e.a[0] + e.dx * t - e.nx * depth; it.z = e.a[1] + e.dz * t - e.nz * depth;
+  return e;   // e.nx/e.nz point out of the building
+}
+function planPoly(P) {
+  const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const insideRect = (cx, cz, fx, fz) => [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]].every(([a, b]) => pip(cx + a * (fx / 2 - 0.2), cz + b * (fz / 2 - 0.2), P));
+  let best = null;
+  for (const [type, cw, cd, label] of [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
+    for (const rot of [90, 0]) {
+      const fx = rot === 90 ? cd : cw, fz = rot === 90 ? cw : cd;
+      for (let ox = 0; ox < fx; ox += 1) for (let oz = 0; oz < fz; oz += 1) {
+        const items = [];
+        for (let cx = x0 + ox + fx / 2; cx + fx / 2 <= x1 + 1e-6; cx += fx) for (let cz = z0 + oz + fz / 2; cz + fz / 2 <= z1 + 1e-6; cz += fz) if (insideRect(cx, cz, fx, fz)) items.push([cx, cz]);
+        if (items.length && (!best || items.length > best.items.length)) best = { type, rot, label, cw, cd, items: items.slice(0, 16), n: Math.min(16, items.length) };
+      }
+    }
+    if (best) break;   // prefer the full-size court whenever at least one fits
+  }
+  return best;
+}
+function polySafetyKit() {
+  const P = state.building.poly, out = [], E = edgesOf(P);
+  const add = (type, x, z, extra = {}) => out.push({ id: uid(), type, x, z, rot: 0, ...extra });
+  const longest = E.slice().sort((a, b) => b.len - a.len);
+  const front = longest[0];
+  const at = (e, f) => [e.a[0] + e.dx * e.len * f, e.a[1] + e.dz * e.len * f];
+  add('aed', ...at(front, 0.85)); add('firstaid', ...at(front, 0.8)); add('panel', ...at(front, 0.1));
+  for (const e of E) {
+    const n = Math.max(1, Math.round(e.len / 20)); for (let i = 0; i < n; i++) add('extinguisher', ...at(e, (i + 0.5) / n));
+    add('emlight', ...at(e, 0.5));
+    if (e.len >= 8) { add('exitsign', ...at(e, 0.08)); }
+    if (e.len >= 12) { const m = Math.max(1, Math.round(e.len / 12)); for (let i = 0; i < m; i++) add('aircon', ...at(e, (i + 0.5) / m)); }
+    add('cctv', ...at(e, 0.03));
+  }
+  const crash = longest[1] || longest[0], segs = Math.max(1, Math.round(crash.len / 20));
+  for (let i = 0; i < segs; i++) add('crashpad', ...at(crash, (i + 0.5) / segs), { w: Math.min(20, crash.len / segs - 0.4) });
+  const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]);
+  for (let x = Math.min(...xs) + 7.5; x < Math.max(...xs); x += 15) for (let z = Math.min(...zs) + 7.5; z < Math.max(...zs); z += 15) if (pip(x, z, P)) add('smoke', x, z);
+  return out;
+}
+
+// ---------------------------------------------------------------- outline editor (satellite + OpenStreetMap)
+const OUT = { map: null, layer: null, pts: [], osm: null, site: null };
+const toLocal = (geo) => {
+  const lat0 = geo.reduce((a, p) => a + p[0], 0) / geo.length, lng0 = geo.reduce((a, p) => a + p[1], 0) / geo.length;
+  const kx = 111320 * Math.cos((lat0 * Math.PI) / 180), kz = 110540;
+  let P = geo.map(([la, ln]) => [(ln - lng0) * kx, -(la - lat0) * kz]);
+  const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  P = P.map(([x, z]) => [Math.round((x - cx) * 10) / 10, Math.round((z - cz) * 10) / 10]);
+  return { P, L: Math.max(...xs) - Math.min(...xs), W: Math.max(...zs) - Math.min(...zs) };
+};
+function outlineInfo() {
+  const el = $('ol-info'), ok = $('ol-ok');
+  if (OUT.pts.length < 3) { el.textContent = `已點 ${OUT.pts.length} 個角，至少要 3 個`; ok.disabled = true; return; }
+  const { P, L, W } = toLocal(OUT.pts.map((m) => [m.getLatLng().lat, m.getLatLng().lng]));
+  const a = Math.abs(polyArea(P));
+  el.textContent = `${OUT.pts.length} 個角・外框 ${fmt1(L)}×${fmt1(W)} m・約 ${Math.round(a / 3.3058).toLocaleString('zh-TW')} 坪（${Math.round(a).toLocaleString('zh-TW')} ㎡）`;
+  ok.disabled = L > 160 || W > 160;
+  if (ok.disabled) el.textContent += '：太大了，長寬要在 160 m 內';
+}
+function redrawOutline() {
+  if (OUT.layer) OUT.layer.remove();
+  if (OUT.pts.length >= 2) OUT.layer = window.L.polygon(OUT.pts.map((m) => m.getLatLng()), { color: '#F2B705', weight: 3, fillOpacity: 0.15 }).addTo(OUT.map);
+  outlineInfo();
+}
+function addCorner(latlng) {
+  const m = window.L.marker(latlng, { draggable: true, icon: window.L.divIcon({ className: 'ol-pt', iconSize: [16, 16] }) }).addTo(OUT.map);
+  m.on('drag', redrawOutline);
+  m.on('contextmenu', () => { m.remove(); OUT.pts = OUT.pts.filter((x) => x !== m); redrawOutline(); });
+  OUT.pts.push(m); redrawOutline();
+}
+function setCorners(geo) { OUT.pts.forEach((m) => m.remove()); OUT.pts = []; geo.forEach((g) => addCorner(window.L.latLng(g[0], g[1]))); }
+async function findOsm() {
+  const s = OUT.site, st = $('ol-osm');
+  st.textContent = '正在找 OpenStreetMap 上附近的建物…';
+  const c = OUT.map.getCenter();
+  const q = `[out:json][timeout:20];way(around:250,${c.lat},${c.lng})[building];out geom;`;
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const j = await r.json();
+    if (OUT.osm) OUT.osm.remove();
+    OUT.osm = window.L.layerGroup().addTo(OUT.map);
+    const ways = (j.elements || []).filter((w) => w.geometry && w.geometry.length >= 4);
+    for (const w of ways) {
+      const geo = w.geometry.map((g) => [g.lat, g.lon]); if (geo.length > 3 && geo[0][0] === geo[geo.length - 1][0] && geo[0][1] === geo[geo.length - 1][1]) geo.pop();
+      const h = Number(w.tags && (w.tags.height || '').replace(/[^\d.]/g, '')) || null, lv = Number(w.tags && w.tags['building:levels']) || null;
+      window.L.polygon(geo, { color: '#4FC3F7', weight: 2, dashArray: '4 4', fillOpacity: 0.08 }).addTo(OUT.osm)
+        .bindTooltip(`點一下套用這棟${h ? `・高 ${h} m` : lv ? `・${lv} 層` : ''}`, { sticky: true })
+        .on('click', () => { setCorners(geo); if (h) $('ol-roof').value = h; st.textContent = '已套用 OpenStreetMap 的外框，可以拖角落微調，右鍵刪掉多的角。'; });
+    }
+    st.textContent = ways.length ? `找到 ${ways.length} 棟（藍色虛線），點你要的那棟就會套用外框。` : 'OpenStreetMap 在這附近沒有建物資料，請在衛星圖上點屋頂角落描外框。';
+  } catch (e) { st.textContent = '連不到 OpenStreetMap，請直接在衛星圖上點屋頂角落描外框。'; }
+}
+async function openOutline() {
+  const id = window.__siteId; if (!id) { toast('先從地圖選一個候選場地，再描外框'); return; }
+  let site = null; try { const d = await fetch('data/sites.json', { cache: 'no-store' }).then((r) => r.json()); site = d.sites.find((s) => s.id === id); } catch (e) {}
+  if (!site) return;
+  OUT.site = site;
+  const box = $('outline'); box.hidden = false;
+  $('ol-title').textContent = `描外框：${site.name}`;
+  $('ol-h').value = state.building.H || site.height || 8;
+  $('ol-roof').value = state.building.roofH || '';
+  $('ol-ge').href = `https://earth.google.com/web/@${site.lat},${site.lng},80a,350d,35y,0h,60t,0r`;
+  if (!OUT.map) {
+    OUT.map = window.L.map('ol-map', { zoomControl: true, maxZoom: 21 }).setView([site.lat, site.lng], 18);
+    window.L.tileLayer('https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; 內政部國土測繪中心' }).addTo(OUT.map);
+    OUT.map.on('click', (e) => addCorner(e.latlng));
+  } else OUT.map.setView([site.lat, site.lng], 18);
+  setTimeout(() => OUT.map.invalidateSize(), 50);
+  setCorners(state.building.geo || []);
+  $('ol-osm').textContent = '在衛星圖上沿屋頂角落依序點一圈；或按「自動找建物」。角落可以拖，右鍵刪除。';
+}
+function closeOutline() { $('outline').hidden = true; }
+async function applyOutline() {
+  const geo = OUT.pts.map((m) => [m.getLatLng().lat, m.getLatLng().lng]);
+  const { P, L, W } = toLocal(geo);
+  const H = Math.max(4, Math.min(15, Number($('ol-h').value) || 8)), roofH = Number($('ol-roof').value) || null;
+  closeOutline();
+  pushHistory();
+  window.__generating = true;
+  state = sanitize({ name: (OUT.site ? OUT.site.name : '球館') + '（真實外框）', building: { L: Math.round(L * 2) / 2, W: Math.round(W * 2) / 2, H, poly: P, geo, roofH }, floor: state.floor, net: state.net, items: [] });
+  selectedId = null; fullRefresh(); frameView('bird');
+  const plan = planPoly(P);
+  if (plan) plan.items.forEach(([x, z], i) => state.items.push(sanitize({ items: [{ type: plan.type, x: Math.round(x * 2) / 2, z: Math.round(z * 2) / 2, rot: plan.rot, locked: true, label: `${i + 1} 號場` }] }).items[0]));
+  let n = 1; for (const c of state.items.filter((i) => CAT[i.type].court === 'vb').slice()) state.items.push(cameraFor(c, n++));
+  for (const kit of polySafetyKit()) state.items.push(sanitize({ items: [kit] }).items[0]);
+  window.__generating = false;
+  fullRefresh(); frameView('bird');
+  toast(plan ? `照真實外框放進 ${plan.n} 面排球場（${plan.label}）` : '外框裡放不下標準排球場，可以手動擺精簡場');
+  if (window.__siteId) saveHall(window.__siteId);
+}
+function initOutline() {
+  $('ol-close').addEventListener('click', closeOutline);
+  $('ol-clear').addEventListener('click', () => setCorners([]));
+  $('ol-find').addEventListener('click', findOsm);
+  $('ol-ok').addEventListener('click', applyOutline);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('outline').hidden) closeOutline(); });
+}
+window.openOutline = openOutline;
+function polyOf(b) {
+  const P = b && b.poly;
+  if (!Array.isArray(P) || P.length < 3 || P.length > 80 || !P.every((p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) return {};
+  const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]);
+  const L = Math.max(...xs) - Math.min(...xs), W = Math.max(...zs) - Math.min(...zs);
+  if (Math.abs(L - num(b.L, 0)) > 1 || Math.abs(W - num(b.W, 0)) > 1) return {};   // size was edited by hand → back to a rectangle
+  const geo = Array.isArray(b.geo) && b.geo.length === P.length ? b.geo.map((g) => [Number(g[0]), Number(g[1])]) : null;
+  return { poly: P.map((p) => [Number(p[0]), Number(p[1])]), ...(geo ? { geo } : {}), ...(Number.isFinite(b.roofH) && b.roofH > 0 ? { roofH: b.roofH } : {}) };
+}
+initOutline();
 
 // ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
 const inspEl = $('insp'); let inspSaved = null, inspTween = null;
