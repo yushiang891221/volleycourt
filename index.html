@@ -844,6 +844,7 @@ a { color: var(--gold); }
   <a class="brand" href="#" id="replay" title="重新播放開場"><span class="dot"></span>新竹排球館企劃</a>
   <nav class="steps" aria-label="流程"><b>1 選場地</b><span>→</span><span>2 生成 3D 球館</span><span>→</span><span>3 智慧球場</span></nav>
   <span class="grow"></span>
+  <a class="tlink home" href="#intro" id="gohome" title="回到開場，可以再按一次「開始企劃」">⌂ 回首頁</a>
   <a class="tlink" href="demo.html">比賽辨識 Demo</a>
   <a class="tlink opt" href="gym.html">直接看 3D 球館</a>
 </header>
@@ -932,13 +933,14 @@ function drawBall(ctx, x, y, r, rot, alpha = 1) {
 }
 const bc = $('#ball'), bctx = bc.getContext('2d');
 let introRot = 0, introRun = true;
-(function spin(ts) {
+function spin(ts) {
   if (!introRun) return;
   bctx.clearRect(0, 0, 600, 600);
   const bob = RM ? 0 : Math.sin(ts / 700) * 10;
   drawBall(bctx, 300, 300 + bob, 230, RM ? 0.4 : (introRot += 0.006));
   requestAnimationFrame(spin);
-})(0);
+}
+spin(0);
 
 // ================================================================ stick figure spike animation
 const cv = $('#anim'), ctx = cv.getContext('2d');
@@ -1227,7 +1229,7 @@ function go(withAnim) {
       setTimeout(() => { fl.style.transition = 'opacity 1s ease'; fl.style.opacity = 0; mp.classList.add('focused'); mp.classList.remove('focusing'); }, 170);
     });
     ready.then(() => arrive(true));
-    setTimeout(() => { cv.hidden = true; c3.hidden = true; ph.hidden = true; c3.classList.remove('leave'); mp.classList.remove('focused'); }, 1700);
+    setTimeout(() => { cv.hidden = true; c3.hidden = true; ph.hidden = true; c3.classList.remove('leave'); ph.classList.remove('leave'); mp.classList.remove('focused'); }, 1700);
   };
   // dark cover goes up first so the map underneath never shows; the start screen stays until the 3D scene has drawn
   const c3 = $('#anim3d'), ph = $('#phase');
@@ -1240,7 +1242,24 @@ function go(withAnim) {
 $('#start').addEventListener('click', () => go(true));
 $('#ball').addEventListener('click', () => go(true));
 $('#skip').addEventListener('click', () => go(false));
-$('#replay').addEventListener('click', (e) => { e.preventDefault(); location.href = location.pathname; });
+// back to the start screen (ball + 開始企劃) without reloading
+function goHome() {
+  map.closePopup();
+  $('#panel').classList.add('away'); $('#panel').classList.remove('mini');
+  $('#topbar').hidden = true; $('#legend').hidden = true;
+  const intro = $('#intro'), st = $('#start');
+  intro.style.zIndex = ''; intro.style.opacity = 0; intro.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => { intro.style.opacity = 1; }));
+  st.disabled = false; st.textContent = '開始企劃';
+  going = false;
+  if (!introRun) { introRun = true; requestAnimationFrame(spin); }
+  // park the map on all of Taiwan so the next start flies in to Hsinchu again
+  setTimeout(() => { map.setMinZoom(6); map.fitBounds(TW, { animate: false }); }, 500);
+  try { history.replaceState(null, '', location.pathname + '#intro'); } catch (e) {}
+  setTimeout(() => st.focus({ preventScroll: true }), 550);
+}
+$('#replay').addEventListener('click', (e) => { e.preventDefault(); goHome(); });
+$('#gohome').addEventListener('click', (e) => { e.preventDefault(); goHome(); });
 setTimeout(() => { if (!$('#intro').hidden && !RM) loadSpike().catch(() => {}); }, 400);
 addEventListener('resize', () => { if (!cv.hidden) sizeCanvas(); });
 if (location.hash === '#map' || sessionStorage.getItem('vb.seenIntro') === '1' && location.hash !== '#intro') {
