@@ -1199,28 +1199,33 @@ map.on('popupclose', () => $('#panel').classList.remove('mini'));
 $('#panel').addEventListener('click', (e) => { if ($('#panel').classList.contains('mini') && e.target.closest('.p-head')) { map.closePopup(); } });
 
 // ================================================================ flow
+// start fetching three.js + the spike scene while the visitor is still on the start screen
+let spikeMod = null;
+const loadSpike = () => (spikeMod = spikeMod || import('./spike3d.js'));
+let going = false;
 function go(withAnim) {
-  introRun = false;
+  if (going) return; going = true;
   const intro = $('#intro');
-  if (!withAnim || RM) { intro.style.opacity = 0; setTimeout(() => { intro.hidden = true; }, 400); ready.then(arrive); return; }
-  intro.style.opacity = 0;
-  setTimeout(() => { intro.hidden = true; }, 500);
+  const hideIntro = () => { introRun = false; intro.style.opacity = 0; setTimeout(() => { intro.hidden = true; }, 500); };
+  if (!withAnim || RM) { hideIntro(); ready.then(arrive); return; }
   const after = () => {
     const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = 1; cv.hidden = true; $('#anim3d').hidden = true; $('#phase').hidden = true;
     requestAnimationFrame(() => { fl.style.transition = 'opacity .7s'; fl.style.opacity = 0; });
     ready.then(arrive);
   };
-  // realistic 3D spike (three.js); falls back to the 2D version if WebGL or the CDN is unavailable
+  // dark cover goes up first so the map underneath never shows; the start screen stays until the 3D scene has drawn
   const c3 = $('#anim3d'), ph = $('#phase');
-  import('./spike3d.js').then((m) => {
-    c3.hidden = false; ph.hidden = false;
+  intro.style.zIndex = 50; c3.hidden = false; $('#start').disabled = true; $('#start').textContent = '載入中…';
+  loadSpike().then((m) => {
     m.playSpike3D(c3, (name, i, n) => { ph.querySelector('b').textContent = `${i + 1}/${n}`; ph.querySelector('span').textContent = name; }, after);
-  }).catch(() => { c3.hidden = true; ph.hidden = true; playSpike(after); });
+    ph.hidden = false; hideIntro();
+  }).catch(() => { c3.hidden = true; ph.hidden = true; hideIntro(); playSpike(after); });
 }
 $('#start').addEventListener('click', () => go(true));
 $('#ball').addEventListener('click', () => go(true));
 $('#skip').addEventListener('click', () => go(false));
 $('#replay').addEventListener('click', (e) => { e.preventDefault(); location.href = location.pathname; });
+setTimeout(() => { if (!$('#intro').hidden && !RM) loadSpike().catch(() => {}); }, 400);
 addEventListener('resize', () => { if (!cv.hidden) sizeCanvas(); });
 if (location.hash === '#map' || sessionStorage.getItem('vb.seenIntro') === '1' && location.hash !== '#intro') {
   // coming back from the 3D page: skip the intro

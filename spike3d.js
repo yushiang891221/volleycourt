@@ -72,7 +72,7 @@ function poseAt(t) {
   // ballistic flight between takeoff and landing
   if (t > 1.14 && t < 2.02) {
     const u = (t - 1.14) / (2.02 - 1.14);
-    out.hip[1] = 1.12 + (0.78 - 1.12) * u + 4 * 0.86 * u * (1 - u);   // parabola: peak ≈ 1.8 m near contact
+    out.hip[1] = 1.12 + (0.78 - 1.12) * u + 4 * 0.92 * u * (1 - u);   // parabola: ~1 m vertical jump, peak near contact
   }
   return out;
 }
@@ -152,6 +152,7 @@ function makeAthlete() {
   limbs.la = arm(1); limbs.ra = arm(-1); limbs.ll = leg(1); limbs.rl = leg(-1);
   return { root, hips, chest, head, limbs };
 }
+const BODY = 1.08;   // ≈1.88 m outside hitter
 const _q = new THREE.Quaternion(), _qi = new THREE.Quaternion();
 function aim(joint, child, dirUpper, dirLower) {
   joint.quaternion.setFromUnitVectors(DOWN, dirUpper);
@@ -160,7 +161,7 @@ function aim(joint, child, dirUpper, dirLower) {
   child.quaternion.setFromUnitVectors(DOWN, local.normalize());
 }
 function applyPose(A, p) {
-  A.root.position.set(p.hip[0], p.hip[1], p.hip[2]);
+  A.root.scale.setScalar(BODY); A.root.position.set(p.hip[0], p.hip[1] * BODY, p.hip[2]);
   A.hips.rotation.set(p.lean * 0.35, p.twist * 0.35, 0);
   A.chest.rotation.set(p.lean * 0.75 + p.arch, p.twist, 0, 'YXZ');
   A.head.rotation.set(-p.lean * 0.6 - p.arch * 0.8 - 0.1, -p.twist * 0.6, 0);
