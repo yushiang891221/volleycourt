@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>設備評估｜新竹排球館企劃</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<style>/* Layout: a navy top bar with the workspace tabs and the save state; each tab is a full-width workspace (overview page, slide editor, spreadsheet, 3D hall, files) */
+:root {
+  --bg: #F6F3EC;
+  --panel: #FFFDF8;
+  --ink: #13233A;
+  --muted: #5A6472;
+  --line: #E3DCCD;
+  --chip: #EFE9DD;
+  --accent: #B24A17;
+  --accent-ink: #FFFFFF;
+  --gold: #F2B705;
+  --navy: #13233A;
+  --navy-ink: #F6F3EC;
+  --cell: #FFFFFF;
+  --cell-calc: #F3F6F9;
+  --sel: #2F6FD1;
+  --ok: #2E7D4F;
+  --ok-bg: #E3F2E9;
+  --warn: #B5471F;
+  --warn-bg: #FBE7DE;
+  --note: #8A6200;
+  --note-bg: #FBF0D2;
+  --scene: #D7DEE6;
+  --ground: #B8C1CA;
+  --font-display: 'Oswald', 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1724; --panel: #152132; --ink: #ECE7DC; --muted: #A2ACB9; --line: #2A3A50; --chip: #1C2A3D;
+    --accent: #E8814A; --accent-ink: #1A0E06; --gold: #F2B705; --navy: #0A121D; --navy-ink: #ECE7DC;
+    --cell: #121D2C; --cell-calc: #182638; --sel: #6FA2F0;
+    --ok: #6CC793; --ok-bg: #16301F; --warn: #F3815A; --warn-bg: #3A1D14; --note: #E9BE55; --note-bg: #33290F; --scene: #18222F; --ground: #2B3746;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1724; --panel: #152132; --ink: #ECE7DC; --muted: #A2ACB9; --line: #2A3A50; --chip: #1C2A3D;
+  --accent: #E8814A; --accent-ink: #1A0E06; --gold: #F2B705; --navy: #0A121D; --navy-ink: #ECE7DC;
+  --cell: #121D2C; --cell-calc: #182638; --sel: #6FA2F0;
+  --ok: #6CC793; --ok-bg: #16301F; --warn: #F3815A; --warn-bg: #3A1D14; --note: #E9BE55; --note-bg: #33290F; --scene: #18222F; --ground: #2B3746;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; display: flex; flex-direction: column; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--navy); }
+a { color: var(--accent); }
+.wrap { max-width: 1240px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--navy); color: var(--navy-ink); }
+.top-in { display: flex; align-items: center; gap: 18px; min-height: 54px; max-width: none; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--navy-ink); text-decoration: none; font-weight: 900; font-size: 16px; white-space: nowrap; }
+.ball { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 30%, var(--gold) 31% 100%); box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .12); }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { color: #C7D2E0; text-decoration: none; padding: 16px 12px 14px; font-size: 14px; font-weight: 500; white-space: nowrap; border-bottom: 3px solid transparent; }
+.tabs a[aria-selected="true"] { color: #FFFFFF; border-bottom-color: var(--gold); }
+.tabs a:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.savebox { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.savestate { font-size: 12px; color: #C7D2E0; display: flex; align-items: center; gap: 6px; }
+.savestate::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #6CC793; }
+.savestate[data-s="dirty"]::before, .savestate[data-s="saving"]::before { background: var(--gold); }
+.savestate[data-s="error"]::before { background: #F3815A; }
+.savestate[data-s="local"]::before { background: #9AA5B1; }
+.savebtn { font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 6px 12px; border: 0; background: var(--gold); color: #13233A; cursor: pointer; }
+.savebtn:disabled { opacity: .45; cursor: default; }
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel { flex: 1; min-height: 0; }
+.panel[hidden] { display: none !important; }
+.banner { background: var(--note-bg); color: var(--ink); border-bottom: 1px solid var(--line); }
+.banner .wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-block: 9px; max-width: none; }
+.banner p { margin: 0; flex: 1 1 260px; font-size: 13px; line-height: 1.5; }
+.btn, .p-btn { font: inherit; font-size: 13px; cursor: pointer; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover, .p-btn:hover { border-color: var(--muted); }
+.btn.primary, .p-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.p-btn.danger { color: var(--warn); }
+.p-btn[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.p-btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible { outline: 2px solid var(--sel); outline-offset: 1px; }
+.muted { color: var(--muted); }
+.fine { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+/* ---------------- overview */
+.hero { background: var(--navy); color: var(--navy-ink); }
+.hero-in { padding-block: 36px 40px; display: flex; flex-direction: column; gap: 14px; }
+.kicker { margin: 0; color: var(--gold); font-weight: 700; letter-spacing: .12em; font-size: 13px; }
+.hero h1 { margin: 0; font-size: clamp(32px, 6vw, 56px); font-weight: 900; line-height: 1.1; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; color: #C7D2E0; font-size: 15px; line-height: 1.7; }
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.fig { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+.fig b { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.fig b small { font-size: 16px; color: #C7D2E0; margin-left: 4px; }
+.fig > span { font-size: 12px; color: #C7D2E0; line-height: 1.5; }
+.page { padding-block: 26px 40px; display: flex; flex-direction: column; gap: 22px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; }
+.block { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.block h2 { margin: 0; font-size: 20px; font-weight: 900; }
+.block h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.points { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; line-height: 1.65; font-size: 14px; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 10px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; }
+.steps li::before { content: counter(s); grid-row: span 2; font-family: var(--font-display); font-weight: 600; font-size: 22px; color: var(--accent); line-height: 1.1; }
+.steps b { font-size: 14px; }
+.steps span { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); text-decoration: none; }
+.card:hover { border-color: var(--accent); }
+.card b { font-size: 15px; }
+.card span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.card em { font-style: normal; font-family: var(--font-display); font-size: 22px; color: var(--accent); }
+.map { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #F6F3EC; }
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.t th { text-align: left; background: var(--chip); padding: 8px 10px; font-weight: 700; white-space: nowrap; }
+table.t td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+table.t .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.files li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.files b { font-size: 14px; }
+.files span { grid-column: 1; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.files em { grid-row: 1 / span 2; grid-column: 2; font-style: normal; font-size: 12px; color: var(--muted); align-self: center; }
+.srcs { columns: 2 320px; column-gap: 24px; }
+.src { break-inside: avoid; margin-bottom: 14px; }
+.src h4 { margin: 0 0 4px; font-size: 13px; }
+.src ul { margin: 0; padding-left: 1.1em; font-size: 13px; line-height: 1.7; }
+
+
+#eval .ev { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 22px; align-items: start; }
+#eval .ev-nav { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 4px; }
+#eval .ev-nav button { all: unset; box-sizing: border-box; cursor: pointer; padding: 9px 12px; border-radius: 10px; font-size: 14px; display: flex; flex-direction: column; gap: 1px; }
+#eval .ev-nav button small { color: var(--muted); font-size: 11.5px; }
+#eval .ev-nav button:hover { background: var(--chip); }
+#eval .ev-nav button[aria-current="true"] { background: var(--navy); color: var(--navy-ink); }
+#eval .ev-nav button[aria-current="true"] small { color: inherit; opacity: .75; }
+#eval .ev-nav button:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+#eval .ev-from { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: 10px; background: var(--note-bg); color: var(--note); font-size: 13px; }
+#eval .ev-from button, #eval .ev-btn { font: 600 13px var(--font-body); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; text-decoration: none; display: inline-block; }
+#eval .ev-btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+#eval .ev-page { display: flex; flex-direction: column; gap: 20px; }
+#eval .ev-page[hidden] { display: none; }
+#eval .ev-hero h2 { margin: 0 0 6px; font-size: 24px; font-weight: 900; }
+#eval .ev-hero p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 14px; max-width: 75ch; }
+#eval .verdict { border-left: 4px solid var(--accent); background: var(--panel); border-radius: 10px; padding: 14px 16px; line-height: 1.7; font-size: 14px; }
+#eval .verdict b { color: var(--accent); }
+#eval .tw table { border-collapse: collapse; width: 100%; font-size: 13px; }
+#eval .tw th, #eval .tw td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.5; }
+#eval .tw td:nth-child(3) { white-space: nowrap; }
+#eval .tw th { color: var(--muted); font-weight: 600; white-space: nowrap; background: var(--chip); }
+#eval .tw td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#eval .tw tr.pick td { background: var(--ok-bg); }
+#eval .tw tr:last-child td { border-bottom: 0; }
+#eval .layers { display: grid; gap: 6px; }
+#eval .layers div { display: grid; grid-template-columns: 26px 160px 1fr; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+#eval .layers div:nth-child(1) { background: #E8EEF6; } #eval .layers div:nth-child(2) { background: #F1EBDD; } #eval .layers div:nth-child(3) { background: #E6EFE6; } #eval .layers div:nth-child(4) { background: #F3E6DA; } #eval .layers div:nth-child(5) { background: #EDE7F3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #eval .layers div { background: var(--chip) !important; } }
+:root[data-theme="dark"] #eval .layers div { background: var(--chip) !important; }
+#eval .layers em { font-style: normal; font: 700 18px var(--font-display); color: var(--accent); text-align: center; }
+#eval .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+#eval .opt { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; }
+#eval .opt h4 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#eval .opt .cost { font-weight: 700; color: var(--ink); }
+#eval .opt .tagx { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+#eval .opt .tagx.go { background: var(--ok-bg); color: var(--ok); } #eval .opt .tagx.no { background: var(--warn-bg); color: var(--warn); }
+#eval .opt ul { margin: 0; padding-left: 1.1em; color: var(--muted); }
+#eval .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+#eval .kpi { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+#eval .kpi b { display: block; font: 700 26px var(--font-display); }
+#eval .kpi span { font-size: 12px; color: var(--muted); }
+#eval .bars { display: grid; gap: 6px; font-size: 13px; }
+#eval .bars .row { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 10px; align-items: center; }
+#eval .bars .bar { height: 18px; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; font-size: 11px; color: #0A0F17; font-weight: 700; min-width: 20px; box-sizing: border-box; }
+#eval .hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#eval .hl li { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel); font-size: 13px; }
+#eval .hl li em { font: 700 20px var(--font-display); font-style: normal; color: var(--accent); text-align: center; }
+#eval .sofa-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#eval .sofa-tools input[type=search] { flex: 1 1 200px; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 14px var(--font-body); }
+#eval .sofa-tools select { padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 13px var(--font-body); }
+#eval .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+#eval .chips button { font: 600 12.5px var(--font-body); padding: 6px 11px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+#eval .chips button[aria-pressed="true"] { background: var(--navy); color: var(--navy-ink); border-color: var(--navy); }
+#eval .sofas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+#eval .sofa { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+#eval .sofa .pr { font: 700 22px var(--font-display); }
+#eval .sofa .br { color: var(--muted); font-size: 12px; }
+#eval .sofa .nm { font-weight: 700; font-size: 14px; line-height: 1.45; }
+#eval .sofa .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+#eval .sofa .meta span { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; background: var(--chip); }
+#eval .sofa .fit { font-size: 12px; color: var(--muted); }
+#eval .sofa .fit i { font-style: normal; color: var(--gold); letter-spacing: 1px; }
+#eval .sofa p { margin: 0; color: var(--muted); line-height: 1.55; }
+#eval .sofa a { margin-top: auto; }
+#eval .ext { display: flex; gap: 8px; flex-wrap: wrap; }
+#eval .srcs-s { font-size: 12px; color: var(--muted); line-height: 1.8; }
+#eval .srcs-s a { color: inherit; }
+#eval .sum { font-size: 13px; color: var(--muted); }
+#eval .sum b { color: var(--ink); }
+.gym .eval-link { width: 100%; }
+@media (max-width: 860px) { #eval .ev { grid-template-columns: 1fr; } #eval .ev-nav { position: static; flex-direction: row; overflow-x: auto; } #eval .ev-nav button { white-space: nowrap; flex: 0 0 auto; } }
+
+.sitebar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: #0B1626; color: #F3EFE6; }
+.sitebar a { color: #F3EFE6; text-decoration: none; }
+.sitebar .brand { display: flex; gap: 10px; align-items: center; font-weight: 900; font-size: 15px; white-space: nowrap; }
+.sitebar .dot { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 28%, #F2B705 30% 100%); }
+.sitebar nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #A9B4C2; }
+.sitebar nav a, .sitebar nav span { padding: 4px 10px; border-radius: 999px; }
+.sitebar nav .on { background: #F2B705; color: #13233A; font-weight: 700; }
+.sitebar nav a:hover { background: rgba(255,255,255,.08); }
+.sitebar .grow { flex: 1; }
+.sitebar .back { font-size: 13px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; white-space: nowrap; }
+@media (max-width: 760px) { .sitebar nav { display: none; } }
+
+html, body { height: auto; } body { display: block; margin: 0; }
+#eval .ev-nav { top: 66px; }
+</style>
+</head>
+<body>
+<header class="sitebar"><a class="brand" href="index.html"><span class="dot"></span>新竹排球館企劃</a><nav aria-label="流程"><a href="index.html#map" class="" data-nav="map">1 選場地</a><span>→</span><a href="gym.html" class="on" data-nav="gym">2 3D 球館</a><span>→</span><a href="demo.html" class="" data-nav="demo">3 智慧球場</a></nav><span class="grow"></span><a class="back" href="#" id="goback">← 上一頁</a></header>
+<main><section class="panel" id="eval" role="tabpanel" aria-labelledby="tab-eval">
+<div class="wrap page">
+  <div class="block"><div><h2 style="margin:0;font-size:22px;font-weight:900">設備評估</h2><p class="fine">3D 球館裡每個物件都可以點：選取後按「查看評估」或直接雙擊，就會跳到這裡對應的頁面。報價來自企劃的比價清單。</p></div></div>
+  <div class="ev">
+    <nav class="ev-nav" aria-label="設備"><button type="button" data-ev-go="floor" aria-current="false">地板與多功能畫線<small>球場、地墊</small></button><button type="button" data-ev-go="camera" aria-current="false">智慧球場攝影機<small>網路攝影機、計分板</small></button><button type="button" data-ev-go="sofa" aria-current="false">沙發比價<small>休息區沙發</small></button><button type="button" data-ev-go="light" aria-current="false">LED 照明<small>天井燈</small></button><button type="button" data-ev-go="fan" aria-current="false">吊扇與通風<small>大型吊扇</small></button><button type="button" data-ev-go="net" aria-current="false">網柱、球網、裁判台<small>比賽設備</small></button><button type="button" data-ev-go="aed" aria-current="false">AED 與安全<small>AED</small></button><button type="button" data-ev-go="room" aria-current="false">廁所、淋浴、更衣<small>空間</small></button><button type="button" data-ev-go="service" aria-current="false">櫃台與休息區設備<small>櫃台、置物櫃、販賣機…</small></button></nav>
+    <div class="ev-main" style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="ev-from" id="ev-from" hidden><span>從 3D 配置點進來：<b id="ev-from-name"></b></span><button type="button" id="ev-back">← 回 3D 球館</button></div>
+      <article class="ev-page" data-ev="floor" hidden>
+  <div class="ev-hero"><h2>地板與多功能畫線</h2><p>點 3D 裡的球場或地板會來到這裡。地板是排球館最貴、也最難改的東西：材質決定救球時膝蓋和皮膚的感受，畫線方式決定能不能做成複合式球場。</p></div>
+  <div class="verdict"><b>建議：</b>主場用「專業 PVC 運動地板（有 EN 14904 認證、含彈性層）」，排球白線＋羽球／匹克球淺色細線（①），鋪地板時就把底色分區（②）規劃好，再加上燈光分場切換（③）。可收捲地墊（④）等確定要做羽球再加。投影和 LED 玻璃地板目前不划算。</div>
+  <section class="block"><h3>地板材質比較（取自「排球館報價比價清單.xlsx」的地板方案比較）</h3>
+    <div class="tw"><table><thead><tr><th>方案</th><th>單價（元／㎡）</th><th>1 面材料費（360 ㎡）</th><th>2 面材料費（672 ㎡）</th><th>優點</th><th>要注意</th></tr></thead><tbody><tr><td><b>網拍 PVC 運動地膠（3.5–4.5 mm）</b> <a href="https://biggo.com.tw/s/排球pvc地板/" target="_blank" rel="noopener">連結</a></td><td class='n'>419–545</td><td class='n'>150,840–196,200</td><td class='n'>281,568–366,240</td><td>便宜、捲材好鋪、可自選顏色</td><td>品質落差大、多半沒有運動認證或彈性底層資料；營業場館耐用度未知</td></tr><tr><td><b>PU 運動地坪（只算 PU 層）</b> <a href="https://www.pro360.com.tw/price/pu_floor" target="_blank" rel="noopener">連結</a></td><td class='n'>650</td><td class='n'>234,000</td><td class='n'>436,800</td><td>無接縫、可直接畫線</td><td>需要平整乾燥的底層；施工期較長、做了搬不走；上限要看底層與彈性層</td></tr><tr><td><b>專業 PVC 運動地板（Enlio、Taraflex 等）</b> <a href="https://www.tcvfloor.com.tw/pdt106101.html" target="_blank" rel="noopener">連結</a></td><td class='n'>待報價</td><td class='n'>待報價</td><td class='n'>待報價</td><td>有運動地板系統與彈性層，國際賽事常用</td><td>價格要向代理商詢價，通常含專業施工</td></tr><tr><td><b>木地板（運動用）</b></td><td class='n'>待報價</td><td class='n'>待報價</td><td class='n'>待報價</td><td>腳感最好</td><td>最貴，怕潮濕；倉庫改建要注意防潮</td></tr></tbody></table></div>
+    <p class="fine">只算材料；整平、彈性底層、鋪設、畫線要另外請地板廠商報價。中國大陸的公開行情可當比例參考：PVC 運動地膠 4.5 mm 約人民幣 69 元／㎡、6 mm 約 99 元、8 mm 約 123 元；22 mm 楓木運動木地板約 265–300 元／㎡（搜狐，2024）。</p>
+  </section>
+  <section class="block"><h3>比價清單裡的地板報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="運動地板"></div></section>
+  <section class="block"><h3>運動地墊怎麼鋪（由下往上）</h3>
+    <div class="layers">
+      <div><em>1</em><b>水泥地整平</b><span>倉庫地坪常有高低差和裂縫，先用自平水泥或研磨整平；請廠商量平整度。</span></div>
+      <div><em>2</em><b>防潮層</b><span>一樓直接接地的倉庫一定要做，請廠商先測地坪含水率；木地板更怕潮。</span></div>
+      <div><em>3</em><b>彈性層</b><span>吸收落地衝擊、保護膝蓋。專業 PVC 地板多半是「耐磨面層＋發泡彈性層」一體的捲材，網拍便宜貨常常只有薄的發泡層。</span></div>
+      <div><em>4</em><b>運動地板面層</b><span>捲材鋪設、接縫熱熔焊接；排球救球多，表面要有一定摩擦又不能刮傷皮膚，選有 EN 14904 測試報告的產品。</span></div>
+      <div><em>5</em><b>畫線</b><span>用運動地板專用線漆。先決定主運動和配色（下面的切換方案），一次畫好。</span></div>
+    </div>
+  </section>
+  <section class="block"><h3>多功能球場：線怎麼切換</h3><div class="opts"><div class="opt"><h4><span>① 多色固定畫線</span><span class="tagx go">一定要做</span></h4><div class="cost">含在畫線工程裡</div><div>排球線用白色，羽球、匹克球用細的淺色線（黃、淺藍），一次畫好。</div><ul><li>成本最低，國內多功能館最常見</li><li>線一多畫面會亂，所以「主運動」要最清楚</li><li>3D 裡第二種球場選「只畫線」就是這個效果</li></ul></div><div class="opt"><h4><span>② 地板底色分區</span><span class="tagx go">建議</span></h4><div class="cost">鋪地板時一起決定</div><div>主排球場用一個底色、緩衝區用另一色；羽球場的範圍不另外上色。</div><ul><li>打球的人靠「顏色塊」比靠細線更快找到自己的場</li><li>鋪設後就改不了，要在地板報價時一起跟廠商討論</li><li>3D 的「整片上色／只畫線」可以先試配色</li></ul></div><div class="opt"><h4><span>③ 燈光分場切換</span><span class="tagx go">建議</span></h4><div class="cost">每面場一組迴路＋場景開關</div><div>燈光不能「畫線」，但可以只點亮正在用的場：排球模式開整面、羽球模式只開羽球場上方那幾排。</div><ul><li>讓當下在用的場最亮、其他區暗下來，視覺上就是「切換」</li><li>同時省電，夜間包場只開一面</li><li>燈具要能分迴路，配電時就要規劃（照明頁有報價）</li></ul></div><div class="opt"><h4><span>④ 可收捲的羽球／匹克球地墊</span><span class="tagx ">可選</span></h4><div class="cost">羽球地墊每面約 2.4 萬元起</div><div>底層是排球地板，要打羽球時鋪上可收捲的 PVC 地墊，打完捲起來。</div><ul><li>BigGo 上「可收捲羽球 PVC 地板」每面（72.9 ㎡）約 24,127 元起</li><li>換場需要人力、地墊要有收納空間</li><li>排球地板維持乾淨只有排球線</li></ul></div><div class="opt"><h4><span>⑤ 地貼臨時線</span><span class="tagx ">活動用</span></h4><div class="cost">一卷幾百元</div><div>辦活動、教學、匹克球體驗時用地板膠帶貼線。</div><ul><li>最便宜、隨時可改</li><li>會翹邊、要常換，不適合天天打</li><li>撕的時候要確認不傷地板表面</li></ul></div><div class="opt"><h4><span>⑥ 天花板投影／雷射投線</span><span class="tagx no">不建議主場用</span></h4><div class="cost">投影機＋安裝（待報價）</div><div>從上方把球場線投到地上，線可以一鍵換。</div><ul><li>已有人申請專利（光源投射活動區域邊線）</li><li>球員一站上去就擋住光、出現陰影</li><li>場館燈要調暗線才看得清楚，和打球需要的亮度衝突</li><li>適合活動、親子、互動遊戲，不適合正式打球</li></ul></div><div class="opt"><h4><span>⑦ LED 玻璃地板（ASB GlassFloor）</span><span class="tagx no">目前不考慮</span></h4><div class="cost">基本款約 1,000 萬元／1 面</div><div>玻璃地板下面埋 LED，排球、羽球、籃球的線一鍵切換，還能顯示廣告。</div><ul><li>FIBA 已核准用在最高等級賽事</li><li>基本款約 US$80–90／平方英尺（約 NT$2.7–3.0 萬／㎡，以 1 美元 ≈ 31 元換算）</li><li>1 面 360 ㎡ 約 960–1,080 萬元，是整個開館預算的好幾倍</li><li>適合旗艦館或品牌館，之後有贊助再評估</li></ul></div></div></section>
+  <section class="block"><h3>其他球館用什麼地板</h3><div class="tw"><table><thead><tr><th>球館</th><th>地點</th><th>已知資訊</th><th>來源</th></tr></thead><tbody><tr><td><b>可利&#x27;s 排球小棧</b></td><td>寶山鄉大崎一路（近竹科）</td><td>Google 評論提到 PU 地板、有冷氣</td><td><a href="https://maps.google.com/?cid=9508940968426951933" target="_blank" rel="noopener">Google 地圖評論</a></td></tr><tr><td><b>龍蝦排球館</b></td><td>寶山鄉大崎一路</td><td>打球區 25 × 18 m、休息區 5 m 深；評論提到挑高、有冷氣</td><td><a href="https://longshot.booknow.com.tw/" target="_blank" rel="noopener">官網、Google 地圖評論</a></td></tr><tr><td><b>Volley Chill × 排丘</b></td><td>寶山鄉大崎一路</td><td>評論提到高度夠跳發；鋼柱和金屬邊角沒有包防撞</td><td><a href="https://maps.google.com/?cid=324765089140641804" target="_blank" rel="noopener">Google 地圖評論</a></td></tr><tr><td><b>就醬瘋 JCV</b></td><td>園區二路（門牌屬寶山鄉大崎村）</td><td>評論提到挑高、明亮，也有人覺得燈太亮</td><td><a href="https://maps.google.com/?cid=12351734585613324858" target="_blank" rel="noopener">Google 地圖評論</a></td></tr><tr><td><b>啪！排郎</b></td><td>竹北市中正西路</td><td>地板資訊待踩點確認</td><td><a href="https://maps.google.com/?cid=392047644088781137" target="_blank" rel="noopener">Google 地圖</a></td></tr><tr><td><b>新莊 259 排球館（參考）</b></td><td>新北市新莊區</td><td>場地 17 × 24 m，兩側緩衝 2.7／5.3 m</td><td><a href="https://www.aligh.co/zh-TW/venue/1785" target="_blank" rel="noopener">愛來運動場館頁</a></td></tr></tbody></table></div></section>
+  <section class="block"><h3>可以詢價的專業廠商</h3>
+    <ul class="points"><li><b>太格地材</b>（運寶 Rexcourt PVC 運動地板、BOEN Boflex 運動木地板）：官網標示符合 EN 14904，可做場館評估、現場丈量；新北 (02)8601-9259、台中 (04)2422-5746、semi@semiflor.com.tw。</li>
+    <li><b>Enlio 英利奧、Gerflor Taraflex</b>：比價清單裡已列，需找台灣代理商報價，通常含專業施工。</li>
+    <li>詢價時一起問：彈性層厚度、是否含整平和防潮、接縫焊接、畫線費、保固年限、維護方式。</li></ul>
+  </section>
+  <p class="srcs-s">資料來源：<a href="https://www.semiflor.com.tw/tw/product/category/sports_flooring/%E9%81%8B%E5%AF%B6/0" target="_blank" rel="noopener">太格地材 運動地板</a>・<a href="https://www.sohu.com/a/771903505_120507664" target="_blank" rel="noopener">搜狐 羽毛球場地膠價格</a>・<a href="https://biggo.com.tw/s/%E6%8E%92%E7%90%83pvc%E5%9C%B0%E6%9D%BF/" target="_blank" rel="noopener">BigGo 排球 PVC 地板</a>・<a href="https://access.intix.org/Full-Article/breaking-glass-floor-in-led-tech-1" target="_blank" rel="noopener">VenuesNow：ASB GlassFloor 價格</a>・<a href="https://www.theconstructionindex.co.uk/news/view/oxford-sports-hall-has-smart-floor-markings" target="_blank" rel="noopener">Construction Index：牛津 LED 地板</a>・<a href="https://patents.google.com/patent/US8690715" target="_blank" rel="noopener">US8690715 投射邊線專利</a></p>
+</article><article class="ev-page" data-ev="camera" hidden>
+  <div class="ev-hero"><h2>智慧球場攝影機</h2><p>點 3D 裡的網路攝影機或計分板會來到這裡。把攝影機接上我們做的辨識流程，就是一個會自己錄影、算分、剪精華的「智慧球場 Agent」。下面的數字是用龍蝦季打那段影片實際算出來的。</p></div>
+  <div class="verdict"><b>建議：</b>每面場在底線後方高處裝 1 台 4K PoE 攝影機（約 7,000 元），網子側邊再加 1 台看觸網和過網；機房放一台邊緣運算主機跑辨識。先做「依預約時段自動錄影＋寄給包場客人」，再加自動計分和精華，當成加值服務。</div>
+  <section class="block"><h3>Agent 從示範影片算出來的結果</h3>
+    <div class="kpis" id="cam-kpis"></div>
+    <div class="cols">
+      <div class="block"><h3>每隊動作統計</h3><div class="bars" id="cam-bars"></div><p class="fine">動作由球的軌跡轉折＋姿態偵測找出，再人工逐格確認；網子另一邊被擋住的觸球可能漏算。</p></div>
+      <div class="block"><h3>自動挑出的精華</h3><ul class="hl" id="cam-hl"></ul><p class="fine">依回合長度、觸球次數、得分方式排序。按「播放」會跳到比賽辨識 Demo 那一刻。</p></div>
+    </div>
+  </section>
+  <section class="block"><h3>Agent 會做的事</h3>
+    <div class="opts">
+      <div class="opt"><h4><span>自動錄影</span><span class="tagx go">第一階段</span></h4><div>依預約系統的時段自動開始、結束錄影，一個時段一個檔案，打完把連結傳給包場的人。</div><ul><li>不用有人顧攝影機</li><li>影片保存天數要訂清楚</li></ul></div>
+      <div class="opt"><h4><span>自動計分</span><span class="tagx">第二階段</span></h4><div>偵測每一球的開始（發球）和結束（落地、出界、接住），判斷誰得分；看不到落點時用「下一球誰發」反推。</div><ul><li>示範影片 7 球全部判對方向</li><li>正式比賽仍以裁判為準，Agent 當紀錄輔助</li></ul></div>
+      <div class="opt"><h4><span>精華與統計</span><span class="tagx">第二階段</span></h4><div>長回合、扣球得分、發球得分自動剪成短片；統計每隊觸球、攻擊、回合長度。</div><ul><li>可做成付費加購或會員福利</li><li>精華短片也是社群行銷素材</li></ul></div>
+      <div class="opt"><h4><span>營運數據</span><span class="tagx">之後</span></h4><div>每個時段實際有幾個人在打、哪面場最常用，回頭調整定價和開放時段。</div><ul><li>只統計人數，不需要辨識是誰</li></ul></div>
+    </div>
+  </section>
+  <section class="block"><h3>硬體與方案比較</h3>
+    <div class="tw"><table><thead><tr><th>方案</th><th>價格</th><th>排球支援</th><th>適合</th></tr></thead><tbody>
+      <tr class="pick"><td><b>自建：4K PoE 攝影機＋邊緣運算</b><br>例：TP-Link Tapo C575D（雙 4K、支援 PoE）、NVIDIA Jetson Orin Nano Super 開發套件</td><td>攝影機 NT$6,999／台（momo 特價）；Jetson 約 US$249；PoE 交換器、NAS 另計</td><td>用這次做的辨識流程，可以依排球規則客製</td><td>想自己掌握資料、做計分和精華</td></tr>
+      <tr><td><b>Veo Cam 3</b></td><td>相機 US$1,299＋月費 US$67 起</td><td>可錄排球，但進階分析目前只有足球</td><td>只要自動錄影、跟拍</td></tr>
+      <tr><td><b>Balltime（Hudl）</b></td><td>個人 US$20／月；招生方案 US$25／月或 US$299／年；團隊方案洽詢</td><td>排球專用 AI：自動精華短片、發球與攻擊速度</td><td>球隊、教練上傳影片做分析</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="block"><h3>比價清單裡的系統報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="系統"></div></section>
+  <section class="block"><h3>安裝與隱私</h3>
+    <ul class="points"><li><b>位置：</b>底線後方 5–6 m 高，能看到整面場和兩條邊線；避開正對窗戶的逆光。在 3D 裡選取攝影機會出現藍色視角錐，就是大概的拍攝範圍，可以拖曳、旋轉調整。</li>
+    <li><b>網路：</b>PoE 一條網路線同時供電和傳影像，裝修時就把線拉好。</li>
+    <li><b>隱私：</b>場內和預約頁面都要寫清楚「場內錄影、用途、保存多久、誰看得到」，包場影片只給該時段的客人。</li></ul>
+  </section>
+  <div class="ext"><a class="ev-btn pri" href="demo.html">看比賽辨識 Demo 影片 →</a></div>
+  <p class="srcs-s">資料來源：<a href="https://www.momoshop.com.tw/product/15535207" target="_blank" rel="noopener">momo TP-Link Tapo C575D</a>・<a href="https://www.inside.com.tw/article/37060-nvidia-unveils-249-ai-supercomputer-jensen-huang-brings-another-game-changer-from-the-oven" target="_blank" rel="noopener">INSIDE：Jetson Orin Nano Super 249 美元</a>・<a href="https://www.veo.com/en-us/veo-vs-trace" target="_blank" rel="noopener">Veo 官網</a>・<a href="https://www.hudl.com/pricing/balltime" target="_blank" rel="noopener">Hudl Balltime 價格</a></p>
+</article><article class="ev-page" data-ev="sofa" hidden>
+  <div class="ev-hero"><h2>沙發比價</h2><p>點 3D 裡的沙發會來到這裡。球館休息區的沙發會被穿著運動服、流汗的人坐，選「好擦、不吸汗、耐刮」比坐起來多軟更重要。</p></div>
+  <div class="verdict"><b>建議：</b>選耐磨合成皮或貓抓皮、沒有電動機構的三人座；你的 3D 方案<span id="sofa-count">–</span>，挑「適合度 4 顆星以上」的大約 <b id="sofa-total">–</b> 元。預算表的「休息區、櫃台、家具」1 面編 <b id="sofa-budget">–</b> 元。</div>
+  <section class="block">
+    <div class="sofa-tools">
+      <input type="search" id="sofa-q" placeholder="搜尋品名、品牌、材質" aria-label="搜尋沙發">
+      <div class="chips" id="sofa-mat" role="group" aria-label="材質"></div>
+      <select id="sofa-sort" aria-label="排序"><option value="fit">依適合度</option><option value="asc">價格低到高</option><option value="desc">價格高到低</option></select>
+    </div>
+    <p class="sum" id="sofa-sum"></p>
+    <div class="sofas" id="sofa-list"></div>
+    <p class="fine">價格是 2026 年 10 月查到的頁面價格，會變動；FindPrice 連結會帶你到比價搜尋結果，買之前確認尺寸（3D 裡沙發是 2.2 × 0.9 m）。</p>
+  </section>
+  <section class="block"><h3>到比價網站搜更多</h3>
+    <div class="ext">
+      <a class="ev-btn" href="https://www.findprice.com.tw/g/%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA" target="_blank" rel="noopener">FindPrice：貓抓皮三人沙發</a>
+      <a class="ev-btn" href="https://biggo.com.tw/s/%E8%80%90%E7%A3%A8%E7%9A%AE%E9%9D%A9%E6%B2%99%E7%99%BC/" target="_blank" rel="noopener">BigGo：耐磨皮革沙發</a>
+      <a class="ev-btn" href="https://www.nitori-net.tw/" target="_blank" rel="noopener">NITORI 宜得利</a>
+      <a class="ev-btn" href="https://www.ikea.com.tw/" target="_blank" rel="noopener">IKEA 台灣</a>
+    </div>
+  </section>
+  <section class="block"><h3>挑選重點</h3>
+    <ul class="points"><li><b>表面：</b>耐磨合成皮（如 NITORI N shield）或貓抓皮最好整理；布沙發要選可拆洗套。</li>
+    <li><b>不要電動：</b>電動躺椅在營業場所容易壞，也比較佔位置。</li>
+    <li><b>高度：</b>坐墊太低、太軟，穿球鞋起身不方便。</li>
+    <li><b>數量：</b>等場的人通常是下一時段的一整隊（6–12 人），沙發加長椅要坐得下。</li></ul>
+  </section>
+  <p class="srcs-s">資料來源：<a href="https://tw.my-best.com/115068" target="_blank" rel="noopener">mybest 宜得利沙發推薦</a>・<a href="https://www.findprice.com.tw/g/%E6%B2%99%E7%99%BC" target="_blank" rel="noopener">FindPrice 沙發</a>・<a href="https://www.momoshop.com.tw/product/14325651" target="_blank" rel="noopener">momo NITORI UM01</a></p>
+</article><article class="ev-page" data-ev="light" hidden>
+  <div class="ev-hero"><h2>LED 照明</h2><p>點 3D 裡的天井燈會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>燈裝在場地兩側、不要裝在球場正上方（排球員一直仰頭看球，正上方的燈最刺眼）；選有防眩光透鏡的天井燈，每面場分迴路，搭配地板頁的「燈光分場切換」。你的 3D 方案目前有 <b class="cnt" data-type="light">–</b> 盞。</div>
+  <section class="block"><h3>比價清單裡的報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="照明"></div></section>
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="light"></div></section>
+  <section class="block"><h3>注意事項</h3><ul class="points"><li>附近的就醬瘋排球館有 Google 評論提到「燈太亮」，亮度夠但眩光要控制。</li><li>請燈具廠商依廠房尺寸和淨高做照度模擬，再決定盞數和瓦數。</li><li>比價清單只含燈具本體，電工配線、分迴路、場景開關另計。</li></ul></section>
+  
+</article><article class="ev-page" data-ev="fan" hidden>
+  <div class="ev-hero"><h2>吊扇與通風</h2><p>點 3D 裡的大型吊扇會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>大型吊扇裝在兩面場之間或場外上方，葉片離地要高於高球的軌跡（3D 會顯示葉片離地高度）；夏天光靠吊扇不夠，冷氣和排風要一起規劃。你的 3D 方案目前有 <b class="cnt" data-type="fan">–</b> 台吊扇。</div>
+  <section class="block"><h3>比價清單裡的報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="通風"></div></section>
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="fan"></div></section>
+  <section class="block"><h3>注意事項</h3><ul class="points"><li>附近球館的評論常提到「有冷氣」，是夏天能不能留住客人的關鍵。</li><li>7.3 m 的 HVLS 工業吊扇要向工業風扇廠商報價，含吊掛結構確認。</li></ul></section>
+  
+</article><article class="ev-page" data-ev="net" hidden>
+  <div class="ev-hero"><h2>網柱、球網、裁判台</h2><p>點 3D 裡的裁判台、隔網或球車會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>先決定網柱是「移動式」還是「地插式」：地插式要在鋪地板前挖孔、埋套管，移動式比較能配合複合式場地。網柱一定要包護墊。</div>
+  <section class="block"><h3>比價清單裡的報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="網柱與球網,球具"></div></section>
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="net"></div></section>
+  
+  
+</article><article class="ev-page" data-ev="aed" hidden>
+  <div class="ev-hero"><h2>AED 與安全</h2><p>點 3D 裡的 AED 會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>簡報預算原本沒列 AED，建議補 7–9 萬元；放在櫃台或出入口旁明顯的位置，並讓員工上 CPR＋AED 課程。</div>
+  <section class="block"><h3>比價清單裡的報價（即時讀試算表）</h3><div class="ev-quotes" data-cats="安全"></div></section>
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="aed"></div></section>
+  
+  
+</article><article class="ev-page" data-ev="room" hidden>
+  <div class="ev-hero"><h2>廁所、淋浴、更衣</h2><p>點 3D 裡的廁所、淋浴間、更衣室或辦公室會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>男女廁分開、至少各 1 間淋浴；倉庫改建的排水、熱水器和防滑地磚是主要成本，向水電、裝修廠商報價。這部分也牽涉建築使用執照變更，要和建築師一起看。</div>
+  
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="room"></div></section>
+  
+  
+</article><article class="ev-page" data-ev="service" hidden>
+  <div class="ev-hero"><h2>櫃台與休息區設備</h2><p>點 3D 裡的櫃台、置物櫃、販賣機、飲水機、桌椅、長椅或觀眾席會來到這裡。</p></div>
+  <div class="verdict"><b>建議：</b>櫃台旁放置物櫃和飲水機；販賣機可以先問業者能不能免費擺放、營收分潤，省下購買成本。沙發另有<a href="#eval/sofa" data-ev-go="sofa">比價頁</a>。</div>
+  
+  <section class="block"><h3>預算表</h3><div class="ev-budget" data-key="service"></div></section>
+  
+  
+</article>
+    </div>
+  </div>
+</div>
+</section></main>
+<script>window.__EMBED = { sheets: {"v": 1, "params": {"courtL": {"w": 25, "d": 18}, "courtS": {"w": 24, "d": 15}, "common": 40, "hMin": 7, "hIdeal": 9, "big": 600}, "sites": [{"id": "s5", "pri": "A", "name": "竹東工業區 挑高 10 米合法廠房（大車可進）", "town": "竹東鎮", "road": "大明路", "zone": "乙種工業區", "floor": "整棟／1F", "total": 1400, "g1": 1400, "rent": 1200000, "hl": 10, "hm": null, "L": null, "W": null, "km": 8.6, "near": "就醬瘋", "ask": "合法廠房、高度最理想。整棟太大，問能否分租約 310 坪（2 面龍蝦規格）與價格", "src": "591", "link": "https://business.591.com.tw/rent/21621521", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s6", "pri": "A", "name": "挑高合法廠房／近竹東火車站／可分租", "town": "竹東鎮", "road": "大明路", "zone": "零星工業區", "floor": "整棟／1F", "total": 1416, "g1": 1416, "rent": 1200000, "hl": null, "hm": null, "L": null, "W": null, "km": 8.6, "near": "就醬瘋", "ask": "廣告寫「可分租」，可能和上一筆同一棟；問分租坪數與價格", "src": "591", "link": "https://business.591.com.tw/rent/20412734", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s7", "pri": "A", "name": "近芎林交流道竹東市區乙工挑高鋼構廠房", "town": "竹東鎮", "road": "大明路", "zone": "乙種工業區", "floor": "1F／1F", "total": 1800, "g1": 1800, "rent": 1350000, "hl": null, "hm": null, "L": null, "W": null, "km": 8.6, "near": "就醬瘋", "ask": "同區大型乙工廠房，問是否可分租", "src": "591", "link": "https://business.591.com.tw/rent/22060261", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s8", "pri": "A", "name": "寶山深井路 300 坪鋼構倉庫", "town": "寶山鄉", "road": "深井路", "zone": "工業用", "floor": "整棟／1F", "total": 300, "g1": 300, "rent": 125000, "hl": null, "hm": null, "L": null, "W": null, "km": 7.6, "near": "排丘", "ask": "大小接近 2 面龍蝦規格；問淨高、柱距、確切位置", "src": "樂屋網（中信房屋）", "link": "https://rent.rakuya.com.tw/item/0b8c92331258528", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s9", "pri": "B", "name": "竹東二重埔挑高倉庫", "town": "竹東鎮", "road": "中興路二段88巷", "zone": "農業區", "floor": "整棟／1F", "total": 150, "g1": 150, "rent": 65000, "hl": null, "hm": null, "L": null, "W": null, "km": 4.8, "near": "就醬瘋", "ask": "大小、租金剛好 1 面場；農業區很可能不能變更成運動場，先問建管", "src": "591", "link": "https://business.591.com.tw/rent/21710501", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s10", "pri": "B", "name": "近 68 快速道路倉庫（適釣蝦場、可分租）", "town": "竹東鎮", "road": "北興路三段", "zone": "農業區", "floor": "整棟／1F", "total": 500, "g1": 500, "rent": 150000, "hl": null, "hm": null, "L": null, "W": null, "km": 6.6, "near": "就醬瘋", "ask": "可放 2 面場、單價便宜；農業區要先問建管", "src": "591", "link": "https://business.591.com.tw/rent/22035915", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s11", "pri": "B", "name": "正寶山交流道旁萬用大廠房", "town": "寶山鄉", "road": "大雅二街", "zone": "見使用執照", "floor": "1F／1F", "total": 150, "g1": 150, "rent": 75000, "hl": null, "hm": null, "L": null, "W": null, "km": 0.8, "near": "排丘", "ask": "1 面場大小；問使用執照用途、淨高。離大崎球館群很近，等於正面競爭", "src": "樂屋網", "link": "https://rent.rakuya.com.tw/item/0ff163323287491", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s12", "pri": "B", "name": "中豐路三段 427 巷倉庫（挑高 9 米、三相電）×4 筆", "town": "竹東鎮", "road": "中豐路三段427巷", "zone": "零星工業區／農業區", "floor": "1F／1F", "total": 50, "g1": 50, "rent": 25000, "hl": 9, "hm": null, "L": null, "W": null, "km": 7.3, "near": "就醬瘋", "ask": "單間太小；問 4 間是否相鄰、能否打通合租約 200 坪（其中一筆寫不可營登）", "src": "591", "link": "https://business.591.com.tw/rent/22108534", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s13", "pri": "B", "name": "二重埔挑高 7 米工業廠房", "town": "竹東鎮", "road": "二重埔", "zone": "", "floor": "", "total": null, "g1": null, "rent": null, "hl": 7, "hm": null, "L": null, "W": null, "km": 3.9, "near": "就醬瘋", "ask": "讀不到坪數和租金，請直接開連結看", "src": "591", "link": "https://business.591.com.tw/rent/22125405", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s14", "pri": "B", "name": "竹東北埔平價倉庫", "town": "竹東／北埔", "road": "", "zone": "", "floor": "", "total": null, "g1": null, "rent": null, "hl": null, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "讀不到內容，請直接開連結看", "src": "591", "link": "https://business.591.com.tw/rent/22126315", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s15", "pri": "C", "name": "寶山鄉深井路 700 坪鋼構倉庫（同路段另有 900 坪）", "town": "寶山鄉", "road": "深井路", "zone": "", "floor": "整棟／1F", "total": 700, "g1": 700, "rent": 285000, "hl": null, "hm": null, "L": null, "W": null, "km": 7.6, "near": "排丘", "ask": "太大；可問能否只租一部分", "src": "樂屋網", "link": "https://rent.rakuya.com.tw/item/00d91d329005354", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s16", "pri": "C", "name": "寶山交流道三相電大面寬廠房", "town": "寶山鄉", "road": "大雅二街", "zone": "", "floor": "頂樓加蓋", "total": 300, "g1": 0, "rent": 150000, "hl": null, "hm": null, "L": null, "W": null, "km": 0.8, "near": "排丘", "ask": "頂樓加蓋，不適合做球場", "src": "樂屋網", "link": "https://rent.rakuya.com.tw/item/03d025324116261", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s17", "pri": "C", "name": "芎林國 3 旁工業廠房（可廠登）", "town": "芎林鄉", "road": "文德路", "zone": "丁種工業區", "floor": "整棟／2F", "total": 1310, "g1": 655, "rent": 260000, "hl": null, "hm": null, "L": null, "W": null, "km": 6.6, "near": "就醬瘋", "ask": "兩層樓、太大；可問 1 樓能否分租", "src": "591", "link": "https://business.591.com.tw/rent/21903407", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s18", "pri": "C", "name": "芎林工業區 1,960–5,880 坪", "town": "芎林鄉", "road": "五和街", "zone": "乙種工業區", "floor": "整棟／3F", "total": 5880, "g1": 1960, "rent": 4410000, "hl": null, "hm": null, "L": null, "W": null, "km": 10.4, "near": "就醬瘋", "ask": "太大", "src": "591", "link": "https://business.591.com.tw/rent/22064957", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s19", "pri": "C", "name": "芎林富林路三段倉庫", "town": "芎林鄉", "road": "富林路三段", "zone": "", "floor": "1F", "total": 65, "g1": 65, "rent": 36500, "hl": 7, "hm": null, "L": null, "W": null, "km": 5.9, "near": "就醬瘋", "ask": "放不下一面場", "src": "新竹租屋網", "link": "https://www.hcrt.com.tw/show.asp?prodcode=G1181", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s20", "pri": "C", "name": "竹東長春路廠辦", "town": "竹東鎮", "road": "長春路三段", "zone": "特種工業區", "floor": "1–3F", "total": 133, "g1": 44, "rent": 98000, "hl": null, "hm": null, "L": null, "W": null, "km": 6.8, "near": "就醬瘋", "ask": "三層樓，每層太小", "src": "樂屋網／591", "link": "https://rent.rakuya.com.tw/item/0a3bc533212856d", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s21", "pri": "C", "name": "竹東柯湖路三層廠房", "town": "竹東鎮", "road": "柯湖路三段", "zone": "", "floor": "整棟／3F", "total": 180, "g1": 60, "rent": 120000, "hl": null, "hm": null, "L": null, "W": null, "km": 1.8, "near": "就醬瘋", "ask": "三層樓，每層太小", "src": "591", "link": "https://business.591.com.tw/rent/21952568", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s22", "pri": "C", "name": "公道路旁倉庫", "town": "竹東鎮", "road": "公道路", "zone": "農業區", "floor": "整棟／1F", "total": 45, "g1": 45, "rent": 40000, "hl": null, "hm": null, "L": null, "W": null, "km": 3.1, "near": "可利", "ask": "太小", "src": "591", "link": "https://business.591.com.tw/rent/21971884", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s23", "pri": "參考", "name": "竹北 新寮街 倉庫", "town": "竹北市", "road": "新寮街", "zone": "", "floor": "", "total": 158, "g1": 131, "rent": 79000, "hl": 7, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "租金行情參考（竹北）。室內 131 坪", "src": "MixRent 搜尋", "link": "https://tw.mixrent.com/search.php?q=新竹倉庫", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s24", "pri": "參考", "name": "竹北 蓮花路 倉庫", "town": "竹北市", "road": "蓮花路", "zone": "", "floor": "", "total": 270, "g1": 270, "rent": 120000, "hl": null, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "租金行情參考（竹北）", "src": "MixRent 搜尋", "link": "https://tw.mixrent.com/search.php?q=新竹倉庫", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s25", "pri": "參考", "name": "竹北 中正西路 廠房", "town": "竹北市", "road": "中正西路", "zone": "", "floor": "", "total": 300, "g1": 300, "rent": 150000, "hl": null, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "租金行情參考（竹北）；排郎也在中正西路", "src": "MixRent 搜尋", "link": "https://tw.mixrent.com/search.php?q=新竹倉庫", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s26", "pri": "參考", "name": "香山 海埔路 倉庫", "town": "新竹市香山區", "road": "海埔路", "zone": "", "floor": "", "total": 220, "g1": 220, "rent": 80000, "hl": null, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "租金行情參考（香山）；可大車出入", "src": "MixRent 搜尋", "link": "https://tw.mixrent.com/search.php?q=新竹倉庫", "reply": "", "contact": "", "date": "", "note": ""}, {"id": "s27", "pri": "參考", "name": "竹北 環北路 廠房（2 樓）", "town": "竹北市", "road": "環北路", "zone": "", "floor": "2F", "total": 470, "g1": 0, "rent": 200000, "hl": 6, "hm": null, "L": null, "W": null, "km": null, "near": "未定位", "ask": "挑高 6 m、在 2 樓：不適合排球", "src": "MixRent 搜尋", "link": "https://tw.mixrent.com/search.php?q=新竹倉庫", "reply": "", "contact": "", "date": "", "note": ""}], "budget": [{"id": "b0", "name": "運動地板", "b1": 500000, "b2": 1000000, "cats": ["運動地板"], "note": "比價只含材料；整平、彈性底層、施工另計，請地板廠商報價"}, {"id": "b1", "name": "網柱、球網、球具", "b1": 100000, "b2": 200000, "cats": ["網柱與球網", "球具"], "note": "球網、標誌桿、裁判台待報價"}, {"id": "b2", "name": "照明（LED、裝兩側）", "b1": 150000, "b2": 250000, "cats": ["照明"], "note": "比價不含電工配線"}, {"id": "b3", "name": "通風、冷氣", "b1": 250000, "b2": 400000, "cats": ["通風"], "note": "比價只含吊扇本體；冷氣、排風、安裝另計"}, {"id": "b4", "name": "廁所、淋浴、更衣", "b1": 350000, "b2": 450000, "cats": [], "note": "向水電、裝修廠商報價"}, {"id": "b5", "name": "休息區、櫃台、家具", "b1": 150000, "b2": 180000, "cats": [], "note": ""}, {"id": "b6", "name": "法規變更、設計、消防", "b1": 200000, "b2": 250000, "cats": [], "note": "建築師、消防設備師報價"}, {"id": "b7", "name": "系統、門禁、監視器", "b1": 100000, "b2": 150000, "cats": ["系統"], "note": "預約平台費用待洽詢"}, {"id": "b8", "name": "品牌與開幕行銷", "b1": 80000, "b2": 80000, "cats": [], "note": ""}, {"id": "b9", "name": "安全設備（AED 等）", "b1": 0, "b2": 0, "cats": ["安全"], "note": "簡報預算原本沒列，建議補 7–9 萬"}], "prices": [{"id": "p0", "cat": "運動地板", "item": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "spec": "4.5 mm 捲材，可依尺寸訂製", "price": 480, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": true, "shop": "樂天市場", "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "網拍等級，無運動認證資料；只含材料"}, {"id": "p1", "cat": "運動地板", "item": "PVC 運動地膠", "brand": "心語家居（網拍）", "spec": "4.5 mm", "price": 423, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": false, "shop": "蝦皮", "link": "https://shopee.tw/product/24532501/55253897635", "note": "網拍等級"}, {"id": "p2", "cat": "運動地板", "item": "PVC 運動地膠", "brand": "MM 居家（網拍）", "spec": "3.5 mm，10 ㎡ 起訂", "price": 419, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": false, "shop": "蝦皮", "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm 偏薄，排球救球建議 4.5 mm 以上（待與廠商確認）"}, {"id": "p3", "cat": "運動地板", "item": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "spec": "室內 PU 層，不含底層與面材", "price": 650, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": false, "shop": "PRO360", "link": "https://www.pro360.com.tw/price/pu_floor", "note": "行情價，非單一廠商報價"}, {"id": "p4", "cat": "運動地板", "item": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "spec": "國際品牌運動地板捲材", "price": null, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": false, "shop": "台灣經銷", "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "需向經銷詢價"}, {"id": "p5", "cat": "運動地板", "item": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "spec": "原廠稱自 1976 年起為奧運地板供應商", "price": null, "unit": "元/㎡", "q1": 360, "q2": 672, "pick": false, "shop": "原廠", "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "需找台灣代理詢價"}, {"id": "p6", "cat": "運動地板", "item": "地板施工（整平、彈性底層、鋪設、畫線）", "brand": "", "spec": "", "price": null, "unit": "式", "q1": 1, "q2": 1, "pick": false, "shop": "地板廠商", "link": "", "note": "一定要另外報價"}, {"id": "p7", "cat": "網柱與球網", "item": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "spec": "一組，下單前需先詢問", "price": 43500, "unit": "元/組", "q1": 1, "q2": 2, "pick": false, "shop": "蝦皮", "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": ""}, {"id": "p8", "cat": "網柱與球網", "item": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "spec": "一組，下單前需先詢問", "price": 31500, "unit": "元/組", "q1": 1, "q2": 2, "pick": true, "shop": "蝦皮", "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": ""}, {"id": "p9", "cat": "網柱與球網", "item": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "spec": "材質未標示", "price": 17680, "unit": "元/組", "q1": 1, "q2": 2, "pick": false, "shop": "蝦皮", "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": ""}, {"id": "p10", "cat": "網柱與球網", "item": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "spec": "一組，不含運費", "price": 14800, "unit": "元/組", "q1": 1, "q2": 2, "pick": false, "shop": "蝦皮", "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "要確認能否調到男網 2.43 m／女網 2.24 m"}, {"id": "p11", "cat": "網柱與球網", "item": "比賽用排球網＋標誌桿", "brand": "", "spec": "", "price": null, "unit": "組", "q1": 1, "q2": 2, "pick": false, "shop": "網柱廠商", "link": "", "note": "跟網柱一起報價"}, {"id": "p12", "cat": "網柱與球網", "item": "裁判台", "brand": "", "spec": "", "price": null, "unit": "台", "q1": 1, "q2": 2, "pick": false, "shop": "網柱廠商", "link": "", "note": "跟網柱一起報價"}, {"id": "p13", "cat": "球具", "item": "比賽用球 V200W", "brand": "MIKASA", "spec": "FIVB 公認比賽球，5 號", "price": 2700, "unit": "元/顆", "q1": 12, "q2": 20, "pick": true, "shop": "Yahoo 拍賣", "link": "https://tw.bid.yahoo.com/item/101034460886", "note": "商品說明另寫 2,350 元，以賣家確認為準"}, {"id": "p14", "cat": "球具", "item": "練習用排球 4035", "brand": "SUCCESS 成功", "spec": "5 號一般排球", "price": 175, "unit": "元/顆", "q1": 20, "q2": 30, "pick": true, "shop": "Yahoo 購物中心", "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": "新手課、臨打練習用"}, {"id": "p15", "cat": "球具", "item": "移動式球車", "brand": "5Cgo", "spec": "鋼製、可拆、133×39.5×96 cm", "price": 2900, "unit": "元/台", "q1": 2, "q2": 3, "pick": true, "shop": "Yahoo 拍賣", "link": "https://tw.bid.yahoo.com/item/101579029525", "note": "原為籃球車，排球可用"}, {"id": "p16", "cat": "照明", "item": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "spec": "瓦數可調", "price": 4180, "unit": "元/盞", "q1": 12, "q2": 24, "pick": true, "shop": "momo（BigGo 比價）", "link": "https://biggo.com.tw/s/天井燈+200w", "note": "在比價頁搜尋型號"}, {"id": "p17", "cat": "照明", "item": "LED 天井燈 200 W", "brand": "億光 星辰", "spec": "", "price": 5300, "unit": "元/盞", "q1": 12, "q2": 24, "pick": false, "shop": "momo（BigGo 比價）", "link": "https://biggo.com.tw/s/天井燈+200w", "note": "在比價頁搜尋型號"}, {"id": "p18", "cat": "照明", "item": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "spec": "", "price": 6930, "unit": "元/盞", "q1": 12, "q2": 24, "pick": false, "shop": "Yahoo 購物中心（BigGo 比價）", "link": "https://biggo.com.tw/s/天井燈+200w", "note": "在比價頁搜尋型號"}, {"id": "p19", "cat": "照明", "item": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "spec": "內建風扇，保固 1 年", "price": 3370, "unit": "元/盞", "q1": 12, "q2": 24, "pick": false, "shop": "momo", "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "限時價，原價 4,400"}, {"id": "p20", "cat": "照明", "item": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "spec": "價格區間 2,890–3,920", "price": 3920, "unit": "元/盞", "q1": 12, "q2": 24, "pick": false, "shop": "momo", "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "取區間上限估"}, {"id": "p21", "cat": "通風", "item": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "spec": "", "price": 36675, "unit": "元/台", "q1": 4, "q2": 8, "pick": true, "shop": "momo（飛比比價）", "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": "在比價頁搜尋型號；不含安裝"}, {"id": "p22", "cat": "通風", "item": "巨型工業吊扇 100 吋", "brand": "宅造印象", "spec": "", "price": 31999, "unit": "元/台", "q1": 4, "q2": 8, "pick": false, "shop": "蝦皮商城（飛比比價）", "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": "在比價頁搜尋型號；不含安裝"}, {"id": "p23", "cat": "通風", "item": "HVLS 大型工業吊扇 7.3 m", "brand": "", "spec": "", "price": null, "unit": "台", "q1": 1, "q2": 2, "pick": false, "shop": "工業風扇廠商", "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": "網拍 1,207–5,280 元多為訂金或零件，請廠商連安裝報價"}, {"id": "p24", "cat": "安全", "item": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "spec": "國產，區間 6.5–7 萬", "price": 65000, "unit": "元/台", "q1": 1, "q2": 1, "pick": true, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限；另有貼片、電池耗材"}, {"id": "p25", "cat": "安全", "item": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "spec": "區間 7–8 萬", "price": 70000, "unit": "元/台", "q1": 1, "q2": 1, "pick": false, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限"}, {"id": "p26", "cat": "安全", "item": "AED", "brand": "Philips HeartStart", "spec": "區間 8–10 萬", "price": 80000, "unit": "元/台", "q1": 1, "q2": 1, "pick": false, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限"}, {"id": "p27", "cat": "安全", "item": "AED", "brand": "Defibtech Lifeline", "spec": "區間 8–10 萬", "price": 80000, "unit": "元/台", "q1": 1, "q2": 1, "pick": false, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限"}, {"id": "p28", "cat": "安全", "item": "AED", "brand": "LIFEPAK CR2", "spec": "區間 8–15 萬", "price": 80000, "unit": "元/台", "q1": 1, "q2": 1, "pick": false, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限"}, {"id": "p29", "cat": "安全", "item": "AED 壁掛收納箱", "brand": "", "spec": "區間 8,000–25,000", "price": 8000, "unit": "元/個", "q1": 1, "q2": 1, "pick": true, "shop": "經銷商", "link": "https://uptogo.com.tw/?p=160809", "note": "取區間下限"}, {"id": "p30", "cat": "系統", "item": "線上預約報名系統", "brand": "booknow", "spec": "", "price": null, "unit": "月", "q1": 12, "q2": 12, "pick": false, "shop": "洽詢", "link": "https://longshot.booknow.com.tw/", "note": "費用待洽詢"}, {"id": "p31", "cat": "系統", "item": "場館報名系統", "brand": "愛來運動 Aligh", "spec": "", "price": null, "unit": "月", "q1": 12, "q2": 12, "pick": false, "shop": "洽詢", "link": "https://www.aligh.co/zh-TW/official", "note": "費用待洽詢"}], "pop": {"ages": [{"name": "15–24 歲", "share": 0.105, "play": 0.06, "monthly": 0.4, "paid": 0.3, "note": "學生多，常在學校或野場免費打，付費比例較低"}, {"name": "25–34 歲", "share": 0.135, "play": 0.03, "monthly": 0.45, "paid": 0.6, "note": "竹科上班族主力，最願意付費包場、臨打"}, {"name": "35–44 歲", "share": 0.19, "play": 0.015, "monthly": 0.45, "paid": 0.55, "note": "新竹這個年齡層人口多（扶幼比全國前二），但時間較少"}, {"name": "45–64 歲", "share": 0.294, "play": 0.004, "monthly": 0.5, "paid": 0.4, "note": "人數多但打排球比例低"}], "regions": [{"name": "新竹縣 竹北市", "pop": 223017, "courts": 1}, {"name": "新竹縣 竹東鎮", "pop": 106287, "courts": 0}, {"name": "新竹縣 湖口鄉", "pop": 99774, "courts": 0}, {"name": "新竹縣 新豐鄉", "pop": 65910, "courts": 0}, {"name": "新竹縣 新埔鎮", "pop": 36085, "courts": 0}, {"name": "新竹縣 關西鎮", "pop": 29693, "courts": 0}, {"name": "新竹縣 芎林鄉", "pop": 22154, "courts": 0}, {"name": "新竹縣 寶山鄉", "pop": 19410, "courts": 9}, {"name": "新竹縣 橫山鄉", "pop": 11885, "courts": 0}, {"name": "新竹縣 北埔鄉", "pop": 7836, "courts": 0}, {"name": "新竹縣 尖石鄉", "pop": 5116, "courts": 0}, {"name": "新竹縣 峨眉鄉", "pop": 4112, "courts": 0}, {"name": "新竹縣 五峰鄉", "pop": 1884, "courts": 0}, {"name": "新竹市 東區", "pop": 249873, "courts": 0}, {"name": "新竹市 北區", "pop": 153427, "courts": 0}, {"name": "新竹市 香山區", "pop": 96168, "courts": 0}], "capacity": {"courts": 10, "slots": 150, "fill": 0.6, "perSession": 13, "perMonth": 3.5}, "breakeven": {"peakSlots": 54, "offSlots": 96, "peakFill": 0.45, "offFill": 0.2, "local": ["新竹縣 竹東鎮", "新竹縣 芎林鄉"]}}, "venues": [{"id": "v1", "name": "可利's 排球小棧（1–3 館）", "loc": "寶山鄉大崎一路 3 巷", "courts": 5, "line": 1260, "floor": "PU（Google 評論）", "air": "有冷氣（評論）", "note": "3 館共 5 面；三館也開匹克球；二、三館地址待查"}, {"id": "v2", "name": "龍蝦排球館", "loc": "寶山鄉大崎一路", "courts": 2, "L": 25, "W": 18, "line": 1500, "air": "有冷氣（評論）", "note": "官網：打球區 25×18 m、休息區深 5 m；打起來很舒服"}, {"id": "v3", "name": "Volley Chill × 排丘", "loc": "寶山鄉大崎一路", "courts": 1, "line": 1180, "note": "評論：高度夠跳發；鋼柱、金屬邊角沒有包防撞"}, {"id": "v4", "name": "就醬瘋 JCV", "loc": "園區二路（門牌屬寶山鄉）", "courts": 1, "line": 1430, "note": "挑高、明亮，也有人覺得燈太亮；有免費停車"}, {"id": "v5", "name": "啪！排郎", "loc": "竹北市中正西路", "courts": 1, "line": 870, "note": "竹北唯一私人排球館"}, {"id": "v6", "name": "新科國民運動中心（公立）", "loc": "新竹市東區光復路", "note": "3 樓排球場，06:00–22:00"}, {"id": "v7", "name": "新莊 259 排球館（外縣市參考）", "loc": "新北市新莊", "courts": 1, "L": 24, "W": 17, "book": 4500, "drop": 180, "note": "熱門時段季租 4,500／場；兩側緩衝 2.7／5.3 m"}], "quotes": []} };</script>
+<script>
+(() => {
+  const D = {"map": {"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"}, "btn": {"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"}, "sofas": [{"name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "seats": "L 型", "mat": "耐磨合成皮", "store": "NITORI 官網", "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "fit": 5, "note": "表面不易刮傷、毛巾一擦就乾淨；附輪子好移動。"}, {"name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "seats": "3 人", "mat": "半皮", "store": "NITORI 官網", "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "fit": 4, "note": "坐感偏硬不塌陷、起身容易；靠背可拆好清潔。"}, {"name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "seats": "可攤平", "mat": "耐磨合成皮", "store": "NITORI 官網", "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "fit": 4, "note": "靠背三段角度；體積較大，先量位置。"}, {"name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "seats": "3 人", "mat": "貓抓皮", "store": "momo（FindPrice 比價）", "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "fit": 4, "note": "獨立筒座墊；貓抓皮比布耐刮、好擦。"}, {"name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "seats": "3 人", "mat": "貓抓皮", "store": "Yahoo 購物中心（FindPrice 比價）", "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "fit": 4, "note": "獨立筒；適合休息區靠牆擺。"}, {"name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "seats": "4 人", "mat": "貓抓皮", "store": "momo（FindPrice 比價）", "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "fit": 4, "note": "商品頁標示耐磨耐刮；4 人座適合等場的人多時。"}, {"name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "seats": "1／2／3 人", "mat": "皮革", "store": "樂天市場（FindPrice 比價）", "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "fit": 3, "note": "價格為頁面起價，依尺寸不同；下單前確認皮革種類。"}, {"name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "seats": "3 人", "mat": "貓抓布（防潑水）", "store": "momo", "link": "https://www.momoshop.com.tw/product/14325651", "fit": 2, "note": "寬 211 cm、防潑水；但電動機構在營業場所容易壞、佔空間。"}, {"name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "seats": "2 人", "mat": "布", "store": "NITORI 官網", "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "fit": 2, "note": "便宜、坐感軟；布面容易吸汗沾污，休息區要搭配可拆洗套。"}, {"name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "seats": "3 人", "mat": "布", "store": "蝦皮（FindPrice 比價）", "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "fit": 2, "note": "最便宜；材質和耐用度資訊少。"}], "cam": {"touches": [{"t": 4.07, "team": "far", "act": "扣球", "n": 1}, {"t": 15.6, "team": "near", "act": "發球", "n": 2}, {"t": 16.83, "team": "far", "act": "接發球（撲救）", "n": 2}, {"t": 28.5, "team": "near", "act": "發球", "n": 3}, {"t": 29.1, "team": "far", "act": "接發球", "n": 3}, {"t": 30.43, "team": "far", "act": "舉球", "n": 3}, {"t": 32.0, "team": "far", "act": "扣球", "n": 3}, {"t": 32.27, "team": "near", "act": "攔網", "n": 3}, {"t": 34.3, "team": "far", "act": "救球（攔網彈回）", "n": 3}, {"t": 35.83, "team": "near", "act": "扣球", "n": 3}, {"t": 47.8, "team": "far", "act": "發球", "n": 4}, {"t": 51.17, "team": "near", "act": "舉球", "n": 4}, {"t": 52.7, "team": "near", "act": "扣球", "n": 4}, {"t": 67.4, "team": "near", "act": "發球", "n": 5}, {"t": 68.75, "team": "far", "act": "接發球", "n": 5}, {"t": 70.33, "team": "far", "act": "舉球", "n": 5}, {"t": 72.0, "team": "far", "act": "網前進攻", "n": 5}, {"t": 72.4, "team": "near", "act": "防守", "n": 5}, {"t": 74.53, "team": "near", "act": "舉球", "n": 5}, {"t": 76.13, "team": "near", "act": "扣球", "n": 5}, {"t": 76.9, "team": "far", "act": "防守", "n": 5}, {"t": 79.05, "team": "far", "act": "舉球", "n": 5}, {"t": 80.3, "team": "far", "act": "扣球", "n": 5}, {"t": 91.6, "team": "far", "act": "發球", "n": 6}, {"t": 93.0, "team": "near", "act": "接發失誤", "n": 6}, {"t": 102.1, "team": "far", "act": "發球", "n": 7}, {"t": 103.57, "team": "near", "act": "接發球", "n": 7}, {"t": 105.27, "team": "near", "act": "跳舉", "n": 7}, {"t": 106.67, "team": "near", "act": "扣球", "n": 7}, {"t": 107.43, "team": "far", "act": "防守（直接回網）", "n": 7}, {"t": 108.73, "team": "near", "act": "舉球", "n": 7}, {"t": 110.3, "team": "near", "act": "進攻", "n": 7}, {"t": 110.9, "team": "far", "act": "攔網", "n": 7}], "rallies": [{"n": 1, "serve": null, "end": 5.2, "win": "near", "how": "片段一開始遠側從左側標誌桿附近進攻，球過網後被近側球員直接接住，回合結束（推測近側判斷球會出界）", "start": 0}, {"n": 2, "serve": 15.6, "end": 20.25, "win": "near", "how": "近側發球，遠側撲救接發，球碰到手臂後噴飛到右側標誌桿外，遠側救不回 → 接發失誤", "start": 12.0}, {"n": 3, "serve": 28.5, "end": 36.9, "win": "far", "how": "近側扣球過長，越過遠側底線落在界外（畫面左側立柱附近）", "start": 24.0}, {"n": 4, "serve": 47.8, "end": 53.2, "win": "near", "how": "近側在網前強攻，遠側防守員有接到，但球打到手臂後噴向右側飛出，沒辦法再處理 → 攻擊得分", "start": 44.0}, {"n": 5, "serve": 67.4, "end": 80.85, "win": "far", "how": "遠側在左側標誌桿附近扣球，球又低又快，近側防守員撲上去沒接起，球往畫面右側飛出", "start": 61.5}, {"n": 6, "serve": 91.6, "end": 93.1, "win": "far", "how": "遠側發球飛向近側右後方，近側接發球員沒接好，球從他身上彈開落地 → 接發失誤", "start": 86.5}, {"n": 7, "serve": 102.1, "end": 111.6, "win": "near", "how": "長回合後近側進攻越過遠側雙人攔網，球落在遠側網前被遠側球員接住 → 死球", "start": 99.0}]}, "budgetKey": {"floor": "b0", "net": "b1", "light": "b2", "fan": "b3", "room": "b4", "service": "b5", "sofa": "b5", "camera": "b7", "aed": "b9"}};
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const f0 = (v) => (typeof v === 'number' && isFinite(v) ? Math.round(v).toLocaleString('en-US') : '');
+  const panel = $('#eval'); if (!panel) return;
+  const P = () => window.__plat || {};
+  const sheets = () => window.__EMBED.sheets;
+  const counts = () => { try { return JSON.parse(sessionStorage.getItem('vb.counts') || '{}'); } catch (e) { return {}; } };
+  let cur = 'floor';
+
+  function renderQuotes(el) {
+    const sh = sheets(); if (!sh) { el.innerHTML = '<p class="fine">試算表還在載入…</p>'; return; }
+    const cats = el.dataset.cats.split(',');
+    const rows = sh.prices.filter((r) => cats.includes(r.cat));
+    if (!rows.length) { el.innerHTML = '<p class="fine">比價清單裡還沒有這類品項。</p>'; return; }
+    const tr = rows.map((r) => {
+      const n = typeof r.price === 'number';
+      const s1 = n ? r.price * (r.q1 || 0) : null, s2 = n ? r.price * (r.q2 || 0) : null;
+      return `<tr class="${r.pick ? 'pick' : ''}"><td><b>${esc(r.item)}</b><br><span class="fine">${esc(r.brand)}${r.spec ? '・' + esc(r.spec) : ''}</span></td><td class="n">${n ? f0(r.price) : '待報價'}</td><td>${esc(r.unit)}</td><td class="n">${f0(r.q1)}</td><td class="n">${s1 == null ? '—' : f0(s1)}</td><td class="n">${s2 == null ? '—' : f0(s2)}</td><td>${r.pick ? '✓ 選用' : ''}</td><td>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.shop || '連結')}</a>` : esc(r.shop)}</td><td>${esc(r.note)}</td></tr>`;
+    }).join('');
+    el.innerHTML = `<div class="tw"><table><thead><tr><th>品項</th><th>單價</th><th>單位</th><th>1 面數量</th><th>1 面小計</th><th>2 面小計</th><th>選用</th><th>賣場</th><th>備註</th></tr></thead><tbody>${tr}</tbody></table></div>
+      <p class="fine">綠底是試算表裡打勾「選用」的品項。<a href="#sheets" data-go="sheets">到試算表修改</a></p>`;
+  }
+  function renderBudget(el) {
+    const sh = sheets(); if (!sh) return;
+    const id = D.budgetKey[el.dataset.key]; const b = sh.budget.find((x) => x.id === id);
+    if (!b) { el.innerHTML = '<p class="fine">預算表沒有對應的項目。</p>'; return; }
+    el.innerHTML = `<div class="kpis"><div class="kpi"><b>${f0(b.b1)}</b><span>${esc(b.name)}｜1 面預算（元）</span></div><div class="kpi"><b>${f0(b.b2)}</b><span>2 面預算（元）</span></div></div>${b.note ? `<p class="fine">${esc(b.note)}</p>` : ''}`;
+  }
+  function renderCounts() {
+    const c = counts();
+    $$('.cnt', panel).forEach((el) => { el.textContent = String(c[el.dataset.type] || 0); });
+  }
+  // ---------- sofa
+  const MATS = ['全部', '耐磨合成皮', '貓抓皮', '皮革', '布'];
+  let mat = '全部';
+  const mchips = $('#sofa-mat');
+  mchips.innerHTML = MATS.map((m) => `<button type="button" data-m="${m}" aria-pressed="${m === mat}">${m}</button>`).join('');
+  mchips.addEventListener('click', (e) => { const b = e.target.closest('button[data-m]'); if (!b) return; mat = b.dataset.m; $$('button', mchips).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); renderSofas(); });
+  $('#sofa-q').addEventListener('input', () => renderSofas());
+  $('#sofa-sort').addEventListener('change', () => renderSofas());
+  function renderSofas() {
+    const q = $('#sofa-q').value.trim().toLowerCase(), sort = $('#sofa-sort').value;
+    let L = D.sofas.filter((s) => (mat === '全部' || s.mat.startsWith(mat) || (mat === '布' && s.mat.startsWith('布'))) && (!q || (s.name + s.brand + s.mat + s.note).toLowerCase().includes(q)));
+    if (mat === '皮革') L = L.filter((s) => s.mat === '皮革' || s.mat === '半皮');
+    L.sort((a, b) => sort === 'asc' ? a.price - b.price : sort === 'desc' ? b.price - a.price : b.fit - a.fit || a.price - b.price);
+    $('#sofa-list').innerHTML = L.map((s) => `<div class="sofa"><div class="br">${esc(s.brand)}</div><div class="nm">${esc(s.name)}</div><div class="pr">NT$${f0(s.price)}</div>
+      <div class="meta"><span>${esc(s.seats)}</span><span>${esc(s.mat)}</span></div>
+      <div class="fit">球館適合度 <i>${'★'.repeat(s.fit)}${'☆'.repeat(5 - s.fit)}</i></div><p>${esc(s.note)}</p>
+      <a class="ev-btn" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.store)} →</a></div>`).join('') || '<p class="fine">沒有符合的商品，換個關鍵字試試。</p>';
+    const prices = L.map((s) => s.price);
+    $('#sofa-sum').innerHTML = L.length ? `找到 <b>${L.length}</b> 款，價格 <b>${f0(Math.min(...prices))}</b>–<b>${f0(Math.max(...prices))}</b> 元` : '';
+  }
+  function renderSofaVerdict() {
+    const c0 = counts().sofa || 0, n = c0 || 2;
+    $('#sofa-count').innerHTML = c0 ? `裡有 <b>${c0}</b> 張沙發` : '還沒有擺沙發（先以 <b>2</b> 張估）';
+    const good = D.sofas.filter((s) => s.fit >= 4).map((s) => s.price);
+    $('#sofa-total').textContent = `${f0(Math.min(...good) * n)}–${f0(Math.max(...good) * n)}`;
+    const sh = sheets(); const b = sh && sh.budget.find((x) => x.id === 'b5'); $('#sofa-budget').textContent = b ? f0(b.b1) : '–';
+  }
+  // ---------- camera (agent stats from the demo clip)
+  function renderCam() {
+    const C = D.cam, T = C.touches.filter((t) => t.act !== '發球'), R = C.rallies;
+    const durs = R.filter((r) => r.serve != null).map((r) => r.end - r.serve);
+    const score = { near: 0, far: 0 }; R.forEach((r) => score[r.win]++);
+    $('#cam-kpis').innerHTML = [
+      [`${score.near}:${score.far}`, '片段內比分（近側：遠側）'], [String(R.length), '辨識到的回合'], [String(C.touches.length), '標註的觸球（含發球）'],
+      [`${Math.max(...durs).toFixed(1)} 秒`, '最長回合'], [`${(durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1)} 秒`, '平均回合長度'],
+    ].map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+    const kinds = ['接發球', '舉球', '扣球', '攔網', '防守'];
+    const norm = (a) => a.startsWith('接發') ? '接發球' : a.startsWith('防守') || a === '救球' ? '防守' : a === '跳舉' ? '舉球' : a === '網前進攻' || a === '進攻' ? '扣球' : a;
+    const cnt = { near: {}, far: {} }; T.forEach((t) => { if (t.team) { const k = norm(t.act); cnt[t.team][k] = (cnt[t.team][k] || 0) + 1; } });
+    const mx = Math.max(1, ...kinds.flatMap((k) => [cnt.near[k] || 0, cnt.far[k] || 0]));
+    $('#cam-bars').innerHTML = '<div class="row"><span></span><b style="font-size:12px;color:#FF8C3C">近側隊</b><b style="font-size:12px;color:#46C8FF">遠側隊</b></div>' + kinds.map((k) => `<div class="row"><span>${k}</span>${['near', 'far'].map((t) => `<div><div class="bar" style="width:${Math.max(8, ((cnt[t][k] || 0) / mx) * 100)}%;background:${t === 'near' ? '#FF8C3C' : '#46C8FF'}">${cnt[t][k] || 0}</div></div>`).join('')}</div>`).join('');
+    const hl = R.filter((r) => r.serve != null).map((r) => {
+      const n = C.touches.filter((t) => t.n === r.n).length, d = r.end - r.serve;
+      const why = d > 9 ? '長回合攻防' : /過長|界外/.test(r.how) ? '扣球出界' : /接發/.test(r.how) ? '發球破壞' : /扣|強攻|進攻/.test(r.how) ? '扣球得分' : '關鍵球';
+      return { r, n, d, score: d + n * 0.8, why };
+    }).sort((a, b) => b.score - a.score).slice(0, 4);
+    $('#cam-hl').innerHTML = hl.map((h, i) => `<li><em>${i + 1}</em><span><b>第 ${h.r.n} 球・${h.why}</b><br><span class="fine">${h.d.toFixed(1)} 秒、${h.n} 次觸球：${esc(h.r.how)}</span></span><button type="button" class="ev-btn" data-seek="${Math.max(0, h.r.serve - 1.5)}">▶ 播放</button></li>`).join('');
+  }
+  panel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-seek]'); if (!b) return;
+    const t = +b.dataset.seek; location.href = 'demo.html#t=' + t;
+  });
+  // ---------- routing
+  function show(key, fromLabel, push = true) {
+    if (!panel.querySelector(`[data-ev="${key}"]`)) key = 'floor';
+    cur = key;
+    $$('.ev-page', panel).forEach((p) => { p.hidden = p.dataset.ev !== key; });
+    $$('[data-ev-go]', panel).forEach((b) => b.tagName === 'BUTTON' && b.setAttribute('aria-current', String(b.dataset.evGo === key)));
+    const fr = $('#ev-from'); if (fromLabel) { fr.hidden = false; $('#ev-from-name').textContent = fromLabel; } else fr.hidden = true;
+    $$('.ev-page:not([hidden]) .ev-quotes', panel).forEach(renderQuotes);
+    $$('.ev-page:not([hidden]) .ev-budget', panel).forEach(renderBudget);
+    renderCounts();
+    if (key === 'sofa') { renderSofas(); renderSofaVerdict(); }
+    if (key === 'camera') renderCam();
+    if (push) { try { history.replaceState(null, '', '#eval/' + key); } catch (e) {} }
+  }
+  window.openEval = (type, label) => {
+    const key = D.map[type] || 'service';
+    if (P().go) P().go('eval', false); else { const a = document.querySelector('[data-go="eval"]'); if (a) a.click(); }
+    show(key, label || null); window.scrollTo(0, 0);
+  };
+  window.evalLabel = (type) => D.btn[D.map[type] || 'service'];
+  panel.addEventListener('click', (e) => { const b = e.target.closest('[data-ev-go]'); if (!b) return; e.preventDefault(); show(b.dataset.evGo, null); });
+  const fromHash = () => { const h = location.hash.slice(1); if (h.startsWith('eval/')) { if (P().go) P().go('eval', false); show(h.slice(5), null); return true; } return false; };
+  window.addEventListener('hashchange', fromHash);
+  document.addEventListener('click', (e) => { const a = e.target.closest('[data-go="eval"]'); if (a) setTimeout(() => show(cur, null), 0); });
+  if (!fromHash()) show('floor', null, false);
+  // re-render live parts when sheets finish loading
+  let tries = 0; const wait = setInterval(() => { if (sheets() || ++tries > 40) { clearInterval(wait); show(cur, $('#ev-from').hidden ? null : $('#ev-from-name').textContent, !panel.hidden); } }, 250);
+})();
+</script>
+<script>
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
+document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
+</script>
+<script>
+document.getElementById('ev-back').addEventListener('click', () => { if (history.length > 1) history.back(); else location.href = 'gym.html'; });
+(() => { const q = new URLSearchParams(location.search); const from = q.get('from'); if (from) { document.getElementById('ev-from').hidden = false; document.getElementById('ev-from-name').textContent = from; } })();
+</script>
+</body>
+</html>

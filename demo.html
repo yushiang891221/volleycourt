@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>比賽辨識 Demo｜新竹排球館企劃</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<style>/* Layout: a navy top bar with the workspace tabs and the save state; each tab is a full-width workspace (overview page, slide editor, spreadsheet, 3D hall, files) */
+:root {
+  --bg: #F6F3EC;
+  --panel: #FFFDF8;
+  --ink: #13233A;
+  --muted: #5A6472;
+  --line: #E3DCCD;
+  --chip: #EFE9DD;
+  --accent: #B24A17;
+  --accent-ink: #FFFFFF;
+  --gold: #F2B705;
+  --navy: #13233A;
+  --navy-ink: #F6F3EC;
+  --cell: #FFFFFF;
+  --cell-calc: #F3F6F9;
+  --sel: #2F6FD1;
+  --ok: #2E7D4F;
+  --ok-bg: #E3F2E9;
+  --warn: #B5471F;
+  --warn-bg: #FBE7DE;
+  --note: #8A6200;
+  --note-bg: #FBF0D2;
+  --scene: #D7DEE6;
+  --ground: #B8C1CA;
+  --font-display: 'Oswald', 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1724; --panel: #152132; --ink: #ECE7DC; --muted: #A2ACB9; --line: #2A3A50; --chip: #1C2A3D;
+    --accent: #E8814A; --accent-ink: #1A0E06; --gold: #F2B705; --navy: #0A121D; --navy-ink: #ECE7DC;
+    --cell: #121D2C; --cell-calc: #182638; --sel: #6FA2F0;
+    --ok: #6CC793; --ok-bg: #16301F; --warn: #F3815A; --warn-bg: #3A1D14; --note: #E9BE55; --note-bg: #33290F; --scene: #18222F; --ground: #2B3746;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1724; --panel: #152132; --ink: #ECE7DC; --muted: #A2ACB9; --line: #2A3A50; --chip: #1C2A3D;
+  --accent: #E8814A; --accent-ink: #1A0E06; --gold: #F2B705; --navy: #0A121D; --navy-ink: #ECE7DC;
+  --cell: #121D2C; --cell-calc: #182638; --sel: #6FA2F0;
+  --ok: #6CC793; --ok-bg: #16301F; --warn: #F3815A; --warn-bg: #3A1D14; --note: #E9BE55; --note-bg: #33290F; --scene: #18222F; --ground: #2B3746;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; display: flex; flex-direction: column; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--navy); }
+a { color: var(--accent); }
+.wrap { max-width: 1240px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--navy); color: var(--navy-ink); }
+.top-in { display: flex; align-items: center; gap: 18px; min-height: 54px; max-width: none; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--navy-ink); text-decoration: none; font-weight: 900; font-size: 16px; white-space: nowrap; }
+.ball { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 30%, var(--gold) 31% 100%); box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .12); }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { color: #C7D2E0; text-decoration: none; padding: 16px 12px 14px; font-size: 14px; font-weight: 500; white-space: nowrap; border-bottom: 3px solid transparent; }
+.tabs a[aria-selected="true"] { color: #FFFFFF; border-bottom-color: var(--gold); }
+.tabs a:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.savebox { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.savestate { font-size: 12px; color: #C7D2E0; display: flex; align-items: center; gap: 6px; }
+.savestate::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #6CC793; }
+.savestate[data-s="dirty"]::before, .savestate[data-s="saving"]::before { background: var(--gold); }
+.savestate[data-s="error"]::before { background: #F3815A; }
+.savestate[data-s="local"]::before { background: #9AA5B1; }
+.savebtn { font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 6px 12px; border: 0; background: var(--gold); color: #13233A; cursor: pointer; }
+.savebtn:disabled { opacity: .45; cursor: default; }
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel { flex: 1; min-height: 0; }
+.panel[hidden] { display: none !important; }
+.banner { background: var(--note-bg); color: var(--ink); border-bottom: 1px solid var(--line); }
+.banner .wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-block: 9px; max-width: none; }
+.banner p { margin: 0; flex: 1 1 260px; font-size: 13px; line-height: 1.5; }
+.btn, .p-btn { font: inherit; font-size: 13px; cursor: pointer; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover, .p-btn:hover { border-color: var(--muted); }
+.btn.primary, .p-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.p-btn.danger { color: var(--warn); }
+.p-btn[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.p-btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible { outline: 2px solid var(--sel); outline-offset: 1px; }
+.muted { color: var(--muted); }
+.fine { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+/* ---------------- overview */
+.hero { background: var(--navy); color: var(--navy-ink); }
+.hero-in { padding-block: 36px 40px; display: flex; flex-direction: column; gap: 14px; }
+.kicker { margin: 0; color: var(--gold); font-weight: 700; letter-spacing: .12em; font-size: 13px; }
+.hero h1 { margin: 0; font-size: clamp(32px, 6vw, 56px); font-weight: 900; line-height: 1.1; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; color: #C7D2E0; font-size: 15px; line-height: 1.7; }
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.fig { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+.fig b { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.fig b small { font-size: 16px; color: #C7D2E0; margin-left: 4px; }
+.fig > span { font-size: 12px; color: #C7D2E0; line-height: 1.5; }
+.page { padding-block: 26px 40px; display: flex; flex-direction: column; gap: 22px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; }
+.block { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.block h2 { margin: 0; font-size: 20px; font-weight: 900; }
+.block h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.points { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; line-height: 1.65; font-size: 14px; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 10px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; }
+.steps li::before { content: counter(s); grid-row: span 2; font-family: var(--font-display); font-weight: 600; font-size: 22px; color: var(--accent); line-height: 1.1; }
+.steps b { font-size: 14px; }
+.steps span { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); text-decoration: none; }
+.card:hover { border-color: var(--accent); }
+.card b { font-size: 15px; }
+.card span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.card em { font-style: normal; font-family: var(--font-display); font-size: 22px; color: var(--accent); }
+.map { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #F6F3EC; }
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.t th { text-align: left; background: var(--chip); padding: 8px 10px; font-weight: 700; white-space: nowrap; }
+table.t td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+table.t .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.files li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.files b { font-size: 14px; }
+.files span { grid-column: 1; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.files em { grid-row: 1 / span 2; grid-column: 2; font-style: normal; font-size: 12px; color: var(--muted); align-self: center; }
+.srcs { columns: 2 320px; column-gap: 24px; }
+.src { break-inside: avoid; margin-bottom: 14px; }
+.src h4 { margin: 0 0 4px; font-size: 13px; }
+.src ul { margin: 0; padding-left: 1.1em; font-size: 13px; line-height: 1.7; }
+
+
+#demo .ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+#demo .ctl button { font: 600 13px var(--font-body); padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-width: 40px; }
+#demo .ctl button:hover { border-color: var(--muted); }
+#demo .ctl button[aria-pressed="true"] { background: var(--navy); color: var(--navy-ink); border-color: var(--navy); }
+#demo .ctl .sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+#demo .ctl .lab { font-size: 12px; color: var(--muted); margin-right: 2px; }
+#demo .ctl .tc { font: 600 14px var(--font-display); margin-left: auto; color: var(--muted); }
+#demo .now { border-radius: 12px; padding: 14px 16px; background: var(--navy); color: var(--navy-ink); margin-bottom: 12px; }
+#demo .now .st { font-size: 12px; opacity: .75; letter-spacing: .04em; }
+#demo .now .big { font: 900 22px/1.35 var(--font-body); margin: 4px 0 2px; }
+#demo .now .sub { font-size: 13px; opacity: .85; line-height: 1.5; }
+#demo .feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+#demo .feed li { display: grid; grid-template-columns: 46px 10px 1fr; gap: 8px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 13px; }
+#demo .feed li:last-child { border-bottom: 0; }
+#demo .feed li:hover { background: var(--chip); }
+#demo .feed li.on { background: var(--note-bg); }
+#demo .feed li.past { color: var(--muted); }
+#demo .feed .ft { font: 600 13px var(--font-display); color: var(--muted); }
+#demo .feed .dot { width: 10px; height: 10px; border-radius: 50%; }
+#demo .feed .rh { grid-template-columns: 1fr; background: var(--chip); font-weight: 700; cursor: pointer; }
+#demo .rcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; list-style: none; margin: 0; padding: 0; }
+
+#demo .vidwrap:fullscreen { display: flex; align-items: center; }
+#demo .vidwrap:fullscreen video { max-height: 100vh; object-fit: contain; }
+#demo .vidwrap { background: #0A0F17; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+#demo video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0A0F17; }
+#demo .demo-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { #demo .demo-grid { grid-template-columns: 1fr; } }
+#demo .rallies { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 70vh; overflow-y: auto; }
+#demo .rallies button { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; width: 100%;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+#demo .rallies button:hover { border-color: var(--muted); }
+#demo .rallies button:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+#demo .rallies li.on button { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold) inset; }
+#demo .rn { grid-row: span 2; font: 700 20px/34px var(--font-display); text-align: center; border-radius: 8px; color: #0A0F17; }
+#demo .rn.near { background: #FF8C3C; } #demo .rn.far { background: #46C8FF; }
+#demo .rt { font-weight: 700; font-size: 14px; }
+#demo .rs { font: 600 15px var(--font-display); color: var(--ink); white-space: nowrap; }
+#demo .rd { grid-column: 2 / span 2; font-size: 13px; color: var(--muted); line-height: 1.5; }
+#demo .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 10px 2px 0; }
+#demo .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+#demo .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 6px 0 4px; }
+@media (max-width: 700px) { #demo .flow { grid-template-columns: 1fr 1fr; } }
+#demo .flow div { background: var(--chip); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+#demo .flow b { display: block; font-size: 15px; margin-bottom: 2px; }
+#demo .rules { margin: 0; padding-left: 20px; line-height: 1.75; font-size: 14px; }
+#demo .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+#demo .tbl th, #demo .tbl td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+#demo .tbl th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+#demo .tblwrap { overflow-x: auto; }
+
+.sitebar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: #0B1626; color: #F3EFE6; }
+.sitebar a { color: #F3EFE6; text-decoration: none; }
+.sitebar .brand { display: flex; gap: 10px; align-items: center; font-weight: 900; font-size: 15px; white-space: nowrap; }
+.sitebar .dot { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 28%, #F2B705 30% 100%); }
+.sitebar nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #A9B4C2; }
+.sitebar nav a, .sitebar nav span { padding: 4px 10px; border-radius: 999px; }
+.sitebar nav .on { background: #F2B705; color: #13233A; font-weight: 700; }
+.sitebar nav a:hover { background: rgba(255,255,255,.08); }
+.sitebar .grow { flex: 1; }
+.sitebar .back { font-size: 13px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; white-space: nowrap; }
+@media (max-width: 760px) { .sitebar nav { display: none; } }
+
+html, body { height: auto; } body { display: block; margin: 0; }
+.camhero { background: #0B1626; color: #F3EFE6; }
+.camhero .wrap { padding-block: 18px 6px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.camhero b { color: #F2B705; }
+.camhero p { margin: 0; font-size: 14px; color: #C7D2E0; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header class="sitebar"><a class="brand" href="index.html"><span class="dot"></span>新竹排球館企劃</a><nav aria-label="流程"><a href="index.html#map" class="" data-nav="map">1 選場地</a><span>→</span><a href="gym.html" class="" data-nav="gym">2 3D 球館</a><span>→</span><a href="demo.html" class="on" data-nav="demo">3 智慧球場</a></nav><span class="grow"></span><a class="back" href="#" id="goback">← 上一頁</a></header>
+<div class="camhero" id="camhero" hidden><div class="wrap"><p>你剛剛點了 3D 球館裡的 <b id="camname">攝影機</b>。裝在球場邊的智慧攝影機，就會把每一場球變成下面這樣：自動標出發球、每一下觸球、落點，算分、剪精華。</p></div></div>
+<main><section class="panel" id="demo" role="tabpanel" aria-labelledby="tab-demo">
+<div class="wrap page">
+  <div class="block"><div><h2 style="margin:0;font-size:22px;font-weight:900">比賽辨識 Demo</h2>
+  <p class="fine">龍蝦排球館季打第九局的片段（約 2 分鐘）。影片左邊是原始畫面加標註（球的軌跡、骨架、發球者、每一下觸球在做什麼、落點），右邊是即時俯視圖（球員站位、球的路線、每一球的落點），下方是比分、死球原因和下一球由誰發。旁邊的「動作紀錄」會跟著影片同步，點任何一筆就跳到那一刻。</p></div></div>
+  <div class="demo-grid">
+    <div>
+      <div class="vidwrap"><video id="demo-video" playsinline preload="metadata" poster="img/demo-poster.jpg"><source src="video/rally-demo.mp4" type="video/mp4"></video></div>
+      <div class="ctl" role="toolbar" aria-label="播放控制">
+        <button type="button" id="dv-play" aria-label="播放">▶ 播放</button>
+        <button type="button" data-skip="-5" aria-label="倒退 5 秒">−5 秒</button>
+        <button type="button" data-skip="5" aria-label="前進 5 秒">+5 秒</button>
+        <button type="button" data-step="-1" aria-label="上一格">◀ 一格</button>
+        <button type="button" data-step="1" aria-label="下一格">一格 ▶</button>
+        <span class="sep"></span>
+        <button type="button" data-jump="-1">上個動作</button>
+        <button type="button" data-jump="1">下個動作</button>
+        <button type="button" id="dv-loop" aria-pressed="false">重播這一球</button>
+        <span class="sep"></span>
+        <span class="lab">速度</span>
+        <button type="button" data-rate="0.25" aria-pressed="false">0.25×</button>
+        <button type="button" data-rate="0.5" aria-pressed="false">0.5×</button>
+        <button type="button" data-rate="1" aria-pressed="true">1×</button>
+        <button type="button" data-rate="1.5" aria-pressed="false">1.5×</button>
+        <button type="button" data-rate="2" aria-pressed="false">2×</button>
+        <button type="button" id="dv-fs">⛶ 全螢幕</button>
+        <span class="tc" id="dv-tc">0:00.0</span>
+      </div>
+      <div class="legend"><span><i style="background:#FF8C3C"></i>近側隊（靠攝影機）</span><span><i style="background:#46C8FF"></i>遠側隊（網子另一邊）</span><span><i style="background:#FFE23C"></i>球的軌跡</span><span>白骨架 = 偵測到的球員，白框 = 發球者，彩色框 = 正在觸球的人</span><span>鍵盤：空白鍵播放、← → 跳 5 秒、, . 逐格</span></div>
+    </div>
+    <div>
+      <div class="now" aria-live="polite"><div class="st" id="dv-st">第 1 球・進行中</div><div class="big" id="dv-big">—</div><div class="sub" id="dv-sub"></div></div>
+      <section class="block" style="margin:0">
+        <h3>動作紀錄（點一下跳到那一刻）</h3>
+        <ul class="feed" id="demo-feed"></ul>
+      </section>
+    </div>
+  </div>
+  <section class="block">
+    <h3>7 個回合</h3>
+    <ul class="rallies rcards" id="demo-rallies"></ul>
+  </section>
+  <section class="block">
+    <h3>一球的流程</h3>
+    <div class="flow">
+      <div><b>1 準備</b>發球方拿球走到底線後，接發方站好位置。</div>
+      <div><b>2 發球</b>發球員擊球的瞬間，這一球才算開始。</div>
+      <div><b>3 進行中</b>每隊最多碰 3 次就要把球打過網，同一人不能連碰兩次（攔網不算次數）。</div>
+      <div><b>4 死球</b>出現下面任一種情況，這一球結束，判一方得分。</div>
+      <div><b>5 下一球</b>得分的隊伍發下一球；如果是接發方得分，要先輪轉一位。</div>
+    </div>
+  </section>
+  <div class="cols">
+    <section class="block">
+      <h3>怎麼判斷死球</h3>
+      <ol class="rules">
+        <li><b>球落地在界內</b>：落地那一方失分（第 7 球）。</li>
+        <li><b>接噴</b>：防守或接發有碰到球，但球從手臂噴出去、隊友救不回來，算碰到球的那一方失分（第 2、4 球；第 5 球近側撲救沒接起也屬於這類）。</li>
+        <li><b>球落在界外</b>：最後碰到球的那一方失分（第 3 球扣球過長）。邊線、底線本身算界內。</li>
+        <li><b>球員判斷會出界而直接接住</b>：等於認定出界，打出去的那一方失分（第 1 球，推測）。</li>
+        <li><b>接球失誤</b>：球碰到人後彈開落地，算碰到球的那一方失分（第 6 球）。</li>
+        <li><b>犯規</b>：四次擊球、連擊、持球、觸網、過中線、發球踩線等，都是對方得分。</li>
+      </ol>
+      <p class="fine">這段影片沒有記分板，比分是從片段開始自己累計的，不是正式比分。</p>
+    </section>
+    <section class="block">
+      <h3>下一球怎麼開始</h3>
+      <ol class="rules">
+        <li><b>發球方得分</b> → 同一位發球員繼續發（第 2→3 球、第 6→7 球都是同一人續發）。</li>
+        <li><b>接發方得分（Side-out）</b> → 拿到發球權，全隊<b>順時針轉一個位置</b>，由轉到右後方（1 號位）的人發球。</li>
+        <li>看不到落點時，也能用「下一球誰發」<b>反推上一球誰得分</b>，第 5 球就是這樣判斷的。</li>
+      </ol>
+      <h3 style="margin-top:16px">這支影片怎麼做出來的</h3>
+      <ol class="rules">
+        <li><b>追球</b>：每一格找黃藍色、會動的小圓形，前後格連成軌跡；軌跡突然轉向的地方就是一次觸球，貼近地板又反彈的點就是落點。</li>
+        <li><b>追人</b>：YOLO 姿態模型抓每個人的 17 個關節點並持續追蹤，觸球時找離球最近的人。</li>
+        <li><b>補償手晃</b>：用背景特徵點估計鏡頭位移，讓落點標記黏在地板上。</li>
+        <li><b>俯視圖</b>：用球場線和網柱位置算出地板的透視轉換，把每個球員腳的位置換算成球場座標；球的位置用「觸球的人站的位置」連成路線，所以是估計值。</li>
+        <li><b>人工確認</b>：觸球是哪一隊、哪一種動作、死球原因都有逐格看過；網子另一邊被網子擋住的球員偵測率較低，畫面外的發球員只標方向。</li>
+      </ol>
+    </section>
+  </div>
+  <section class="block">
+    <h3>回合判讀表</h3>
+    <div class="tblwrap"><table class="tbl"><thead><tr><th>回合</th><th>發球方／發球者</th><th>死球原因</th><th>落點</th><th>得分</th><th>比分（近:遠）</th><th>依據</th><th>信心</th></tr></thead><tbody id="demo-tbody"></tbody></table></div>
+    <p class="fine"><a href="video/rally-demo.mp4" download>下載影片（MP4）</a>　<a href="files/回合判讀表.csv" download>下載判讀表（CSV）</a></p>
+  </section>
+</div>
+</section></main>
+<script>
+(() => {
+  const R = [{"n": 1, "start": 0, "serve": null, "end": 5.2, "team": null, "server": "（片段開始時已在進行中）", "how": "片段一開始遠側從左側標誌桿附近進攻，球過網後被近側球員直接接住，回合結束（推測近側判斷球會出界）", "tag": "推測出界", "win": "near", "score": "1:0", "rule": "近側隊得分 → 由近側隊發下一球", "ev": "近側球員擊掌慶祝；下一球由近側發球", "conf": "中低"}, {"n": 2, "start": 12.0, "serve": 15.6, "end": 20.25, "team": "near", "server": "近側發球員（在畫面右側外）", "how": "近側發球，遠側撲救接發，球碰到手臂後噴飛到右側標誌桿外，遠側救不回 → 接發失誤", "tag": "接噴", "win": "near", "score": "2:0", "rule": "發球方得分 → 同一人續發", "ev": "撲救後球高飛出場、遠側沒有第二下；近側續發", "conf": "高"}, {"n": 3, "start": 24.0, "serve": 28.5, "end": 36.9, "team": "near", "server": "近側發球員（同上一球，畫面右側外）", "how": "近側扣球過長，越過遠側底線落在界外（畫面左側立柱附近）", "tag": "界外", "win": "far", "score": "2:1", "rule": "接發方得分 → 換發球權，輪轉一位", "ev": "落點在場外；下一球改由遠側發球", "conf": "高"}, {"n": 4, "start": 44.0, "serve": 47.8, "end": 53.2, "team": "far", "server": "遠側發球員（畫面左緣）", "how": "近側在網前強攻，遠側防守員有接到，但球打到手臂後噴向右側飛出，沒辦法再處理 → 攻擊得分", "tag": "接噴", "win": "near", "score": "3:1", "rule": "接發方得分 → 換發球權，輪轉一位", "ev": "球碰到遠側防守員手臂後高飛出去；下一球改由近側發球", "conf": "高"}, {"n": 5, "start": 61.5, "serve": 67.4, "end": 80.85, "team": "near", "server": "近側發球員（輪轉後，畫面右側外）", "how": "遠側在左側標誌桿附近扣球，球又低又快，近側防守員撲上去沒接起，球往畫面右側飛出", "tag": "未入鏡", "win": "far", "score": "3:2", "rule": "接發方得分 → 換發球權，輪轉一位", "ev": "最後落點沒拍到；但下一球由遠側發球，可反推遠側得分", "conf": "中"}, {"n": 6, "start": 86.5, "serve": 91.6, "end": 93.1, "team": "far", "server": "遠側 綠衣男", "how": "遠側發球飛向近側右後方，近側接發球員沒接好，球從他身上彈開落地 → 接發失誤", "tag": "接發失誤", "win": "far", "score": "3:3", "rule": "發球方得分 → 同一人續發", "ev": "球碰到近側接發球員後落地；同一人續發下一球", "conf": "中高"}, {"n": 7, "start": 99.0, "serve": 102.1, "end": 111.6, "team": "far", "server": "遠側 綠衣男（續發）", "how": "長回合後近側進攻越過遠側雙人攔網，球落在遠側網前被遠側球員接住 → 死球", "tag": "界內", "win": "near", "score": "4:3", "rule": "接發方得分 → 換發球權，輪轉一位", "ev": "球掉在遠側；之後球被滾往近側發球區（116 秒）", "conf": "中"}];
+  const T = [{"t": 4.07, "team": "far", "act": "扣球", "k": 1, "n": 1}, {"t": 15.6, "team": "near", "act": "發球", "k": 0, "n": 2}, {"t": 16.83, "team": "far", "act": "接發球（撲救）", "k": 1, "n": 2}, {"t": 28.5, "team": "near", "act": "發球", "k": 0, "n": 3}, {"t": 29.1, "team": "far", "act": "接發球", "k": 1, "n": 3}, {"t": 30.43, "team": "far", "act": "舉球", "k": 2, "n": 3}, {"t": 32.0, "team": "far", "act": "扣球", "k": 3, "n": 3}, {"t": 32.27, "team": "near", "act": "攔網", "k": 0, "n": 3}, {"t": 34.3, "team": "far", "act": "救球（攔網彈回）", "k": 1, "n": 3}, {"t": 35.83, "team": "near", "act": "扣球", "k": 1, "n": 3}, {"t": 47.8, "team": "far", "act": "發球", "k": 0, "n": 4}, {"t": 51.17, "team": "near", "act": "舉球", "k": 1, "n": 4}, {"t": 52.7, "team": "near", "act": "扣球", "k": 2, "n": 4}, {"t": 67.4, "team": "near", "act": "發球", "k": 0, "n": 5}, {"t": 68.75, "team": "far", "act": "接發球", "k": 1, "n": 5}, {"t": 70.33, "team": "far", "act": "舉球", "k": 2, "n": 5}, {"t": 72.0, "team": "far", "act": "網前進攻", "k": 3, "n": 5}, {"t": 72.4, "team": "near", "act": "防守", "k": 1, "n": 5}, {"t": 74.53, "team": "near", "act": "舉球", "k": 2, "n": 5}, {"t": 76.13, "team": "near", "act": "扣球", "k": 3, "n": 5}, {"t": 76.9, "team": "far", "act": "防守", "k": 1, "n": 5}, {"t": 79.05, "team": "far", "act": "舉球", "k": 2, "n": 5}, {"t": 80.3, "team": "far", "act": "扣球", "k": 3, "n": 5}, {"t": 91.6, "team": "far", "act": "發球", "k": 0, "n": 6}, {"t": 93.0, "team": "near", "act": "接發失誤", "k": 1, "n": 6}, {"t": 102.1, "team": "far", "act": "發球", "k": 0, "n": 7}, {"t": 103.57, "team": "near", "act": "接發球", "k": 1, "n": 7}, {"t": 105.27, "team": "near", "act": "跳舉", "k": 2, "n": 7}, {"t": 106.67, "team": "near", "act": "扣球", "k": 3, "n": 7}, {"t": 107.43, "team": "far", "act": "防守（直接回網）", "k": 1, "n": 7}, {"t": 108.73, "team": "near", "act": "舉球", "k": 1, "n": 7}, {"t": 110.3, "team": "near", "act": "進攻", "k": 2, "n": 7}, {"t": 110.9, "team": "far", "act": "攔網", "k": 0, "n": 7}];
+  const TEAM = { near: '近側隊', far: '遠側隊' };
+  const COL = { near: '#FF8C3C', far: '#46C8FF' };
+  const FPS = 30;
+  const $ = (id) => document.getElementById(id);
+  const v = $('demo-video'), ul = $('demo-rallies'), tb = $('demo-tbody'), feed = $('demo-feed');
+  if (!v || !ul) return;
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const mmss = (t, d) => { t = Math.max(0, t || 0); const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(d ?? 0).padStart(d ? 4 : 2, '0')}`; };
+  const tlabel = (e) => (e.team ? TEAM[e.team].slice(0, 2) + '・' : '') + e.act + (e.k ? `（第 ${e.k} 下）` : '');
+  ul.innerHTML = R.map((r) => `<li data-n="${r.n}"><button type="button" data-t="${r.start}">
+    <span class="rn ${r.win}">${r.n}</span>
+    <span class="rt">${esc(TEAM[r.win])}得分・${esc(r.tag)}</span><span class="rs">${r.score}</span>
+    <span class="rd">${mmss(r.serve ?? 0)} 發球：${esc(r.server)}<br>${esc(r.how)}<br><b>下一球：</b>${esc(r.rule)}</span></button></li>`).join('');
+  tb.innerHTML = R.map((r) => `<tr><td>${r.n}</td><td>${r.team ? esc(TEAM[r.team]) + '<br>' : ''}${esc(r.server)}</td><td>${esc(r.how)}</td><td>${esc(r.tag)}</td><td>${esc(TEAM[r.win])}</td><td>${r.score}</td><td>${esc(r.ev)}</td><td>${esc(r.conf)}</td></tr>`).join('');
+  // feed: touches + dead-ball rows, grouped by rally
+  const items = [];
+  R.forEach((r) => {
+    items.push({ kind: 'head', t: r.start, n: r.n, html: `第 ${r.n} 球`, });
+    T.filter((e) => e.n === r.n).forEach((e) => items.push({ kind: 'touch', t: e.t, n: r.n, e }));
+    items.push({ kind: 'dead', t: r.end, n: r.n, r });
+  });
+  feed.innerHTML = items.map((it, i) => {
+    if (it.kind === 'head') return `<li class="rh" data-i="${i}" data-t="${it.t}">第 ${it.n} 球</li>`;
+    if (it.kind === 'touch') return `<li data-i="${i}" data-t="${Math.max(0, it.t - 1.2)}"><span class="ft">${mmss(it.t, 1)}</span><span class="dot" style="background:${it.e.team ? COL[it.e.team] : '#bbb'}"></span><span>${esc(tlabel(it.e))}</span></li>`;
+    return `<li data-i="${i}" data-t="${Math.max(0, it.t - 1.5)}"><span class="ft">${mmss(it.t, 1)}</span><span class="dot" style="background:#E23B3B"></span><span><b>死球：${esc(TEAM[it.r.win])}得分 ${it.r.score}</b><br>${esc(it.r.how)}</span></li>`;
+  }).join('');
+  const seek = (t) => { v.currentTime = Math.max(0, Math.min(t, (v.duration || 1e9) - 0.05)); };
+  feed.addEventListener('click', (e) => { const li = e.target.closest('li[data-t]'); if (li) { seek(+li.dataset.t); v.play().catch(() => {}); } });
+  ul.addEventListener('click', (e) => { const b = e.target.closest('button[data-t]'); if (b) { seek(+b.dataset.t); v.play().catch(() => {}); } });
+  // controls
+  const playBtn = $('dv-play');
+  const syncPlay = () => { playBtn.textContent = v.paused ? '▶ 播放' : '❚❚ 暫停'; playBtn.setAttribute('aria-label', v.paused ? '播放' : '暫停'); };
+  playBtn.addEventListener('click', () => (v.paused ? v.play().catch(() => {}) : v.pause()));
+  v.addEventListener('play', syncPlay); v.addEventListener('pause', syncPlay);
+  v.addEventListener('click', () => (v.paused ? v.play().catch(() => {}) : v.pause()));
+  document.querySelectorAll('#demo [data-skip]').forEach((b) => b.addEventListener('click', () => seek(v.currentTime + +b.dataset.skip)));
+  const step = (k) => { v.pause(); seek(v.currentTime + k / FPS); };
+  document.querySelectorAll('#demo [data-step]').forEach((b) => b.addEventListener('click', () => step(+b.dataset.step)));
+  const rates = document.querySelectorAll('#demo [data-rate]');
+  rates.forEach((b) => b.addEventListener('click', () => { v.playbackRate = +b.dataset.rate; rates.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
+  const marks = T.map((e) => e.t).concat(R.map((r) => r.end)).sort((a, b) => a - b);
+  document.querySelectorAll('#demo [data-jump]').forEach((b) => b.addEventListener('click', () => {
+    const t = v.currentTime + 1.2, d = +b.dataset.jump;
+    const m = d > 0 ? marks.find((x) => x > t + 0.05) : [...marks].reverse().find((x) => x < t - 0.3);
+    if (m != null) { seek(m - 1.2); }
+  }));
+  $('dv-fs').addEventListener('click', () => { const w = v.closest('.vidwrap'); if (document.fullscreenElement) document.exitFullscreen(); else if (w.requestFullscreen) w.requestFullscreen().catch(() => {}); else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); });
+  const loopBtn = $('dv-loop'); let loop = null;
+  loopBtn.addEventListener('click', () => {
+    if (loop) { loop = null; loopBtn.setAttribute('aria-pressed', 'false'); return; }
+    const r = rallyAt(v.currentTime); loop = { a: r.start, b: r.end + 3 }; loopBtn.setAttribute('aria-pressed', 'true');
+    seek(loop.a); v.play().catch(() => {});
+  });
+  document.addEventListener('keydown', (e) => {
+    const panel = $('demo'); if (!panel || panel.hidden) return;
+    if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+    if (e.key === ' ') { e.preventDefault(); v.paused ? v.play().catch(() => {}) : v.pause(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); seek(v.currentTime - 5); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); seek(v.currentTime + 5); }
+    else if (e.key === ',') step(-1); else if (e.key === '.') step(1);
+  });
+  const rallyAt = (t) => { let cur = R[0]; for (const r of R) if (t >= r.start - 0.01) cur = r; return cur; };
+  const stateAt = (t) => {
+    const r = rallyAt(t);
+    if (t >= r.end) return [r, '死球', `${TEAM[r.win]}得分（${r.score}）`, `${r.how}　下一球：${r.rule}`];
+    if (r.serve != null && t < r.serve - 1) return [r, '準備發球', `${TEAM[r.team]}準備發球`, `發球者：${r.server}`];
+    if (r.serve != null && t < r.serve + 0.5) return [r, '發球', `${TEAM[r.team]}發球`, `發球者：${r.server}`];
+    const last = T.filter((e) => e.n === r.n && e.t <= t + 0.02).pop();
+    if (!last) return [r, '進行中', '比賽進行中', '片段開始時這一球已經在進行。'];
+    const rest = last.k ? `該隊已碰 ${last.k} 下，最多 3 下就要過網。` : (last.act === '攔網' ? '攔網不算在 3 下裡。' : '');
+    return [r, '進行中', tlabel(last), rest];
+  };
+  let lastKey = '';
+  const tick = () => {
+    const t = v.currentTime;
+    $('dv-tc').textContent = mmss(t, 1) + (v.playbackRate !== 1 ? `　${v.playbackRate}×` : '');
+    if (loop && t > loop.b) seek(loop.a);
+    const [r, st, big, sub] = stateAt(t);
+    const key = r.n + st + big;
+    if (key !== lastKey) {
+      lastKey = key;
+      $('dv-st').textContent = `第 ${r.n} 球・${st}`; $('dv-big').textContent = big; $('dv-sub').textContent = sub;
+      ul.querySelectorAll('li').forEach((li) => li.classList.toggle('on', +li.dataset.n === r.n));
+      let on = -1; items.forEach((it, i) => { if (it.kind !== 'head' && it.t <= t + 0.02) on = i; });
+      feed.querySelectorAll('li').forEach((li) => { const i = +li.dataset.i; li.classList.toggle('on', i === on); li.classList.toggle('past', i < on && items[i].kind !== 'head'); });
+      const el = feed.querySelector('li.on');
+      if (el) { const top = el.offsetTop - feed.offsetTop - feed.clientHeight / 2 + el.clientHeight / 2; feed.scrollTo({ top, behavior: 'smooth' }); }
+    }
+  };
+  v.addEventListener('timeupdate', tick); v.addEventListener('seeked', tick);
+  const raf = () => { if (!v.paused) tick(); requestAnimationFrame(raf); }; requestAnimationFrame(raf);
+  tick();
+  document.addEventListener('click', (e) => { const a = e.target.closest('[data-go]'); if (a && a.dataset.go !== 'demo' && !v.paused) v.pause(); });
+})();
+</script>
+<script>
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
+document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
+</script>
+<script>
+(() => { const q = new URLSearchParams(location.search); if (q.get('cam')) { document.getElementById('camhero').hidden = false; document.getElementById('camname').textContent = q.get('cam'); } })();
+</script>
+<script>(() => { const m = location.hash.match(/t=([\d.]+)/); if (m) { const v = document.getElementById('demo-video'); const go = () => { v.currentTime = +m[1]; v.play().catch(() => {}); }; if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true }); v.scrollIntoView({ block: 'center' }); } })();</script>
+</body>
+</html>

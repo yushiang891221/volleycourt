@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>新竹排球館企劃</title>
+<meta name="description" content="新竹室內排球館開館企劃：候選場地地圖、3D 場館配置、智慧球場比賽辨識。">
+<meta property="og:title" content="新竹排球館企劃">
+<meta property="og:description" content="從候選場地挑一間廠房，直接生成 3D 排球館，再看智慧球場怎麼自動計分。">
+<meta property="og:image" content="img/og.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<style>/* Leaflet 1.9.4 */
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+</style>
+<style>
+:root {
+  --navy: #0B1626; --navy2: #13233A; --ink: #F3EFE6; --muted: #A9B4C2; --line: rgba(255,255,255,.12);
+  --gold: #F2B705; --orange: #E8814A; --glass: rgba(11, 22, 38, .86); --A: #2E9E5B; --B: #E08A2E; --C: #8A96A6;
+  --font: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --display: 'Oswald', 'Noto Sans TC', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--navy); color: var(--ink); font-family: var(--font); overflow: hidden; }
+button { font: inherit; color: inherit; }
+a { color: var(--gold); }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---------- intro */
+#intro { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px 16px;
+  background: radial-gradient(ellipse at 50% 60%, #1C3352 0%, #0B1626 62%, #060D18 100%); text-align: center; transition: opacity .5s; }
+#intro .kick { margin: 0; color: var(--gold); letter-spacing: .32em; font-size: 13px; font-weight: 700; }
+#intro h1 { margin: 0; font-size: clamp(34px, 7vw, 64px); font-weight: 900; line-height: 1.1; letter-spacing: .02em; }
+#intro p.sub { margin: 0; color: var(--muted); font-size: 15px; max-width: 34em; line-height: 1.7; }
+#ball { width: min(46vh, 70vw); height: min(46vh, 70vw); cursor: pointer; filter: drop-shadow(0 30px 40px rgba(0,0,0,.55)); }
+#start { border: 0; border-radius: 999px; background: var(--gold); color: #13233A; font-weight: 900; font-size: 18px; padding: 14px 34px; cursor: pointer; letter-spacing: .08em;
+  box-shadow: 0 10px 30px rgba(242,183,5,.35); transition: transform .15s; }
+#start:hover { transform: translateY(-2px); }
+#skip { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.floor-lines { position: absolute; inset: auto 0 0 0; height: 38vh; pointer-events: none; opacity: .35;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(242,183,5,.5) calc(10% - 1px) 10%);
+  transform: perspective(300px) rotateX(62deg); transform-origin: bottom; mask-image: linear-gradient(to top, #000, transparent); -webkit-mask-image: linear-gradient(to top, #000, transparent); }
+#intro > :not(.floor-lines) { position: relative; }
+
+/* ---------- spike animation */
+#anim { position: fixed; inset: 0; z-index: 40; width: 100%; height: 100%; display: block; pointer-events: none; }
+
+/* ---------- map */
+#map { position: fixed; inset: 0; z-index: 1; background: #06101C; }
+.leaflet-container { font-family: var(--font); background: #06101C; }
+.topbar { position: fixed; z-index: 20; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  background: linear-gradient(to bottom, rgba(6,13,24,.92), rgba(6,13,24,.0)); pointer-events: none; }
+.topbar > * { pointer-events: auto; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 16px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.dot { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6D6 0 28%, var(--gold) 30% 100%); }
+.steps { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.steps b { color: #13233A; background: var(--gold); border-radius: 999px; padding: 3px 10px; }
+.steps span { padding: 3px 4px; }
+.grow { flex: 1; }
+.tlink { color: var(--ink); text-decoration: none; font-size: 13px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(11,22,38,.7); white-space: nowrap; cursor: pointer; }
+.tlink:hover { border-color: var(--gold); }
+
+.panel { position: fixed; z-index: 15; top: 64px; left: max(12px, env(safe-area-inset-left)); bottom: 12px; width: 350px; display: flex; flex-direction: column;
+  background: var(--glass); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(8px); overflow: hidden; transition: transform .4s, opacity .4s; }
+.panel.away { transform: translateX(-110%); opacity: 0; }
+.p-head { padding: 16px 16px 10px; border-bottom: 1px solid var(--line); }
+.p-head h2 { margin: 0 0 4px; font-size: 19px; font-weight: 900; }
+.p-head .meta { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.p-head .meta b { color: var(--ink); }
+.filters { padding: 10px 16px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.ftoggle { display: flex; justify-content: space-between; align-items: center; background: none; border: 0; padding: 0; cursor: pointer; font-weight: 700; font-size: 14px; }
+.ftoggle i { font-style: normal; color: var(--muted); font-size: 12px; font-weight: 400; }
+.fbody { display: flex; flex-direction: column; gap: 10px; }
+.frow { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.frow .lab { display: flex; justify-content: space-between; }
+.frow .lab b { color: var(--ink); font-weight: 700; }
+.frow input[type=range] { width: 100%; accent-color: var(--gold); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips button { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.chips button[aria-pressed="true"] { background: var(--gold); color: #13233A; border-color: var(--gold); font-weight: 700; }
+.chk { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); cursor: pointer; }
+.chk input { accent-color: var(--gold); }
+.list { flex: 1; overflow-y: auto; padding: 8px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.item { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 34px 1fr; gap: 3px 10px; padding: 10px 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.item:hover, .item.on { border-color: var(--gold); background: rgba(242,183,5,.08); }
+.item.off { opacity: .42; }
+.item:focus-visible { outline: 2px solid var(--gold); }
+.g { grid-row: span 2; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font: 700 18px var(--display); color: #fff; }
+.g.A { background: var(--A); } .g.B { background: var(--B); } .g.C { background: var(--C); }
+.item .nm { font-weight: 700; font-size: 14px; line-height: 1.35; }
+.item .sp { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.item .sp em { font-style: normal; color: var(--gold); font-weight: 700; }
+.p-foot { padding: 8px 16px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+
+.legend { position: fixed; z-index: 15; right: max(12px, env(safe-area-inset-right)); bottom: 28px; background: var(--glass); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; transition: opacity .4s; }
+.legend div { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; }
+.toast { position: fixed; z-index: 25; left: 50%; top: 70px; transform: translateX(-50%); background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 9px 18px; font-size: 14px; transition: opacity .4s; pointer-events: none; }
+
+/* markers */
+.pin { position: relative; width: 50px; height: 62px; transform-origin: 50% 100%; animation: drop .55s cubic-bezier(.2,1.4,.4,1) both; }
+.pin svg { position: absolute; inset: 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+.pin b { position: absolute; left: 0; right: 0; top: 9px; text-align: center; font: 700 20px/1 var(--display); color: #fff; }
+.pin span { position: absolute; left: 0; right: 0; top: 31px; text-align: center; font-size: 10.5px; font-weight: 700; color: #fff; }
+.pin.off { opacity: .35; transform: scale(.7); }
+.pin.sel svg path { stroke: var(--gold); stroke-width: 3.5; }
+@keyframes drop { from { transform: translateY(-40px) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.vpin { width: 30px; height: 30px; border-radius: 50%; background: #E2582B; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font: 700 13px var(--display); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.vpin.pub { background: #2F6FD1; }
+.vlabel { background: rgba(6,13,24,.8); border: 0; color: #fff; font-size: 12px; font-weight: 700; box-shadow: none; padding: 2px 6px; }
+.vlabel::before { display: none; }
+.ring-label { background: transparent; border: 0; box-shadow: none; color: var(--gold); font-weight: 700; font-size: 12px; text-shadow: 0 0 3px #000, 0 0 6px #000; padding: 0; }
+.ring-label::before { display: none; }
+
+/* popup */
+.leaflet-popup.card .leaflet-popup-content-wrapper { background: #0F1D31; color: var(--ink); border-radius: 16px; border: 1px solid rgba(242,183,5,.4); box-shadow: 0 18px 40px rgba(0,0,0,.6); }
+.leaflet-popup.card .leaflet-popup-tip { background: #0F1D31; }
+.leaflet-popup.card .leaflet-popup-content { margin: 16px 16px 14px; width: 300px !important; font-size: 13px; line-height: 1.55; }
+.leaflet-popup.card a.leaflet-popup-close-button { color: var(--muted); font-size: 22px; padding: 8px 8px 0 0; }
+.pc-top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.pc-top h3 { margin: 0; font-size: 16px; line-height: 1.35; }
+.pc-top .loc { color: var(--muted); font-size: 12px; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.fact { background: rgba(255,255,255,.05); border-radius: 10px; padding: 7px 9px; }
+.fact b { display: block; font: 600 18px var(--display); color: var(--ink); }
+.fact span { font-size: 11px; color: var(--muted); }
+.fact.wide { grid-column: span 2; }
+.fact.wide b { font: 700 14px var(--font); }
+.pc-note { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+.pc-links { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; margin-bottom: 12px; }
+.enter { display: block; width: 100%; border: 0; border-radius: 12px; background: var(--gold); color: #13233A !important; font-weight: 900; font-size: 16px; padding: 12px; cursor: pointer; text-align: center; text-decoration: none; }
+.enter:hover { filter: brightness(1.06); }
+.leaflet-control-attribution { background: rgba(6,13,24,.7) !important; color: var(--muted) !important; font-size: 10px; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-top.leaflet-right { top: 58px; }
+.leaflet-bar a { background: #0F1D31; color: var(--ink); border-color: var(--line); }
+
+.fadeout { position: fixed; inset: 0; z-index: 50; background: #fff; opacity: 0; pointer-events: none; transition: opacity .5s; }
+
+@media (max-width: 760px) {
+  .steps { display: none; }
+  .panel { top: auto; left: 8px; right: 8px; width: auto; bottom: 8px; height: 44vh; }
+  .panel.away { transform: translateY(110%); }
+  .legend { display: none; }
+  .panel.mini { height: 58px; }
+  .panel.mini .filters, .panel.mini .list, .panel.mini .p-foot { display: none; }
+  .tlink.opt { display: none; }
+  .leaflet-popup.card .leaflet-popup-content { width: 260px !important; }
+}
+@media (prefers-reduced-motion: reduce) { .pin { animation: none; } }
+</style>
+</head>
+<body>
+<div id="map" aria-label="新竹候選場地衛星地圖"></div>
+
+<header class="topbar" id="topbar" hidden>
+  <a class="brand" href="#" id="replay" title="重新播放開場"><span class="dot"></span>新竹排球館企劃</a>
+  <nav class="steps" aria-label="流程"><b>1 選場地</b><span>→</span><span>2 生成 3D 球館</span><span>→</span><span>3 智慧球場</span></nav>
+  <span class="grow"></span>
+  <a class="tlink" href="demo.html">比賽辨識 Demo</a>
+  <a class="tlink opt" href="gym.html">直接看 3D 球館</a>
+</header>
+
+<aside class="panel away" id="panel" aria-label="候選場地">
+  <div class="p-head">
+    <h2>候選場地</h2>
+    <div class="meta" id="meta">載入中…</div>
+  </div>
+  <div class="filters">
+    <button type="button" class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fbody">篩選條件 <i id="fsum"></i></button>
+    <div class="fbody" id="fbody" hidden>
+      <div class="frow"><div class="lab">地區</div><div class="chips" id="f-town" role="group" aria-label="地區"></div></div>
+      <div class="frow"><div class="lab">優先度</div><div class="chips" id="f-pri" role="group" aria-label="優先度"></div></div>
+      <div class="frow"><label class="lab" for="f-ping">一樓可用坪數至少 <b id="v-ping"></b></label><input type="range" id="f-ping" min="0" max="600" step="10"></div>
+      <div class="frow"><label class="lab" for="f-h">挑高至少 <b id="v-h"></b></label><input type="range" id="f-h" min="0" max="12" step="0.5"></div>
+      <label class="chk"><input type="checkbox" id="f-hu"> 挑高還不知道的也顯示</label>
+      <div class="frow"><label class="lab" for="f-rent">月租上限 <b id="v-rent"></b></label><input type="range" id="f-rent" min="0" max="200" step="5"></div>
+      <button type="button" class="tlink" id="f-reset" style="align-self:flex-start">恢復預設條件</button>
+    </div>
+  </div>
+  <div class="list" id="list" role="list"></div>
+  <div class="p-foot" id="pfoot">點地圖上的大圖釘或清單，看場地資訊、按「進入球館」生成 3D 配置。</div>
+</aside>
+
+<div class="legend" id="legend" hidden>
+  <div><i style="background:#E2582B;border:2px solid #fff"></i>現有私人排球館（數字＝面數）</div>
+  <div><i style="background:#2F6FD1;border:2px solid #fff"></i>公立運動中心</div>
+  <div><i style="background:var(--A)"></i>候選場地 A　<i style="background:var(--B)"></i>B　<i style="background:var(--C)"></i>C</div>
+  <div><i style="background:transparent;border:2px dashed var(--gold);border-radius:50%"></i>現有球館 3／5／10 km</div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<section id="intro">
+  <div class="floor-lines" aria-hidden="true"></div>
+  <p class="kick">HSINCHU VOLLEYBALL HOUSE</p>
+  <h1>新竹排球館企劃</h1>
+  <canvas id="ball" width="600" height="600" role="img" aria-label="一顆排球"></canvas>
+  <button type="button" id="start">開始企劃</button>
+  <p class="sub">從候選廠房挑一間，直接生成 3D 排球館，再看智慧球場怎麼自動錄影、算分。</p>
+  <button type="button" id="skip">跳過動畫，直接看地圖</button>
+</section>
+<canvas id="anim" hidden></canvas>
+<div class="fadeout" id="flash"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f0 = (n) => Math.round(n).toLocaleString('zh-TW');
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+// ================================================================ volleyball drawing
+function drawBall(ctx, x, y, r, rot, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(-r, -r, 2 * r, 2 * r);
+  // three wedges, each with three curved strips (classic volleyball panels)
+  const cols = [['#F4C21E', '#1F5FB4', '#FFFFFF'], ['#1F5FB4', '#FFFFFF', '#F4C21E'], ['#FFFFFF', '#F4C21E', '#1F5FB4']];
+  for (let k = 0; k < 3; k++) {
+    ctx.save(); ctx.rotate(rot + k * Math.PI * 2 / 3);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r * 1.1, -Math.PI / 2 - Math.PI / 3, -Math.PI / 2 + Math.PI / 3); ctx.closePath(); ctx.clip();
+    for (let i = 2; i >= 0; i--) {
+      ctx.beginPath(); ctx.arc(r * 0.35, r * 0.75, r * (0.95 + 0.42 * (i + 1)), 0, Math.PI * 2);
+      ctx.fillStyle = cols[k][i]; ctx.fill();
+      ctx.lineWidth = Math.max(1, r * 0.02); ctx.strokeStyle = 'rgba(20,30,50,.35)'; ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.save(); ctx.rotate(rot); ctx.strokeStyle = 'rgba(20,30,50,.4)'; ctx.lineWidth = Math.max(1, r * 0.022);
+  for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + Math.PI / 3 + k * Math.PI * 2 / 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); }
+  ctx.restore();
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.05);
+  g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.45, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,30,.45)');
+  ctx.fillStyle = g; ctx.fillRect(-r, -r, 2 * r, 2 * r);
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = alpha * 0.6; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.lineWidth = Math.max(1, r * 0.02); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.stroke(); ctx.restore();
+}
+const bc = $('#ball'), bctx = bc.getContext('2d');
+let introRot = 0, introRun = true;
+(function spin(ts) {
+  if (!introRun) return;
+  bctx.clearRect(0, 0, 600, 600);
+  const bob = RM ? 0 : Math.sin(ts / 700) * 10;
+  drawBall(bctx, 300, 300 + bob, 230, RM ? 0.4 : (introRot += 0.006));
+  requestAnimationFrame(spin);
+})(0);
+
+// ================================================================ stick figure spike animation
+const cv = $('#anim'), ctx = cv.getContext('2d');
+function sizeCanvas() { const d = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * d; cv.height = innerHeight * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+const lerp = (a, b, t) => a + (b - a) * t;
+function stick(x, y, s, armR, armL, legBend, alpha) {
+  // (x, y) = hip position; s = scale (px per unit); arm angles in radians from straight down, positive = to the figure's right side upward
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
+  ctx.strokeStyle = '#F3EFE6'; ctx.fillStyle = '#F3EFE6'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, s * 0.09);
+  const sh = -s * 1.05; // shoulder y
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, sh); ctx.stroke();                    // body
+  ctx.beginPath(); ctx.arc(0, sh - s * 0.32, s * 0.24, 0, Math.PI * 2); ctx.fill();        // head
+  const arm = (side, a) => { const l1 = s * 0.5, l2 = s * 0.48; const ex = side * Math.sin(a) * l1, ey = sh + Math.cos(a) * l1;
+    const a2 = a + side * 0.0; const hx = ex + side * Math.sin(a2) * l2, hy = ey + Math.cos(a2) * l2;
+    ctx.beginPath(); ctx.moveTo(side * s * 0.16, sh + s * 0.05); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke(); return [hx, hy]; };
+  const hand = arm(1, armR); arm(-1, armL);
+  for (const side of [1, -1]) {                                                            // legs (front view, knees bent outward)
+    ctx.beginPath(); ctx.moveTo(side * s * 0.12, 0);
+    ctx.lineTo(side * s * (0.22 + legBend * 0.25), s * (0.55 - legBend * 0.15));
+    ctx.lineTo(side * s * (0.16 + legBend * 0.05), s * (1.08 - legBend * 0.35)); ctx.stroke();
+  }
+  ctx.restore();
+  return [x + hand[0], y + hand[1]];
+}
+function playSpike(done) {
+  cv.hidden = false; sizeCanvas();
+  const W = innerWidth, H = innerHeight, t0 = performance.now(), T = 3300;
+  const hz = H * 0.42;
+  function frame(now) {
+    const t = now - t0;
+    ctx.clearRect(0, 0, W, H);
+    // background: dark gym with perspective court lines
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#081221'); bg.addColorStop(1, '#1B2F4D'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(242,183,5,.35)'; ctx.lineWidth = 1.5;
+    for (let i = -6; i <= 6; i++) { ctx.beginPath(); ctx.moveTo(W / 2 + i * 12, hz); ctx.lineTo(W / 2 + i * W * 0.3, H); ctx.stroke(); }
+    for (let k = 1; k < 9; k++) { const y = hz + (H - hz) * Math.pow(k / 9, 2); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(W / 2 - W * 0.32, hz - H * 0.09, W * 0.64, 2); // net tape far away
+    // figure flies in from the background
+    const pIn = ease(t / 1300);
+    const s = lerp(H * 0.02, H * 0.2, pIn);
+    const hipY = lerp(hz + H * 0.01, H * 0.62, pIn) - Math.sin(Math.min(1, t / 1500) * Math.PI) * H * 0.06;
+    const hipX = W / 2 - s * 0.15;
+    const swing = ease((t - 1330) / 280);                         // hitting arm: up-back → forward
+    const armR = lerp(Math.PI * 0.95, Math.PI * 0.35, swing);
+    const armL = lerp(Math.PI * 0.85, Math.PI * 0.25, ease((t - 1150) / 400));
+    const figA = 1 - ease((t - 1700) / 500);
+    const hand = stick(hipX, hipY, s, armR, armL, 0.7, figA);
+    // ball: set high, then smashed toward the viewer
+    const contact = 1420;
+    let bx, by, br;
+    const aC = lerp(Math.PI * 0.95, Math.PI * 0.35, ease((contact - 1330) / 280));
+    const handTop = [hipX + Math.sin(aC) * 0.98 * s, hipY - s * 1.05 + Math.cos(aC) * 0.98 * s - s * 0.2];
+    if (t < contact) {
+      const k = ease(t / contact);
+      bx = lerp(W / 2 + W * 0.04, handTop[0], k); by = lerp(-H * 0.1, handTop[1], k); br = Math.max(4, s * 0.24);
+    } else {
+      const k = (t - contact) / 1250, e = Math.pow(k, 2.4);
+      bx = lerp(handTop[0], W / 2, Math.min(1, k)); by = lerp(handTop[1], H / 2, Math.min(1, k));
+      br = s * 0.24 + e * Math.hypot(W, H) * 0.9;
+      if (k < 0.35) { ctx.strokeStyle = `rgba(255,255,255,${0.8 - k * 2})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(handTop[0], handTop[1], s * 0.3 + k * s * 3, 0, Math.PI * 2); ctx.stroke(); }
+      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + 0.3, r1 = br * 1.05, r2 = br * (1.25 + 0.25 * k);
+        ctx.strokeStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx + Math.cos(a) * r1, by + Math.sin(a) * r1); ctx.lineTo(bx + Math.cos(a) * r2, by + Math.sin(a) * r2); ctx.stroke(); }
+    }
+    drawBall(ctx, bx, by, br, t / 90);
+    if (t > 2500) { ctx.fillStyle = `rgba(255,255,255,${ease((t - 2500) / 500)})`; ctx.fillRect(0, 0, W, H); }
+    if (t < T) requestAnimationFrame(frame);
+    else done();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ================================================================ map
+const TW = L.latLngBounds([21.85, 119.95], [25.35, 122.05]);
+const map = L.map('map', { zoomControl: false, maxZoom: 20, minZoom: 6, zoomSnap: 0.25, attributionControl: true });
+L.control.zoom({ position: 'topright' }).addTo(map);
+map.fitBounds(TW);
+const nlsc = (layer) => L.tileLayer(`https://wmts.nlsc.gov.tw/wmts/${layer}/default/GoogleMapsCompatible/{z}/{y}/{x}`,
+  { maxZoom: 20, maxNativeZoom: 19, attribution: '&copy; <a href="https://maps.nlsc.gov.tw/" target="_blank" rel="noopener">內政部國土測繪中心</a>' });
+nlsc('PHOTO2').addTo(map);
+let MAP = null, SITES = null, CRIT = null;
+const markers = new Map();
+const PING = 3.3058, PL = 25 * 18 / PING, PS = 24 * 15 / PING, COMMON = 40;
+function fit(s) {
+  // same rule as the 3D generator: courts side by side + a 5 m service strip
+  const eff = s.ping == null ? null : (s.ping >= 600 ? (s.split || 340) : s.ping);
+  if (eff == null) return { eff, L: null, S: null };
+  const A = eff * PING;
+  const n = (cw, cd) => Math.max(0, Math.min(4, Math.floor(A / (cw + 5) / cd), Math.floor((eff - COMMON) / (cw * cd / PING))));
+  return { eff, L: n(25, 18), S: n(24, 15) };
+}
+function fitText(s) {
+  const f = fit(s);
+  if (f.eff == null) return '坪數待查';
+  if (f.L >= 1) return `${f.L} 面排球`;
+  if (f.S >= 1) return `${f.S} 面（精簡）`;
+  return '放不下 1 面';
+}
+const DEF = { towns: null, pri: ['A', 'B', 'C'], ping: 150, h: 7, hu: true, rent: 0 };
+let F = null;
+function matches(s) {
+  if (F.towns && !F.towns.includes(s.town)) return false;
+  if (!F.pri.includes(s.pri)) return false;
+  const p = s.ping >= 600 && s.split ? s.split : s.ping;
+  if (F.ping && !(p != null && p >= F.ping) && !(s.total != null && s.total >= F.ping && /打通/.test(s.note))) return false;
+  if (F.h && s.height != null && s.height < F.h) return false;
+  if (F.h && s.height == null && !F.hu) return false;
+  if (F.rent && s.rent != null && s.rent > F.rent * 10000 && !s.split) return false;
+  return true;
+}
+function pinHtml(s, on) {
+  const col = { A: '#2E9E5B', B: '#E08A2E', C: '#8A96A6' }[s.pri];
+  return `<div class="pin${on ? '' : ' off'}" data-id="${s.id}"><svg viewBox="0 0 50 62" width="50" height="62"><path d="M25 60 C25 60 4 36 4 22 A21 21 0 0 1 46 22 C46 36 25 60 25 60Z" fill="${col}" stroke="#fff" stroke-width="2.5"/></svg><b>${s.pri}</b><span>${esc(fitText(s).replace('排球', ''))}</span></div>`;
+}
+function popupHtml(s) {
+  const f = fit(s);
+  const fact = (v, l, wide) => `<div class="fact${wide ? ' wide' : ''}"><b>${v}</b><span>${l}</span></div>`;
+  const per = s.rent && s.total ? `${f0(s.rent / s.total)} 元／坪` : '—';
+  const links = (s.links || []).map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)} ↗</a>`).join('');
+  return `<div class="pc-top"><div class="g ${s.pri}">${s.pri}</div><div><h3>${esc(s.name)}</h3><div class="loc">${esc(s.town)}・${esc(s.road)}・離最近球館（${esc(s.near)}）${s.km} km</div></div></div>
+  <div class="facts">
+    ${fact(s.height != null ? s.height + ' m' : '待量', '挑高')}
+    ${fact(s.ping != null ? f0(s.ping) + ' 坪' : '待查', s.total && s.total !== s.ping ? `一樓可用（總 ${f0(s.total)} 坪）` : '一樓可用坪數')}
+    ${fact(s.rent != null ? f0(s.rent / 10000) + ' 萬' : '待查', `月租・${per}`)}
+    ${fact(esc(fitText(s)), f.eff != null && s.ping >= 600 ? `整棟太大，以分租 ${s.split || 340} 坪估算` : '龍蝦規格 25×18 m')}
+    ${fact(esc(s.usage || '—'), '現在用途', true)}
+    ${fact(esc([s.zone, s.floor].filter(Boolean).join('・') || '待查'), '使用分區・樓層', true)}
+  </div>
+  <p class="pc-note">${esc(s.note || '')}</p>
+  <div class="pc-links">${links}</div>
+  <a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 生成 3D 配置</a>`;
+}
+function renderList() {
+  const L2 = [...SITES.sites].sort((a, b) => (matches(b) - matches(a)) || a.pri.localeCompare(b.pri) || (b.ping || 0) - (a.ping || 0));
+  const n = SITES.sites.filter(matches).length;
+  $('#list').innerHTML = L2.map((s) => `<button type="button" class="item${matches(s) ? '' : ' off'}" role="listitem" data-id="${s.id}"><span class="g ${s.pri}">${s.pri}</span><span class="nm">${esc(s.name)}</span>
+    <span class="sp">${esc(s.town)}・${s.ping != null ? f0(s.ping) + ' 坪' : '坪數待查'}・挑高 ${s.height != null ? s.height + ' m' : '待量'}・${s.rent != null ? '月租 ' + f0(s.rent / 10000) + ' 萬' : '租金待查'}・<em>${esc(fitText(s))}</em></span></button>`).join('');
+  const upd = new Date(SITES.updated);
+  $('#meta').innerHTML = `符合條件 <b>${n}</b>／共 <b>${SITES.sites.length}</b> 筆・每天自動更新<br>上次更新：${upd.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+  for (const s of SITES.sites) { const m = markers.get(s.id); if (m) { m.setIcon(icon(s)); m.setZIndexOffset(matches(s) ? 1000 : 0); } }
+  const parts = [];
+  if (F.towns) parts.push(F.towns.length + ' 個地區'); if (F.ping) parts.push(`≥${F.ping} 坪`); if (F.h) parts.push(`挑高 ≥${F.h} m`); if (F.rent) parts.push(`≤${F.rent} 萬`);
+  $('#fsum').textContent = parts.join('・') || '不限';
+}
+const icon = (s) => L.divIcon({ className: '', html: pinHtml(s, matches(s)), iconSize: [50, 62], iconAnchor: [25, 60], popupAnchor: [0, -56] });
+function bindFilters() {
+  const towns = [...new Set(SITES.sites.map((s) => s.town))];
+  const draw = () => {
+    $('#f-town').innerHTML = towns.map((t) => `<button type="button" data-t="${t}" aria-pressed="${!F.towns || F.towns.includes(t)}">${t}</button>`).join('');
+    $('#f-pri').innerHTML = ['A', 'B', 'C'].map((p) => `<button type="button" data-p="${p}" aria-pressed="${F.pri.includes(p)}">${p} 級</button>`).join('');
+    $('#f-ping').value = F.ping; $('#v-ping').textContent = F.ping ? F.ping + ' 坪' : '不限';
+    $('#f-h').value = F.h; $('#v-h').textContent = F.h ? F.h + ' m' : '不限';
+    $('#f-hu').checked = F.hu;
+    $('#f-rent').value = F.rent; $('#v-rent').textContent = F.rent ? F.rent + ' 萬' : '不限';
+  };
+  const apply = () => { store.set('vb.filters', F); draw(); renderList(); };
+  draw();
+  $('#f-town').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; const cur = F.towns || towns.slice(); const t = b.dataset.t;
+    F.towns = cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]; if (F.towns.length === towns.length) F.towns = null; apply(); });
+  $('#f-pri').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; const p = b.dataset.p; F.pri = F.pri.includes(p) ? F.pri.filter((x) => x !== p) : [...F.pri, p]; apply(); });
+  $('#f-ping').addEventListener('input', (e) => { F.ping = +e.target.value; apply(); });
+  $('#f-h').addEventListener('input', (e) => { F.h = +e.target.value; apply(); });
+  $('#f-hu').addEventListener('change', (e) => { F.hu = e.target.checked; apply(); });
+  $('#f-rent').addEventListener('input', (e) => { F.rent = +e.target.value; apply(); });
+  $('#f-reset').addEventListener('click', () => { F = { ...DEF, ping: CRIT.minPing ?? 150, h: CRIT.minHeight ?? 7 }; apply(); });
+  $('#ftoggle').addEventListener('click', () => { const b = $('#fbody'); b.hidden = !b.hidden; $('#ftoggle').setAttribute('aria-expanded', String(!b.hidden)); });
+}
+function openSite(id, fly = true) {
+  const s = SITES.sites.find((x) => x.id === id), m = markers.get(id); if (!s || !m) return;
+  document.querySelectorAll('.item').forEach((el) => el.classList.toggle('on', el.dataset.id === id));
+  const go = () => m.openPopup();
+  if (fly) { map.once('moveend', go); map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 14), { duration: RM ? 0 : 1.1 }); } else go();
+}
+function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.hidden = false; t.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(() => { t.style.opacity = 0; setTimeout(() => { t.hidden = true; }, 400); }, ms); }
+
+let layersAdded = false;
+function addLayers() {
+  if (layersAdded) return; layersAdded = true;
+  // region mask
+  map.createPane('mask'); map.getPane('mask').style.zIndex = 350; map.getPane('mask').style.pointerEvents = 'none';
+  const holes = []; MAP.region.features.forEach((f) => f.geometry.coordinates.forEach((poly) => holes.push(poly[0].map(([x, y]) => [y, x]))));
+  L.polygon([[[-89, -179], [-89, 179], [89, 179], [89, -179]], ...holes], { pane: 'mask', stroke: false, fillColor: '#06101C', fillOpacity: 0.55, interactive: false }).addTo(map);
+  L.geoJSON(MAP.region, { pane: 'mask', interactive: false, style: { color: '#F2B705', weight: 1.5, opacity: 0.6, dashArray: '2 6', fill: false } }).addTo(map);
+  // rings around existing private venues
+  const groups = [{ lat: MAP.center[0], lon: MAP.center[1], name: '寶山球館群' }, { lat: MAP.venues[4].lat, lon: MAP.venues[4].lon, name: '排郎' }];
+  for (const g of groups) for (const km of [3, 5, 10]) {
+    L.circle([g.lat, g.lon], { radius: km * 1000, color: '#F2B705', weight: 1.6, dashArray: '6 6', fillColor: '#F2B705', fillOpacity: km === 3 ? 0.08 : 0.03, interactive: false }).addTo(map);
+    if (g.name === '寶山球館群') L.tooltip({ permanent: true, direction: 'center', className: 'ring-label' }).setLatLng([g.lat - km / 111, g.lon]).setContent(`${km} km`).addTo(map);
+  }
+  // existing venues
+  MAP.venues.forEach((v) => {
+    const pub = v.kind === 'public';
+    L.marker([v.lat, v.lon], { icon: L.divIcon({ className: '', html: `<div class="vpin${pub ? ' pub' : ''}">${pub ? '公' : v.courts}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] }), zIndexOffset: 500 })
+      .bindTooltip(v.name.replace(' LongShot', ''), { direction: 'top', offset: [0, -14], className: 'vlabel' })
+      .bindPopup(`<b>${esc(v.name)}</b><br><span style="color:#A9B4C2">${esc(v.addr)}</span><br>${v.courts ? v.courts + ' 面場・' : ''}${esc(v.note)}`, { className: 'card' })
+      .addTo(map);
+  });
+  // candidate pins (staggered)
+  SITES.sites.forEach((s, i) => setTimeout(() => {
+    const m = L.marker([s.lat, s.lng], { icon: icon(s), zIndexOffset: matches(s) ? 1000 : 0, title: s.name, keyboard: true, riseOnHover: true })
+      .bindPopup(() => popupHtml(s), { className: 'card', maxWidth: 340, minWidth: 260, autoPanPaddingTopLeft: [innerWidth > 760 ? 380 : 10, 70], autoPanPaddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] })
+      .on('click', () => document.querySelectorAll('.item').forEach((el) => el.classList.toggle('on', el.dataset.id === s.id)))
+      .addTo(map);
+    markers.set(s.id, m);
+  }, RM ? 0 : 120 * i));
+}
+function hsinchuBounds() { return L.latLngBounds(SITES.sites.map((s) => [s.lat, s.lng]).concat(MAP.venues.map((v) => [v.lat, v.lon]))).pad(0.12); }
+function arrive() {
+  $('#topbar').hidden = false; $('#legend').hidden = false;
+  const pad = { paddingTopLeft: [innerWidth > 760 ? 380 : 10, 70], paddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] };
+  const target = hsinchuBounds();
+  const finish = () => { addLayers(); $('#panel').classList.remove('away'); toast('點大圖釘看場地資訊，再按「進入球館」'); map.setMinZoom(8); };
+  if (RM) { map.fitBounds(target, pad); finish(); return; }
+  setTimeout(() => {
+    map.once('moveend', finish);
+    map.flyToBounds(target, { ...pad, duration: 3.4, easeLinearity: 0.15 });
+  }, 500);
+}
+async function loadData() {
+  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => r.json());
+  [MAP, SITES, CRIT] = await Promise.all([get('data/map.json'), get('data/sites.json'), get('data/criteria.json').catch(() => ({}))]);
+  F = store.get('vb.filters', null) || { ...DEF, ping: CRIT.minPing ?? 150, h: CRIT.minHeight ?? 7 };
+  bindFilters(); renderList();
+  $('#list').addEventListener('click', (e) => { const b = e.target.closest('.item'); if (b) openSite(b.dataset.id); });
+}
+const ready = loadData();
+map.on('popupopen', () => { if (innerWidth <= 760) $('#panel').classList.add('mini'); });
+map.on('popupclose', () => $('#panel').classList.remove('mini'));
+$('#panel').addEventListener('click', (e) => { if ($('#panel').classList.contains('mini') && e.target.closest('.p-head')) { map.closePopup(); } });
+
+// ================================================================ flow
+function go(withAnim) {
+  introRun = false;
+  const intro = $('#intro');
+  if (!withAnim || RM) { intro.style.opacity = 0; setTimeout(() => { intro.hidden = true; }, 400); ready.then(arrive); return; }
+  intro.style.opacity = 0;
+  setTimeout(() => { intro.hidden = true; }, 500);
+  playSpike(() => {
+    const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = 1; cv.hidden = true;
+    requestAnimationFrame(() => { fl.style.transition = 'opacity .7s'; fl.style.opacity = 0; });
+    ready.then(arrive);
+  });
+}
+$('#start').addEventListener('click', () => go(true));
+$('#ball').addEventListener('click', () => go(true));
+$('#skip').addEventListener('click', () => go(false));
+$('#replay').addEventListener('click', (e) => { e.preventDefault(); location.href = location.pathname; });
+addEventListener('resize', () => { if (!cv.hidden) sizeCanvas(); });
+if (location.hash === '#map' || sessionStorage.getItem('vb.seenIntro') === '1' && location.hash !== '#intro') {
+  // coming back from the 3D page: skip the intro
+  $('#intro').hidden = true; introRun = false; ready.then(() => { map.fitBounds(hsinchuBounds(), { paddingTopLeft: [innerWidth > 760 ? 380 : 10, 70] }); $('#topbar').hidden = false; $('#legend').hidden = false; addLayers(); $('#panel').classList.remove('away'); map.setMinZoom(8);
+    const id = new URLSearchParams(location.search).get('site'); if (id) setTimeout(() => openSite(id, true), 1600); });
+}
+document.addEventListener('click', (e) => { if (e.target.closest('.enter')) { try { sessionStorage.setItem('vb.seenIntro', '1'); } catch (er) {} } });
+})();
+</script>
+</body>
+</html>

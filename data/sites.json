@@ -1,0 +1,391 @@
+{
+ "updated": "2026-10-22T21:50:00+08:00",
+ "note": "候選場地每天自動更新；位置為路段推估，請以物件連結為準",
+ "sites": [
+  {
+   "id": "zd-daming",
+   "pri": "A",
+   "name": "竹東工業區 大明路挑高合法廠房",
+   "town": "竹東鎮",
+   "road": "大明路",
+   "lat": 24.733,
+   "lng": 121.0985,
+   "ping": 1400,
+   "total": 1400,
+   "height": 10,
+   "rent": 1200000,
+   "usage": "挑高鋼構廠房（大車可進）",
+   "zone": "乙種／零星工業區",
+   "floor": "整棟 1F",
+   "note": "同路段 3 筆，1,400–1,800 坪、月租 120–135 萬；整棟太大，要談分租 250–300 坪",
+   "links": [
+    [
+     "挑高 10 米合法廠房",
+     "https://business.591.com.tw/rent/21621521"
+    ],
+    [
+     "可分租",
+     "https://business.591.com.tw/rent/20412734"
+    ],
+    [
+     "近芎林交流道乙工",
+     "https://business.591.com.tw/rent/22060261"
+    ]
+   ],
+   "split": 340,
+   "km": 8.6,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "bs-shenjing",
+   "pri": "A",
+   "name": "寶山深井路 鋼構倉庫",
+   "town": "寶山鄉",
+   "road": "深井路",
+   "lat": 24.724,
+   "lng": 120.9475,
+   "ping": 300,
+   "total": 300,
+   "height": null,
+   "rent": 125000,
+   "usage": "鋼構倉庫",
+   "zone": "工業用",
+   "floor": "整棟 1F",
+   "note": "同路段另有 700 坪（月租 28.5 萬）、900 坪；要問淨高、柱距",
+   "links": [
+    [
+     "300 坪（樂屋網）",
+     "https://rent.rakuya.com.tw/item/0b8c92331258528"
+    ],
+    [
+     "700 坪（樂屋網）",
+     "https://rent.rakuya.com.tw/item/00d91d329005354"
+    ],
+    [
+     "900 坪（樂屋網）",
+     "https://rent.rakuya.com.tw/item/08739e331509147"
+    ]
+   ],
+   "km": 7.6,
+   "near": "排丘",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-erchong-150",
+   "pri": "B",
+   "name": "竹東二重埔挑高倉庫",
+   "town": "竹東鎮",
+   "road": "中興路二段 88 巷",
+   "lat": 24.76,
+   "lng": 121.0661,
+   "ping": 150,
+   "total": 150,
+   "height": null,
+   "rent": 65000,
+   "usage": "倉庫",
+   "zone": "農業區",
+   "floor": "整棟 1F",
+   "note": "農業區，先問建管能否變更為 D-1 室內運動場",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/21710501"
+    ]
+   ],
+   "km": 4.8,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-beixing",
+   "pri": "B",
+   "name": "北興路三段倉庫（近台 68）",
+   "town": "竹東鎮",
+   "road": "北興路三段",
+   "lat": 24.748,
+   "lng": 121.083,
+   "ping": 500,
+   "total": 500,
+   "height": null,
+   "rent": 150000,
+   "usage": "倉庫（刊登寫適合釣蝦場、可分租）",
+   "zone": "農業區",
+   "floor": "整棟 1F",
+   "note": "農業區，先問建管；面積夠放 2 面場",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/22035915"
+    ]
+   ],
+   "km": 6.6,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "bs-daya",
+   "pri": "B",
+   "name": "寶山交流道旁廠房（大雅二街）",
+   "town": "寶山鄉",
+   "road": "大雅二街",
+   "lat": 24.7555,
+   "lng": 121.0067,
+   "ping": 150,
+   "total": 150,
+   "height": null,
+   "rent": 75000,
+   "usage": "萬用廠房",
+   "zone": "見使用執照",
+   "floor": "1F",
+   "note": "離大崎球館群不到 1 公里，等於正面競爭；同街另有 300 坪頂樓加蓋",
+   "links": [
+    [
+     "150 坪（樂屋網）",
+     "https://rent.rakuya.com.tw/item/0ff163323287491"
+    ],
+    [
+     "300 坪頂樓（樂屋網）",
+     "https://rent.rakuya.com.tw/item/03d025324116261"
+    ]
+   ],
+   "km": 0.8,
+   "near": "排丘",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-zhongfeng",
+   "pri": "B",
+   "name": "中豐路三段 427 巷倉庫群",
+   "town": "竹東鎮",
+   "road": "中豐路三段 427 巷",
+   "lat": 24.722,
+   "lng": 121.077,
+   "ping": 50,
+   "total": 200,
+   "height": 9,
+   "rent": 25000,
+   "usage": "倉庫（三相電）",
+   "zone": "零星工業區／農業區",
+   "floor": "1F，4 間相鄰",
+   "note": "每間 50 坪太小，要問 4 間能不能打通（打通約 200 坪）",
+   "links": [
+    [
+     "A",
+     "https://business.591.com.tw/rent/22108534"
+    ],
+    [
+     "B",
+     "https://business.591.com.tw/rent/22109465"
+    ],
+    [
+     "C",
+     "https://business.591.com.tw/rent/22109480"
+    ],
+    [
+     "D",
+     "https://business.591.com.tw/rent/22108508"
+    ]
+   ],
+   "km": 7.2,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-erchong-7m",
+   "pri": "B",
+   "name": "二重埔挑高 7 米工業廠房",
+   "town": "竹東鎮",
+   "road": "二重埔",
+   "lat": 24.77,
+   "lng": 121.056,
+   "ping": null,
+   "total": null,
+   "height": 7,
+   "rent": null,
+   "usage": "工業廠房",
+   "zone": "",
+   "floor": "",
+   "note": "坪數、租金沒讀到；地圖位置只知道在二重埔，請開連結確認",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/22125405"
+    ]
+   ],
+   "km": 3.9,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "ql-wende",
+   "pri": "C",
+   "name": "芎林國 3 旁工業廠房（文德路）",
+   "town": "芎林鄉",
+   "road": "文德路",
+   "lat": 24.783,
+   "lng": 121.0797,
+   "ping": 655,
+   "total": 1310,
+   "height": null,
+   "rent": 260000,
+   "usage": "兩層工業廠房（可廠登）",
+   "zone": "丁種工業區",
+   "floor": "整棟 2F",
+   "note": "整棟太大，可問 1 樓分租",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/21903407"
+    ]
+   ],
+   "split": 340,
+   "km": 6.6,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "ql-wuhe",
+   "pri": "C",
+   "name": "芎林工業區（五和街）",
+   "town": "芎林鄉",
+   "road": "五和街",
+   "lat": 24.734,
+   "lng": 121.1175,
+   "ping": 1960,
+   "total": 5880,
+   "height": null,
+   "rent": 4410000,
+   "usage": "三層工業廠房",
+   "zone": "乙種工業區",
+   "floor": "整棟 3F",
+   "note": "面積太大、租金太高",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/22064957"
+    ]
+   ],
+   "km": 10.4,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "ql-fulin",
+   "pri": "C",
+   "name": "芎林富林路三段倉庫",
+   "town": "芎林鄉",
+   "road": "富林路三段",
+   "lat": 24.7723,
+   "lng": 121.0757,
+   "ping": 65,
+   "total": 65,
+   "height": 7,
+   "rent": 36500,
+   "usage": "倉庫",
+   "zone": "",
+   "floor": "1F",
+   "note": "放不下一面場",
+   "links": [
+    [
+     "新竹租屋網",
+     "https://www.hcrt.com.tw/show.asp?prodcode=G1181"
+    ]
+   ],
+   "km": 5.9,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-changchun",
+   "pri": "C",
+   "name": "竹東長春路廠辦",
+   "town": "竹東鎮",
+   "road": "長春路三段",
+   "lat": 24.7427,
+   "lng": 121.0833,
+   "ping": 44,
+   "total": 133,
+   "height": null,
+   "rent": 98000,
+   "usage": "三層廠辦",
+   "zone": "特種工業區",
+   "floor": "1–3F",
+   "note": "每層太小",
+   "links": [
+    [
+     "樂屋網",
+     "https://rent.rakuya.com.tw/item/0a3bc533212856d"
+    ]
+   ],
+   "km": 6.8,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-kehu",
+   "pri": "C",
+   "name": "竹東柯湖路三層廠房",
+   "town": "竹東鎮",
+   "road": "柯湖路三段",
+   "lat": 24.76,
+   "lng": 121.0372,
+   "ping": 60,
+   "total": 180,
+   "height": null,
+   "rent": 120000,
+   "usage": "三層廠房",
+   "zone": "",
+   "floor": "整棟 3F",
+   "note": "每層太小",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/21952568"
+    ]
+   ],
+   "km": 1.8,
+   "near": "就醬瘋",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  },
+  {
+   "id": "zd-gongdao",
+   "pri": "C",
+   "name": "公道路旁倉庫",
+   "town": "竹東鎮",
+   "road": "公道路",
+   "lat": 24.7825,
+   "lng": 121.04,
+   "ping": 45,
+   "total": 45,
+   "height": null,
+   "rent": 40000,
+   "usage": "倉庫",
+   "zone": "農業區",
+   "floor": "整棟 1F",
+   "note": "太小",
+   "links": [
+    [
+     "591",
+     "https://business.591.com.tw/rent/21971884"
+    ]
+   ],
+   "km": 3.1,
+   "near": "可利",
+   "found": "2026-10-21",
+   "source": "591／樂屋網／新竹租屋網（人工整理）"
+  }
+ ]
+}
