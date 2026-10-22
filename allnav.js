@@ -50,12 +50,15 @@
   .allnav a.here { background: rgba(242,183,5,.14); }
   @media (max-width: 640px) { .allnav { grid-template-columns: 1fr; } }`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
-  const bar = document.querySelector('.sitebar') || document.getElementById('topbar'); if (!bar) return;
+  const bar = document.querySelector('.sitebar') || document.getElementById('topbar') || document.querySelector('header.top'); if (!bar) return;
+  // pages under /plan/ link back up one level
+  const base = /\/plan\//.test(location.pathname) ? '../' : '';
+  for (const [, L] of G) for (const it of L) if (!/^https?:/.test(it[0])) it[0] = base + it[0];
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'allnav-btn'; btn.textContent = '☰ 全部功能'; btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', 'allnav');
-  const anchor = bar.querySelector('.grow'); anchor ? anchor.after(btn) : bar.appendChild(btn);
+  const anchor = bar.querySelector('.grow'); anchor ? anchor.after(btn) : (bar.querySelector('.top-in') || bar).appendChild(btn);
   const pane = document.createElement('nav'); pane.id = 'allnav'; pane.className = 'allnav'; pane.hidden = true; pane.setAttribute('aria-label', '全部功能');
-  const here = location.pathname.split('/').pop() + location.hash;
-  pane.innerHTML = G.map(([t, L]) => `<section><h4>${t}</h4>${L.map(([h, n, d]) => `<a href="${h}"${/\.(xlsx|kml|gs|csv|mp4)$/.test(h) ? ' download' : ''}${here && h.startsWith(here) ? ' class="here"' : ''}>${n}${d ? `<small>${d}</small>` : ''}</a>`).join('')}</section>`).join('');
+  const here = (base ? 'plan/' : '') + location.pathname.split('/').pop() + location.hash;
+  pane.innerHTML = G.map(([t, L]) => `<section><h4>${t}</h4>${L.map(([h, n, d]) => `<a href="${h}"${/\.(xlsx|kml|gs|csv|mp4)$/.test(h) ? ' download' : ''}${here && h.replace(/^\.\.\//, '').startsWith(here) ? ' class="here"' : ''}>${n}${d ? `<small>${d}</small>` : ''}</a>`).join('')}</section>`).join('');
   document.body.appendChild(pane);
   const set = (open) => { pane.hidden = !open; btn.setAttribute('aria-expanded', String(open)); };
   btn.addEventListener('click', (e) => { e.stopPropagation(); set(pane.hidden); });
@@ -63,5 +66,5 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') set(false); });
   // same-page links on the map page (#intro / #map) need a reload to switch views
   pane.addEventListener('click', (e) => { const a = e.target.closest('a'); if (!a) return; const h = a.getAttribute('href');
-    if (/^index\.html#/.test(h) && /index\.html$|\/$/.test(location.pathname)) { e.preventDefault(); if (h.endsWith('#intro') && typeof window.goHome === 'function') { set(false); window.goHome(); } else { location.href = h; location.reload(); } } });
+    if (!base && /^index\.html#/.test(h) && /index\.html$|\/$/.test(location.pathname)) { e.preventDefault(); if (h.endsWith('#intro') && typeof window.goHome === 'function') { set(false); window.goHome(); } else { location.href = h; location.reload(); } } });
 })();

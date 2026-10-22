@@ -834,7 +834,111 @@ table.grid { border-collapse: separate; border-spacing: 0; font-size: 13px; min-
 </div>
 </section><section class="panel" id="docs" role="tabpanel" aria-labelledby="tab-docs" hidden>
 <div class="wrap page">
-  <div class="block"><div><h2 style="margin:0;font-size:22px;font-weight:900">問卷與資料</h2><p class="fine">問卷怎麼建、原始檔下載和所有資料來源。</p></div></div>
+  <div class="block"><div><h2 style="margin:0;font-size:22px;font-weight:900">問卷與資料</h2><p class="fine">問卷怎麼建、原始檔下載和所有資料來源。</p></div></div><!--survey-results-->
+<section class="block sv" id="sv">
+  <div class="sv-head"><h3>問卷結果（即時）</h3><span class="fine" id="sv-meta"></span><span style="flex:1"></span><button type="button" class="sv-btn" id="sv-reload">重新整理</button><button type="button" class="sv-btn" id="sv-set">設定結果連結</button></div>
+  <div class="sv-setup" id="sv-setup" hidden>
+    <ol class="fine">
+      <li>打開問卷的「回覆試算表」（建立問卷時執行紀錄印出的那個連結，或在 Google 表單「回覆」分頁按綠色試算表圖示）。</li>
+      <li>試算表上方「檔案」→「共用」→「發布到網路」。</li>
+      <li>左邊選「表單回應 1」，右邊選「逗號分隔值檔案 (.csv)」，按「發布」，複製出現的連結。</li>
+      <li>貼到下面按「儲存」。存好之後，所有打開這個網站的人都會看到同一份結果，有新回覆重新整理就會更新。</li>
+    </ol>
+    <div class="sv-row"><input id="sv-url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&single=true&output=csv" aria-label="回覆試算表的 CSV 連結"><button type="button" class="sv-btn pri" id="sv-save">儲存</button></div>
+    <p class="fine" id="sv-msg"></p>
+  </div>
+  <div id="sv-body"><p class="fine">讀取中…</p></div>
+</section>
+<style>
+.sv { display: flex; flex-direction: column; gap: 14px; }
+.sv-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; } .sv-head h3 { margin: 0; }
+.sv-btn { font: 600 13px var(--font-body); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.sv-btn.pri { background: var(--navy); color: var(--navy-ink); border-color: var(--navy); }
+.sv-setup { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; background: var(--chip); }
+.sv-setup ol { margin: 0 0 10px; padding-left: 20px; line-height: 1.8; }
+.sv-row { display: flex; gap: 8px; } .sv-row input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.sv-kpis { display: flex; gap: 12px; flex-wrap: wrap; } .sv-kpi { padding: 10px 14px; border-radius: 12px; background: var(--chip); min-width: 140px; } .sv-kpi b { font: 700 24px var(--font-display); display: block; } .sv-kpi span { font-size: 12px; color: var(--muted); }
+.sv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+.sv-q { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); min-width: 0; }
+.sv-q h4 { margin: 0 0 8px; font-size: 14px; line-height: 1.5; } .sv-q h4 small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.sv-bar { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr) 84px; gap: 8px; align-items: center; font-size: 12.5px; margin: 3px 0; }
+.sv-bar .lb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .sv-bar .tr { height: 14px; background: var(--chip); border-radius: 4px; overflow: hidden; } .sv-bar .tr i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.sv-bar .n { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.sv-gt { width: 100%; border-collapse: collapse; font-size: 12px; } .sv-gt th, .sv-gt td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; } .sv-gt th:first-child, .sv-gt td:first-child { text-align: left; }
+.sv-gt td.hot { background: rgba(232,129,74,.18); font-weight: 700; }
+.sv-txt { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; max-height: 220px; overflow: auto; }
+</style>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let CSV = '';
+  try { CSV = localStorage.getItem('vb.surveyCsv') || ''; } catch (e) {}
+  function parseCSV(t) {
+    const rows = []; let row = [], f = '', q = false;
+    for (let i = 0; i < t.length; i++) { const c = t[i];
+      if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(f); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; } else f += c; }
+    if (f || row.length) { row.push(f); rows.push(row); }
+    return rows.filter((r) => r.some((x) => x.trim()));
+  }
+  const bars = (counts, total) => { const L = Object.entries(counts).sort((a, b) => b[1] - a[1]); const mx = Math.max(1, ...L.map((x) => x[1]));
+    return L.map(([k, v]) => `<div class="sv-bar"><span class="lb" title="${esc(k)}">${esc(k)}</span><span class="tr"><i style="width:${(v / mx) * 100}%"></i></span><span class="n">${v}（${Math.round((v / Math.max(1, total)) * 100)}%）</span></div>`).join(''); };
+  function render(rows) {
+    const body = $('sv-body');
+    if (rows.length < 2) { body.innerHTML = '<p class="fine">結果連結正常，但還沒有人填。把填答連結貼到 LINE 群吧！</p>'; $('sv-meta').textContent = '0 份回覆'; return; }
+    const head = rows[0], data = rows.slice(1), N = data.length;
+    const ts = data.map((r) => r[0]).filter(Boolean); $('sv-meta').textContent = `${N} 份回覆・最新：${esc(ts[ts.length - 1] || '')}`;
+    // group grid columns: 「題目 [列]」
+    const groups = []; const gi = {};
+    head.forEach((h, i) => { if (i === 0) return; const m = h.match(/^(.*)\s\[(.+)\]$/); if (m) { if (!(m[1] in gi)) { gi[m[1]] = groups.length; groups.push({ t: m[1], grid: [] }); } groups[gi[m[1]]].grid.push({ row: m[2], i }); } else groups.push({ t: h, i }); });
+    const cards = groups.map((g) => {
+      if (g.grid) {
+        const cols = [...new Set(g.grid.flatMap((r) => data.map((d) => d[r.i]).filter(Boolean)))];
+        const order = ['一定會去', '可能會去', '不太會去', '不會去']; cols.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+        const rowsH = g.grid.map((r) => { const c = {}; data.forEach((d) => { if (d[r.i]) c[d[r.i]] = (c[d[r.i]] || 0) + 1; }); const best = Math.max(...cols.map((k) => c[k] || 0));
+          const score = cols.length ? data.reduce((a, d) => a + ({ '一定會去': 2, '可能會去': 1 }[d[r.i]] || 0), 0) : 0;
+          return { r, c, best, score }; }).sort((a, b) => b.score - a.score);
+        return `<div class="sv-q" style="grid-column:1/-1"><h4>${esc(g.t)}<small>依「一定會去×2＋可能會去」排序</small></h4><div style="overflow:auto"><table class="sv-gt"><thead><tr><th></th>${cols.map((k) => `<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${rowsH.map(({ r, c, best }) => `<tr><td>${esc(r.row)}</td>${cols.map((k) => `<td class="${(c[k] || 0) === best && best ? 'hot' : ''}">${c[k] || 0}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+      }
+      const vals = data.map((d) => (d[g.i] || '').trim()).filter(Boolean);
+      const multi = vals.some((v) => v.includes(', '));
+      const parts = multi ? vals.flatMap((v) => v.split(', ')) : vals;
+      const uniq = new Set(parts);
+      if (uniq.size > 14 && uniq.size > N * 0.6) return `<div class="sv-q"><h4>${esc(g.t)}<small>${vals.length} 則</small></h4><ul class="sv-txt">${vals.slice(-30).reverse().map((v) => `<li>${esc(v)}</li>`).join('')}</ul></div>`;
+      const c = {}; parts.forEach((v) => { c[v] = (c[v] || 0) + 1; });
+      return `<div class="sv-q"><h4>${esc(g.t)}<small>${multi ? '可複選・' : ''}${vals.length} 人回答</small></h4>${bars(c, vals.length)}</div>`;
+    });
+    body.innerHTML = `<div class="sv-kpis"><div class="sv-kpi"><b>${N}</b><span>份回覆</span></div></div><div class="sv-grid">${cards.join('')}</div>`;
+  }
+  async function load() {
+    const body = $('sv-body');
+    if (!CSV) { body.innerHTML = '<p class="fine">還沒設定問卷結果的連結。按右上角「設定結果連結」，照步驟把回覆試算表發布成 CSV 貼上來，之後大家都看得到即時結果。</p>'; $('sv-setup').hidden = false; return; }
+    body.innerHTML = '<p class="fine">讀取中…</p>';
+    try { const t = await fetch(CSV + (CSV.includes('?') ? '&' : '?') + 't=' + Date.now()).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); });
+      if (/<html/i.test(t.slice(0, 200))) throw new Error('not csv');
+      render(parseCSV(t)); }
+    catch (e) { body.innerHTML = `<p class="fine">讀不到結果（${esc(e.message)}）。請確認試算表已「發布到網路」，而且格式選的是 CSV。</p>`; }
+  }
+  // the link is shared for everyone through the site's shared storage (falls back to this browser)
+  async function loadConfig() {
+    try { const r = await fetch('../api/hall?site=survey-config', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); const u = j.data && j.data.items && j.data.items[0] && j.data.items[0].csv; if (u) { CSV = u; try { localStorage.setItem('vb.surveyCsv', u); } catch (e) {} } } } catch (e) {}
+    $('sv-url').value = CSV; load();
+  }
+  $('sv-set').addEventListener('click', () => { $('sv-setup').hidden = !$('sv-setup').hidden; });
+  $('sv-reload').addEventListener('click', load);
+  $('sv-save').addEventListener('click', async () => {
+    const u = $('sv-url').value.trim(), msg = $('sv-msg');
+    if (!/^https:\/\/docs\.google\.com\/spreadsheets\/.+output=csv/.test(u)) { msg.textContent = '這看起來不是「發布到網路」的 CSV 連結（網址裡要有 output=csv）。'; return; }
+    CSV = u; try { localStorage.setItem('vb.surveyCsv', u); } catch (e) {}
+    try { const r = await fetch('../api/hall', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-edit-key': localStorage.getItem('vb.editKey') || '' }, body: JSON.stringify({ site: 'survey-config', name: '問卷結果連結', data: { items: [{ csv: u }] } }) });
+      msg.textContent = r.ok ? '已儲存，大家都會看到這份結果。' : '已存在這台裝置（共用儲存失敗）。'; } catch (e) { msg.textContent = '已存在這台裝置。'; }
+    $('sv-setup').hidden = true; load();
+  });
+  loadConfig();
+})();
+</script>
+
   <div class="cols">
     <section class="block">
       <h3>建立問卷（約 5 分鐘）</h3>
@@ -3130,5 +3234,6 @@ window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude
 
 </script>
 
+<script src="../allnav.js" defer></script>
 </body>
 </html>
