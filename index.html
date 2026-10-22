@@ -838,6 +838,23 @@ a { color: var(--gold); }
   .leaflet-popup.card .leaflet-popup-content { width: 260px !important; }
 }
 @media (prefers-reduced-motion: reduce) { .pin { animation: none; } }
+/* ---------- phone held sideways (landscape, short screen) */
+@media (orientation: landscape) and (max-height: 520px) {
+  #intro { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "ball kick" "ball h1" "ball start" "ball sub" "ball skip"; column-gap: 28px; row-gap: 8px; align-content: center; justify-content: center; text-align: left; padding: 12px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left)); }
+  #intro .kick { grid-area: kick; font-size: 11px; } #intro h1 { grid-area: h1; font-size: clamp(26px, 8vh, 40px); }
+  #intro p.sub { grid-area: sub; font-size: 13px; line-height: 1.5; max-width: 28em; } #start { grid-area: start; justify-self: start; font-size: 16px; padding: 10px 26px; } #skip { grid-area: skip; justify-self: start; }
+  #ball { grid-area: ball; width: min(62vh, 38vw); height: min(62vh, 38vw); }
+  #intro .floor-lines { display: none; }
+  .topbar { padding: 6px max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left)); gap: 8px; }
+  .steps { display: none; }
+  .tlink { padding: 5px 10px; font-size: 12px; } .tlink.opt, .tlink[href="demo.html"] { display: none; }
+  .panel { top: 46px; bottom: 6px; width: 270px; left: max(6px, env(safe-area-inset-left)); }
+  .panel .p-head h2, .panel h2 { font-size: 16px; }
+  .legend { display: none; }
+  .leaflet-popup.card .leaflet-popup-content { max-height: calc(100vh - 90px); overflow: auto; width: 300px !important; }
+  #phase { bottom: 10px; font-size: 13px; padding: 5px 12px; }
+}
+
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
@@ -1019,6 +1036,8 @@ function playSpike(done) {
 
 // ================================================================ map
 const TW = L.latLngBounds([21.85, 119.95], [25.35, 122.05]);
+const LAND_PHONE = matchMedia('(orientation: landscape) and (max-height: 520px)');
+const panelPad = () => (innerWidth <= 760 ? 10 : LAND_PHONE.matches ? 290 : 380);
 const map = L.map('map', { zoomControl: false, maxZoom: 20, minZoom: 6, zoomSnap: 0.25, attributionControl: true });
 L.control.zoom({ position: 'topright' }).addTo(map);
 map.fitBounds(TW);
@@ -1196,7 +1215,7 @@ function addLayers() {
   // candidate pins (staggered)
   SITES.sites.forEach((s, i) => setTimeout(() => {
     const m = L.marker([s.lat, s.lng], { icon: icon(s), zIndexOffset: matches(s) ? 1000 : 0, title: s.name, keyboard: true, riseOnHover: true })
-      .bindPopup(() => popupHtml(s), { className: 'card', maxWidth: 340, minWidth: 260, autoPanPaddingTopLeft: [innerWidth > 760 ? 380 : 10, 70], autoPanPaddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] })
+      .bindPopup(() => popupHtml(s), { className: 'card', maxWidth: 340, minWidth: 260, autoPanPaddingTopLeft: [panelPad(), 70], autoPanPaddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] })
       .on('click', () => document.querySelectorAll('.item').forEach((el) => el.classList.toggle('on', el.dataset.id === s.id)))
       .addTo(map);
     markers.set(s.id, m);
@@ -1205,7 +1224,7 @@ function addLayers() {
 function hsinchuBounds() { return L.latLngBounds(SITES.sites.map((s) => [s.lat, s.lng]).concat(MAP.venues.map((v) => [v.lat, v.lon]))).pad(0.12); }
 function arrive(quick) {
   $('#topbar').hidden = false; $('#legend').hidden = false;
-  const pad = { paddingTopLeft: [innerWidth > 760 ? 380 : 10, 70], paddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] };
+  const pad = { paddingTopLeft: [panelPad(), 70], paddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] };
   const target = hsinchuBounds();
   const mp = $('#map');
   // while flying from all-of-Taiwan, hide rings / mask / pins: Leaflet scales the old SVG with CSS during the
@@ -1287,7 +1306,7 @@ setTimeout(() => { if (!$('#intro').hidden && !RM) loadSpike().catch(() => {}); 
 addEventListener('resize', () => { if (!cv.hidden) sizeCanvas(); });
 if (location.hash === '#map' || sessionStorage.getItem('vb.seenIntro') === '1' && location.hash !== '#intro') {
   // coming back from the 3D page: skip the intro
-  $('#intro').hidden = true; introRun = false; ready.then(() => { map.fitBounds(hsinchuBounds(), { paddingTopLeft: [innerWidth > 760 ? 380 : 10, 70] }); $('#topbar').hidden = false; $('#legend').hidden = false; addLayers(); $('#panel').classList.remove('away'); map.setMinZoom(8);
+  $('#intro').hidden = true; introRun = false; ready.then(() => { map.fitBounds(hsinchuBounds(), { paddingTopLeft: [panelPad(), 70] }); $('#topbar').hidden = false; $('#legend').hidden = false; addLayers(); $('#panel').classList.remove('away'); map.setMinZoom(8);
     const id = new URLSearchParams(location.search).get('site'); if (id) setTimeout(() => openSite(id, true), 1600); });
 }
 document.addEventListener('click', (e) => { if (e.target.closest('.enter')) { try { sessionStorage.setItem('vb.seenIntro', '1'); } catch (er) {} } });
