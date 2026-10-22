@@ -84,6 +84,15 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .gen li.ok { color: #C7D2E0; } .gen li.ok::before { background: #2E9E5B; border-color: #2E9E5B; }
 .gen .bar { height: 4px; border-radius: 4px; background: #24344A; margin-top: 14px; overflow: hidden; } .gen .bar i { display: block; height: 100%; width: 0; background: #F2B705; transition: width .5s; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.wallmenu { position: absolute; z-index: 7; top: 58px; right: 12px; width: 300px; max-height: calc(100% - 80px); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(10,20,35,.25); padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.wallmenu[hidden] { display: none; }
+.wallmenu label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.wallmenu .wm-t { font-weight: 700; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.wallmenu .wm-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.wallmenu .seg-s { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.wallmenu .seg-s button { border: 0; border-radius: 0; padding: 4px 8px; font-size: 12px; }
+.wallmenu .seg-s button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.wallmenu .wm-reset { align-self: flex-start; font-size: 12px; }
 .insp { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
 @media (min-width: 901px) { .app.inspecting { grid-template-columns: 0 minmax(0, 1fr) !important; }
 .app.inspecting > .rail { visibility: hidden; padding: 0; overflow: hidden; border: 0; } }
@@ -318,6 +327,7 @@ button.danger { color: var(--warn); }
         <button type="button" id="v-top" aria-pressed="false">俯視</button>
         <button type="button" id="v-player" aria-pressed="false">球員視角</button>
       </div>
+      <button type="button" id="t-walls" aria-expanded="false" aria-controls="wallmenu">牆與樑柱 ▾</button>
       <button type="button" id="t-labels" aria-pressed="true">標籤</button>
       <button type="button" id="t-snap" aria-pressed="true">對齊 0.5 m</button>
       <button type="button" id="btn-undo">復原</button>
@@ -338,6 +348,7 @@ button.danger { color: var(--warn); }
       <div id="ol-map"></div>
       <div class="ol-foot"><span id="ol-info"></span><label>淨高（樑下）<input id="ol-h" type="number" min="4" max="15" step="0.1"> m</label><label>屋頂外觀高度（選填）<input id="ol-roof" type="number" min="0" max="40" step="0.1"> m</label><span style="flex:1"></span><button type="button" class="pri" id="ol-ok" disabled>用這個外框生成球館</button><span id="ol-osm"></span></div>
     </div></div>
+    <div class="wallmenu" id="wallmenu" hidden role="dialog" aria-label="牆與樑柱"></div>
     <div class="camtip" id="camtip" hidden>點球場邊的攝影機，看智慧球場怎麼自動算分 →</div>
   </main>
 </div>
@@ -913,8 +924,8 @@ function buildBuilding() {
   for (let i = 0; i <= n; i++) {
     const x = -L / 2 + (i * L) / n;
     const cx = clamp(x, -L / 2 + 0.2, L / 2 - 0.2);
-    box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, -W / 2 + 0.2);
-    box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, W / 2 - 0.2);
+    box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, -W / 2 + 0.2).userData.structure = true;
+    box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, W / 2 - 0.2).userData.structure = true;
     const rafter = box(buildingGroup, 0.3, 0.7, W, '#6B7682', cx, H, 0); rafter.userData.overhead = true;
   }
   // gable roof
@@ -1407,14 +1418,14 @@ function undo() {
 }
 let draftTimer = 0;
 function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
-function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
+function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 
 // ---------------------------------------------------------------- camera
 let view = 'bird';
 function applyOverhead() {
   const hide = view === 'top';
-  if (typeof buildingGroup !== 'undefined') buildingGroup.traverse((o) => { if (o.userData && o.userData.overhead) o.visible = !hide; });
+  if (typeof applyStructure === 'function') applyStructure();
   for (const [id, g] of itemObjs) { const it = state && state.items.find((x) => x.id === id); if (it && CAT[it.type].ceiling && it.type !== 'camera') { g.visible = !hide; g.traverse((o) => { if (o.userData.isTag) o.visible = !hide && showLabels; }); } }
   window.wakeRender && window.wakeRender();
 }
@@ -1548,10 +1559,7 @@ function tick() {
   if (!camMoved && performance.now() > renderUntil && !(spinning && frameNo % 2 === 0)) return;
   const cp = camera.position;
   const { H } = state.building;
-  for (const wl of walls) {
-    const [nx, nz] = wl.userData.normal, [cx, cz] = wl.userData.center;
-    wl.visible = (cp.x - cx) * nx + (cp.z - cz) * nz < 0;
-  }
+  walls.forEach((wl, i) => { wl.visible = typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true; });
   if (roof) roof.visible = cp.y < H + 0.5;
   if (!reduceMotion) for (const s of spinners) s.rotation.y += 0.01;
   renderer.render(scene, camera);
@@ -2044,7 +2052,7 @@ function buildPolyBuilding() {
     const n = Math.max(1, Math.round(e.len / 6));
     for (let i = 0; i <= n; i++) {
       const px = e.a[0] + e.dx * (e.len * i / n) - e.nx * 0.2, pz = e.a[1] + e.dz * (e.len * i / n) - e.nz * 0.2;
-      box(buildingGroup, 0.35, eave, 0.35, '#5C6773', px, 0, pz);
+      box(buildingGroup, 0.35, eave, 0.35, '#5C6773', px, 0, pz).userData.structure = true;
     }
   }
   // flat roof following the outline (hidden from above like the rectangular roof)
@@ -2289,6 +2297,48 @@ async function locateAddress() {
   OUT.addr = addr; OUT.map.setView([g.lat, g.lng], 19);
   await autoOutline(g.lat, g.lng, `「${g.label || addr}」`);
 }
+
+// ---------------------------------------------------------------- wall / steel-structure visibility (view helpers, not saved)
+const VIS = { structure: false, auto: true, wall: {} };   // wall[i] = 'show' | 'hide' (overrides auto)
+function wallName(wl, i) {
+  const [nx, nz] = wl.userData.normal;
+  const dir = Math.abs(nx) > Math.abs(nz) ? (nx > 0 ? '東' : '西') : (nz > 0 ? '南' : '北');
+  const len = wl.geometry && wl.geometry.parameters ? Math.max(wl.geometry.parameters.width || 0, wl.geometry.parameters.depth || 0) : 0;
+  return `${dir}側牆${len ? `・${Math.round(len)} m` : ''}`;
+}
+function wallVisible(wl, i, cp) {
+  const o = VIS.wall[i];
+  if (o === 'show') return true; if (o === 'hide') return false;
+  if (!VIS.auto) return true;
+  const [nx, nz] = wl.userData.normal, [cx, cz] = wl.userData.center;
+  return (cp.x - cx) * nx + (cp.z - cz) * nz < 0;
+}
+function applyStructure() {
+  buildingGroup.traverse((o) => { if (o.userData && o.userData.structure) o.visible = VIS.structure; if (o.userData && o.userData.overhead) o.visible = VIS.structure && view !== 'top'; });
+  window.wakeRender && window.wakeRender();
+}
+function renderWallMenu() {
+  const m = $('wallmenu'); if (!m) return;
+  m.innerHTML = `<label><input type="checkbox" data-k="structure" ${VIS.structure ? 'checked' : ''}> 顯示鋼構樑柱</label>
+    <label><input type="checkbox" data-k="auto" ${VIS.auto ? 'checked' : ''}> 擋住視線的牆自動隱藏</label>
+    <div class="wm-t">各面牆</div>
+    ${walls.map((wl, i) => `<div class="wm-row"><span>${wallName(wl, i)}</span><span class="seg-s">${[['auto', '自動'], ['show', '顯示'], ['hide', '拿掉']].map(([k, l]) => `<button type="button" data-w="${i}" data-v="${k}" aria-pressed="${(VIS.wall[i] || 'auto') === k}">${l}</button>`).join('')}</span></div>`).join('')}
+    <button type="button" class="wm-reset" data-reset="1">全部恢復</button>`;
+}
+function initWallMenu() {
+  const btn = $('t-walls'), m = $('wallmenu');
+  btn.addEventListener('click', (e) => { e.stopPropagation(); m.hidden = !m.hidden; btn.setAttribute('aria-expanded', String(!m.hidden)); if (!m.hidden) renderWallMenu(); });
+  document.addEventListener('click', (e) => { if (!m.hidden && !m.contains(e.target) && e.target !== btn) { m.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
+  m.addEventListener('change', (e) => { const k = e.target.dataset.k; if (!k) return; VIS[k] = e.target.checked; if (k === 'structure') applyStructure(); window.wakeRender && window.wakeRender(); });
+  m.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return; e.stopPropagation();
+    if (b.dataset.reset) { VIS.wall = {}; VIS.auto = true; }
+    else { const i = +b.dataset.w, v = b.dataset.v; if (v === 'auto') delete VIS.wall[i]; else VIS.wall[i] = v; }
+    renderWallMenu(); window.wakeRender && window.wakeRender();
+  });
+}
+
+initWallMenu();
 
 // ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
 const inspEl = $('insp'); let inspSaved = null, inspTween = null;
