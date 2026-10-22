@@ -820,7 +820,9 @@ a { color: var(--gold); }
 @keyframes vbIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { #anim3d.leave, #map.focused, #topbar, #legend { transition: none !important; animation: none !important; } }
 #phase.leave { opacity: 0; }
-#map.focusing { filter: blur(8px) brightness(.7); transform: scale(1.06); }
+#map.focusing { filter: blur(4px) brightness(.75); transform: scale(1.04); }
+#map .leaflet-overlay-pane, #map .leaflet-marker-pane, #map .leaflet-tooltip-pane, #map .leaflet-mask-pane { transition: opacity .6s ease; }
+#map.flying .leaflet-overlay-pane, #map.flying .leaflet-marker-pane, #map.flying .leaflet-tooltip-pane, #map.flying .leaflet-mask-pane, #map.flying .leaflet-shadow-pane { opacity: 0; visibility: hidden; transition: none; }
 #map.focused { transition: filter 1.4s ease, transform 1.6s cubic-bezier(.2,.7,.2,1); filter: none; transform: none; }
 
 @media (max-width: 760px) {
@@ -1190,7 +1192,11 @@ function arrive(quick) {
   $('#topbar').hidden = false; $('#legend').hidden = false;
   const pad = { paddingTopLeft: [innerWidth > 760 ? 380 : 10, 70], paddingBottomRight: [20, innerWidth > 760 ? 20 : innerHeight * 0.46] };
   const target = hsinchuBounds();
-  const finish = () => { addLayers(); $('#panel').classList.remove('away'); toast('點大圖釘看場地資訊，再按「進入球館」'); map.setMinZoom(8); };
+  const mp = $('#map');
+  // while flying from all-of-Taiwan, hide rings / mask / pins: Leaflet scales the old SVG with CSS during the
+  // animation, which turned the dashed rings into huge smeared strokes and made the flight stutter
+  mp.classList.add('flying');
+  const finish = () => { addLayers(); requestAnimationFrame(() => mp.classList.remove('flying')); $('#panel').classList.remove('away'); toast('點大圖釘看場地資訊，再按「進入球館」'); map.setMinZoom(8); };
   if (RM) { map.fitBounds(target, pad); finish(); return; }
   setTimeout(() => {
     map.once('moveend', finish);
