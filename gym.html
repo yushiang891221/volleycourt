@@ -26,6 +26,7 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .siteinfo b { font-size: 15px; }
 .siteinfo span { font-size: 12px; color: var(--muted); line-height: 1.6; }
 .siteinfo .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.siteinfo .memo { color: var(--ok) !important; }
 .gen { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px)); background: rgba(11, 22, 38, .92); color: #F3EFE6; border-radius: 18px; padding: 20px 22px; box-shadow: 0 20px 50px rgba(0,0,0,.45); transition: opacity .5s, transform .5s; }
 .gen.hide { opacity: 0; transform: translate(-50%, -40%); pointer-events: none; }
 .gen h3 { margin: 0 0 4px; font-size: 18px; }
@@ -1334,7 +1335,7 @@ function undo() {
   fullRefresh();
 }
 let draftTimer = 0;
-function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
+function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
 function commit() { window.wakeRender && window.wakeRender(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); }
 
@@ -1501,7 +1502,8 @@ function start(hot) {
   let note = '';
   if (hot && hot.state) state = sanitize(hot.state);
   if (!state) { try { const s = sessionStorage.getItem(STASH_KEY); if (s) { state = sanitize(JSON.parse(s)); sessionStorage.removeItem(STASH_KEY); } } catch (e) { /* ignore */ } }
-  if (!state) { try { const d = localStorage.getItem(DRAFT_KEY); if (d) { state = sanitize(JSON.parse(d)); note = '已載回你上次在這台裝置的配置'; } } catch (e) { /* ignore */ } }
+  if (!state && window.__siteId) { const m = loadHall(window.__siteId); if (m) { state = sanitize({ ...m.data, id: null }); window.__hallLoaded = true; } else window.__generating = true; }
+  if (!state && !window.__siteId) { try { const d = localStorage.getItem(DRAFT_KEY); if (d) { state = sanitize(JSON.parse(d)); note = '已載回你上次在這台裝置的配置'; } } catch (e) { /* ignore */ } }
   if (!state) state = fromTemplate(T_PRO);
   if (!state.items.some((i) => i.type === 'camera')) { let n = 1; for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) state.items.push(cameraFor(c, n++)); }
   if (state.id && !SAVED.some((s) => s.id === state.id)) state.id = null;
@@ -1586,7 +1588,11 @@ function planHall(site) {
   }
   return { L, W, H, best, items, eff };
 }
-async function generateFromSite(id) {
+// every candidate site keeps its own layout on this device (localStorage 'vb.hall.<id>')
+const HALL_KEY = (id) => 'vb.hall.' + id;
+function loadHall(id) { try { const v = JSON.parse(localStorage.getItem(HALL_KEY(id)) || 'null'); return v && v.data && Array.isArray(v.data.items) ? v : null; } catch (e) { return null; } }
+function saveHall(id) { try { localStorage.setItem(HALL_KEY(id), JSON.stringify({ data: designData(), savedAt: new Date().toISOString(), name: state.name, courts: state.items.filter((i) => CAT[i.type].court === 'vb').length })); } catch (e) { /* storage full or blocked */ } }
+async function generateFromSite(id, opts = {}) {
   const gen = $('gen'), steps = $('gen-steps'), bar = $('gen-bar');
   let site = null;
   try { const d = await fetch('data/sites.json', { cache: 'no-store' }).then((r) => r.json()); site = d.sites.find((s) => s.id === id); } catch (e) { /* ignore */ }
@@ -1604,8 +1610,27 @@ async function generateFromSite(id) {
   sp2.textContent = site.L && site.W ? '長寬為實測。' : `長寬還沒量，先用 ${fmtW(plan.eff)} 坪推估成 ${plan.L}×${plan.W} m；量到之後在下面「廠房」改數字。`;
   const row = document.createElement('div'); row.className = 'row';
   const back = document.createElement('a'); back.href = 'index.html?site=' + encodeURIComponent(id) + '#map'; back.textContent = '← 回地圖看這個場地';
-  const regen = document.createElement('button'); regen.type = 'button'; regen.textContent = '重新生成'; regen.addEventListener('click', () => generateFromSite(id));
-  row.append(back, regen); info.append(b, sp, sp2, row);
+  const mem = opts.fresh ? null : loadHall(id);
+  const regen = document.createElement('button'); regen.type = 'button'; regen.textContent = '重新生成';
+  // regenerating throws away this site's edits, so it takes a second click to confirm
+  regen.addEventListener('click', () => {
+    if (loadHall(id) && regen.dataset.armed !== '1') { regen.dataset.armed = '1'; regen.textContent = '再按一次：清掉這個場館的配置重來'; setTimeout(() => { regen.dataset.armed = ''; regen.textContent = '重新生成'; }, 4000); return; }
+    generateFromSite(id, { fresh: true });
+  });
+  const memo = document.createElement('span'); memo.className = 'memo';
+  row.append(back, regen); info.append(b, sp, sp2, memo, row);
+  const showMemo = (t) => { memo.textContent = t ? `💾 這個場館有自己的記憶：改過的配置會自動存起來，下次進來接著用（上次存：${new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}）` : '💾 這個場館有自己的記憶：改過的配置會自動存起來，下次進來接著用'; };
+  window.__hallMemo = showMemo;
+  if (mem) {
+    // restore this site's own layout instead of regenerating
+    window.__generating = false;
+    if (!window.__hallLoaded) { pushHistory(); state = sanitize({ ...mem.data, id: null }); selectedId = null; fullRefresh(); frameView('bird'); }
+    showMemo(mem.savedAt);
+    toast(`已載入「${site.name}」上次的配置`);
+    return;
+  }
+  showMemo(null);
+  window.__generating = true;
   const S = [
     `讀取場地：${site.name}`,
     `量出廠房 ${plan.L}×${plan.W} m、淨高 ${plan.H} m（約 ${fmtW(plan.L * plan.W / 3.3058)} 坪）`,
@@ -1634,6 +1659,7 @@ async function generateFromSite(id) {
   await stepOn(4, 900);
   for (let i = 0; i < li.length; i++) li[i].className = 'ok'; bar.style.width = '100%';
   $('gen-title').textContent = '球館生成好了';
+  window.__generating = false; saveHall(id); showMemo(new Date().toISOString());
   await wait(1300);
   gen.classList.add('hide');
   const tip = $('camtip'); tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 7000);
@@ -1743,6 +1769,7 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !inspEl.hidden) {
 addEventListener('message', (e) => { if (e.data && e.data.vb === 'close') window.closeInspector(); });
 
 const SITE_ID = new URLSearchParams(location.search).get('site');
+window.__siteId = SITE_ID;
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 if (SITE_ID) generateFromSite(SITE_ID);
 </script>

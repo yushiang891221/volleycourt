@@ -743,6 +743,8 @@ a { color: var(--gold); }
 .frow .lab b { color: var(--ink); font-weight: 700; }
 .frow input[type=range] { width: 100%; accent-color: var(--gold); }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.memtag { font-style: normal; font-size: 11px; font-weight: 700; color: #6CC793; margin-left: 4px; white-space: nowrap; }
+.memline { margin: 8px 0 0; font-size: 12px; color: #6CC793; }
 .chips button { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
 .chips button[aria-pressed="true"] { background: var(--gold); color: #13233A; border-color: var(--gold); font-weight: 700; }
 .chips button i { font-style: normal; opacity: .7; margin-left: 4px; font-size: 11px; }
@@ -1074,6 +1076,9 @@ function pinHtml(s, on) {
   const col = { A: '#2E9E5B', B: '#E08A2E', C: '#8A96A6' }[s.pri];
   return `<div class="pin${on ? '' : ' off'}" data-id="${s.id}"><svg viewBox="0 0 50 62" width="50" height="62"><path d="M25 60 C25 60 4 36 4 22 A21 21 0 0 1 46 22 C46 36 25 60 25 60Z" fill="${col}" stroke="#fff" stroke-width="2.5"/></svg><b>${s.pri}</b><span>${esc(fitText(s).replace('排球', ''))}</span></div>`;
 }
+// each site remembers its own 3D layout (saved by gym.html on this device)
+function hallMem(id) { try { const v = JSON.parse(localStorage.getItem('vb.hall.' + id) || 'null'); return v && v.data ? v : null; } catch (e) { return null; } }
+const memTime = (t) => new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 function popupHtml(s) {
   const f = fit(s);
   const fact = (v, l, wide) => `<div class="fact${wide ? ' wide' : ''}"><b>${v}</b><span>${l}</span></div>`;
@@ -1090,12 +1095,12 @@ function popupHtml(s) {
   </div>
   <p class="pc-note">${esc(s.note || '')}</p>
   <div class="pc-links">${links}</div>
-  <a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 生成 3D 配置</a>`;
+  ${(() => { const m = hallMem(s.id); return m ? `<div class="memline">💾 已有你的配置・${m.courts ?? '?'} 面場・上次編輯 ${esc(memTime(m.savedAt))}</div><a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 接續上次配置</a>` : `<a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 生成 3D 配置</a>`; })()}`;
 }
 function renderList() {
   const L2 = [...SITES.sites].sort((a, b) => (matches(b) - matches(a)) || a.pri.localeCompare(b.pri) || (b.ping || 0) - (a.ping || 0));
   const n = SITES.sites.filter(matches).length;
-  $('#list').innerHTML = L2.map((s) => `<button type="button" class="item${matches(s) ? '' : ' off'}" role="listitem" data-id="${s.id}"><span class="g ${s.pri}">${s.pri}</span><span class="nm">${esc(s.name)}</span>
+  $('#list').innerHTML = L2.map((s) => `<button type="button" class="item${matches(s) ? '' : ' off'}" role="listitem" data-id="${s.id}"><span class="g ${s.pri}">${s.pri}</span><span class="nm">${esc(s.name)}${hallMem(s.id) ? ' <i class="memtag">💾 已規劃</i>' : ''}</span>
     <span class="sp">${esc(s.town)}・${s.ping != null ? f0(s.ping) + ' 坪' : '坪數待查'}・挑高 ${s.height != null ? s.height + ' m' : '待量'}・${s.rent != null ? '月租 ' + f0(s.rent / 10000) + ' 萬' : '租金待查'}・<em>${esc(fitText(s))}</em></span></button>`).join('');
   const upd = new Date(SITES.updated);
   $('#meta').innerHTML = `符合條件 <b>${n}</b>／共 <b>${SITES.sites.length}</b> 筆・每天自動更新<br>上次更新：${upd.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
