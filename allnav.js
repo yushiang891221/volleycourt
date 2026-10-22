@@ -14,6 +14,8 @@
       ['eval.html#eval/sofa', '沙發比價', '搜尋、篩材質、排序'],
       ['eval.html#eval/light', 'LED 照明', ''],
       ['eval.html#eval/fan', '吊扇與通風', ''],
+      ['eval.html#eval/air', '冷氣與用電量', '契約容量、電費、屋頂隔熱'],
+      ['eval.html#eval/fire', '消防設備', '滅火器、緊急照明、避難指示、偵煙'],
       ['eval.html#eval/net', '網柱、球網、裁判台', ''],
       ['eval.html#eval/aed', 'AED 與安全', ''],
       ['eval.html#eval/room', '廁所、淋浴、更衣', ''],

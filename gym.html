@@ -321,10 +321,10 @@ button.danger { color: var(--warn); }
 </div>
 <script type="application/json" id="saved-designs">[{"id":"dmvjcd5m1","name":"2 面專業排球（龍蝦規格）","savedAt":"2026-10-22T09:31:29.065Z","data":{"name":"2 面專業排球（龍蝦規格）","building":{"L":36,"W":30,"H":9},"floor":"blue","net":"men","items":[{"type":"vb","x":-9,"z":-2.5,"rot":90},{"type":"vb","x":9,"z":-2.5,"rot":90},{"type":"referee","x":-15.2,"z":-2.5,"rot":0},{"type":"referee","x":15.2,"z":-2.5,"rot":0},{"type":"wc","x":-15.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"男廁"},{"type":"wc","x":-10.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"女廁"},{"type":"changing","x":-5.5,"z":12.75,"rot":0,"w":5,"d":4.5},{"type":"rug","x":2.5,"z":12.5,"rot":0,"w":7,"d":4},{"type":"sofa","x":0.8,"z":14.2,"rot":0},{"type":"sofa","x":4.2,"z":14.2,"rot":0},{"type":"table","x":2.5,"z":12,"rot":0},{"type":"locker","x":7,"z":14.6,"rot":0,"w":1.8,"d":0.5},{"type":"counter","x":10,"z":13.5,"rot":0,"w":3,"d":0.8},{"type":"vending","x":14.5,"z":14.4,"rot":0},{"type":"water","x":16.2,"z":14.5,"rot":0},{"type":"bench","x":12.6,"z":11,"rot":0},{"type":"ballcart","x":15.5,"z":11.2,"rot":0},{"type":"aed","x":17.8,"z":11,"rot":90},{"type":"light","x":-15.5,"z":-12,"rot":0},{"type":"light","x":-15.5,"z":-6,"rot":0},{"type":"light","x":-15.5,"z":0,"rot":0},{"type":"light","x":-15.5,"z":6,"rot":0},{"type":"light","x":-3,"z":-12,"rot":0},{"type":"light","x":-3,"z":-6,"rot":0},{"type":"light","x":-3,"z":0,"rot":0},{"type":"light","x":-3,"z":6,"rot":0},{"type":"light","x":3,"z":-12,"rot":0},{"type":"light","x":3,"z":-6,"rot":0},{"type":"light","x":3,"z":0,"rot":0},{"type":"light","x":3,"z":6,"rot":0},{"type":"light","x":15.5,"z":-12,"rot":0},{"type":"light","x":15.5,"z":-6,"rot":0},{"type":"light","x":15.5,"z":0,"rot":0},{"type":"light","x":15.5,"z":6,"rot":0},{"type":"netwall","x":0,"z":-2.5,"rot":90,"w":25,"d":0.1},{"type":"netwall","x":9,"z":10,"rot":0,"w":18,"d":0.1},{"type":"netwall","x":-9,"z":10,"rot":0,"w":18,"d":0.1}]}}]</script>
 <script>
-window.evalLabel = (type) => type === 'camera' ? '看智慧球場（比賽辨識 Demo）→' : ({"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"})[({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service'];
+window.evalLabel = (type) => type === 'camera' ? '看智慧球場（比賽辨識 Demo）→' : ({"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "air": "冷氣與用電量評估 →", "fire": "消防設備評估 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"})[({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service'];
 window.evalUrl = (type, label) => {
   if (type === 'camera' || type === 'scoreboard') return 'demo.html?cam=' + encodeURIComponent(label || '攝影機');
-  return 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + (({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service');
+  return 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + (({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service');
 };
 window.openEval = (type, label) => {
   try { sessionStorage.setItem('vb.counts', JSON.stringify(window.gymCounts ? window.gymCounts().counts : {})); } catch (e) {}
@@ -390,11 +390,21 @@ const CAT = {
   ballcart: { label: '球車', group: '比賽設備', w: 1, d: 0.6, h: 1, color: '#E0B33A' },
   bleacher: { label: '觀眾席', group: '比賽設備', w: 6, d: 2.4, h: 1.2, color: '#8D99A6', resize: true, tag: true },
   netwall: { label: '隔網', group: '比賽設備', w: 18, d: 0.1, h: 5, color: '#1F2933', resize: 'w', tag: true },
+  aircon: { label: '冷氣（掛牆）', group: '牆面、消防與安全', w: 1.2, d: 0.32, h: 0.42, mountY: 2.8, color: '#F2F4F6', wall: true, zoneOK: true, tag: true },
+  extinguisher: { label: '滅火器', group: '牆面、消防與安全', w: 0.35, d: 0.3, h: 0.6, mountY: 0, color: '#D7262B', wall: true, zoneOK: true },
+  emlight: { label: '緊急照明燈', group: '牆面、消防與安全', w: 0.4, d: 0.12, h: 0.15, mountY: 2.6, color: '#F4F4F2', wall: true, zoneOK: true },
+  exitsign: { label: '避難方向指示燈', group: '牆面、消防與安全', w: 0.45, d: 0.06, h: 0.2, mountY: 2.3, color: '#1E9E4A', wall: true, zoneOK: true },
+  smoke: { label: '偵煙器（天花板）', group: '牆面、消防與安全', w: 0.2, d: 0.2, h: 0.06, color: '#F4F4F2', ceiling: true },
+  crashpad: { label: '防撞墊（牆面）', group: '牆面、消防與安全', w: 6, d: 0.06, h: 2, mountY: 0, color: '#2F5FA8', wall: true, zoneOK: true, resize: 'w', tag: true },
+  firstaid: { label: '急救箱', group: '牆面、消防與安全', w: 0.42, d: 0.16, h: 0.32, mountY: 1.4, color: '#F4F4F2', wall: true, zoneOK: true },
+  cctv: { label: '監視器（安全）', group: '牆面、消防與安全', w: 0.25, d: 0.25, h: 0.15, mountY: 3.2, color: '#1F2933', wall: true, zoneOK: true },
+  heater: { label: '熱水器', group: '牆面、消防與安全', w: 0.45, d: 0.45, h: 0.9, mountY: 1.2, color: '#E8ECEF', wall: true, zoneOK: true },
+  panel: { label: '配電盤', group: '牆面、消防與安全', w: 0.8, d: 0.25, h: 1.2, mountY: 0.6, color: '#8A96A6', wall: true, zoneOK: true, tag: true },
   light: { label: 'LED 天井燈', group: '天花板', w: 0.5, d: 0.5, h: 0.3, color: '#F4F1E6', ceiling: true },
   fan: { label: '大型吊扇', group: '天花板', w: 7.3, d: 7.3, h: 1.2, color: '#3A4654', ceiling: true, diam: true, tag: true },
   camera: { label: '網路攝影機（智慧球場，掛牆）', group: '天花板', w: 0.4, d: 0.4, h: 0.3, color: '#22303F', ceiling: true, tag: true },
 };
-const GROUPS = ['球場', '休息與服務', '空間', '比賽設備', '天花板'];
+const GROUPS = ['球場', '休息與服務', '空間', '比賽設備', '天花板', '牆面、消防與安全'];
 
 // ---------------------------------------------------------------- templates
 const T_PRO = () => ({
@@ -711,6 +721,9 @@ function buildItem(it, courtIndex) {
       lamp.userData.pick = true;
       const pad = new THREE.Mesh(new THREE.CircleGeometry(0.35, 20), new THREE.MeshBasicMaterial({ color: '#FFF4C8', transparent: true, opacity: 0.35, depthWrite: false }));
       pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; g.add(pad);
+    } else if (it.type === 'smoke') {
+      cyl(g, 0.08, 0.08, 0.05, '#F4F4F2', 0, H - 0.1, 0, null, 16);
+      const led = cyl(g, 0.012, 0.012, 0.01, '#E23B3B', 0.04, H - 0.11, 0, { emissive: '#FF3B3B', emissiveIntensity: 1.2 }, 6);
     } else if (it.type === 'camera') {
       const y = Math.min(H - 1.2, 5.5);
       if (typeof snapCamera === 'function') snapCamera(it);
@@ -745,6 +758,9 @@ function buildItem(it, courtIndex) {
       pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; g.add(pad);
       tag(g, `吊扇 Ø${fmt1(w)} m（葉片離地 ${fmt1(yb)} m）`, yb + 0.6);
     }
+  } else if (def.wall) {
+    if (typeof snapWallItem === 'function') snapWallItem(it);
+    buildWallItem(g, it, w, d, def);
   } else {
     buildFurniture(g, it, w, d, def);
     if (def.tag) tag(g, labelOf(it), (def.h || 1) + 0.4);
@@ -928,14 +944,14 @@ function rerenderOne(it) {
 function applyLabelVisibility() {
   for (const g of itemObjs.values()) g.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; });
 }
-function moveObj(it) { if (it.type === 'camera' && typeof snapCamera === 'function') { snapCamera(it); const g0 = itemObjs.get(it.id); if (g0 && Math.abs(g0.rotation.y - (it.rot * Math.PI) / 180) > 1e-3) { rerenderOne(it); return; } } const g = itemObjs.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; } }
+function moveObj(it) { if (CAT[it.type].wall && typeof snapWallItem === 'function') { const r0 = it.rot; snapWallItem(it); if (r0 !== it.rot) { rerenderOne(it); return; } } if (it.type === 'camera' && typeof snapCamera === 'function') { snapCamera(it); const g0 = itemObjs.get(it.id); if (g0 && Math.abs(g0.rotation.y - (it.rot * Math.PI) / 180) > 1e-3) { rerenderOne(it); return; } } const g = itemObjs.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; } }
 function updateOutline() {
   for (const [id, g] of itemObjs) g.traverse((o) => { if (o.userData.camCone) o.visible = id === selectedId; });
   const it = state.items.find((x) => x.id === selectedId);
   if (!it) { selOutline.visible = false; return; }
   const { w, d } = sizeOf(it);
   const def = CAT[it.type];
-  const y = it.type === 'camera' ? Math.min(state.building.H - 1.2, 5.5) - 0.2 : def.ceiling ? (it.type === 'fan' ? state.building.H - 1.2 : state.building.H - 0.45) : 0.05;
+  const y = def.wall ? (def.mountY || 0) + 0.05 : it.type === 'smoke' ? state.building.H - 0.1 : it.type === 'camera' ? Math.min(state.building.H - 1.2, 5.5) - 0.2 : def.ceiling ? (it.type === 'fan' ? state.building.H - 1.2 : state.building.H - 0.45) : 0.05;
   const pts = corners(it.x, it.z, w + 0.1, d + 0.1, it.rot).map(([x, z]) => new THREE.Vector3(x, y, z));
   selOutline.geometry.dispose();
   selOutline.geometry = new THREE.BufferGeometry().setFromPoints(pts);
@@ -1070,7 +1086,7 @@ function renderPalette() {
       const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = def.color;
       bb.append(sw, document.createTextNode(def.label));
       const sp = document.createElement('span');
-      sp.textContent = def.diam ? `Ø${def.w} m` : def.ceiling ? (type === 'camera' ? '掛在牆上' : '掛在天花板') : `${def.w}×${def.d} m`;
+      sp.textContent = def.diam ? `Ø${def.w} m` : def.wall ? '掛在牆上' : def.ceiling ? (type === 'camera' ? '掛在牆上' : '掛在天花板') : `${def.w}×${def.d} m`;
       b.append(bb, sp);
       b.addEventListener('click', () => addItem(type));
       grid.appendChild(b);
@@ -1591,6 +1607,23 @@ function layoutCourts(ping) {
   }
   return null;
 }
+// fire / safety / building services laid out along the walls (positions are indicative; snapWallItem puts them on the wall)
+function safetyKit() {
+  const { L, W, H } = state.building, out = [];
+  const add = (type, x, z, extra = {}) => out.push({ id: uid(), type, x, z, rot: 0, ...extra });
+  const along = (len, step) => { const n = Math.max(1, Math.round(len / step)); return Array.from({ length: n }, (_, i) => -len / 2 + len * (i + 0.5) / n); };
+  // entrance side = +z wall (the service strip): AED, first aid, panel, exit signs
+  add('aed', L / 2 - 3, W / 2); add('firstaid', L / 2 - 4, W / 2); add('panel', -L / 2 + 2, W / 2);
+  add('exitsign', L / 2 - 1.5, W / 2); add('exitsign', -L / 2 + 1.5, W / 2); add('exitsign', L / 2 - 1.5, -W / 2); add('exitsign', -L / 2 + 1.5, -W / 2);
+  for (const z of [-W / 2, W / 2]) for (const x of along(L, 20)) add('extinguisher', x, z);
+  for (const x of [-L / 2, L / 2]) for (const z of along(W, 20)) add('extinguisher', x, z);
+  for (const [x, z] of [[0, W / 2], [0, -W / 2], [-L / 2, 0], [L / 2, 0]]) add('emlight', x, z);
+  for (const x of [-L / 2, L / 2]) for (const z of along(W, 12)) add('aircon', x, z);
+  for (const x of along(L, 15)) for (const z of along(W, 15)) add('smoke', x, z);
+  for (const x of along(L - 2, 20)) add('crashpad', x, -W / 2, { w: Math.min(20, (L - 2) / Math.max(1, Math.round((L - 2) / 20))) - 0.2 });
+  for (const [x, z] of [[-L / 2, -W / 2 + 1], [L / 2, -W / 2 + 1], [-L / 2, W / 2 - 1], [L / 2, W / 2 - 1]]) add('cctv', x, z);
+  return out;
+}
 function planHall(site) {
   const PINGM = 3.3058, H = site.height || 8;
   const eff = site.ping == null ? 300 : site.ping;
@@ -1676,7 +1709,7 @@ async function generateFromSite(id, opts = {}) {
     `讀取場地：${site.name}`,
     `量出廠房 ${plan.L}×${plan.W} m、淨高 ${plan.H} m（約 ${fmtW(plan.L * plan.W / 3.3058)} 坪）`,
     plan.best ? `依 ${fmtW(plan.eff)} 坪放入 ${plan.best.n} 面排球場（${plan.best.label}，${plan.best.rows || 1} 排）` : '放不下標準排球場，先放 1 面精簡規格，記得確認尺寸',
-    '每面球場邊架設智慧攝影機',
+    '每面球場邊架設智慧攝影機，配置冷氣、消防與安全設備（示意）',
     '完成！點任何物件看評估，攝影機會帶你看比賽辨識',
   ];
   steps.innerHTML = S.map((t) => `<li>${t.replace(/[<>&]/g, '')}</li>`).join('');
@@ -1697,6 +1730,8 @@ async function generateFromSite(id, opts = {}) {
   await stepOn(3, 200);
   let n = 1;
   for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) { const cam = cameraFor(c, n++); state.items.push(cam); rerenderOne(cam); commit(); await wait(stepMs * 0.8); }
+  for (const kit of safetyKit()) { const it = sanitize({ items: [kit] }).items[0]; state.items.push(it); rerenderOne(it); }
+  commit();
   await stepOn(4, 900);
   for (let i = 0; i < li.length; i++) li[i].className = 'ok'; bar.style.width = '100%';
   $('gen-title').textContent = '球館生成好了';
@@ -1707,18 +1742,21 @@ async function generateFromSite(id, opts = {}) {
   const firstCam = state.items.find((i) => i.type === 'camera'); if (firstCam) select(firstCam.id);
 }
 
-const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "龍蝦規格每面 450 ㎡、精簡 360 ㎡；只含材料", "options": [{"id": "p0", "name": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "price": 480, "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "4.5 mm 捲材，可依尺寸訂製"}, {"id": "p1", "name": "PVC 運動地膠", "brand": "心語家居（網拍）", "price": 423, "link": "https://shopee.tw/product/24532501/55253897635", "note": "4.5 mm"}, {"id": "p2", "name": "PVC 運動地膠", "brand": "MM 居家（網拍）", "price": 419, "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm，10 ㎡ 起訂"}, {"id": "p3", "name": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "price": 650, "link": "https://www.pro360.com.tw/price/pu_floor", "note": "室內 PU 層，不含底層與面材"}, {"id": "p4", "name": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "price": null, "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "國際品牌運動地板捲材"}, {"id": "p5", "name": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "price": null, "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "原廠稱自 1976 年起為奧運地板供應商"}], "def": "p0"}, "net": {"label": "網柱（每面 1 組）", "unit": "組", "qnote": "", "options": [{"id": "p7", "name": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "price": 43500, "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p8", "name": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "price": 31500, "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p9", "name": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "price": 17680, "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": "材質未標示"}, {"id": "p10", "name": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "price": 14800, "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "一組，不含運費"}], "def": "p8"}, "balls": {"label": "球具（每面一套）", "unit": "套", "qnote": "", "options": [{"id": "b-full", "name": "比賽球 ×12＋練習球 ×20＋球車 ×2", "brand": "MIKASA V200W／SUCCESS 4035／5Cgo", "price": 41700, "link": "https://tw.bid.yahoo.com/item/101034460886", "note": ""}, {"id": "b-lite", "name": "練習球 ×30＋球車 ×2（不買比賽球）", "brand": "SUCCESS 4035／5Cgo", "price": 11050, "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": ""}], "def": "b-full"}, "light": {"label": "LED 天井燈", "unit": "盞", "qnote": "", "options": [{"id": "p16", "name": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "price": 4180, "link": "https://biggo.com.tw/s/天井燈+200w", "note": "瓦數可調"}, {"id": "p17", "name": "LED 天井燈 200 W", "brand": "億光 星辰", "price": 5300, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p18", "name": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "price": 6930, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p19", "name": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "price": 3370, "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "內建風扇，保固 1 年"}, {"id": "p20", "name": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "price": 3920, "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "價格區間 2,890–3,920"}], "def": "p16"}, "fan": {"label": "吊扇", "unit": "台", "qnote": "", "options": [{"id": "p21", "name": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "price": 36675, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}, {"id": "p22", "name": "巨型工業吊扇 100 吋", "brand": "宅造印象", "price": 31999, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}], "def": "p21"}, "aed": {"label": "AED", "unit": "台", "qnote": "壁掛收納箱另計約 8,000", "options": [{"id": "p24", "name": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "price": 65000, "link": "https://uptogo.com.tw/?p=160809", "note": "國產，區間 6.5–7 萬"}, {"id": "p25", "name": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "price": 70000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 7–8 萬"}, {"id": "p26", "name": "AED", "brand": "Philips HeartStart", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p27", "name": "AED", "brand": "Defibtech Lifeline", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p28", "name": "AED", "brand": "LIFEPAK CR2", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–15 萬"}], "def": "p24"}, "sofa": {"label": "沙發", "unit": "張", "qnote": "", "options": [{"id": "s0", "name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "note": "耐磨合成皮"}, {"id": "s1", "name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "note": "半皮"}, {"id": "s2", "name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "note": "耐磨合成皮"}, {"id": "s3", "name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "note": "貓抓皮"}, {"id": "s4", "name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s5", "name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s6", "name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "note": "皮革"}, {"id": "s7", "name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "link": "https://www.momoshop.com.tw/product/14325651", "note": "貓抓布（防潑水）"}, {"id": "s8", "name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "note": "布"}, {"id": "s9", "name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "note": "布"}], "def": "s0"}, "camera": {"label": "智慧球場攝影機", "unit": "支", "qnote": "每面球場 1 支，掛牆", "options": [{"id": "c4k", "name": "4K PoE 槍型網路攝影機", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}, {"id": "cpanel", "name": "AI 運動攝影機（自動追球、剪精華）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}], "def": "c4k"}};
+const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "龍蝦規格每面 450 ㎡、精簡 360 ㎡；只含材料", "options": [{"id": "p0", "name": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "price": 480, "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "4.5 mm 捲材，可依尺寸訂製"}, {"id": "p1", "name": "PVC 運動地膠", "brand": "心語家居（網拍）", "price": 423, "link": "https://shopee.tw/product/24532501/55253897635", "note": "4.5 mm"}, {"id": "p2", "name": "PVC 運動地膠", "brand": "MM 居家（網拍）", "price": 419, "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm，10 ㎡ 起訂"}, {"id": "p3", "name": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "price": 650, "link": "https://www.pro360.com.tw/price/pu_floor", "note": "室內 PU 層，不含底層與面材"}, {"id": "p4", "name": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "price": null, "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "國際品牌運動地板捲材"}, {"id": "p5", "name": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "price": null, "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "原廠稱自 1976 年起為奧運地板供應商"}], "def": "p0"}, "net": {"label": "網柱（每面 1 組）", "unit": "組", "qnote": "", "options": [{"id": "p7", "name": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "price": 43500, "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p8", "name": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "price": 31500, "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p9", "name": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "price": 17680, "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": "材質未標示"}, {"id": "p10", "name": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "price": 14800, "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "一組，不含運費"}], "def": "p8"}, "balls": {"label": "球具（每面一套）", "unit": "套", "qnote": "", "options": [{"id": "b-full", "name": "比賽球 ×12＋練習球 ×20＋球車 ×2", "brand": "MIKASA V200W／SUCCESS 4035／5Cgo", "price": 41700, "link": "https://tw.bid.yahoo.com/item/101034460886", "note": ""}, {"id": "b-lite", "name": "練習球 ×30＋球車 ×2（不買比賽球）", "brand": "SUCCESS 4035／5Cgo", "price": 11050, "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": ""}], "def": "b-full"}, "light": {"label": "LED 天井燈", "unit": "盞", "qnote": "", "options": [{"id": "p16", "name": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "price": 4180, "link": "https://biggo.com.tw/s/天井燈+200w", "note": "瓦數可調"}, {"id": "p17", "name": "LED 天井燈 200 W", "brand": "億光 星辰", "price": 5300, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p18", "name": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "price": 6930, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p19", "name": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "price": 3370, "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "內建風扇，保固 1 年"}, {"id": "p20", "name": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "price": 3920, "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "價格區間 2,890–3,920"}], "def": "p16"}, "fan": {"label": "吊扇", "unit": "台", "qnote": "", "options": [{"id": "p21", "name": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "price": 36675, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}, {"id": "p22", "name": "巨型工業吊扇 100 吋", "brand": "宅造印象", "price": 31999, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}], "def": "p21"}, "aed": {"label": "AED", "unit": "台", "qnote": "壁掛收納箱另計約 8,000", "options": [{"id": "p24", "name": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "price": 65000, "link": "https://uptogo.com.tw/?p=160809", "note": "國產，區間 6.5–7 萬"}, {"id": "p25", "name": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "price": 70000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 7–8 萬"}, {"id": "p26", "name": "AED", "brand": "Philips HeartStart", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p27", "name": "AED", "brand": "Defibtech Lifeline", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p28", "name": "AED", "brand": "LIFEPAK CR2", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–15 萬"}], "def": "p24"}, "sofa": {"label": "沙發", "unit": "張", "qnote": "", "options": [{"id": "s0", "name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "note": "耐磨合成皮"}, {"id": "s1", "name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "note": "半皮"}, {"id": "s2", "name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "note": "耐磨合成皮"}, {"id": "s3", "name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "note": "貓抓皮"}, {"id": "s4", "name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s5", "name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s6", "name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "note": "皮革"}, {"id": "s7", "name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "link": "https://www.momoshop.com.tw/product/14325651", "note": "貓抓布（防潑水）"}, {"id": "s8", "name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "note": "布"}, {"id": "s9", "name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "note": "布"}], "def": "s0"}, "aircon": {"label": "冷氣", "unit": "台", "qnote": "台數以冷氣廠商負荷計算為準", "options": [{"id": "tbd", "name": "工業用冷氣（依負荷計算）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "fire": {"label": "消防設備（滅火器、緊急照明、指示燈、偵煙器）", "unit": "個", "qnote": "數量以消防設計為準", "options": [{"id": "tbd", "name": "消防設備（依設備師設計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "crashpad": {"label": "防撞墊", "unit": "m", "qnote": "依牆面長度", "options": [{"id": "tbd", "name": "牆面防撞墊", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "firstaid": {"label": "急救箱", "unit": "個", "qnote": "", "options": [{"id": "tbd", "name": "急救箱（含冰敷、繃帶）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "cctv": {"label": "監視器", "unit": "支", "qnote": "", "options": [{"id": "tbd", "name": "監視器（含錄影主機另計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "heater": {"label": "熱水器", "unit": "台", "qnote": "", "options": [{"id": "tbd", "name": "熱水器（淋浴用）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "panel": {"label": "配電與迴路", "unit": "式", "qnote": "", "options": [{"id": "tbd", "name": "配電盤、分迴路施工", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "camera": {"label": "智慧球場攝影機", "unit": "支", "qnote": "每面球場 1 支，掛牆", "options": [{"id": "c4k", "name": "4K PoE 槍型網路攝影機", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}, {"id": "cpanel", "name": "AI 運動攝影機（自動追球、剪精華）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}], "def": "c4k"}};
 
 // ---------------------------------------------------------------- per-venue product picks and total cost
 // CATALOG is injected at build time from the comparison sheet (排球館報價比價清單) + the sofa list.
 const TYPE_CATS = { vb: ['floor', 'net', 'balls'], vbs: ['floor', 'net', 'balls'], referee: ['net'], netwall: ['net'], ballcart: ['balls'],
-  light: ['light'], fan: ['fan'], aed: ['aed'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'] };
+  light: ['light'], fan: ['fan'], aed: ['aed', 'firstaid'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'],
+  aircon: ['aircon'], panel: ['panel', 'aircon'], extinguisher: ['fire'], emlight: ['fire'], exitsign: ['fire'], smoke: ['fire'], crashpad: ['crashpad'], firstaid: ['firstaid', 'aed'], cctv: ['cctv'], heater: ['heater'] };
 const PICK_KEY = () => 'vb.picks.' + (window.__siteId || 'free');
 function getPicks() { try { const v = JSON.parse(localStorage.getItem(PICK_KEY()) || '{}'); return v && typeof v === 'object' ? { sel: v.sel || {}, custom: v.custom || {} } : { sel: {}, custom: {} }; } catch (e) { return { sel: {}, custom: {} }; } }
 function setPicks(p) { try { localStorage.setItem(PICK_KEY(), JSON.stringify(p)); } catch (e) { /* ignore */ } }
+function crashLen() { return Math.round(state.items.filter((i) => i.type === 'crashpad').reduce((a, i) => a + (i.w || CAT.crashpad.w), 0)); }
 function qtyOf(cat, c) {
   const courts = (c.vb || 0) + (c.vbs || 0);
-  return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0) }[cat] || 0;
+  return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0),
+    aircon: c.aircon || 0, fire: (c.extinguisher || 0) + (c.emlight || 0) + (c.exitsign || 0) + (c.smoke || 0), crashpad: crashLen(), firstaid: c.firstaid || 0, cctv: c.cctv || 0, heater: c.heater || 0, panel: c.panel || 0 }[cat] || 0;
 }
 function chosen(cat, picks) {
   const C = CATALOG[cat]; const id = picks.sel[cat] ?? C.def;
@@ -1852,6 +1890,58 @@ document.addEventListener('visibilitychange', async () => {
   const rec = await pullShared(id);
   if (rec && rec.savedAt && (!share.known || rec.savedAt > share.known)) { applyShared(id, rec, true); toast('有人更新了這個場館，已載入最新版'); }
 });
+
+// ---------------------------------------------------------------- wall-mounted / safety items (aircon, fire equipment, pads…)
+function snapWallItem(it) {
+  const { L, W } = state.building, def = CAT[it.type];
+  const d = [it.x + L / 2, L / 2 - it.x, it.z + W / 2, W / 2 - it.z], k = d.indexOf(Math.min(...d));
+  const depth = (def.d || 0.2) / 2 + 0.06;
+  if (k === 0) it.x = -L / 2 + depth; else if (k === 1) it.x = L / 2 - depth; else if (k === 2) it.z = -W / 2 + depth; else it.z = W / 2 - depth;
+  const half = (it.w || def.w || 0.5) / 2 + 0.1;
+  if (k < 2) it.z = Math.max(-W / 2 + half, Math.min(W / 2 - half, it.z)); else it.x = Math.max(-L / 2 + half, Math.min(L / 2 - half, it.x));
+  // local +z faces into the hall
+  it.rot = [90, -90, 0, 180][k];
+}
+function buildWallItem(g, it, w, d, def) {
+  const y = def.mountY ?? 0;
+  const t = it.type;
+  if (t === 'aircon') {
+    box(g, w, 0.42, d, '#F2F4F6', 0, y, 0);
+    box(g, w - 0.1, 0.05, 0.02, '#9AA5B1', 0, y + 0.06, d / 2 + 0.005);
+    box(g, w - 0.2, 0.02, 0.06, '#C9D1D9', 0, y + 0.02, d / 2 - 0.02);
+    const led = cyl(g, 0.015, 0.015, 0.01, '#4FC3F7', w / 2 - 0.12, y + 0.3, d / 2 + 0.005, { emissive: '#4FC3F7', emissiveIntensity: 1.5 }, 8); led.rotation.x = Math.PI / 2;
+  } else if (t === 'extinguisher') {
+    cyl(g, 0.08, 0.08, 0.5, '#D7262B', 0, 0.02, 0, null, 16);
+    cyl(g, 0.03, 0.03, 0.08, '#2B2B2B', 0, 0.52, 0, null, 10);
+    box(g, 0.32, 0.03, 0.3, '#B8BEC6', 0, 0, 0);
+    box(g, 0.3, 0.5, 0.02, '#D7262B', 0, 0.9, -d / 2 + 0.01);
+  } else if (t === 'emlight') {
+    box(g, 0.36, 0.14, 0.1, '#F4F4F2', 0, y, 0);
+    for (const s of [-1, 1]) { const l = cyl(g, 0.045, 0.045, 0.06, '#FFF4C8', s * 0.11, y - 0.03, 0.06, { emissive: '#FFF4C8', emissiveIntensity: 1.2 }, 12); l.rotation.x = Math.PI / 2; }
+  } else if (t === 'exitsign') {
+    box(g, 0.42, 0.18, 0.05, '#1E9E4A', 0, y, 0, { emissive: '#1E9E4A', emissiveIntensity: 0.9 });
+    box(g, 0.12, 0.1, 0.01, '#FFFFFF', -0.1, y + 0.04, 0.027, { emissive: '#FFFFFF', emissiveIntensity: 0.6 });
+  } else if (t === 'smoke') {
+    const y2 = state.building.H - 0.08;
+    cyl(g, 0.07, 0.07, 0.05, '#F4F4F2', 0, y2, 0, null, 16);
+  } else if (t === 'crashpad') {
+    box(g, w, 2.0, d, '#2F5FA8', 0, 0.05, 0);
+    for (let x = -w / 2 + 1; x < w / 2; x += 1) box(g, 0.02, 2.0, 0.01, '#244C88', x, 0.05, d / 2 + 0.005);
+  } else if (t === 'firstaid') {
+    box(g, 0.4, 0.3, 0.14, '#F4F4F2', 0, y, 0);
+    box(g, 0.14, 0.04, 0.01, '#D7262B', 0, y + 0.13, 0.075); box(g, 0.04, 0.14, 0.01, '#D7262B', 0, y + 0.08, 0.075);
+  } else if (t === 'cctv') {
+    box(g, 0.06, 0.08, 0.2, '#C9D1D9', 0, y, -0.02);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2933'));
+    dome.rotation.x = Math.PI; dome.position.set(0, y - 0.01, 0.1); g.add(dome);
+  } else if (t === 'heater') {
+    cyl(g, 0.22, 0.22, 0.9, '#E8ECEF', 0, y, 0, null, 18);
+  } else if (t === 'panel') {
+    box(g, w, 1.2, d, '#8A96A6', 0, y, 0);
+    box(g, 0.02, 0.15, 0.03, '#3A4654', w / 2 - 0.1, y + 0.55, d / 2 + 0.01);
+  }
+  if (def.tag) tag(g, labelOf(it), (t === 'smoke' ? state.building.H - 0.2 : Math.max(y + 0.6, (def.h || 0.5) + 0.3)));
+}
 
 // ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
 const inspEl = $('insp'); let inspSaved = null, inspTween = null;
