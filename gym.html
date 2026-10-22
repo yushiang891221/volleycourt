@@ -892,7 +892,7 @@ function buildBuilding() {
     const cx = clamp(x, -L / 2 + 0.2, L / 2 - 0.2);
     box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, -W / 2 + 0.2);
     box(buildingGroup, 0.35, eave, 0.35, '#5C6773', cx, 0, W / 2 - 0.2);
-    box(buildingGroup, 0.3, 0.7, W, '#6B7682', cx, H, 0);
+    const rafter = box(buildingGroup, 0.3, 0.7, W, '#6B7682', cx, H, 0); rafter.userData.overhead = true;
   }
   // gable roof
   roof = new THREE.Group();
@@ -940,6 +940,7 @@ function rerenderOne(it) {
   const g = buildItem(it, Math.max(0, ci));
   itemsGroup.add(g); itemObjs.set(it.id, g);
   applyLabelVisibility();
+  if (typeof view !== 'undefined' && view === 'top' && CAT[it.type].ceiling && it.type !== 'camera') { g.visible = false; g.traverse((o) => { if (o.userData.isTag) o.visible = false; }); }
 }
 function applyLabelVisibility() {
   for (const g of itemObjs.values()) g.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; });
@@ -1384,12 +1385,19 @@ function undo() {
 let draftTimer = 0;
 function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
 function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
-function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); }
+function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 
 // ---------------------------------------------------------------- camera
 let view = 'bird';
+function applyOverhead() {
+  const hide = view === 'top';
+  if (typeof buildingGroup !== 'undefined') buildingGroup.traverse((o) => { if (o.userData && o.userData.overhead) o.visible = !hide; });
+  for (const [id, g] of itemObjs) { const it = state && state.items.find((x) => x.id === id); if (it && CAT[it.type].ceiling && it.type !== 'camera') { g.visible = !hide; g.traverse((o) => { if (o.userData.isTag) o.visible = !hide && showLabels; }); } }
+  window.wakeRender && window.wakeRender();
+}
 function frameView(v) {
   view = v;
+  setTimeout(applyOverhead, 0);
   for (const [id, k] of [['v-bird', 'bird'], ['v-top', 'top'], ['v-player', 'player']]) setPressed($(id), k === v);
   const { L, W } = state.building; const m = Math.max(L, W);
   controls.maxPolarAngle = Math.PI / 2 - 0.03;
