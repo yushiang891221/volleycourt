@@ -38,6 +38,8 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .gen .bar { height: 4px; border-radius: 4px; background: #24344A; margin-top: 14px; overflow: hidden; } .gen .bar i { display: block; height: 100%; width: 0; background: #F2B705; transition: width .5s; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .insp { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+@media (min-width: 901px) { .app.inspecting { grid-template-columns: 0 minmax(0, 1fr) !important; }
+.app.inspecting > .rail { visibility: hidden; padding: 0; overflow: hidden; border: 0; } }
 .insp .block { position: absolute; left: 0; top: 0; bottom: 0; width: var(--railw, 0px); pointer-events: auto; }
 .insp .hint { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 52px); transform: translateX(-50%); font-size: 12px; color: #DCE3EC; background: rgba(8,16,28,.6); padding: 4px 10px; border-radius: 999px; opacity: 0; transition: opacity .4s .8s; white-space: nowrap; }
 .insp.on .hint { opacity: 1; }
@@ -48,7 +50,7 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .insp.on .ring { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .insp .tagname { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 14px); transform: translate(-50%, 6px); background: #F2B705; color: #13233A; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .35s .55s, transform .35s .55s; white-space: nowrap; }
 .insp.on .tagname { opacity: 1; transform: translate(-50%, 0); }
-.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(780px, 56vw); display: flex; flex-direction: column; pointer-events: auto; will-change: transform, opacity;
+.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(1180px, 68vw); display: flex; flex-direction: column; pointer-events: auto; will-change: transform, opacity;
   background: rgba(14,23,36,.97); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; color: #ECE7DC;
   opacity: 0; transform: translateX(60px) scale(.98); transition: opacity .45s .15s ease, transform .6s .15s cubic-bezier(.2,.8,.2,1); }
 .insp.on .sheet { opacity: 1; transform: none; }
@@ -358,7 +360,7 @@ const CAT = {
   netwall: { label: '隔網', group: '比賽設備', w: 18, d: 0.1, h: 5, color: '#1F2933', resize: 'w', tag: true },
   light: { label: 'LED 天井燈', group: '天花板', w: 0.5, d: 0.5, h: 0.3, color: '#F4F1E6', ceiling: true },
   fan: { label: '大型吊扇', group: '天花板', w: 7.3, d: 7.3, h: 1.2, color: '#3A4654', ceiling: true, diam: true, tag: true },
-  camera: { label: '網路攝影機（智慧球場）', group: '天花板', w: 0.4, d: 0.4, h: 0.3, color: '#22303F', ceiling: true, tag: true },
+  camera: { label: '網路攝影機（智慧球場，掛牆）', group: '天花板', w: 0.4, d: 0.4, h: 0.3, color: '#22303F', ceiling: true, tag: true },
 };
 const GROUPS = ['球場', '休息與服務', '空間', '比賽設備', '天花板'];
 
@@ -678,11 +680,17 @@ function buildItem(it, courtIndex) {
       const pad = new THREE.Mesh(new THREE.CircleGeometry(0.35, 20), new THREE.MeshBasicMaterial({ color: '#FFF4C8', transparent: true, opacity: 0.35, depthWrite: false }));
       pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; g.add(pad);
     } else if (it.type === 'camera') {
-      const y = Math.min(H - 1, 6);
-      box(g, 0.06, H - y, 0.06, '#5A6676', -0.2, y, 0);
-      box(g, 0.34, 0.16, 0.18, '#22303F', 0, y - 0.08, 0);
-      const lens = cyl(g, 0.06, 0.06, 0.06, '#0E1520', 0.19, y - 0.06, 0, null, 16); lens.rotation.z = Math.PI / 2;
-      const led = cyl(g, 0.02, 0.02, 0.02, '#E23B3B', 0.1, y + 0.08, 0.05, { emissive: '#FF3B3B', emissiveIntensity: 1.5 }, 8);
+      const y = Math.min(H - 1.2, 5.5);
+      if (typeof snapCamera === 'function') snapCamera(it);
+      // wall plate + arm, turned so the plate stays flat on the wall whatever way the camera looks
+      const mount = new THREE.Group(); mount.rotation.y = (it.wallYaw ?? 0) - (it.rot * Math.PI) / 180; g.add(mount);
+      box(mount, 0.04, 0.36, 0.28, '#9AA5B1', -0.38, y - 0.2, 0);
+      box(mount, 0.32, 0.05, 0.06, '#5A6676', -0.22, y - 0.05, 0);
+      const head = new THREE.Group(); head.position.set(0, y, 0); head.rotation.z = -0.3; g.add(head);
+      const body = box(head, 0.34, 0.16, 0.18, '#22303F', 0, -0.08, 0); body.userData.focus = true;
+      box(head, 0.4, 0.02, 0.22, '#2E3B4C', 0.03, 0.0, 0);
+      const lens = cyl(head, 0.06, 0.06, 0.06, '#0E1520', 0.19, -0.06, 0, null, 16); lens.rotation.z = Math.PI / 2; lens.userData.focus = true;
+      const led = cyl(head, 0.02, 0.02, 0.02, '#E23B3B', 0.1, 0.02, 0.05, { emissive: '#FF3B3B', emissiveIntensity: 1.5 }, 8);
       const reach = Math.max(6, Math.min(24, state.building.L * 0.6));
       const coneGeo = new THREE.ConeGeometry(Math.tan(0.5) * reach, reach, 4, 1, true);
       const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: '#4FC3F7', transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
@@ -888,14 +896,14 @@ function rerenderOne(it) {
 function applyLabelVisibility() {
   for (const g of itemObjs.values()) g.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; });
 }
-function moveObj(it) { const g = itemObjs.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; } }
+function moveObj(it) { if (it.type === 'camera' && typeof snapCamera === 'function') { snapCamera(it); const g0 = itemObjs.get(it.id); if (g0 && Math.abs(g0.rotation.y - (it.rot * Math.PI) / 180) > 1e-3) { rerenderOne(it); return; } } const g = itemObjs.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; } }
 function updateOutline() {
   for (const [id, g] of itemObjs) g.traverse((o) => { if (o.userData.camCone) o.visible = id === selectedId; });
   const it = state.items.find((x) => x.id === selectedId);
   if (!it) { selOutline.visible = false; return; }
   const { w, d } = sizeOf(it);
   const def = CAT[it.type];
-  const y = def.ceiling ? (it.type === 'fan' ? state.building.H - 1.2 : state.building.H - 0.45) : 0.05;
+  const y = it.type === 'camera' ? Math.min(state.building.H - 1.2, 5.5) - 0.2 : def.ceiling ? (it.type === 'fan' ? state.building.H - 1.2 : state.building.H - 0.45) : 0.05;
   const pts = corners(it.x, it.z, w + 0.1, d + 0.1, it.rot).map(([x, z]) => new THREE.Vector3(x, y, z));
   selOutline.geometry.dispose();
   selOutline.geometry = new THREE.BufferGeometry().setFromPoints(pts);
@@ -1030,7 +1038,7 @@ function renderPalette() {
       const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = def.color;
       bb.append(sw, document.createTextNode(def.label));
       const sp = document.createElement('span');
-      sp.textContent = def.diam ? `Ø${def.w} m` : def.ceiling ? '掛在天花板' : `${def.w}×${def.d} m`;
+      sp.textContent = def.diam ? `Ø${def.w} m` : def.ceiling ? (type === 'camera' ? '掛在牆上' : '掛在天花板') : `${def.w}×${def.d} m`;
       b.append(bb, sp);
       b.addEventListener('click', () => addItem(type));
       grid.appendChild(b);
@@ -1509,11 +1517,27 @@ function start(hot) {
 
 // ---------------------------------------------------------------- generate a hall from a candidate site
 function cameraFor(c, n) {
-  const def = CAT[c.type];
-  const r = ((c.rot % 360) + 360) % 360;
-  // camera sits just inside the free zone behind one end line, looking along the court
-  if (r === 90 || r === 270) return { id: uid(), type: 'camera', x: c.x, z: c.z + def.w / 2 - 0.4, rot: 90, label: `攝影機 ${n}`, locked: true };
-  return { id: uid(), type: 'camera', x: c.x - def.w / 2 + 0.4, z: c.z, rot: 0, label: `攝影機 ${n}`, locked: true };
+  // wall-mounted: on the hall wall nearest to this court, aimed at the court centre (snapCamera finishes the job)
+  const { L, W } = state.building;
+  const cands = [[c.x, -W / 2], [c.x, W / 2], [-L / 2, c.z], [L / 2, c.z]];
+  let best = cands[0], bd = Infinity;
+  for (const [x, z] of cands) { const d = Math.hypot(x - c.x, z - c.z); if (d < bd) { bd = d; best = [x, z]; } }
+  const cam = { id: uid(), type: 'camera', x: best[0], z: best[1], rot: 0, label: `攝影機 ${n}`, locked: true };
+  snapCamera(cam); return cam;
+}
+function snapCamera(it) {
+  const { L, W } = state.building, m = 0.4;
+  const d = [it.x + L / 2, L / 2 - it.x, it.z + W / 2, W / 2 - it.z], k = d.indexOf(Math.min(...d));
+  if (k === 0) it.x = -L / 2 + m; else if (k === 1) it.x = L / 2 - m; else if (k === 2) it.z = -W / 2 + m; else it.z = W / 2 - m;
+  it.x = Math.max(-L / 2 + m, Math.min(L / 2 - m, it.x)); it.z = Math.max(-W / 2 + m, Math.min(W / 2 - m, it.z));
+  // aim at the nearest volleyball court; with no court, look straight into the hall
+  let tx = null, tz = null, td = Infinity;
+  for (const c of state.items) if (CAT[c.type] && CAT[c.type].court === 'vb') { const dd = Math.hypot(c.x - it.x, c.z - it.z); if (dd < td) { td = dd; tx = c.x; tz = c.z; } }
+  const nx = [1, -1, 0, 0][k], nz = [0, 0, 1, -1][k];
+  let dx = tx == null ? nx : tx - it.x, dz = tx == null ? nz : tz - it.z;
+  if (dx * nx + dz * nz <= 0.2) { dx = nx; dz = nz; }    // never aim into the wall
+  it.rot = Math.round((Math.atan2(-dz, dx) * 180) / Math.PI);
+  it.wallYaw = Math.atan2(-nz, nx);                       // the bracket stays flat against the wall
 }
 function layoutCourts(ping) {
   // same rule as the map: a grid of rows × cols courts (rotated 90°) + a 5 m strip for toilets / lounge / counter
@@ -1642,12 +1666,13 @@ function setOffset(x, y) {
 function focusPlan(it) {
   // real bounding box of the 3D object (ignores the camera view cone and labels)
   const grp = itemObjs.get(it.id), box = new THREE.Box3();
-  if (grp) { grp.updateMatrixWorld(true); grp.traverse((o) => { if (o.isMesh && !o.userData.noPick && !o.userData.camCone && o.visible) box.expandByObject(o); }); }
+  if (grp) { grp.updateMatrixWorld(true); let hasFocus = false; grp.traverse((o) => { if (o.isMesh && o.userData.focus) hasFocus = true; });
+    grp.traverse((o) => { if (o.isMesh && !o.userData.noPick && !o.userData.camCone && o.visible && (!hasFocus || o.userData.focus)) box.expandByObject(o); }); }
   if (box.isEmpty()) { const def = CAT[it.type]; box.setFromCenterAndSize(new THREE.Vector3(it.x, 1, it.z), new THREE.Vector3(def.w || 1, 2, def.d || 1)); }
   const obj = box.getCenter(new THREE.Vector3()), dims = box.getSize(new THREE.Vector3());
   const size = Math.max(0.6, dims.x, dims.z, Math.min(dims.y, 3));
   const rect = renderer.domElement.getBoundingClientRect();
-  const narrow = innerWidth <= 760, panelW = narrow ? 0 : Math.min(780, innerWidth * 0.56) + 16;
+  const narrow = innerWidth <= 760, panelW = narrow ? 0 : Math.min(1180, innerWidth * 0.68) + 16;
   const sx = narrow ? rect.left + rect.width / 2 : (rect.left + (innerWidth - panelW)) / 2;
   const sy = narrow ? rect.top + rect.height * 0.19 : rect.top + rect.height * 0.5;
   const dir = camera.position.clone().sub(controls.target); dir.y = 0; if (dir.lengthSq() < 1e-6) dir.set(1, 0, 1); dir.normalize();
@@ -1677,6 +1702,9 @@ window.openInspector = async (type, label) => {
   if (!inspSaved) inspSaved = { pos: camera.position.clone(), target: controls.target.clone(), min: controls.minDistance, max: controls.maxDistance };
   window.__insp = true;
   inspEl.hidden = false; inspEl.setAttribute('aria-hidden', 'false');
+  // fold the left settings rail away so the 3D view gets the whole space left of the panel
+  $('app').classList.add('inspecting'); resize();
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const plan = it ? focusPlan(it) : null; inspGoal = plan;
   if (plan) {
     inspEl.style.setProperty('--hx', plan.sx + 'px'); inspEl.style.setProperty('--hy', plan.sy + 'px'); inspEl.style.setProperty('--hr', plan.r + 'px');
@@ -1698,6 +1726,8 @@ window.closeInspector = async () => {
   inspEl.classList.remove('on'); inspEl.setAttribute('aria-hidden', 'true');
   controls.autoRotate = false; controls.enabled = false; controls.enablePan = true;
   const sv = inspSaved; inspSaved = null; inspGoal = null;
+  setOffset(inspOff.x, inspOff.y);
+  $('app').classList.remove('inspecting'); resize();
   if (sv) { controls.minDistance = sv.min; controls.maxDistance = sv.max; await Promise.all([tweenCam(sv.pos, sv.target, 800), tweenOffset(0, 0, 800)]); }
   setOffset(0, 0);
   controls.enabled = true; window.__insp = false;
