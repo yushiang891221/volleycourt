@@ -706,6 +706,10 @@ a { color: var(--gold); }
 #intro > :not(.floor-lines) { position: relative; }
 
 /* ---------- spike animation */
+#anim3d { position: fixed; inset: 0; z-index: 41; width: 100%; height: 100%; display: block; pointer-events: none; background: #0B1626; }
+#phase { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 42; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px; background: rgba(8,18,33,.72); border: 1px solid rgba(255,255,255,.12); color: #F3EFE6; font-size: 15px; letter-spacing: .08em; pointer-events: none; backdrop-filter: blur(6px); }
+#phase b { color: #F2B705; font-family: Oswald, sans-serif; font-weight: 600; }
+#phase span { font-weight: 700; }
 #anim { position: fixed; inset: 0; z-index: 40; width: 100%; height: 100%; display: block; pointer-events: none; }
 
 /* ---------- map */
@@ -741,6 +745,16 @@ a { color: var(--gold); }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .chips button { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
 .chips button[aria-pressed="true"] { background: var(--gold); color: #13233A; border-color: var(--gold); font-weight: 700; }
+.chips button i { font-style: normal; opacity: .7; margin-left: 4px; font-size: 11px; }
+.chips button.zero:not([aria-pressed="true"]) { opacity: .55; }
+.chips button .x { margin-left: 6px; font-weight: 900; opacity: .8; }
+.chips button.custom { border-style: dashed; }
+.hint { font-weight: 400; color: var(--muted); font-size: 11px; margin-left: 6px; }
+.addtown { display: flex; gap: 6px; margin-top: 8px; }
+.addtown input { flex: 1; min-width: 0; font: inherit; font-size: 13px; color: inherit; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; }
+.addtown button { font: inherit; font-size: 13px; font-weight: 700; border: 0; border-radius: 8px; padding: 6px 12px; background: var(--gold); color: #13233A; cursor: pointer; }
+.tq { display: flex; gap: 6px; margin-top: 6px; }
+.tq button { font: inherit; font-size: 12px; background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 2px 4px; }
 .chk { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); cursor: pointer; }
 .chk input { accent-color: var(--gold); }
 .list { flex: 1; overflow-y: auto; padding: 8px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -812,6 +826,7 @@ a { color: var(--gold); }
 }
 @media (prefers-reduced-motion: reduce) { .pin { animation: none; } }
 </style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
 <body>
 <div id="map" aria-label="新竹候選場地衛星地圖"></div>
@@ -832,7 +847,10 @@ a { color: var(--gold); }
   <div class="filters">
     <button type="button" class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fbody">篩選條件 <i id="fsum"></i></button>
     <div class="fbody" id="fbody" hidden>
-      <div class="frow"><div class="lab">地區</div><div class="chips" id="f-town" role="group" aria-label="地區"></div></div>
+      <div class="frow"><div class="lab">地區 <small class="hint">點選切換・也可以自己加</small></div><div class="chips" id="f-town" role="group" aria-label="地區"></div>
+        <form class="addtown" id="f-addtown" autocomplete="off"><input id="f-newtown" list="town-list" placeholder="輸入鄉鎮、路名或關鍵字，例：湖口、中華路" aria-label="新增地區或關鍵字" maxlength="20"><button type="submit">加入</button></form>
+        <datalist id="town-list"></datalist>
+        <div class="tq"><button type="button" id="f-all">全選</button><button type="button" id="f-none">全不選</button></div></div>
       <div class="frow"><div class="lab">優先度</div><div class="chips" id="f-pri" role="group" aria-label="優先度"></div></div>
       <div class="frow"><label class="lab" for="f-ping">一樓可用坪數至少 <b id="v-ping"></b></label><input type="range" id="f-ping" min="0" max="600" step="10"></div>
       <div class="frow"><label class="lab" for="f-h">挑高至少 <b id="v-h"></b></label><input type="range" id="f-h" min="0" max="12" step="0.5"></div>
@@ -863,6 +881,8 @@ a { color: var(--gold); }
   <button type="button" id="skip">跳過動畫，直接看地圖</button>
 </section>
 <canvas id="anim" hidden></canvas>
+<canvas id="anim3d" hidden></canvas>
+<div id="phase" hidden><b></b><span></span></div>
 <div class="fadeout" id="flash"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -993,27 +1013,44 @@ nlsc('PHOTO2').addTo(map);
 let MAP = null, SITES = null, CRIT = null;
 const markers = new Map();
 const PING = 3.3058, PL = 25 * 18 / PING, PS = 24 * 15 / PING, COMMON = 40;
+// courts laid out in a grid of rows × cols (rotated 90°) plus a 5 m service strip; used by the 3D generator too
+function layoutCourts(ping) {
+  const A = ping * PING, MAXN = 16, MAXD = 160;
+  for (const [type, cw, cd, label] of [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
+    const cap = Math.min(MAXN, Math.floor((A - COMMON * PING) / (cw * cd)));
+    if (cap < 1) continue;
+    let best = null;
+    for (let r = 1; r <= 8; r++) {
+      const W = r * cw + 5, L = A / W;
+      if (W > MAXD) break; if (L > MAXD) continue;
+      const cols = Math.floor(L / cd), n = Math.min(cap, r * cols);
+      if (n < 1) continue;
+      const sc = n * 10 - Math.abs(Math.log(L / W / 1.5));
+      if (!best || sc > best.sc) best = { type, label, cw, cd, n, rows: r, cols, L, W, sc };
+    }
+    if (best) return best;
+  }
+  return null;
+}
 function fit(s) {
-  // same rule as the 3D generator: courts side by side + a 5 m service strip
-  const eff = s.ping == null ? null : (s.ping >= 600 ? (s.split || 340) : s.ping);
-  if (eff == null) return { eff, L: null, S: null };
-  const A = eff * PING;
-  const n = (cw, cd) => Math.max(0, Math.min(4, Math.floor(A / (cw + 5) / cd), Math.floor((eff - COMMON) / (cw * cd / PING))));
-  return { eff, L: n(25, 18), S: n(24, 15) };
+  if (s.ping == null) return { eff: null, lay: null };
+  return { eff: s.ping, lay: layoutCourts(s.ping) };
 }
 function fitText(s) {
   const f = fit(s);
   if (f.eff == null) return '坪數待查';
-  if (f.L >= 1) return `${f.L} 面排球`;
-  if (f.S >= 1) return `${f.S} 面（精簡）`;
-  return '放不下 1 面';
+  if (!f.lay) return '放不下 1 面';
+  return f.lay.type === 'vb' ? `${f.lay.n} 面排球` : `${f.lay.n} 面（精簡）`;
 }
-const DEF = { towns: null, pri: ['A', 'B', 'C'], ping: 150, h: 7, hu: true, rent: 0 };
+const DEF = { towns: null, custom: [], pri: ['A', 'B', 'C'], ping: 150, h: 7, hu: true, rent: 0 };
 let F = null;
+const ALL_TOWNS = ['竹北市', '竹東鎮', '新埔鎮', '關西鎮', '湖口鄉', '新豐鄉', '芎林鄉', '橫山鄉', '北埔鄉', '寶山鄉', '峨眉鄉', '尖石鄉', '五峰鄉', '東區', '北區', '香山區'];
+// a chip matches its town exactly, or (for keywords the user typed) anywhere in town / road / name / note
+function townHit(s, t) { return s.town === t || (!ALL_TOWNS.includes(t) && [s.town, s.road, s.name, s.note].join(' ').includes(t)); }
 function matches(s) {
-  if (F.towns && !F.towns.includes(s.town)) return false;
+  if (F.towns && !F.towns.some((t) => townHit(s, t))) return false;
   if (!F.pri.includes(s.pri)) return false;
-  const p = s.ping >= 600 && s.split ? s.split : s.ping;
+  const p = s.ping;
   if (F.ping && !(p != null && p >= F.ping) && !(s.total != null && s.total >= F.ping && /打通/.test(s.note))) return false;
   if (F.h && s.height != null && s.height < F.h) return false;
   if (F.h && s.height == null && !F.hu) return false;
@@ -1034,7 +1071,7 @@ function popupHtml(s) {
     ${fact(s.height != null ? s.height + ' m' : '待量', '挑高')}
     ${fact(s.ping != null ? f0(s.ping) + ' 坪' : '待查', s.total && s.total !== s.ping ? `一樓可用（總 ${f0(s.total)} 坪）` : '一樓可用坪數')}
     ${fact(s.rent != null ? f0(s.rent / 10000) + ' 萬' : '待查', `月租・${per}`)}
-    ${fact(esc(fitText(s)), f.eff != null && s.ping >= 600 ? `整棟太大，以分租 ${s.split || 340} 坪估算` : '龍蝦規格 25×18 m')}
+    ${fact(esc(fitText(s)), f.lay ? `${f.lay.label}・${f.lay.rows} 排 × ${Math.ceil(f.lay.n / f.lay.rows)} 面` : '依坪數估算')}
     ${fact(esc(s.usage || '—'), '現在用途', true)}
     ${fact(esc([s.zone, s.floor].filter(Boolean).join('・') || '待查'), '使用分區・樓層', true)}
   </div>
@@ -1051,14 +1088,21 @@ function renderList() {
   $('#meta').innerHTML = `符合條件 <b>${n}</b>／共 <b>${SITES.sites.length}</b> 筆・每天自動更新<br>上次更新：${upd.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
   for (const s of SITES.sites) { const m = markers.get(s.id); if (m) { m.setIcon(icon(s)); m.setZIndexOffset(matches(s) ? 1000 : 0); } }
   const parts = [];
-  if (F.towns) parts.push(F.towns.length + ' 個地區'); if (F.ping) parts.push(`≥${F.ping} 坪`); if (F.h) parts.push(`挑高 ≥${F.h} m`); if (F.rent) parts.push(`≤${F.rent} 萬`);
+  if (F.towns) parts.push(F.towns.length <= 2 ? F.towns.join('、') : F.towns.length + ' 個地區'); if (F.ping) parts.push(`≥${F.ping} 坪`); if (F.h) parts.push(`挑高 ≥${F.h} m`); if (F.rent) parts.push(`≤${F.rent} 萬`);
   $('#fsum').textContent = parts.join('・') || '不限';
 }
 const icon = (s) => L.divIcon({ className: '', html: pinHtml(s, matches(s)), iconSize: [50, 62], iconAnchor: [25, 60], popupAnchor: [0, -56] });
 function bindFilters() {
-  const towns = [...new Set(SITES.sites.map((s) => s.town))];
+  F.custom = Array.isArray(F.custom) ? F.custom : [];
+  const known = () => [...new Set([...ALL_TOWNS, ...(CRIT.towns || []), ...SITES.sites.map((s) => s.town)])];
+  const options = () => [...known(), ...F.custom.filter((c) => !known().includes(c))];
+  $('#town-list').innerHTML = known().map((t) => `<option value="${esc(t)}">`).join('');
   const draw = () => {
-    $('#f-town').innerHTML = towns.map((t) => `<button type="button" data-t="${t}" aria-pressed="${!F.towns || F.towns.includes(t)}">${t}</button>`).join('');
+    const opts = options();
+    $('#f-town').innerHTML = opts.map((t) => {
+      const n = SITES.sites.filter((s) => townHit(s, t)).length, cus = F.custom.includes(t);
+      return `<button type="button" data-t="${esc(t)}" class="${n ? '' : 'zero'}${cus ? ' custom' : ''}" aria-pressed="${!F.towns || F.towns.includes(t)}">${esc(t)}<i>${n}</i>${cus ? `<span class="x" data-x="${esc(t)}" title="移除" aria-label="移除 ${esc(t)}">×</span>` : ''}</button>`;
+    }).join('');
     $('#f-pri').innerHTML = ['A', 'B', 'C'].map((p) => `<button type="button" data-p="${p}" aria-pressed="${F.pri.includes(p)}">${p} 級</button>`).join('');
     $('#f-ping').value = F.ping; $('#v-ping').textContent = F.ping ? F.ping + ' 坪' : '不限';
     $('#f-h').value = F.h; $('#v-h').textContent = F.h ? F.h + ' m' : '不限';
@@ -1067,14 +1111,28 @@ function bindFilters() {
   };
   const apply = () => { store.set('vb.filters', F); draw(); renderList(); };
   draw();
-  $('#f-town').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; const cur = F.towns || towns.slice(); const t = b.dataset.t;
-    F.towns = cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]; if (F.towns.length === towns.length) F.towns = null; apply(); });
+  $('#f-town').addEventListener('click', (e) => {
+    const x = e.target.closest('[data-x]');
+    if (x) { const t = x.dataset.x; F.custom = F.custom.filter((c) => c !== t); if (F.towns) F.towns = F.towns.filter((c) => c !== t); apply(); return; }
+    const b = e.target.closest('[data-t]'); if (!b) return; const all = options(); const cur = F.towns || all.slice(); const t = b.dataset.t;
+    F.towns = cur.includes(t) ? cur.filter((c) => c !== t) : [...cur, t]; if (all.every((c) => F.towns.includes(c))) F.towns = null; apply(); });
+  $('#f-addtown').addEventListener('submit', (e) => {
+    e.preventDefault(); const inp = $('#f-newtown'); const t = inp.value.trim().replace(/[<>"&]/g, '').slice(0, 20); if (!t) return;
+    if (!options().includes(t)) F.custom.push(t);
+    // adding a place means "show me this": select it (keep the others that were on)
+    F.towns = F.towns ? [...new Set([...F.towns, t])] : null;
+    inp.value = ''; apply();
+    const n = SITES.sites.filter((s) => townHit(s, t)).length;
+    toast(n ? `「${t}」有 ${n} 個候選場地` : `「${t}」目前還沒有候選場地，地區已加入，之後有新物件就會出現`);
+  });
+  $('#f-all').addEventListener('click', () => { F.towns = null; apply(); });
+  $('#f-none').addEventListener('click', () => { F.towns = []; apply(); });
   $('#f-pri').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; const p = b.dataset.p; F.pri = F.pri.includes(p) ? F.pri.filter((x) => x !== p) : [...F.pri, p]; apply(); });
   $('#f-ping').addEventListener('input', (e) => { F.ping = +e.target.value; apply(); });
   $('#f-h').addEventListener('input', (e) => { F.h = +e.target.value; apply(); });
   $('#f-hu').addEventListener('change', (e) => { F.hu = e.target.checked; apply(); });
   $('#f-rent').addEventListener('input', (e) => { F.rent = +e.target.value; apply(); });
-  $('#f-reset').addEventListener('click', () => { F = { ...DEF, ping: CRIT.minPing ?? 150, h: CRIT.minHeight ?? 7 }; apply(); });
+  $('#f-reset').addEventListener('click', () => { F = { ...DEF, custom: F.custom, ping: CRIT.minPing ?? 150, h: CRIT.minHeight ?? 7 }; apply(); });
   $('#ftoggle').addEventListener('click', () => { const b = $('#fbody'); b.hidden = !b.hidden; $('#ftoggle').setAttribute('aria-expanded', String(!b.hidden)); });
 }
 function openSite(id, fly = true) {
@@ -1147,11 +1205,17 @@ function go(withAnim) {
   if (!withAnim || RM) { intro.style.opacity = 0; setTimeout(() => { intro.hidden = true; }, 400); ready.then(arrive); return; }
   intro.style.opacity = 0;
   setTimeout(() => { intro.hidden = true; }, 500);
-  playSpike(() => {
-    const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = 1; cv.hidden = true;
+  const after = () => {
+    const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = 1; cv.hidden = true; $('#anim3d').hidden = true; $('#phase').hidden = true;
     requestAnimationFrame(() => { fl.style.transition = 'opacity .7s'; fl.style.opacity = 0; });
     ready.then(arrive);
-  });
+  };
+  // realistic 3D spike (three.js); falls back to the 2D version if WebGL or the CDN is unavailable
+  const c3 = $('#anim3d'), ph = $('#phase');
+  import('./spike3d.js').then((m) => {
+    c3.hidden = false; ph.hidden = false;
+    m.playSpike3D(c3, (name, i, n) => { ph.querySelector('b').textContent = `${i + 1}/${n}`; ph.querySelector('span').textContent = name; }, after);
+  }).catch(() => { c3.hidden = true; ph.hidden = true; playSpike(after); });
 }
 $('#start').addEventListener('click', () => go(true));
 $('#ball').addEventListener('click', () => go(true));

@@ -37,6 +37,37 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .gen li.ok { color: #C7D2E0; } .gen li.ok::before { background: #2E9E5B; border-color: #2E9E5B; }
 .gen .bar { height: 4px; border-radius: 4px; background: #24344A; margin-top: 14px; overflow: hidden; } .gen .bar i { display: block; height: 100%; width: 0; background: #F2B705; transition: width .5s; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.insp { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.insp .block { position: absolute; left: 0; top: 0; bottom: 0; width: var(--railw, 0px); pointer-events: auto; }
+.insp .hint { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 52px); transform: translateX(-50%); font-size: 12px; color: #DCE3EC; background: rgba(8,16,28,.6); padding: 4px 10px; border-radius: 999px; opacity: 0; transition: opacity .4s .8s; white-space: nowrap; }
+.insp.on .hint { opacity: 1; }
+.insp .scrim { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .55s ease;
+  background: radial-gradient(circle at var(--hx, 30%) var(--hy, 50%), rgba(8,16,28,0) 0, rgba(8,16,28,0) var(--hr, 140px), rgba(8,16,28,.62) calc(var(--hr, 140px) + 160px)); backdrop-filter: saturate(.85); }
+.insp.on .scrim { opacity: 1; }
+.insp .ring { position: absolute; left: var(--hx, 30%); top: var(--hy, 50%); width: calc(var(--hr, 140px) * 2); height: calc(var(--hr, 140px) * 2); transform: translate(-50%, -50%) scale(.85); border-radius: 50%; border: 2px solid rgba(242,183,5,.85); box-shadow: 0 0 0 6px rgba(242,183,5,.12); opacity: 0; transition: opacity .4s .45s, transform .6s .4s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.insp.on .ring { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.insp .tagname { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 14px); transform: translate(-50%, 6px); background: #F2B705; color: #13233A; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .35s .55s, transform .35s .55s; white-space: nowrap; }
+.insp.on .tagname { opacity: 1; transform: translate(-50%, 0); }
+.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(780px, 56vw); display: flex; flex-direction: column; pointer-events: auto;
+  background: rgba(14,23,36,.86); backdrop-filter: blur(18px) saturate(1.2); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; color: #ECE7DC;
+  opacity: 0; transform: translateX(60px) scale(.98); transition: opacity .45s .15s ease, transform .6s .15s cubic-bezier(.2,.8,.2,1); }
+.insp.on .sheet { opacity: 1; transform: none; }
+.insp .sh-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.insp .sh-head .kind { font-size: 12px; color: #F2B705; font-weight: 700; letter-spacing: .06em; }
+.insp .sh-head h2 { margin: 2px 0 0; font-size: 18px; font-weight: 900; color: #F3EFE6; }
+.insp .sh-head .grow { flex: 1; }
+.insp .sh-head a, .insp .sh-head button { font: 600 13px var(--font-body); color: #ECE7DC; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 7px 12px; text-decoration: none; cursor: pointer; }
+.insp .sh-head button.x { width: 36px; height: 36px; padding: 0; font-size: 18px; line-height: 1; }
+.insp .sh-body { position: relative; flex: 1; min-height: 0; }
+.insp iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #0E1724; opacity: 0; transition: opacity .35s; }
+.insp iframe.ready { opacity: 1; }
+.insp .loading { position: absolute; inset: 0; display: grid; place-items: center; color: #A9B4C2; font-size: 13px; }
+.insp .loading i { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #2A3A50; border-top-color: #F2B705; animation: spin .8s linear infinite; display: block; margin: 0 auto 10px; }
+@media (max-width: 760px) {
+  .insp .sheet { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; height: 68%; transform: translateY(60px); }
+  .insp .sh-head a.newtab { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .insp .scrim, .insp .sheet, .insp .ring, .insp .tagname { transition: none; } }
 .camtip { position: absolute; z-index: 5; left: 50%; bottom: 56px; transform: translateX(-50%); background: #F2B705; color: #13233A; font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.3); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .gen li.run::before { animation: none; } }
 
@@ -182,8 +213,8 @@ button.danger { color: var(--warn); }
     <section class="sec">
       <h2>廠房</h2>
       <div class="grid3">
-        <label class="field" for="b-L"><span>長（m）</span><input id="b-L" type="number" min="10" max="80" step="0.5" inputmode="decimal"></label>
-        <label class="field" for="b-W"><span>寬（m）</span><input id="b-W" type="number" min="10" max="80" step="0.5" inputmode="decimal"></label>
+        <label class="field" for="b-L"><span>長（m）</span><input id="b-L" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
+        <label class="field" for="b-W"><span>寬（m）</span><input id="b-W" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
         <label class="field" for="b-H"><span>淨高（m）</span><input id="b-H" type="number" min="4" max="15" step="0.5" inputmode="decimal"></label>
       </div>
       <div class="readout"><span><span class="big" id="r-ping">–</span> <span class="unit">坪</span></span><span class="unit" id="r-m2"></span><span class="chip" id="r-height"></span></div>
@@ -244,17 +275,27 @@ button.danger { color: var(--warn); }
     <p class="stage-hint">先點一下選取，再拖曳才會移動｜鎖定的物件不會動｜拖曳空白處轉視角｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     <div class="gen hide" id="gen" role="status" aria-live="polite"><h3 id="gen-title">正在生成球館</h3><p id="gen-sub"></p><ol id="gen-steps"></ol><div class="bar"><i id="gen-bar"></i></div></div>
+    <div class="insp" id="insp" hidden aria-hidden="true">
+      <div class="scrim" id="insp-scrim"></div><div class="block" id="insp-block"></div><div class="ring"></div><div class="tagname" id="insp-tag"></div><div class="hint">拖曳 360° 旋轉・滾輪縮放・Esc 關閉</div>
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="insp-title">
+        <div class="sh-head"><div><div class="kind" id="insp-kind"></div><h2 id="insp-title"></h2></div><span class="grow"></span><a class="newtab" id="insp-new" href="#" target="_blank" rel="noopener">新分頁開啟 ↗</a><button type="button" class="x" id="insp-x" aria-label="關閉">×</button></div>
+        <div class="sh-body"><div class="loading"><div><i></i>載入中…</div></div><iframe id="insp-frame" title="物件詳細內容"></iframe></div>
+      </section>
+    </div>
     <div class="camtip" id="camtip" hidden>點球場邊的攝影機，看智慧球場怎麼自動算分 →</div>
   </main>
 </div>
 <script type="application/json" id="saved-designs">[{"id":"dmvjcd5m1","name":"2 面專業排球（龍蝦規格）","savedAt":"2026-10-22T09:31:29.065Z","data":{"name":"2 面專業排球（龍蝦規格）","building":{"L":36,"W":30,"H":9},"floor":"blue","net":"men","items":[{"type":"vb","x":-9,"z":-2.5,"rot":90},{"type":"vb","x":9,"z":-2.5,"rot":90},{"type":"referee","x":-15.2,"z":-2.5,"rot":0},{"type":"referee","x":15.2,"z":-2.5,"rot":0},{"type":"wc","x":-15.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"男廁"},{"type":"wc","x":-10.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"女廁"},{"type":"changing","x":-5.5,"z":12.75,"rot":0,"w":5,"d":4.5},{"type":"rug","x":2.5,"z":12.5,"rot":0,"w":7,"d":4},{"type":"sofa","x":0.8,"z":14.2,"rot":0},{"type":"sofa","x":4.2,"z":14.2,"rot":0},{"type":"table","x":2.5,"z":12,"rot":0},{"type":"locker","x":7,"z":14.6,"rot":0,"w":1.8,"d":0.5},{"type":"counter","x":10,"z":13.5,"rot":0,"w":3,"d":0.8},{"type":"vending","x":14.5,"z":14.4,"rot":0},{"type":"water","x":16.2,"z":14.5,"rot":0},{"type":"bench","x":12.6,"z":11,"rot":0},{"type":"ballcart","x":15.5,"z":11.2,"rot":0},{"type":"aed","x":17.8,"z":11,"rot":90},{"type":"light","x":-15.5,"z":-12,"rot":0},{"type":"light","x":-15.5,"z":-6,"rot":0},{"type":"light","x":-15.5,"z":0,"rot":0},{"type":"light","x":-15.5,"z":6,"rot":0},{"type":"light","x":-3,"z":-12,"rot":0},{"type":"light","x":-3,"z":-6,"rot":0},{"type":"light","x":-3,"z":0,"rot":0},{"type":"light","x":-3,"z":6,"rot":0},{"type":"light","x":3,"z":-12,"rot":0},{"type":"light","x":3,"z":-6,"rot":0},{"type":"light","x":3,"z":0,"rot":0},{"type":"light","x":3,"z":6,"rot":0},{"type":"light","x":15.5,"z":-12,"rot":0},{"type":"light","x":15.5,"z":-6,"rot":0},{"type":"light","x":15.5,"z":0,"rot":0},{"type":"light","x":15.5,"z":6,"rot":0},{"type":"netwall","x":0,"z":-2.5,"rot":90,"w":25,"d":0.1},{"type":"netwall","x":9,"z":10,"rot":0,"w":18,"d":0.1},{"type":"netwall","x":-9,"z":10,"rot":0,"w":18,"d":0.1}]}}]</script>
 <script>
 window.evalLabel = (type) => type === 'camera' ? '看智慧球場（比賽辨識 Demo）→' : ({"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"})[({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service'];
+window.evalUrl = (type, label) => {
+  if (type === 'camera' || type === 'scoreboard') return 'demo.html?cam=' + encodeURIComponent(label || '攝影機');
+  return 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + (({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service');
+};
 window.openEval = (type, label) => {
   try { sessionStorage.setItem('vb.counts', JSON.stringify(window.gymCounts ? window.gymCounts().counts : {})); } catch (e) {}
-  if (type === 'camera' || type === 'scoreboard') { location.href = 'demo.html?cam=' + encodeURIComponent(label || '攝影機'); return; }
-  const key = ({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service';
-  location.href = 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + key;
+  if (typeof window.openInspector === 'function') { window.openInspector(type, label); return; }
+  location.href = window.evalUrl(type, label);
 };
 </script>
 <script type="importmap" id="app-importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -389,7 +430,7 @@ function sanitize(raw) {
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 80), W: clamp(num(b.W, 30), 10, 80), H: clamp(num(b.H, 8), 4, 15) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15) },
     floor: SCHEMES[s.floor] ? s.floor : 'blue',
     net: NETS[s.net] ? s.net : 'men',
     items: [],
@@ -431,7 +472,7 @@ controls.enableDamping = !reduceMotion;
 controls.dampingFactor = 0.12;
 controls.maxPolarAngle = Math.PI / 2 - 0.03;
 controls.minDistance = 2;
-controls.maxDistance = 220;
+controls.maxDistance = 420;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f96, 1.05));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -1327,7 +1368,7 @@ function pickItem() {
   return (nonCourt || hits[0]).object.userData.itemId;
 }
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || window.__insp) return;
   setPointer(e);
   const id = pickItem();
   drag = { id, sx: e.clientX, sy: e.clientY, moved: false, pid: e.pointerId };
@@ -1367,7 +1408,7 @@ function endDrag() {
 }
 renderer.domElement.addEventListener('pointerup', endDrag);
 renderer.domElement.addEventListener('dblclick', (e) => {
-  if (typeof window.openEval !== 'function') return;
+  if (typeof window.openEval !== 'function' || window.__insp) return;
   setPointer(e);
   const id = pickItem();
   const it = id && state.items.find((x) => x.id === id);
@@ -1464,33 +1505,45 @@ function cameraFor(c, n) {
   if (r === 90 || r === 270) return { id: uid(), type: 'camera', x: c.x, z: c.z + def.w / 2 - 0.4, rot: 90, label: `攝影機 ${n}`, locked: true };
   return { id: uid(), type: 'camera', x: c.x - def.w / 2 + 0.4, z: c.z, rot: 0, label: `攝影機 ${n}`, locked: true };
 }
+function layoutCourts(ping) {
+  // same rule as the map: a grid of rows × cols courts (rotated 90°) + a 5 m strip for toilets / lounge / counter
+  const PINGM = 3.3058, A = ping * PINGM, MAXN = 16, MAXD = 160;
+  for (const [type, cw, cd, label] of [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
+    const cap = Math.min(MAXN, Math.floor((A - 40 * PINGM) / (cw * cd)));
+    if (cap < 1) continue;
+    let best = null;
+    for (let r = 1; r <= 8; r++) {
+      const W = r * cw + 5, L = A / W;
+      if (W > MAXD) break; if (L > MAXD) continue;
+      const cols = Math.floor(L / cd), n = Math.min(cap, r * cols);
+      if (n < 1) continue;
+      const sc = n * 10 - Math.abs(Math.log(L / W / 1.5));
+      if (!best || sc > best.sc) best = { type, label, cw, cd, n, rows: r, cols, L, W, sc, rot: 90 };
+    }
+    if (best) return best;
+  }
+  return null;
+}
 function planHall(site) {
-  // same rule as the map: courts side by side (rotated 90°), plus a 5 m strip for toilets / lounge / counter
   const PINGM = 3.3058, H = site.height || 8;
-  const eff = site.ping == null ? 300 : (site.ping >= 600 ? (site.split || 340) : site.ping);
-  const specs = [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']];
+  const eff = site.ping == null ? 300 : site.ping;
   let L, W, best = null;
   if (site.L && site.W) {
     L = Math.max(site.L, site.W); W = Math.min(site.L, site.W);
-    for (const [type, cw, cd, label] of specs) {
-      const a = Math.floor(L / cd) * Math.floor((W - 4) / cw), b2 = Math.floor((L - 4) / cw) * Math.floor(W / cd);
-      const rot = a >= b2 ? 90 : 0, n = Math.min(4, Math.max(a, b2));
-      if (n > 0) { best = { type, rot, n, label, cw, cd }; break; }
+    for (const [type, cw, cd, label] of [['vb', 25, 18, '龍蝦規格 25×18 m'], ['vbs', 24, 15, '精簡規格 24×15 m']]) {
+      const c90 = Math.floor(L / cd), r90 = Math.floor((W - 4) / cw), c0 = Math.floor((L - 4) / cw), r0 = Math.floor(W / cd);
+      const a = c90 * r90, b2 = c0 * r0, n = Math.min(16, Math.max(a, b2));
+      if (n > 0) { best = a >= b2 ? { type, rot: 90, n, label, cw, cd, cols: c90, rows: r90 } : { type, rot: 0, n, label, cw, cd, cols: c0, rows: r0 }; break; }
     }
   } else {
-    const A = eff * PINGM;
-    for (const [type, cw, cd, label] of specs) {
-      const w0 = cw + 5, l0 = A / w0;
-      const n = Math.min(4, Math.floor(l0 / cd), Math.floor((eff - 40) / (cw * cd / PINGM)));
-      if (n > 0) { best = { type, rot: 90, n, label, cw, cd }; W = w0; L = l0; break; }
-    }
-    if (!best) { W = Math.max(10, Math.sqrt(A / 1.4)); L = A / W; }
+    best = layoutCourts(eff);
+    if (best) { W = best.W; L = best.L; } else { const A = eff * PINGM; W = Math.max(10, Math.sqrt(A / 1.4)); L = A / W; }
   }
-  L = Math.min(80, Math.max(12, Math.round(L * 2) / 2)); W = Math.min(80, Math.max(10, Math.round(W * 2) / 2));
+  L = Math.min(160, Math.max(12, Math.round(L * 2) / 2)); W = Math.min(160, Math.max(10, Math.round(W * 2) / 2));
   const items = [];
   if (best) {
     const fx = best.rot === 90 ? best.cd : best.cw, fz = best.rot === 90 ? best.cw : best.cd;
-    const perRow = Math.max(1, Math.floor(L / fx));
+    const perRow = Math.max(1, Math.min(best.cols || 99, Math.floor(L / fx)));
     for (let i = 0; i < best.n; i++) {
       const col = i % perRow, row = Math.floor(i / perRow), nInRow = Math.min(perRow, best.n - row * perRow);
       const x = -(nInRow * fx) / 2 + fx / 2 + col * fx, z = -W / 2 + fz / 2 + row * fz;
@@ -1522,7 +1575,7 @@ async function generateFromSite(id) {
   const S = [
     `讀取場地：${site.name}`,
     `量出廠房 ${plan.L}×${plan.W} m、淨高 ${plan.H} m（約 ${fmtW(plan.L * plan.W / 3.3058)} 坪）`,
-    plan.best ? `依大小放入 ${plan.best.n} 面排球場（${plan.best.label}）` : '放不下標準排球場，先放 1 面精簡規格，記得確認尺寸',
+    plan.best ? `依 ${fmtW(plan.eff)} 坪放入 ${plan.best.n} 面排球場（${plan.best.label}，${plan.best.rows || 1} 排）` : '放不下標準排球場，先放 1 面精簡規格，記得確認尺寸',
     '每面球場邊架設智慧攝影機',
     '完成！點任何物件看評估，攝影機會帶你看比賽辨識',
   ];
@@ -1538,11 +1591,12 @@ async function generateFromSite(id) {
   selectedId = null; fullRefresh(); frameView('bird');
   await stepOn(1, 900);
   const courts = plan.items.length ? plan.items : [{ id: uid(), type: 'vbs', x: 0, z: 0, rot: 0, locked: true, label: '1 號場' }];
-  for (const c of courts) { const it = sanitize({ items: [c] }).items[0]; it.id = c.id; state.items.push(it); rerenderOne(it); commit(); await wait(450); }
+  const stepMs = Math.max(120, 450 - courts.length * 25);
+  for (const c of courts) { const it = sanitize({ items: [c] }).items[0]; it.id = c.id; state.items.push(it); rerenderOne(it); commit(); await wait(stepMs); }
   await stepOn(2, 300);
   await stepOn(3, 200);
   let n = 1;
-  for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) { const cam = cameraFor(c, n++); state.items.push(cam); rerenderOne(cam); commit(); await wait(400); }
+  for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) { const cam = cameraFor(c, n++); state.items.push(cam); rerenderOne(cam); commit(); await wait(stepMs * 0.8); }
   await stepOn(4, 900);
   for (let i = 0; i < li.length; i++) li[i].className = 'ok'; bar.style.width = '100%';
   $('gen-title').textContent = '球館生成好了';
@@ -1551,6 +1605,102 @@ async function generateFromSite(id) {
   const tip = $('camtip'); tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 7000);
   const firstCam = state.items.find((i) => i.type === 'camera'); if (firstCam) select(firstCam.id);
 }
+
+// ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
+const inspEl = $('insp'); let inspSaved = null, inspTween = null;
+function tweenCam(toPos, toTarget, ms) {
+  if (inspTween) cancelAnimationFrame(inspTween);
+  const fromPos = camera.position.clone(), fromT = controls.target.clone(), t0 = performance.now();
+  const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  return new Promise((res) => {
+    const step = (now) => {
+      const k = reduceMotion ? 1 : Math.min(1, (now - t0) / ms), e = ease(k);
+      camera.position.lerpVectors(fromPos, toPos, e); controls.target.lerpVectors(fromT, toTarget, e); controls.update();
+      if (k < 1) inspTween = requestAnimationFrame(step); else { inspTween = null; res(); }
+    };
+    inspTween = requestAnimationFrame(step);
+  });
+}
+// the object becomes the orbit centre (so it can be spun 360°); a camera view offset slides it left of the panel
+let inspOff = { x: 0, y: 0 }, inspGoal = null;
+function setOffset(x, y) {
+  inspOff = { x, y };
+  const r = renderer.domElement.getBoundingClientRect(), w = r.width || 1, h = r.height || 1;
+  if (Math.abs(x) < 0.5 && Math.abs(y) < 0.5) camera.clearViewOffset(); else camera.setViewOffset(w, h, x, y, w, h);
+  camera.updateProjectionMatrix();
+}
+function focusPlan(it) {
+  // real bounding box of the 3D object (ignores the camera view cone and labels)
+  const grp = itemObjs.get(it.id), box = new THREE.Box3();
+  if (grp) { grp.updateMatrixWorld(true); grp.traverse((o) => { if (o.isMesh && !o.userData.noPick && !o.userData.camCone && o.visible) box.expandByObject(o); }); }
+  if (box.isEmpty()) { const def = CAT[it.type]; box.setFromCenterAndSize(new THREE.Vector3(it.x, 1, it.z), new THREE.Vector3(def.w || 1, 2, def.d || 1)); }
+  const obj = box.getCenter(new THREE.Vector3()), dims = box.getSize(new THREE.Vector3());
+  const size = Math.max(0.6, dims.x, dims.z, Math.min(dims.y, 3));
+  const rect = renderer.domElement.getBoundingClientRect();
+  const narrow = innerWidth <= 760, panelW = narrow ? 0 : Math.min(780, innerWidth * 0.56) + 16;
+  const sx = narrow ? rect.left + rect.width / 2 : (rect.left + (innerWidth - panelW)) / 2;
+  const sy = narrow ? rect.top + rect.height * 0.19 : rect.top + rect.height * 0.5;
+  const dir = camera.position.clone().sub(controls.target); dir.y = 0; if (dir.lengthSq() < 1e-6) dir.set(1, 0, 1); dir.normalize();
+  const el = 0.5, area = narrow ? 0.62 : Math.max(0.3, (innerWidth - panelW - rect.left) / rect.width);
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const dist = Math.max(narrow ? 3 : 2.2, Math.min(140, (size * (narrow ? 0.9 : 0.62)) / (tanV * camera.aspect * area)));
+  const pos = obj.clone().add(new THREE.Vector3(dir.x * Math.cos(el), Math.sin(el), dir.z * Math.cos(el)).multiplyScalar(dist));
+  const r = Math.max(70, Math.min(rect.height * (narrow ? 0.17 : 0.34), (size * 0.6) / (dist * tanV) * rect.height * 0.5));
+  return { pos, target: obj, sx, sy, r, ox: rect.width / 2 - (sx - rect.left), oy: rect.height / 2 - (sy - rect.top), dist, left: rect.left };
+}
+function tweenOffset(x, y, ms) {
+  const f = { ...inspOff }, t0 = performance.now();
+  return new Promise((res) => { const st = (now) => { const k = reduceMotion ? 1 : Math.min(1, (now - t0) / ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    setOffset(f.x + (x - f.x) * e, f.y + (y - f.y) * e); if (k < 1) requestAnimationFrame(st); else res(); }; requestAnimationFrame(st); });
+}
+window.openInspector = async (type, label) => {
+  const it = state.items.find((i) => i.id === selectedId);
+  const url = window.evalUrl(type, label);
+  const frame = $('insp-frame');
+  $('insp-kind').textContent = type === 'camera' || type === 'scoreboard' ? '智慧球場・比賽辨識' : '設備評估';
+  $('insp-title').textContent = label || (CAT[type] && CAT[type].label) || '物件';
+  $('insp-tag').textContent = label || '';
+  $('insp-new').href = url;
+  frame.classList.remove('ready');
+  frame.onload = () => { if (frame.src !== 'about:blank') frame.classList.add('ready'); };
+  frame.src = url.replace('.html?', '.html?embed=1&');
+  if (!inspSaved) inspSaved = { pos: camera.position.clone(), target: controls.target.clone(), min: controls.minDistance, max: controls.maxDistance };
+  window.__insp = true;
+  inspEl.hidden = false; inspEl.setAttribute('aria-hidden', 'false');
+  const plan = it ? focusPlan(it) : null; inspGoal = plan;
+  if (plan) {
+    inspEl.style.setProperty('--hx', plan.sx + 'px'); inspEl.style.setProperty('--hy', plan.sy + 'px'); inspEl.style.setProperty('--hr', plan.r + 'px');
+    inspEl.style.setProperty('--railw', plan.left + 'px');
+  } else { inspEl.style.setProperty('--hx', '30%'); inspEl.style.setProperty('--hr', '0px'); }
+  controls.enabled = false; controls.autoRotate = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => inspEl.classList.add('on')));
+  if (plan) {
+    await Promise.all([tweenCam(plan.pos, plan.target, 950), tweenOffset(plan.ox, plan.oy, 950)]);
+    // free 360° look-around: drag to orbit, wheel to zoom, slow auto-spin until the first touch
+    controls.minDistance = Math.max(2, plan.dist * 0.35); controls.maxDistance = plan.dist * 2.2;
+    controls.enabled = true; controls.enablePan = false;
+    if (!reduceMotion) { controls.autoRotate = true; controls.autoRotateSpeed = 1.6; }
+  }
+  $('insp-x').focus({ preventScroll: true });
+};
+window.closeInspector = async () => {
+  if (inspEl.hidden) return;
+  inspEl.classList.remove('on'); inspEl.setAttribute('aria-hidden', 'true');
+  controls.autoRotate = false; controls.enabled = false; controls.enablePan = true;
+  const sv = inspSaved; inspSaved = null; inspGoal = null;
+  if (sv) { controls.minDistance = sv.min; controls.maxDistance = sv.max; await Promise.all([tweenCam(sv.pos, sv.target, 800), tweenOffset(0, 0, 800)]); }
+  setOffset(0, 0);
+  controls.enabled = true; window.__insp = false;
+  setTimeout(() => { if (!inspEl.classList.contains('on')) { inspEl.hidden = true; $('insp-frame').src = 'about:blank'; } }, 250);
+};
+renderer.domElement.addEventListener('pointerdown', () => { if (window.__insp) controls.autoRotate = false; });
+renderer.domElement.addEventListener('wheel', () => { if (window.__insp) controls.autoRotate = false; }, { passive: true });
+addEventListener('resize', () => { if (window.__insp && inspGoal) { const it = state.items.find((i) => i.id === selectedId); if (it) { const p = focusPlan(it); inspGoal = p; setOffset(p.ox, p.oy);
+  inspEl.style.setProperty('--hx', p.sx + 'px'); inspEl.style.setProperty('--hy', p.sy + 'px'); inspEl.style.setProperty('--railw', p.left + 'px'); } } });
+$('insp-x').addEventListener('click', () => window.closeInspector());
+$('insp-block').addEventListener('click', () => window.closeInspector());
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !inspEl.hidden) { e.stopPropagation(); window.closeInspector(); } }, true);
+addEventListener('message', (e) => { if (e.data && e.data.vb === 'close') window.closeInspector(); });
 
 const SITE_ID = new URLSearchParams(location.search).get('site');
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

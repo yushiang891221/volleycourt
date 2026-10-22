@@ -7,6 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap">
+<script>(() => { if (new URLSearchParams(location.search).has('embed')) { const r = document.documentElement; r.dataset.theme = 'dark'; r.classList.add('embed'); } })();</script>
+<style>html.embed .sitebar, html.embed #camhero, html.embed #ev-from { display: none !important; } html.embed body { background: var(--bg); } html.embed #eval .ev-nav { top: 0 !important; } html.embed main { padding-top: 4px; }</style>
 <style>/* Layout: a navy top bar with the workspace tabs and the save state; each tab is a full-width workspace (overview page, slide editor, spreadsheet, 3D hall, files) */
 :root {
   --bg: #F6F3EC;
@@ -396,6 +398,15 @@ html, body { height: auto; } body { display: block; margin: 0; }
 <script>
 document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
+</script>
+<script>
+(() => { if (!document.documentElement.classList.contains('embed')) return;
+  // keep navigation inside the panel; outside links open a new tab
+  document.addEventListener('click', (e) => { const a = e.target.closest('a[href]'); if (!a) return; const h = a.getAttribute('href');
+    if (/^https?:/.test(h)) { a.target = '_blank'; a.rel = 'noopener'; return; }
+    if (/^(demo|eval)\.html/.test(h) && !/embed=1/.test(h)) { e.preventDefault(); const [path, hash] = h.split('#'); location.href = path + (path.includes('?') ? '&' : '?') + 'embed=1' + (hash ? '#' + hash : ''); }
+    if (/^(index|gym)\.html/.test(h)) { e.preventDefault(); parent.postMessage({ vb: 'close' }, '*'); } }, true);
+})();
 </script>
 <script>
 (() => { const q = new URLSearchParams(location.search); if (q.get('cam')) { document.getElementById('camhero').hidden = false; document.getElementById('camname').textContent = q.get('cam'); } })();
