@@ -96,7 +96,7 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .insp.on .ring { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .insp .tagname { position: absolute; left: var(--hx, 30%); top: calc(var(--hy, 50%) + var(--hr, 140px) + 14px); transform: translate(-50%, 6px); background: #F2B705; color: #13233A; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .35s .55s, transform .35s .55s; white-space: nowrap; }
 .insp.on .tagname { opacity: 1; transform: translate(-50%, 0); }
-.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(1180px, 68vw); display: flex; flex-direction: column; pointer-events: auto; will-change: transform, opacity;
+.insp .sheet { position: absolute; top: 70px; right: 16px; bottom: 16px; width: min(1700px, 80vw); display: flex; flex-direction: column; pointer-events: auto; will-change: transform, opacity;
   background: rgba(14,23,36,.97); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; color: #ECE7DC;
   opacity: 0; transform: translateX(60px) scale(.98); transition: opacity .45s .15s ease, transform .6s .15s cubic-bezier(.2,.8,.2,1); }
 .insp.on .sheet { opacity: 1; transform: none; }
@@ -2242,13 +2242,13 @@ function focusPlan(it) {
   const obj = box.getCenter(new THREE.Vector3()), dims = box.getSize(new THREE.Vector3());
   const size = Math.max(0.6, dims.x, dims.z, Math.min(dims.y, 3));
   const rect = renderer.domElement.getBoundingClientRect();
-  const narrow = innerWidth <= 760, panelW = narrow ? 0 : Math.min(1180, innerWidth * 0.68) + 16;
+  const narrow = innerWidth <= 760, panelW = narrow ? 0 : Math.min(1700, innerWidth * 0.8) + 16;
   const sx = narrow ? rect.left + rect.width / 2 : (rect.left + (innerWidth - panelW)) / 2;
   const sy = narrow ? rect.top + rect.height * 0.19 : rect.top + rect.height * 0.5;
   const dir = camera.position.clone().sub(controls.target); dir.y = 0; if (dir.lengthSq() < 1e-6) dir.set(1, 0, 1); dir.normalize();
   const el = 0.5, area = narrow ? 0.62 : Math.max(0.3, (innerWidth - panelW - rect.left) / rect.width);
   const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const dist = Math.max(narrow ? 3 : 2.2, Math.min(140, (size * (narrow ? 0.9 : 0.62)) / (tanV * camera.aspect * area)));
+  const dist = Math.max(narrow ? 7 : 6.5, Math.min(180, (size * (narrow ? 1.8 : 1.6)) / (tanV * camera.aspect * area)));
   const pos = obj.clone().add(new THREE.Vector3(dir.x * Math.cos(el), Math.sin(el), dir.z * Math.cos(el)).multiplyScalar(dist));
   const r = Math.max(70, Math.min(rect.height * (narrow ? 0.17 : 0.34), (size * 0.6) / (dist * tanV) * rect.height * 0.5));
   return { pos, target: obj, sx, sy, r, ox: rect.width / 2 - (sx - rect.left), oy: rect.height / 2 - (sy - rect.top), dist, left: rect.left };
