@@ -26,7 +26,8 @@
 .outline[hidden] { display: none; }
 .outline .ol-card { width: min(1100px, 100%); height: min(820px, 100%); background: #0E1724; color: #ECE7DC; border-radius: 18px; border: 1px solid rgba(255,255,255,.12); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 .outline .ol-head { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); flex-wrap: wrap; }
-.outline .ol-head h3 { margin: 0; font-size: 16px; flex: 1; min-width: 200px; }
+.outline .ol-head h3 { margin: 0; font-size: 16px; flex-basis: 100%; }
+.outline .ol-addr { flex: 1; min-width: 240px; font: inherit; font-size: 14px; color: #ECE7DC; background: #111C2B; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 8px 14px; }
 .outline button, .outline .ol-link { font: 600 13px var(--font-body); color: #ECE7DC; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 7px 12px; cursor: pointer; text-decoration: none; }
 .outline button.pri { background: #F2B705; color: #13233A; border-color: #F2B705; } .outline button:disabled { opacity: .45; cursor: not-allowed; }
 .outline #ol-map { width: 100%; height: 100%; background: #06101C; }
@@ -333,7 +334,7 @@ button.danger { color: var(--warn); }
       </section>
     </div>
     <div class="outline" id="outline" hidden role="dialog" aria-modal="true" aria-labelledby="ol-title"><div class="ol-card">
-      <div class="ol-head"><h3 id="ol-title">描建物外框</h3><button type="button" id="ol-find">🔎 自動找建物（OpenStreetMap）</button><button type="button" id="ol-clear">清除重描</button><a class="ol-link" id="ol-ge" target="_blank" rel="noopener">在 Google Earth 量高度 ↗</a><a class="ol-link" href="https://3dmaps.nlsc.gov.tw/FrontMap/" target="_blank" rel="noopener">國土測繪 3D 地圖 ↗</a><button type="button" id="ol-close" aria-label="關閉">×</button></div>
+      <div class="ol-head"><h3 id="ol-title">描建物外框</h3><input id="ol-addr" class="ol-addr" placeholder="輸入確切地址，例：新竹縣竹東鎮○○路○段○號" maxlength="80" aria-label="地址"><button type="button" class="pri" id="ol-find">📍 用地址抓建物</button><button type="button" id="ol-clear">清除重描</button><a class="ol-link" id="ol-ge" target="_blank" rel="noopener">在 Google Earth 量高度 ↗</a><a class="ol-link" href="https://3dmaps.nlsc.gov.tw/FrontMap/" target="_blank" rel="noopener">國土測繪 3D 地圖 ↗</a><button type="button" id="ol-close" aria-label="關閉">×</button></div>
       <div id="ol-map"></div>
       <div class="ol-foot"><span id="ol-info"></span><label>淨高（樑下）<input id="ol-h" type="number" min="4" max="15" step="0.1"> m</label><label>屋頂外觀高度（選填）<input id="ol-roof" type="number" min="0" max="40" step="0.1"> m</label><span style="flex:1"></span><button type="button" class="pri" id="ol-ok" disabled>用這個外框生成球館</button><span id="ol-osm"></span></div>
     </div></div>
@@ -2170,17 +2171,20 @@ async function openOutline() {
   } else OUT.map.setView([site.lat, site.lng], 18);
   setTimeout(() => OUT.map.invalidateSize(), 50);
   setCorners(state.building.geo || []);
-  $('ol-osm').textContent = '在衛星圖上沿屋頂角落依序點一圈；或按「自動找建物」。角落可以拖，右鍵刪除。';
+  $('ol-addr').value = state.building.addr || OUT.addr || '';
+  if (state.building.geo && state.building.geo.length >= 3) { $('ol-osm').textContent = '這是之前存的外框。要換的話輸入地址按「用地址抓建物」。'; OUT.map.fitBounds(window.L.latLngBounds(state.building.geo).pad(0.6)); }
+  else if ($('ol-addr').value) locateAddress();
+  else autoOutline(site.lat, site.lng, '候選場地座標附近');
 }
 function closeOutline() { $('outline').hidden = true; }
 async function applyOutline() {
   const geo = OUT.pts.map((m) => [m.getLatLng().lat, m.getLatLng().lng]);
   const { P, L, W } = toLocal(geo);
-  const H = Math.max(4, Math.min(15, Number($('ol-h').value) || 8)), roofH = Number($('ol-roof').value) || null;
+  const H = Math.max(4, Math.min(15, Number($('ol-h').value) || 8)), roofH = Number($('ol-roof').value) || null, addr = $('ol-addr').value.trim().slice(0, 80) || null;
   closeOutline();
   pushHistory();
   window.__generating = true;
-  state = sanitize({ name: (OUT.site ? OUT.site.name : '球館') + '（真實外框）', building: { L: Math.round(L * 2) / 2, W: Math.round(W * 2) / 2, H, poly: P, geo, roofH }, floor: state.floor, net: state.net, items: [] });
+  state = sanitize({ name: (OUT.site ? OUT.site.name : '球館') + '（真實外框）', building: { L: Math.round(L * 2) / 2, W: Math.round(W * 2) / 2, H, poly: P, geo, roofH, addr }, floor: state.floor, net: state.net, items: [] });
   selectedId = null; fullRefresh(); frameView('bird');
   const plan = planPoly(P);
   if (plan) plan.items.forEach(([x, z], i) => state.items.push(sanitize({ items: [{ type: plan.type, x: Math.round(x * 2) / 2, z: Math.round(z * 2) / 2, rot: plan.rot, locked: true, label: `${i + 1} 號場` }] }).items[0]));
@@ -2194,7 +2198,8 @@ async function applyOutline() {
 function initOutline() {
   $('ol-close').addEventListener('click', closeOutline);
   $('ol-clear').addEventListener('click', () => setCorners([]));
-  $('ol-find').addEventListener('click', findOsm);
+  $('ol-find').addEventListener('click', locateAddress);
+  $('ol-addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locateAddress(); } });
   $('ol-ok').addEventListener('click', applyOutline);
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('outline').hidden) closeOutline(); });
 }
@@ -2206,9 +2211,84 @@ function polyOf(b) {
   const L = Math.max(...xs) - Math.min(...xs), W = Math.max(...zs) - Math.min(...zs);
   if (Math.abs(L - num(b.L, 0)) > 1 || Math.abs(W - num(b.W, 0)) > 1) return {};   // size was edited by hand → back to a rectangle
   const geo = Array.isArray(b.geo) && b.geo.length === P.length ? b.geo.map((g) => [Number(g[0]), Number(g[1])]) : null;
-  return { poly: P.map((p) => [Number(p[0]), Number(p[1])]), ...(geo ? { geo } : {}), ...(Number.isFinite(b.roofH) && b.roofH > 0 ? { roofH: b.roofH } : {}) };
+  return { poly: P.map((p) => [Number(p[0]), Number(p[1])]), ...(geo ? { geo } : {}), ...(Number.isFinite(b.roofH) && b.roofH > 0 ? { roofH: b.roofH } : {}), ...(typeof b.addr === 'string' && b.addr ? { addr: b.addr.slice(0, 80) } : {}) };
 }
 initOutline();
+
+// ---------------------------------------------------------------- automatic outline: address → building → footprint (Overture Maps / OpenStreetMap)
+const OVT = 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/buildings.pmtiles';
+let ovtLib = null;
+async function ovtLoad() {
+  if (!ovtLib) ovtLib = Promise.all([
+    import('https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/+esm'), import('https://cdn.jsdelivr.net/npm/@mapbox/vector-tile@2.0.3/+esm'), import('https://cdn.jsdelivr.net/npm/pbf@4.0.1/+esm'),
+  ]).then(([pm, vt, pbf]) => ({ src: new pm.PMTiles(OVT), VectorTile: vt.VectorTile, Pbf: pbf.default }));
+  return ovtLib;
+}
+// all building footprints within ~radius metres of a point, as [[lat, lng], …] rings
+async function buildingsNear(lat, lng, radius = 250) {
+  const { src, VectorTile, Pbf } = await ovtLoad();
+  const z = 14, n = 2 ** z;
+  const tx = (lng + 180) / 360 * n, ty = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
+  const span = radius / (40075016 * Math.cos(lat * Math.PI / 180) / n);   // radius in tile units
+  const tiles = new Set();
+  for (const dx of [-span, 0, span]) for (const dy of [-span, 0, span]) tiles.add(`${Math.floor(tx + dx)},${Math.floor(ty + dy)}`);
+  const out = [];
+  await Promise.all([...tiles].map(async (k) => {
+    const [x, y] = k.split(',').map(Number);
+    const t = await src.getZxy(z, x, y); if (!t) return;
+    const layer = new VectorTile(new Pbf(new Uint8Array(t.data))).layers.building; if (!layer) return;
+    for (let i = 0; i < layer.length; i++) {
+      const f = layer.feature(i), ext = layer.extent || 4096;
+      const rings = f.loadGeometry(); if (!rings.length || rings[0].length < 4) continue;
+      const ring = rings[0].map((p) => { const gx = (x + p.x / ext) / n, gy = (y + p.y / ext) / n; return [Math.atan(Math.sinh(Math.PI * (1 - 2 * gy))) * 180 / Math.PI, gx * 360 - 180]; });
+      if (ring.length > 3 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]) ring.pop();
+      const c = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]);
+      const d = Math.hypot((c[0] - lat) * 110540, (c[1] - lng) * 111320 * Math.cos(lat * Math.PI / 180));
+      if (d <= radius) out.push({ ring, d, h: Number(f.properties.height) || null, src: f.properties['@geometry_source'] === 'OpenStreetMap' ? 'OpenStreetMap' : 'Overture' });
+    }
+  }));
+  return out;
+}
+const geoArea = (ring) => Math.abs(polyArea(toLocal(ring).P));
+// the building that contains the point; otherwise the closest sizeable one (factories are big, so prefer ≥ 300 ㎡)
+function pickBuilding(list, lat, lng) {
+  const inside = list.filter((b) => { const lp = toLocalAt(b.ring, lat, lng); return pip(0, 0, lp); });
+  if (inside.length) return inside.sort((a, b) => geoArea(a.ring) - geoArea(b.ring))[0];
+  const big = list.filter((b) => geoArea(b.ring) >= 300).sort((a, b) => a.d - b.d);
+  return big[0] || list.sort((a, b) => a.d - b.d)[0] || null;
+}
+function toLocalAt(ring, lat0, lng0) { const kx = 111320 * Math.cos(lat0 * Math.PI / 180); return ring.map(([la, ln]) => [(ln - lng0) * kx, -(la - lat0) * 110540]); }
+async function geocode(addr) {
+  const r = await fetch('api/geocode?q=' + encodeURIComponent(addr)); if (!r.ok) return null;
+  const j = await r.json(); return (j.results || [])[0] || null;
+}
+async function autoOutline(lat, lng, how) {
+  const st = $('ol-osm');
+  st.textContent = `正在找${how}的建物輪廓…`;
+  try {
+    const list = await buildingsNear(lat, lng);
+    if (OUT.osm) OUT.osm.remove();
+    OUT.osm = window.L.layerGroup().addTo(OUT.map);
+    window.L.circleMarker([lat, lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#E8814A', fillOpacity: 1 }).addTo(OUT.osm).bindTooltip(how, { permanent: false });
+    for (const b of list) window.L.polygon(b.ring, { color: '#4FC3F7', weight: 1.5, dashArray: '4 4', fillOpacity: 0.06 }).addTo(OUT.osm)
+      .bindTooltip(`點一下改用這棟・約 ${Math.round(geoArea(b.ring) / 3.3058).toLocaleString('zh-TW')} 坪`, { sticky: true })
+      .on('click', (e) => { window.L.DomEvent.stopPropagation(e); setCorners(b.ring); if (b.h) $('ol-roof').value = b.h; st.textContent = '已換成這棟。'; });
+    const b = pickBuilding(list, lat, lng);
+    if (!b) { st.textContent = '這附近沒有建物輪廓資料，請在衛星圖上點屋頂角落描外框。'; return false; }
+    setCorners(b.ring); if (b.h) $('ol-roof').value = b.h;
+    OUT.map.fitBounds(window.L.latLngBounds(b.ring).pad(0.6));
+    st.textContent = `已自動抓到${how}的建物輪廓（來源：${b.src}）。不是這棟的話，點旁邊藍色虛線的建物換一棟；角落也可以拖曳微調。`;
+    return true;
+  } catch (e) { st.textContent = '建物輪廓資料讀取失敗，請稍後再試，或在衛星圖上點屋頂角落描外框。'; return false; }
+}
+async function locateAddress() {
+  const addr = $('ol-addr').value.trim(); if (!addr) { $('ol-addr').focus(); return; }
+  $('ol-osm').textContent = '正在用地址定位…';
+  const g = await geocode(addr).catch(() => null);
+  if (!g) { $('ol-osm').textContent = '找不到這個地址，請確認縣市、鄉鎮、路名和門牌號碼。'; return; }
+  OUT.addr = addr; OUT.map.setView([g.lat, g.lng], 19);
+  await autoOutline(g.lat, g.lng, `「${g.label || addr}」`);
+}
 
 // ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
 const inspEl = $('insp'); let inspSaved = null, inspTween = null;
