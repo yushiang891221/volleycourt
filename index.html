@@ -1095,7 +1095,7 @@ function popupHtml(s) {
   </div>
   <p class="pc-note">${esc(s.note || '')}</p>
   <div class="pc-links">${links}</div>
-  ${(() => { const m = hallMem(s.id); return m ? `<div class="memline">💾 已有你的配置・${m.courts ?? '?'} 面場・上次編輯 ${esc(memTime(m.savedAt))}</div><a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 接續上次配置</a>` : `<a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 生成 3D 配置</a>`; })()}`;
+  ${(() => { const m = hallMem(s.id); return m ? `<div class="memline">💾 已有你的配置・${m.courts ?? '?'} 面場${typeof m.total === 'number' ? `・設備估價 NT$${Math.round(m.total).toLocaleString('zh-TW')}` : ''}・上次編輯 ${esc(memTime(m.savedAt))}</div><a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 接續上次配置</a>` : `<a class="enter" href="gym.html?site=${encodeURIComponent(s.id)}">進入球館 → 生成 3D 配置</a>`; })()}`;
 }
 function renderList() {
   const L2 = [...SITES.sites].sort((a, b) => (matches(b) - matches(a)) || a.pri.localeCompare(b.pri) || (b.ping || 0) - (a.ping || 0));

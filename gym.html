@@ -27,6 +27,32 @@ body { margin: 0; display: flex; flex-direction: column; height: 100%; }
 .siteinfo span { font-size: 12px; color: var(--muted); line-height: 1.6; }
 .siteinfo .row { display: flex; gap: 6px; flex-wrap: wrap; }
 .siteinfo .memo { color: var(--ok) !important; }
+.costcard { padding: 12px; border-radius: 12px; background: var(--chip); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.costcard .ct-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
+.costcard .ct-total { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.costcard ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.costcard li { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.costcard li small { display: block; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.costcard li b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.costcard .ct-miss, .costcard .ct-hint { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.insp .tot { font: 800 13px var(--font-body); color: #13233A; background: #F2B705; padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
+.insp .pick { border-bottom: 1px solid rgba(255,255,255,.08); max-height: 46%; display: flex; flex-direction: column; min-height: 0; }
+.insp .pick.closed .pk-body { display: none; }
+.insp .pick.closed .pk-toggle i { transform: rotate(-90deg); display: inline-block; }
+.insp .pk-toggle { all: unset; cursor: pointer; padding: 10px 20px; font: 700 13px var(--font-body); color: #F2B705; }
+.insp .pk-body { overflow: auto; padding: 0 16px 12px 20px; display: flex; flex-direction: column; gap: 12px; }
+.insp .pk-cat h4 { margin: 0 0 6px; font-size: 14px; color: #F3EFE6; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.insp .pk-cat h4 span { font-size: 12px; font-weight: 500; color: #A9B4C2; }
+.insp .pk-opt { display: grid; grid-template-columns: 18px minmax(0, 1fr) 120px 120px 22px; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); margin-bottom: 4px; cursor: pointer; font-size: 13px; color: #DCE3EC; }
+.insp .pk-opt.on { border-color: #F2B705; background: rgba(242,183,5,.1); }
+.insp .pk-opt input[type=radio] { accent-color: #F2B705; margin: 0; }
+.insp .pk-n { display: flex; flex-direction: column; min-width: 0; } .insp .pk-n b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insp .pk-n small, .insp .pk-p small { color: #8E9AAA; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insp .pk-p, .insp .pk-s { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.insp .pk-s { font-weight: 800; color: #F3EFE6; }
+.insp .pk-p input { width: 78px; font: inherit; color: #F3EFE6; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18); border-radius: 6px; padding: 3px 6px; text-align: right; }
+.insp .pk-opt a { color: #A9B4C2; text-decoration: none; font-size: 15px; }
+@media (max-width: 760px) { .insp .pk-opt { grid-template-columns: 18px minmax(0, 1fr) 90px; } .insp .pk-s, .insp .pk-opt a, .insp .pk-opt > i { display: none; } .insp .tot { display: none; } }
 .gen { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px)); background: rgba(11, 22, 38, .92); color: #F3EFE6; border-radius: 18px; padding: 20px 22px; box-shadow: 0 20px 50px rgba(0,0,0,.45); transition: opacity .5s, transform .5s; }
 .gen.hide { opacity: 0; transform: translate(-50%, -40%); pointer-events: none; }
 .gen h3 { margin: 0 0 4px; font-size: 18px; }
@@ -207,6 +233,7 @@ button.danger { color: var(--warn); }
       <p class="eyebrow">步驟 2・3D 球館</p>
       <h1 id="gym-title">排球館 3D 配置</h1>
       <div class="siteinfo" id="siteinfo" hidden></div>
+      <div class="costcard" id="costcard"><div class="ct-head"><span>設備估價（這個場館）</span><b class="ct-total"></b></div><ul class="ct-lines"></ul><p class="ct-miss"></p><p class="ct-hint">點 3D 裡的球場、燈、吊扇、沙發、攝影機、AED，可以換不同產品，總額跟著變。</p></div>
       <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
     </header>
     <section class="sec">
@@ -281,7 +308,8 @@ button.danger { color: var(--warn); }
     <div class="insp" id="insp" hidden aria-hidden="true">
       <div class="scrim" id="insp-scrim"></div><div class="block" id="insp-block"></div><div class="ring"></div><div class="tagname" id="insp-tag"></div><div class="hint">拖曳 360° 旋轉・滾輪縮放・Esc 關閉</div>
       <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="insp-title">
-        <div class="sh-head"><div><div class="kind" id="insp-kind"></div><h2 id="insp-title"></h2></div><span class="grow"></span><a class="newtab" id="insp-new" href="#" target="_blank" rel="noopener">新分頁開啟 ↗</a><button type="button" class="x" id="insp-x" aria-label="關閉">×</button></div>
+        <div class="sh-head"><div><div class="kind" id="insp-kind"></div><h2 id="insp-title"></h2></div><span class="grow"></span><span class="tot" id="insp-total"></span><a class="newtab" id="insp-new" href="#" target="_blank" rel="noopener">新分頁開啟 ↗</a><button type="button" class="x" id="insp-x" aria-label="關閉">×</button></div>
+        <div class="pick" id="insp-pick" hidden><button type="button" class="pk-toggle" aria-expanded="true">選擇產品・這個場館的報價 <i>▾</i></button><div class="pk-body"></div></div>
         <div class="sh-body"><div class="loading"><div><i></i>載入中…</div></div><iframe id="insp-frame" title="物件詳細內容"></iframe></div>
       </section>
     </div>
@@ -1336,7 +1364,7 @@ function undo() {
 }
 let draftTimer = 0;
 function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
-function commit() { window.wakeRender && window.wakeRender(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
+function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); syncBuildingInputs(); renderChecks(); renderSaved(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); renderItems(); renderSelection(); commit(); }
 
 // ---------------------------------------------------------------- camera
@@ -1591,7 +1619,7 @@ function planHall(site) {
 // every candidate site keeps its own layout on this device (localStorage 'vb.hall.<id>')
 const HALL_KEY = (id) => 'vb.hall.' + id;
 function loadHall(id) { try { const v = JSON.parse(localStorage.getItem(HALL_KEY(id)) || 'null'); return v && v.data && Array.isArray(v.data.items) ? v : null; } catch (e) { return null; } }
-function saveHall(id) { try { localStorage.setItem(HALL_KEY(id), JSON.stringify({ data: designData(), savedAt: new Date().toISOString(), name: state.name, courts: state.items.filter((i) => CAT[i.type].court === 'vb').length })); } catch (e) { /* storage full or blocked */ } }
+function saveHall(id) { try { localStorage.setItem(HALL_KEY(id), JSON.stringify({ data: designData(), savedAt: new Date().toISOString(), name: state.name, courts: state.items.filter((i) => CAT[i.type].court === 'vb').length, total: (typeof costReport === 'function' ? costReport().total : null) })); } catch (e) { /* storage full or blocked */ } }
 async function generateFromSite(id, opts = {}) {
   const gen = $('gen'), steps = $('gen-steps'), bar = $('gen-bar');
   let site = null;
@@ -1666,6 +1694,85 @@ async function generateFromSite(id, opts = {}) {
   const firstCam = state.items.find((i) => i.type === 'camera'); if (firstCam) select(firstCam.id);
 }
 
+const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "龍蝦規格每面 450 ㎡、精簡 360 ㎡；只含材料", "options": [{"id": "p0", "name": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "price": 480, "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "4.5 mm 捲材，可依尺寸訂製"}, {"id": "p1", "name": "PVC 運動地膠", "brand": "心語家居（網拍）", "price": 423, "link": "https://shopee.tw/product/24532501/55253897635", "note": "4.5 mm"}, {"id": "p2", "name": "PVC 運動地膠", "brand": "MM 居家（網拍）", "price": 419, "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm，10 ㎡ 起訂"}, {"id": "p3", "name": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "price": 650, "link": "https://www.pro360.com.tw/price/pu_floor", "note": "室內 PU 層，不含底層與面材"}, {"id": "p4", "name": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "price": null, "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "國際品牌運動地板捲材"}, {"id": "p5", "name": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "price": null, "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "原廠稱自 1976 年起為奧運地板供應商"}], "def": "p0"}, "net": {"label": "網柱（每面 1 組）", "unit": "組", "qnote": "", "options": [{"id": "p7", "name": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "price": 43500, "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p8", "name": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "price": 31500, "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p9", "name": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "price": 17680, "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": "材質未標示"}, {"id": "p10", "name": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "price": 14800, "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "一組，不含運費"}], "def": "p8"}, "balls": {"label": "球具（每面一套）", "unit": "套", "qnote": "", "options": [{"id": "b-full", "name": "比賽球 ×12＋練習球 ×20＋球車 ×2", "brand": "MIKASA V200W／SUCCESS 4035／5Cgo", "price": 41700, "link": "https://tw.bid.yahoo.com/item/101034460886", "note": ""}, {"id": "b-lite", "name": "練習球 ×30＋球車 ×2（不買比賽球）", "brand": "SUCCESS 4035／5Cgo", "price": 11050, "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": ""}], "def": "b-full"}, "light": {"label": "LED 天井燈", "unit": "盞", "qnote": "", "options": [{"id": "p16", "name": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "price": 4180, "link": "https://biggo.com.tw/s/天井燈+200w", "note": "瓦數可調"}, {"id": "p17", "name": "LED 天井燈 200 W", "brand": "億光 星辰", "price": 5300, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p18", "name": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "price": 6930, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p19", "name": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "price": 3370, "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "內建風扇，保固 1 年"}, {"id": "p20", "name": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "price": 3920, "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "價格區間 2,890–3,920"}], "def": "p16"}, "fan": {"label": "吊扇", "unit": "台", "qnote": "", "options": [{"id": "p21", "name": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "price": 36675, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}, {"id": "p22", "name": "巨型工業吊扇 100 吋", "brand": "宅造印象", "price": 31999, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}], "def": "p21"}, "aed": {"label": "AED", "unit": "台", "qnote": "壁掛收納箱另計約 8,000", "options": [{"id": "p24", "name": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "price": 65000, "link": "https://uptogo.com.tw/?p=160809", "note": "國產，區間 6.5–7 萬"}, {"id": "p25", "name": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "price": 70000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 7–8 萬"}, {"id": "p26", "name": "AED", "brand": "Philips HeartStart", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p27", "name": "AED", "brand": "Defibtech Lifeline", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p28", "name": "AED", "brand": "LIFEPAK CR2", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–15 萬"}], "def": "p24"}, "sofa": {"label": "沙發", "unit": "張", "qnote": "", "options": [{"id": "s0", "name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "note": "耐磨合成皮"}, {"id": "s1", "name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "note": "半皮"}, {"id": "s2", "name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "note": "耐磨合成皮"}, {"id": "s3", "name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "note": "貓抓皮"}, {"id": "s4", "name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s5", "name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s6", "name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "note": "皮革"}, {"id": "s7", "name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "link": "https://www.momoshop.com.tw/product/14325651", "note": "貓抓布（防潑水）"}, {"id": "s8", "name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "note": "布"}, {"id": "s9", "name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "note": "布"}], "def": "s0"}, "camera": {"label": "智慧球場攝影機", "unit": "支", "qnote": "每面球場 1 支，掛牆", "options": [{"id": "c4k", "name": "4K PoE 槍型網路攝影機", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}, {"id": "cpanel", "name": "AI 運動攝影機（自動追球、剪精華）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}], "def": "c4k"}};
+
+// ---------------------------------------------------------------- per-venue product picks and total cost
+// CATALOG is injected at build time from the comparison sheet (排球館報價比價清單) + the sofa list.
+const TYPE_CATS = { vb: ['floor', 'net', 'balls'], vbs: ['floor', 'net', 'balls'], referee: ['net'], netwall: ['net'], ballcart: ['balls'],
+  light: ['light'], fan: ['fan'], aed: ['aed'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'] };
+const PICK_KEY = () => 'vb.picks.' + (window.__siteId || 'free');
+function getPicks() { try { const v = JSON.parse(localStorage.getItem(PICK_KEY()) || '{}'); return v && typeof v === 'object' ? { sel: v.sel || {}, custom: v.custom || {} } : { sel: {}, custom: {} }; } catch (e) { return { sel: {}, custom: {} }; } }
+function setPicks(p) { try { localStorage.setItem(PICK_KEY(), JSON.stringify(p)); } catch (e) { /* ignore */ } }
+function qtyOf(cat, c) {
+  const courts = (c.vb || 0) + (c.vbs || 0);
+  return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0) }[cat] || 0;
+}
+function chosen(cat, picks) {
+  const C = CATALOG[cat]; const id = picks.sel[cat] ?? C.def;
+  if (id === 'custom') return { id, name: '自己輸入的報價', brand: '', price: picks.custom[cat] ?? null };
+  return C.options.find((o) => o.id === id) || C.options.find((o) => o.id === C.def) || C.options[0];
+}
+function costReport() {
+  const c = window.gymCounts().counts, picks = getPicks();
+  const lines = []; let total = 0; const missing = [];
+  for (const cat of Object.keys(CATALOG)) {
+    const q = qtyOf(cat, c); if (!q) continue;
+    const o = chosen(cat, picks), price = typeof o.price === 'number' ? o.price : null;
+    const sub = price == null ? null : price * q;
+    if (sub == null) missing.push(CATALOG[cat].label); else total += sub;
+    lines.push({ cat, label: CATALOG[cat].label, q, unit: CATALOG[cat].unit, o, price, sub });
+  }
+  return { lines, total, missing };
+}
+const nt = (v) => 'NT$' + Math.round(v).toLocaleString('zh-TW');
+function renderCostCard() {
+  const el = $('costcard'); if (!el) return;
+  const r = costReport();
+  el.querySelector('.ct-total').textContent = nt(r.total);
+  el.querySelector('.ct-lines').innerHTML = r.lines.map((l) => `<li><span>${l.label}<small>${l.o.brand ? l.o.brand + '・' : ''}${l.o.name}・${l.q.toLocaleString('zh-TW')} ${l.unit}</small></span><b>${l.sub == null ? '待報價' : nt(l.sub)}</b></li>`).join('') || '<li><span>還沒有可估價的設備</span></li>';
+  el.querySelector('.ct-miss').textContent = (r.missing.length ? `待報價：${r.missing.join('、')}。` : '') + '未含地板施工、水電、廁所淋浴、冷氣與裝修。';
+  const chip = $('insp-total'); if (chip) chip.textContent = '這個場館設備總額 ' + nt(r.total);
+  window.__costTotal = r.total;
+}
+window.updateCost = renderCostCard;
+function renderPicker(type) {
+  const box = $('insp-pick'); const cats = TYPE_CATS[type] || [];
+  if (!cats.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const c = window.gymCounts().counts, picks = getPicks();
+  box.querySelector('.pk-body').innerHTML = cats.map((cat) => {
+    const C = CATALOG[cat], q = qtyOf(cat, c), cur = (picks.sel[cat] ?? C.def);
+    const row = (o) => {
+      const sub = typeof o.price === 'number' && q ? o.price * q : null;
+      return `<label class="pk-opt${cur === o.id ? ' on' : ''}"><input type="radio" name="pk-${cat}" value="${o.id}" ${cur === o.id ? 'checked' : ''}>
+        <span class="pk-n"><b>${o.name}</b><small>${o.brand || ''}${o.note ? '・' + o.note : ''}</small></span>
+        <span class="pk-p">${typeof o.price === 'number' ? nt(o.price) + '<small>/' + C.unit + '</small>' : '<small>待報價</small>'}</span>
+        <span class="pk-s">${sub == null ? '—' : nt(sub)}</span>
+        ${o.link ? `<a href="${o.link}" target="_blank" rel="noopener" title="看商品">↗</a>` : '<i></i>'}</label>`;
+    };
+    const cv = picks.custom[cat] ?? '';
+    return `<section class="pk-cat" data-cat="${cat}"><h4>${C.label}<span>這個場館 ${q.toLocaleString('zh-TW')} ${C.unit}${C.qnote ? '・' + C.qnote : ''}</span></h4>
+      ${C.options.map(row).join('')}
+      <label class="pk-opt custom${cur === 'custom' ? ' on' : ''}"><input type="radio" name="pk-${cat}" value="custom" ${cur === 'custom' ? 'checked' : ''}>
+        <span class="pk-n"><b>自己輸入報價</b><small>拿到廠商報價後填這裡</small></span>
+        <span class="pk-p"><input type="number" min="0" step="1" inputmode="numeric" data-custom="${cat}" value="${cv}" placeholder="單價"><small>/${C.unit}</small></span>
+        <span class="pk-s">${cv !== '' && q ? nt(cv * q) : '—'}</span><i></i></label></section>`;
+  }).join('');
+}
+function initPicker() {
+  const box = $('insp-pick'); if (!box) return;
+  box.addEventListener('change', (e) => {
+    const r = e.target.closest('input[type=radio]');
+    const p = getPicks();
+    if (r) { p.sel[r.name.slice(3)] = r.value; }
+    const cu = e.target.closest('input[data-custom]');
+    if (cu) { const v = cu.value === '' ? null : Math.max(0, +cu.value); if (v == null) delete p.custom[cu.dataset.custom]; else { p.custom[cu.dataset.custom] = v; p.sel[cu.dataset.custom] = 'custom'; } }
+    setPicks(p); renderPicker(box.dataset.type); renderCostCard();
+    if (window.__siteId && typeof saveHall === 'function' && !window.__generating) saveHall(window.__siteId);
+  });
+  box.querySelector('.pk-toggle').addEventListener('click', () => { const open = box.classList.toggle('closed'); box.querySelector('.pk-toggle').setAttribute('aria-expanded', String(!open)); });
+}
+
 // ---------------------------------------------------------------- in-page inspector: fly the camera so the picked object sits left of centre, panel on the right
 const inspEl = $('insp'); let inspSaved = null, inspTween = null;
 function tweenCam(toPos, toTarget, ms) {
@@ -1722,6 +1829,7 @@ window.openInspector = async (type, label) => {
   $('insp-title').textContent = label || (CAT[type] && CAT[type].label) || '物件';
   $('insp-tag').textContent = label || '';
   $('insp-new').href = url;
+  $('insp-pick').dataset.type = type; renderPicker(type); renderCostCard();
   frame.classList.remove('ready');
   frame.onload = () => { if (frame.src !== 'about:blank') frame.classList.add('ready'); };
   frame.src = url.replace('.html?', '.html?embed=1&');
@@ -1767,6 +1875,8 @@ $('insp-x').addEventListener('click', () => window.closeInspector());
 $('insp-block').addEventListener('click', () => window.closeInspector());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !inspEl.hidden) { e.stopPropagation(); window.closeInspector(); } }, true);
 addEventListener('message', (e) => { if (e.data && e.data.vb === 'close') window.closeInspector(); });
+
+initPicker(); setTimeout(renderCostCard, 0);
 
 const SITE_ID = new URLSearchParams(location.search).get('site');
 window.__siteId = SITE_ID;
