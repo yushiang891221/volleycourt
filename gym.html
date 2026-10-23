@@ -273,7 +273,8 @@ details.more[open] > summary { margin-bottom: 10px; }
 .mp { position: absolute; top: 12px; left: max(12px, env(safe-area-inset-left, 0px)); width: min(300px, calc(100% - 24px)); background: rgba(27,38,56,.94); color: #fff; border: 1px solid #F2B705; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; z-index: 11; font-size: 13px; }
 .mp[hidden] { display: none !important; }
 .mp .field span { color: #C9D1DC; }
-.mp input { color: #1B2638; }
+.mp input { color: #fff; background: rgba(255,255,255,.08); border-color: #F2B705; caret-color: #F2B705; }
+.mp input::placeholder { color: rgba(255,255,255,.5); }
 .mp-h { display: flex; align-items: center; justify-content: space-between; }
 .mp-h button { min-height: 0; padding: 2px 8px; }
 .mp-join { display: flex; gap: 6px; } .mp-join input { flex: 1; min-width: 0; text-transform: uppercase; }
