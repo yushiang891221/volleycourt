@@ -150,13 +150,21 @@ details.pal-group { border-top: 1px solid var(--rule); }
 .boxsel { fill: rgba(242,183,5,.12); stroke: #C4552A; stroke-width: 1.5px; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .multi-sel { display: flex; flex-direction: column; gap: 8px; }
 .multi-sel .btn-row { flex-wrap: wrap; }
-.colors .crow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; flex-wrap: wrap; }
-.colors .crow small { color: var(--soft); margin-left: 4px; }
-.colors .sw { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-.colors .sw button[data-cv] { width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 6px; border: 1px solid rgba(0,0,0,.25); }
-.colors .sw button[aria-pressed=true] { outline: 2px solid #F2B705; outline-offset: 1px; }
-.colors .sw input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--rule); border-radius: 6px; background: none; }
-.colors .sw .reset { font-size: 11px; padding: 2px 6px; min-height: 0; }
+.cp { padding: 6px 0; border-top: 1px solid var(--rule); }
+.cp-head { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.cp-head .cp-l { flex: 1; min-width: 0; }
+.cp-head small { color: var(--soft); margin-left: 4px; }
+.cp-cur { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.3); }
+.cp-head button { font-size: 11px; padding: 2px 8px; min-height: 0; flex: none; }
+.cp-sw { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cp-sw .cp-s { flex: 0 0 24px; width: 24px; height: 24px; min-width: 0; min-height: 0; padding: 0; border-radius: 6px; border: 1px solid rgba(0,0,0,.25); }
+.cp-sw .cp-s[aria-pressed=true] { outline: 2px solid #F2B705; outline-offset: 1px; }
+.cp-rgb { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 12px; }
+.cp-rgb[hidden] { display: none; }
+.cp-rgb label { display: grid; grid-template-columns: 16px 1fr 52px; gap: 6px; align-items: center; }
+.cp-rgb input[type=range] { width: 100%; min-width: 0; }
+.cp-rgb input[type=number] { padding: 2px 4px; }
+.cp-hex { font-family: var(--font-mono); font-size: 11px; color: var(--soft); }
 input.pal-search { margin: 4px 0 6px; padding: 8px 10px; }
 .pal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .pal button { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; min-width: 0; }
@@ -255,6 +263,8 @@ details.more[open] > summary { margin-bottom: 10px; }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
 .wk-cross.on { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: transparent; box-shadow: 0 0 0 2px #F2B705, 0 0 0 3.5px rgba(27,38,56,.5); }
 .wk-act { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(27,38,56,.88); color: #fff; border: 1px solid #F2B705; font-size: 14px; font-weight: 700; }
+.wk-lock { position: absolute; left: 50%; top: calc(50% + 26px); transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: rgba(27,38,56,.82); color: #fff; font-size: 13px; pointer-events: none !important; white-space: nowrap; }
+.wk-lock[hidden] { display: none !important; }
 .wk-combo { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: #F2B705; color: #1B2638; font-weight: 800; font-size: 15px; pointer-events: none !important; }
 .wk-combo[hidden], .vmodal[hidden] { display: none !important; }
 .vmodal { position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(10,14,22,.62); padding: 16px; }
@@ -464,6 +474,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="grid2">
         <label class="field" for="b-floor"><span>球場配色</span><select id="b-floor"></select></label>
         <label class="field" for="b-net"><span>排球網高</span><select id="b-net"></select></label>
+        <label class="field" for="b-wall"><span>建物外觀</span><select id="b-wall"><option value="metal">鐵皮屋（浪板牆、倒 V 屋頂）</option><option value="plaster">粉刷牆</option></select></label>
         <label class="field" for="b-entryW"><span>主入口寬度（m）</span><input id="b-entryW" type="number" min="0.9" max="12" step="0.1" inputmode="decimal"></label>
       </div>
       <div class="colors" id="b-colors"></div>
@@ -524,6 +535,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <button type="button" id="v-bird" aria-pressed="true">鳥瞰</button>
         <button type="button" id="v-top" aria-pressed="false">俯視</button>
         <button type="button" id="v-player" aria-pressed="false">球員視角</button>
+        <button type="button" id="v-fly" aria-pressed="false" title="拖曳＝原地轉頭、滾輪＝往前後走、WASD 移動、Q／E 下降上升">自由移動</button>
       </div>
       <button type="button" id="t-walls" aria-expanded="false" aria-controls="wallmenu">牆與樑柱 ▾</button>
       <button type="button" id="t-quality" aria-pressed="true">畫質：高</button>
@@ -531,13 +543,14 @@ details.more[open] > summary { margin-bottom: 10px; }
       <button type="button" id="t-snap" aria-pressed="true">對齊 0.5 m</button>
       <button type="button" id="btn-undo">復原</button>
     </div>
-    <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜鎖定的物件不會動｜拖曳空白處轉視角｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
+    <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>按住滑鼠拖曳轉頭・點地板直接走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>拿著球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 墊球（時機對才接得住）、網前 <kbd>R</kbd> 攻擊<br><kbd>Esc</kbd> 離開導覽</p>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>拿著球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 墊球（時機對才接得住）、<kbd>V</kbd> 發球、網前 <kbd>R</kbd> 攻擊<br><kbd>Esc</kbd> 離開導覽</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
+      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：之後移動滑鼠就能轉頭看（Esc 放開滑鼠）</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
@@ -816,6 +829,7 @@ function sanitizeZone(z) {
   if (z.bare === true) o.bare = true;
   const r = ((num(z.rot, 0) % 360) + 360) % 360; if (r) o.rot = Math.round(r * 100) / 100;
   if (['n', 'e', 's', 'w'].includes(z.door)) o.door = z.door;
+  if (z.type === 'wc' && ['stalls', 'open'].includes(z.wcl)) o.wcl = z.wcl;
   if (typeof z.desc === 'string' && z.desc.trim()) o.desc = z.desc.slice(0, 160);
   return o;
 }
@@ -852,7 +866,7 @@ function sanitize(raw) {
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Number.isFinite(b.entryW) ? { entryW: clamp(num(b.entryW, 3), 0.9, 12) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'plaster' ? { wall: 'plaster' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Number.isFinite(b.entryW) ? { entryW: clamp(num(b.entryW, 3), 0.9, 12) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
     colors: Object.fromEntries(Object.entries(s.colors && typeof s.colors === 'object' ? s.colors : {}).filter(([k, v]) => COLOR_KEYS.includes(k) && /^#[0-9a-f]{6}$/i.test(String(v)))),
     net: NETS[s.net] ? s.net : 'men',
@@ -869,6 +883,7 @@ function sanitize(raw) {
     if (['white', 'dark', 'poster', 'black', 'red', 'blue'].includes(it.tone)) o.tone = it.tone;
     if (typeof it.label === 'string' && it.label.trim()) o.label = it.label.slice(0, 20);
     if (it.locked === true) o.locked = true;
+    if (def.court && it.cc && typeof it.cc === 'object') { const cc = {}; for (const k of ['court', 'free']) if (/^#[0-9a-f]{6}$/i.test(String(it.cc[k] || ''))) cc[k] = it.cc[k]; if (Object.keys(cc).length) o.cc = cc; }
     if (typeof it.zone === 'string' && it.zone) o.zone = it.zone.slice(0, 40);
     out.items.push(o);
   }
@@ -1080,6 +1095,33 @@ const ribNormal = (() => {
   for (let x = 0; x < 64; x++) { const sl = Math.cos((x / 64) * Math.PI * 2) * 0.85; const r = Math.round((sl * 0.5 + 0.5) * 255); c.fillStyle = `rgb(${r},128,${Math.round(Math.sqrt(Math.max(0, 1 - sl * sl)) * 127 + 128)})`; c.fillRect(x, 0, 1, 4); }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1 / 0.25, 1); return t;
 })();
+// 鐵皮浪板：梯形浪（每 20 cm 一道）＋淡淡的板片接縫與髒污，貼圖以公尺計
+function sheetTextures(horizontal) {
+  const S = 256, cv = document.createElement('canvas'), nv = document.createElement('canvas'); cv.width = nv.width = S; cv.height = nv.height = S;
+  const c = cv.getContext('2d'), n = nv.getContext('2d'), img = c.createImageData(S, S), nim = n.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const t = ((horizontal ? y : x) / S) * 5 % 1;          // 一公尺五道浪
+    // 梯形：平頂 35%、斜邊 15%、平底 35%、斜邊 15%
+    let slope = 0, h = 0;
+    if (t < 0.35) h = 1; else if (t < 0.5) { slope = -1; h = 1 - (t - 0.35) / 0.15; } else if (t < 0.85) h = 0; else { slope = 1; h = (t - 0.85) / 0.15; }
+    const i = (y * S + x) * 4, streak = 6 * Math.sin(((horizontal ? x : y) / S) * 6.283 * 3 + y * 0.01);
+    const v = 196 + h * 26 + streak + (slope ? -18 : 0);
+    img.data[i] = v; img.data[i + 1] = v + 3; img.data[i + 2] = v + 7; img.data[i + 3] = 255;
+    const sx = horizontal ? 0 : slope * 0.75, sy = horizontal ? slope * 0.75 : 0, sz = Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+    nim.data[i] = (sx * 0.5 + 0.5) * 255; nim.data[i + 1] = (-sy * 0.5 + 0.5) * 255; nim.data[i + 2] = sz * 127 + 128; nim.data[i + 3] = 255;
+  }
+  c.putImageData(img, 0, 0); n.putImageData(nim, 0, 0);
+  const map = new THREE.CanvasTexture(cv), nor = new THREE.CanvasTexture(nv);
+  for (const t of [map, nor]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; }
+  map.colorSpace = THREE.SRGBColorSpace;
+  return { map, nor };
+}
+const SHEET_H = sheetTextures(true), SHEET_V = sheetTextures(false);
+const sheetWallMat = new THREE.MeshStandardMaterial({ color: '#E3E6E9', map: SHEET_H.map, normalMap: SHEET_H.nor, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.42, metalness: 0.45 });
+sheetWallMat.envMapIntensity = sheetWallMat.userData.env = 0.4;
+const roofSheetMat = new THREE.MeshStandardMaterial({ color: '#DADDE0', map: SHEET_V.map, normalMap: SHEET_V.nor, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide });
+roofSheetMat.envMapIntensity = roofSheetMat.userData.env = 0.3;
+const isMetal = () => state.building.wall !== 'plaster';
 const metalWallMat = new THREE.MeshStandardMaterial({ color: '#DADDDF', roughness: 0.45, metalness: 0.35, normalMap: ribNormal, normalScale: new THREE.Vector2(0.9, 0.9) });
 metalWallMat.envMapIntensity = metalWallMat.userData.env = 0.35;
 const plasterMat = new THREE.MeshStandardMaterial({ color: '#EFEBE4', roughness: 0.92, normalMap: phTex('white_plaster_02', 'nor', 1), normalScale: new THREE.Vector2(0.35, 0.35) });
@@ -1173,7 +1215,7 @@ function kit(name, g, x = 0, y = 0, z = 0, o = {}) {
     const m = new THREE.Mesh(pt.geometry, kitMat(pt.role, o.tint && o.tint[pt.role]));
     if (pt.role === 'glass' || pt.role === 'emit') m.userData.noInk = true;
     if (pt.role === 'leaf') m.userData.noInk = true;
-    m.userData.softInk = true;
+    m.userData.softInk = true; m.userData.role = pt.role;
     grp.add(m);
   }
   grp.position.set(x, y, z);
@@ -1215,10 +1257,10 @@ function tag(g, text, y, cls = '', x = 0, z = 0) {
 // ---------------------------------------------------------------- court textures
 const PX = 40; // pixels per metre
 const texCache = new Map();
-function courtTexture(kind, fw, fd, mode, schemeKey) {
-  const key = [kind, fw, fd, mode, schemeKey, JSON.stringify(state.colors || {})].join('|');
+function courtTexture(kind, fw, fd, mode, schemeKey, cc) {
+  const key = [kind, fw, fd, mode, schemeKey, JSON.stringify(state.colors || {}), JSON.stringify(cc || {})].join('|');
   if (texCache.has(key)) return texCache.get(key);
-  const sc = schemeKey === state.floor ? scheme() : SCHEMES[schemeKey];
+  const sc = { ...(schemeKey === state.floor ? scheme() : SCHEMES[schemeKey]), ...(cc || {}) };
   const cv = document.createElement('canvas');
   cv.width = Math.round(fw * PX); cv.height = Math.round(fd * PX);
   const c = cv.getContext('2d');
@@ -1309,6 +1351,11 @@ function net(g, span, top, depth, tape = '#FFFFFF') {
 }
 
 // ---------------------------------------------------------------- item builders
+// 球車、球籃裡的球：把素材庫的單色球藏起來，換成寫實排球（位置跟建模時一樣）
+function realBalls(g, sx, sz, each) {
+  g.traverse((o) => { if (o.isMesh && /^ball_/.test(o.userData.role || '')) o.visible = false; });
+  each((x, y, z) => { const b = newBallMesh(); b.scale.setScalar(0.98); b.position.set(x * sx, y, z * sz); g.add(b); });
+}
 function buildItem(it, courtIndex) {
   const def = CAT[it.type];
   const { w, d } = sizeOf(it);
@@ -1316,7 +1363,7 @@ function buildItem(it, courtIndex) {
   const g = new THREE.Group();
   g.userData.itemId = it.id;
   if (def.court) {
-    const tex = courtTexture(def.court, def.w, def.d, it.mode, state.floor);
+    const tex = courtTexture(def.court, def.w, def.d, it.mode, state.floor, it.cc);
     const lines = it.mode === 'lines';
     const cm = new THREE.MeshStandardMaterial({ map: tex, transparent: lines, roughness: 0.5, normalMap: phTex('smooth_concrete_floor', 'nor', def.w / 2, def.d / 2), normalScale: new THREE.Vector2(0.25, 0.25), polygonOffset: true, polygonOffsetFactor: -1 - courtIndex, polygonOffsetUnits: -1 - courtIndex });
     cm.userData.env = cm.envMapIntensity = 0.12;
@@ -1639,6 +1686,7 @@ function buildFurniture(g, it, w, d, def) {
     case 'ballcart': {
       // 鋼管框＋網面＋排球（黃藍白）
       if (kit('ball_cart', g, 0, 0, 0, { sx: w / 1.0, sz: d / 0.6 })) {
+        realBalls(g, w / 1.0, d / 0.6, (add) => { for (let layer = 0; layer < 3; layer++) for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) add(-0.33 + i * 0.22 + (layer % 2) * 0.05, 0.28 + layer * 0.2, -0.11 + j * 0.22); });
         const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(w / 0.12, 0.8 / 0.12);
         for (const [px, pz, ry, len] of [[0, -d / 2, 0, w], [0, d / 2, 0, w], [-w / 2, 0, Math.PI / 2, d], [w / 2, 0, Math.PI / 2, d]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.8), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.6 })); m.position.set(px, 0.57, pz); m.rotation.y = ry; g.add(m); }
         break;
@@ -1674,7 +1722,7 @@ function buildFurniture(g, it, w, d, def) {
       const nb = Math.max(1, Math.round(w / 1.0));
       if (KIT.ready) for (let k = 0; k < nb; k++) kit('shelf_bay', g, -w / 2 + (w / nb) * (k + 0.5), 0, 0, { sx: w / nb / 1.0, sz: d / 0.5 });
       else { for (let k = 0; k < 4; k++) box(g, w, 0.03, d, darkSteel, 0, 0.3 + k * 0.55, 0); for (let k = 0; k <= nb; k++) box(g, 0.035, 2.0, d, darkSteel, -w / 2 + (w * k) / nb, 0, 0); }
-      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), mat(k % 2 ? '#F2C230' : '#2F5D8C')); ball.position.set(-w / 2 + 0.2 + k * 0.3, KIT.ready ? 0.82 : 0.45, 0); g.add(ball); }
+      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = newBallMesh(); ball.position.set(-w / 2 + 0.2 + k * 0.3, KIT.ready ? 0.82 : 0.45, 0); g.add(ball); }
       break;
     }
     case 'stall': {
@@ -1737,7 +1785,8 @@ function buildFurniture(g, it, w, d, def) {
       if (!kit('recycle_bins', g)) for (let k = 0; k < 3; k++) box(g, 0.3, 0.76, 0.36, ['#3A3D42', '#2F5FA8', '#2E8B57'][k], -0.32 + k * 0.32, 0, 0);
       break;
     case 'ballbasket':
-      if (!kit('ball_basket', g)) { box(g, w, 0.34, d, '#1F2A40', 0, 0.28, 0); for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), mat(i % 2 ? '#F2C230' : '#2F5D8C')); b.position.set(-0.12 + (i % 2) * 0.24, 0.68, -0.12 + Math.floor(i / 2) * 0.24); g.add(b); } }
+      if (kit('ball_basket', g)) realBalls(g, 1, 1, (add) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) add(-0.18 + i * 0.18, 0.68, -0.18 + j * 0.18); });
+      else { box(g, w, 0.34, d, '#1F2A40', 0, 0.28, 0); for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), mat(i % 2 ? '#F2C230' : '#2F5D8C')); b.position.set(-0.12 + (i % 2) * 0.24, 0.68, -0.12 + Math.floor(i / 2) * 0.24); g.add(b); } }
       break;
     case 'netwall': {
       const hh = Math.min(def.h, state.building.H - 0.2);
@@ -1811,7 +1860,7 @@ function buildBuilding() {
   disposeGroup(buildingGroup); mainDoors.length = 0;
   walls = []; colliders = [];
   const { H } = state.building, P = outlinePoly(), sc = scheme(), col = state.colors || {};
-  const wallMat = tinted(state.building.wall === 'metal' ? metalWallMat : plasterMat, col.wall);
+  const metal = isMetal(), wallMat = tinted(metal ? sheetWallMat : plasterMat, col.wall);
   const B = hallBounds();
   fitShadow(Math.max(B.x1 - B.x0, B.z1 - B.z0));
   // 地坪：木地板（UV＝公尺）
@@ -1871,38 +1920,65 @@ function buildBuilding() {
   for (const [px, pz] of columnPoints()) {
     const c = new THREE.Group(); c.position.set(px, 0, pz);
     box(c, 0.3, eave, 0.08, steelMat, 0, 0, -0.11); box(c, 0.3, eave, 0.08, steelMat, 0, 0, 0.11); box(c, 0.06, eave, 0.22, steelMat, 0, 0, 0);
-    if (state.building.wall !== 'metal') c.userData.structure = true;   // 鋼板廠房的柱子本來就外露
+    if (!metal) c.userData.structure = true;   // 鐵皮屋的柱子本來就外露
     buildingGroup.add(c);
   }
-  // 屋架：每 6 m 一榀 H 型鋼樑，屋頂底下是金屬浪板
+  // 屋頂：倒 V（雙斜）屋頂，屋脊沿著長邊；每 6 m 一榀鋼構（柱＋沿斜面上去的 H 型鋼樑），樑上有檁條，最上面是浪板
   ceilingGroup = new THREE.Group(); ceilingGroup.userData.overhead = true; buildingGroup.add(ceilingGroup);
-  const nb = Math.max(2, Math.round((B.x1 - B.x0) / 6));
-  for (let i = 0; i <= nb; i++) {
-    const x = clamp(B.x0 + ((B.x1 - B.x0) * i) / nb, B.x0 + 0.3, B.x1 - 0.3);
-    for (const [z1, z2] of clipLine(P, 'x', x)) { const b1 = box(ceilingGroup, 0.22, 0.6, z2 - z1, steelMat, x, H + 0.1, (z1 + z2) / 2); b1.userData.noShadow = true; }
-  }
-  for (let z = B.z0 + 3; z < B.z1 - 1; z += 3) for (const [x1, x2] of clipLine(P, 'z', z)) { const p = box(ceilingGroup, x2 - x1, 0.12, 0.12, steelMat, (x1 + x2) / 2, H + 0.7, z); p.userData.noShadow = true; p.userData.softInk = true; }
-  // 屋頂：長方形是雙斜屋頂，描外框的是平屋頂；從上面看會自動隱藏
   roof = new THREE.Group();
-  if (!state.building.poly) {
-    const { L, W } = state.building;
-    const rise = Math.max(1.2, W * 0.08), half = W / 2 + 0.4;
-    const slope = Math.hypot(half, rise), ang = Math.atan2(rise, half);
-    for (const s of [-1, 1]) {
-      const p = new THREE.Mesh(new THREE.PlaneGeometry(L + 0.8, slope), deckMat);
-      p.rotation.x = -Math.PI / 2 + s * -ang;
-      p.position.set(0, eave + rise / 2, (s * half) / 2);
-      p.userData.noShadow = true; roof.add(p);
+  const alongX = (B.x1 - B.x0) >= (B.z1 - B.z0);
+  const u0 = alongX ? B.x0 : B.z0, u1 = alongX ? B.x1 : B.z1, v0 = alongX ? B.z0 : B.x0, v1 = alongX ? B.z1 : B.x1;
+  const vc = (v0 + v1) / 2, halfV = (v1 - v0) / 2, rise = Math.max(1.2, halfV * 0.18), slopeA = Math.atan2(rise, halfV);
+  const W3 = (u, y, v) => (alongX ? new THREE.Vector3(u, y, v) : new THREE.Vector3(v, y, u));
+  const roofY = (v) => eave + rise * (1 - Math.abs(v - vc) / halfV);
+  // 一根沿著兩點的鋼樑（H 型：腹板＋上下翼板）
+  const beam = (a, b, depth, width, grp = ceilingGroup) => {
+    const g = new THREE.Group(), len = a.distanceTo(b); g.position.copy(a).lerp(b, 0.5); g.lookAt(b); grp.add(g);
+    box(g, 0.012 + width * 0.08, depth, len, steelMat, 0, -depth / 2, 0).userData.noShadow = true;
+    for (const yy of [0, -depth]) box(g, width, 0.02, len, steelMat, 0, yy - 0.01, 0).userData.noShadow = true;
+    return g;
+  };
+  const nF = Math.max(2, Math.round((u1 - u0) / 6));
+  for (let i = 0; i <= nF; i++) {
+    const u = clamp(u0 + ((u1 - u0) * i) / nF, u0 + 0.25, u1 - 0.25);
+    // 這一榀落在外框裡的那一段（描外框的建物不一定是長方形）
+    const segs = clipLine(P, alongX ? 'x' : 'z', u);
+    for (const [a1, a2] of segs) {
+      const lo = Math.max(a1, v0), hi = Math.min(a2, v1), mid = clamp(vc, lo, hi);
+      if (hi - lo < 1) continue;
+      if (lo < mid) beam(W3(u, roofY(lo) - 0.02, lo), W3(u, roofY(mid) - 0.02, mid), 0.55, 0.2);
+      if (mid < hi) beam(W3(u, roofY(mid) - 0.02, mid), W3(u, roofY(hi) - 0.02, hi), 0.55, 0.2);
     }
-    for (const s of [-1, 1]) {   // 山牆
-      const tri = new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(0, rise)]);
-      const gm = new THREE.Mesh(new THREE.ShapeGeometry(tri), new THREE.MeshStandardMaterial({ color: '#EEE9E0', roughness: 0.9, side: THREE.DoubleSide }));
-      gm.rotation.y = Math.PI / 2; gm.position.set(s * (L / 2 + 0.12), eave, 0); gm.userData.noShadow = true; roof.add(gm);
-    }
-  } else {
-    const rm = new THREE.Mesh(new THREE.ShapeGeometry(shape), deckMat);
-    rm.rotation.x = -Math.PI / 2; rm.position.y = eave + 0.3; rm.userData.noShadow = true; roof.add(rm);
   }
+  // 檁條：沿著屋脊方向，每 1.2 m 一支，靠在鋼樑上面
+  for (const side of [-1, 1]) for (let k = 0; k * 1.2 < halfV - 0.3; k++) {
+    const v = vc + side * (halfV - 0.4 - k * 1.2), y = roofY(v) - 0.1;
+    for (const [a1, a2] of clipLine(P, alongX ? 'z' : 'x', v)) { const pz = beam(W3(a1 + 0.1, y, v), W3(a2 - 0.1, y, v), 0.15, 0.06); pz.traverse((o) => { if (o.isMesh) o.userData.softInk = true; }); }
+  }
+  // 屋脊一根
+  beam(W3(u0 + 0.1, eave + rise - 0.05, vc), W3(u1 - 0.1, eave + rise - 0.05, vc), 0.3, 0.15);
+  // 兩片斜屋面（浪板，往下順著斜面）
+  const slopeLen = Math.hypot(halfV + 0.4, rise + 0.4 * (rise / halfV)), spanU = u1 - u0 + 0.8;
+  for (const sd of [-1, 1]) {
+    const geo = new THREE.PlaneGeometry(spanU, slopeLen); const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * spanU, uv.getY(i) * slopeLen);
+    const pl = new THREE.Mesh(geo, roofSheetMat);
+    const mv = vc + (sd * (halfV + 0.4)) / 2, my = eave + rise / 2 - 0.2 * (rise / halfV);
+    if (alongX) { pl.rotation.set(-Math.PI / 2 - sd * slopeA, 0, 0); pl.position.set((u0 + u1) / 2, my + 0.02, mv); }
+    else { pl.rotation.order = 'YXZ'; pl.rotation.set(-Math.PI / 2 - sd * slopeA, Math.PI / 2, 0); pl.position.set(mv, my + 0.02, (u0 + u1) / 2); }
+    pl.userData.noShadow = true; roof.add(pl);
+  }
+  // 山牆（兩端的三角形）：也是浪板
+  for (const sd of [-1, 1]) {
+    const tri = new THREE.Shape([new THREE.Vector2(-halfV, 0), new THREE.Vector2(halfV, 0), new THREE.Vector2(0, rise)]);
+    const tg = new THREE.ShapeGeometry(tri);
+    const gm = new THREE.Mesh(tg, tinted(metal ? sheetWallMat : plasterMat, col.wall).clone()); gm.material.side = THREE.DoubleSide;
+    const uw = sd < 0 ? u0 : u1;
+    if (alongX) { gm.rotation.y = Math.PI / 2; gm.position.set(uw + sd * 0.12, eave, vc); } else { gm.position.set(vc, eave, uw + sd * 0.12); }
+    gm.userData.noShadow = true; roof.add(gm);
+  }
+  // 鐵皮屋的牆內側：兩道橫向鋼樑（牆檁）
+  if (metal) for (const e of edgesOf(P)) for (const hy of [H * 0.38, H * 0.76]) { const ix = -e.nx * 0.12, iz = -e.nz * 0.12; const gb = wallBox(ceilingGroup.parent, steelMat, e.a[0] + ix, e.a[1] + iz, e.b[0] + ix, e.b[1] + iz, 0.18, 0.06, hy); if (gb) { gb.userData.noShadow = true; gb.userData.softInk = true; } }
   buildingGroup.add(roof);
   inkify(buildingGroup);
   roof.traverse((o) => { if (o.isMesh) o.castShadow = false; });
@@ -2079,9 +2155,11 @@ function zoneFixtures(z) {
   const R = (dist) => dist, L = (dist) => left.len - dist;
   if (z.type === 'wc') {
     // 廁所：背牆一排隔間（男廁一半換小便斗），洗手台靠側牆、在隔間前走道和門口之間
-    // 小間的廁所：一間就是一個馬桶＋洗手台，不做隔間（進門就是）
-    if (along * across < 10 || along < 1.9 || across < 2.2) {
+    // 沒有隔間（一間式）：進門就是馬桶（男廁旁邊再一個小便斗）＋洗手台。小間的廁所自動用這種；也可以在區域設定指定
+    const small = along * across < 10 || along < 1.9 || across < 2.2;
+    if (z.wcl === 'open' || (small && z.wcl !== 'stalls')) {
       at(back, Math.min(along / 2, Math.max(0.45, along - 0.6)), 0.36, 'toilet');
+      if (/男/.test(z.name || '') && along >= 2.2) at(back, Math.min(along / 2, Math.max(0.45, along - 0.6)) + (along / 2 > 1.2 ? -0.85 : 0.85), 0.2, 'urinal');
       if (across >= 1.9) at(left, L(Math.max(1.1, across - 0.75)), 0.28, 'sinkrow', { w: 0.6 });
       else at(right, R(0.4), 0.28, 'sinkrow', { w: 0.6 });
       for (const f of out) { const def = CAT[f.type]; if (!def.resize) { delete f.w; delete f.d; } else if (def.resize === 'w') delete f.d; }
@@ -2330,10 +2408,9 @@ function initBuildingInputs() {
   $('b-H').addEventListener('change', dimChange('H', 4, 15));
   fs.addEventListener('change', () => { pushHistory(); state.floor = fs.value; buildBuilding(); buildZones(); renderItems(); commit(); });
   ns.addEventListener('change', () => { pushHistory(); state.net = ns.value; renderItems(); commit(); });
+  $('b-wall').addEventListener('change', (e) => { pushHistory(); if (e.target.value === 'plaster') state.building.wall = 'plaster'; else delete state.building.wall; tintCache.clear(); planChanged(); renderColorInputs(); });
   $('b-entryW').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); state.building.entryW = clamp(Math.round(v * 10) / 10, 0.9, 12); planChanged(); toast(`主入口寬度改成 ${state.building.entryW} m`); });
-  const cb = $('b-colors');
-  cb.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.cr) setColor(b.dataset.cr, null); else if (b.dataset.ck) setColor(b.dataset.ck, b.dataset.cv); });
-  cb.addEventListener('change', (e) => { const i = e.target.closest('input[type=color]'); if (i) setColor(i.dataset.ck, i.value); });
+  wireColorPickers($('b-colors'), (k, v) => setColor(k, v));
   $('design-name').addEventListener('input', (e) => { state.name = e.target.value.slice(0, 40) || '未命名方案'; saveDraftSoon(); renderSaved(); });
 }
 // 顏色：每一項一個色票＋「預設」；改了 3D 立刻更新
@@ -2347,12 +2424,54 @@ const COLOR_SWATCH = {
 };
 function colorDefault(k) {
   const sc = SCHEMES[state.floor] || SCHEMES.pu;
-  return { hall: sc.wood ? '#C9A06A' : sc.base || '#E6E3DD', court: sc.court, free: sc.free, wall: state.building.wall === 'metal' ? '#DADDDF' : '#EFEBE4', pad: sc.pad }[k] || '#888888';
+  return { hall: sc.wood ? '#C9A06A' : sc.base || '#E6E3DD', court: sc.court, free: sc.free, wall: isMetal() ? '#D4D8DC' : '#EFEBE4', pad: sc.pad }[k] || '#888888';
 }
+// 調色器：一排常用色＋「調色」打開 R、G、B 三個拉桿（0–255）自己調；拉的時候色塊即時變，放開才套用
+let cpOpen = '';   // 哪一個調色器的 RGB 拉桿開著（重畫後保持打開）
+const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = (r, g, b) => '#' + [r, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+function colorPickerHtml(key, label, value, custom, swatches) {
+  const [r, g, b] = hex2rgb(value);
+  return `<div class="cp" data-cp="${key}"><div class="cp-head"><i class="cp-cur" style="background:${value}"></i><span class="cp-l">${label}${custom ? '' : '<small>（配色預設）</small>'}</span><button type="button" class="cp-more" aria-expanded="false">調色</button>${custom ? '<button type="button" class="cp-reset">預設</button>' : ''}</div>
+    <div class="cp-sw">${swatches.map((h) => `<button type="button" class="cp-s" data-cv="${h}" style="background:${h}" aria-label="${label} ${h}" aria-pressed="${value.toUpperCase() === h.toUpperCase()}"></button>`).join('')}</div>
+    <div class="cp-rgb" hidden>${[['R', r, '#E5484D'], ['G', g, '#30A46C'], ['B', b, '#3E63DD']].map(([n, v, col]) => `<label><b style="color:${col}">${n}</b><input type="range" min="0" max="255" value="${v}" data-ch="${n}" style="accent-color:${col}"><input type="number" min="0" max="255" value="${v}" data-chn="${n}"></label>`).join('')}<code class="cp-hex">${value.toUpperCase()}</code></div></div>`;
+}
+// 一個容器裡的所有調色器共用一組事件：onPick(key, hex|null)
+function wireColorPickers(root, onPick) {
+  const rgbOf = (cp) => ['R', 'G', 'B'].map((n) => Number(cp.querySelector(`[data-ch="${n}"]`).value));
+  const preview = (cp) => { const h = rgb2hex(...rgbOf(cp)); cp.querySelector('.cp-cur').style.background = h; cp.querySelector('.cp-hex').textContent = h; return h; };
+  root.addEventListener('click', (e) => {
+    const cp = e.target.closest('.cp'); if (!cp) return;
+    if (e.target.closest('.cp-more')) { const box = cp.querySelector('.cp-rgb'); box.hidden = !box.hidden; e.target.closest('.cp-more').setAttribute('aria-expanded', String(!box.hidden)); cpOpen = box.hidden ? '' : `${root.id}:${cp.dataset.cp}`; return; }
+    if (e.target.closest('.cp-reset')) { onPick(cp.dataset.cp, null); return; }
+    const sw = e.target.closest('.cp-s'); if (sw) onPick(cp.dataset.cp, sw.dataset.cv);
+  });
+  root.addEventListener('input', (e) => {
+    const cp = e.target.closest('.cp'); if (!cp) return;
+    const n = e.target.dataset.ch || e.target.dataset.chn; if (!n) return;
+    const v = clamp(Math.round(Number(e.target.value) || 0), 0, 255);
+    cp.querySelector(`[data-ch="${n}"]`).value = v; if (e.target.dataset.ch) cp.querySelector(`[data-chn="${n}"]`).value = v;
+    preview(cp);
+  });
+  root.addEventListener('change', (e) => { const cp = e.target.closest('.cp'); if (!cp || !(e.target.dataset.ch || e.target.dataset.chn)) return; onPick(cp.dataset.cp, preview(cp), true); });
+}
+function reopenPicker(root) { if (!root || !cpOpen.startsWith(root.id + ':')) return; const k = cpOpen.slice(root.id.length + 1); const cp = root.querySelector(`.cp[data-cp="${k}"]`); if (cp) { cp.querySelector('.cp-rgb').hidden = false; cp.querySelector('.cp-more').setAttribute('aria-expanded', 'true'); } }
 function renderColorInputs() {
   const box = $('b-colors'); if (!box) return;
   const c = state.colors || {};
-  box.innerHTML = `<p class="hint" style="margin:10px 0 6px">顏色（點色塊直接換，或點最右邊自己挑）</p>` + COLOR_KEYS.map((k) => `<div class="crow"><span>${COLOR_LABELS[k]}${c[k] ? '' : '<small>（配色預設）</small>'}</span><div class="sw">${COLOR_SWATCH[k].map((h) => `<button type="button" data-ck="${k}" data-cv="${h}" style="background:${h}" aria-label="${COLOR_LABELS[k]} ${h}" aria-pressed="${(c[k] || colorDefault(k)).toLowerCase() === h.toLowerCase()}"></button>`).join('')}<input type="color" data-ck="${k}" value="${c[k] || colorDefault(k)}" aria-label="自己挑${COLOR_LABELS[k]}顏色">${c[k] ? `<button type="button" class="reset" data-cr="${k}">預設</button>` : ''}</div></div>`).join('');
+  box.innerHTML = `<p class="hint" style="margin:10px 0 6px">顏色：點色塊直接換，或按「調色」用 R、G、B 拉桿調。每一面球場也可以各自選色（選取那面球場）。</p>` + COLOR_KEYS.map((k) => colorPickerHtml(k, COLOR_LABELS[k], c[k] || colorDefault(k), !!c[k], COLOR_SWATCH[k])).join('');
+  reopenPicker(box);
+}
+// 單一面球場的顏色（沒設就跟全館一樣）
+function courtColorHtml(it) {
+  const sc = scheme(), cc = it.cc || {};
+  return `<p class="hint" style="margin:4px 0">這一面球場的顏色（沒改就跟全館一樣）</p>` + [['court', '球場內場'], ['free', '球場外圍（緩衝區）']].map(([k, l]) => colorPickerHtml(k, l, cc[k] || sc[k], !!cc[k], COLOR_SWATCH[k])).join('');
+}
+function setCourtColor(it, k, v, rerender) {
+  pushHistory(); it.cc = { ...(it.cc || {}) };
+  if (v) it.cc[k] = v; else delete it.cc[k];
+  if (!Object.keys(it.cc).length) delete it.cc;
+  rerenderOne(it); commit(); rerender && rerender();
 }
 function setColor(k, v) {
   pushHistory(); state.colors = { ...(state.colors || {}) };
@@ -2362,8 +2481,8 @@ function setColor(k, v) {
 function syncBuildingInputs() {
   const { L, W, H } = state.building;
   $('b-L').value = L; $('b-W').value = W; $('b-H').value = H;
-  $('b-floor').value = state.floor; $('b-net').value = state.net; if (document.activeElement !== $('b-entryW')) $('b-entryW').value = state.building.entryW || 3;
-  if (!$('b-colors').contains(document.activeElement)) renderColorInputs();
+  $('b-floor').value = state.floor; $('b-net').value = state.net; if (document.activeElement !== $('b-entryW')) $('b-entryW').value = state.building.entryW || 3; $('b-wall').value = isMetal() ? 'metal' : 'plaster';
+  if (!$('b-colors').contains(document.activeElement) && !cpOpen.startsWith('b-colors:')) renderColorInputs();
   if (document.activeElement !== $('design-name')) $('design-name').value = state.name;
   $('r-ping').textContent = fmt1((L * W) / PING);
   $('r-m2').textContent = `${fmt1(L * W)} ㎡`;
@@ -2523,6 +2642,7 @@ function renderSelection() {
     }
     const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = '同一塊地板畫多種球場時，第二種以後選「只畫線」。';
     wrap.append(seg, hint);
+    if (it.mode !== 'lines') { const cw = document.createElement('div'); cw.className = 'colors'; cw.id = 'sel-colors'; cw.innerHTML = courtColorHtml(it); wireColorPickers(cw, (k, v) => setCourtColor(it, k, v, renderSelection)); reopenPicker(cw); wrap.appendChild(cw); }
   }
   const row = document.createElement('div'); row.className = 'btn-row';
   const mkBtn = (id, txt, fn, cls = '') => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.textContent = txt; if (cls) b.className = cls; b.addEventListener('click', fn); row.appendChild(b); return b; };
@@ -2850,8 +2970,52 @@ function applyOverhead() {
   for (const [id, g] of itemObjs) { const it = state && state.items.find((x) => x.id === id); if (it && CAT[it.type].ceiling && it.type !== 'camera') { g.visible = !hide; g.traverse((o) => { if (o.userData.isTag) o.visible = !hide && showLabels; }); } }
   window.wakeRender && window.wakeRender();
 }
+// 3D 編輯時自由移動：WASD 前後左右、Q／E 下降上升（Shift 加速）；「自由移動」模式下拖曳是原地轉頭、滾輪往前後走
+const fly = { on: false, keys: new Set() };
+function setFly(on) {
+  fly.on = on; setPressed($('v-fly'), on);
+  if (on) {
+    // 走到原本看著的地方前面 4 m、人的視線高度（1.7 m），面向同一個方向
+    const fwd = new THREE.Vector3().subVectors(controls.target, camera.position); fwd.y = 0; if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1); fwd.normalize();
+    camera.position.set(controls.target.x - fwd.x * 4, 1.7, controls.target.z - fwd.z * 4);
+    controls.minDistance = 0.05; controls.target.copy(camera.position).addScaledVector(fwd, 0.6);
+    controls.enableZoom = false; controls.rotateSpeed = 0.35;
+    for (const id of ['v-bird', 'v-top', 'v-player']) setPressed($(id), false);
+    toast('自由移動：WASD 走、Q／E 下降上升、Shift 加速、拖曳轉頭、滾輪往前後走；點物件照常選取與拖曳');
+  } else { controls.minDistance = 2; controls.enableZoom = true; controls.rotateSpeed = 1; }
+  window.wakeRender && window.wakeRender(400);
+}
+function moveEditCam(dt) {
+  if (!fly.keys.size || walk.on || mode !== '3d') return false;
+  const k = fly.keys, fwd = new THREE.Vector3().subVectors(controls.target, camera.position); fwd.y = 0;
+  if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1); fwd.normalize();
+  const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+  const dist = camera.position.distanceTo(controls.target), sp = (fly.on ? 3.2 : clamp(dist * 0.35, 4, 14)) * (k.has('shift') ? 2.8 : 1) * dt;
+  const d = new THREE.Vector3();
+  if (k.has('w')) d.add(fwd); if (k.has('s')) d.sub(fwd); if (k.has('d')) d.add(right); if (k.has('a')) d.sub(right);
+  if (d.lengthSq()) d.normalize().multiplyScalar(sp);
+  if (k.has('e')) d.y += sp * 0.8; if (k.has('q')) d.y -= sp * 0.8;
+  if (camera.position.y + d.y < 0.3) d.y = 0.3 - camera.position.y;
+  camera.position.add(d); controls.target.add(d);
+  return true;
+}
+addEventListener('keydown', (e) => {
+  if (mode !== '3d' || walk.on || e.ctrlKey || e.metaKey || e.altKey) return;
+  const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
+  const k = e.key.toLowerCase();
+  if (['w', 'a', 's', 'd', 'q', 'e', 'shift'].includes(k)) { fly.keys.add(k); if (k !== 'shift') e.preventDefault(); window.wakeRender && window.wakeRender(300); }
+});
+addEventListener('keyup', (e) => { fly.keys.delete(e.key.toLowerCase()); });
+addEventListener('blur', () => fly.keys.clear());
+renderer.domElement.addEventListener('wheel', (e) => {
+  if (!fly.on || walk.on || mode !== '3d') return;
+  e.preventDefault();
+  const fwd = new THREE.Vector3().subVectors(controls.target, camera.position).normalize().multiplyScalar(-Math.sign(e.deltaY) * 0.8);
+  camera.position.add(fwd); controls.target.add(fwd); if (camera.position.y < 0.3) { const dy = 0.3 - camera.position.y; camera.position.y += dy; controls.target.y += dy; }
+  window.wakeRender && window.wakeRender(300);
+}, { passive: false });
 function frameView(v) {
-  view = v;
+  view = v; if (fly.on) setFly(false);
   setTimeout(applyOverhead, 0);
   for (const [id, k] of [['v-bird', 'bird'], ['v-top', 'top'], ['v-player', 'player']]) setPressed($(id), k === v);
   const { L, W } = state.building; const m = Math.max(L, W);
@@ -2951,9 +3115,11 @@ renderer.domElement.addEventListener('dblclick', (e) => {
   if (typeof window.openEval !== 'function' || window.__insp) return;
   setPointer(e);
   if (window.__walk) {
-    // 導覽中：雙擊物件看資訊報表（單擊才是互動）
+    // 導覽中：雙擊物件看資訊報表（單擊才是互動）；鎖定滑鼠時看準星對著的東西
     clearTimeout(walk.clickT);
-    const tg = pickTargets(raycaster, 10);
+    if (locked()) centerRay.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const tg = pickTargets(locked() ? centerRay : raycaster, 10);
+    unlockMouse();
     if (tg && tg.kind === 'item') { walk.keys.clear(); window.openEval(tg.it.type, labelOf(tg.it)); }
     return;
   }
@@ -4542,6 +4708,7 @@ function renderZoneSel() {
       <div class="grid4">${[['x', 'X'], ['z', 'Z'], ['w', '寬'], ['d', '深']].map(([k, l]) => `<label class="field" for="zs-${k}"><span>${l}（m）</span><input id="zs-${k}" data-k="${k}" type="number" step="0.5" value="${f2(z[k])}" inputmode="decimal"></label>`).join('')}</div>
       <div class="grid2"><label class="field" for="zs-floor"><span>地坪</span><select id="zs-floor">${ZONE_FLOORS.map((k) => `<option value="${k}"${k === zoneFloor(z) ? ' selected' : ''}>${FLOOR_LABELS[k]}</option>`).join('')}</select></label>
       <label class="field" for="zs-walls"><span>隔間</span><select id="zs-walls">${Object.entries({ open: '開放（不隔間）', glass: '透明玻璃', frost: '霧面玻璃', solid: '實心牆（組合屋）', net: '圍網' }).map(([k, l]) => `<option value="${k}"${k === zoneWalls(z) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      ${z.type === 'wc' ? `<label class="field" for="zs-wcl"><span>廁所裡面</span><select id="zs-wcl"><option value=""${!z.wcl ? ' selected' : ''}>自動（小間的沒有隔間、大間的有隔間）</option><option value="open"${z.wcl === 'open' ? ' selected' : ''}>沒有隔間（一間式：馬桶＋洗手台）</option><option value="stalls"${z.wcl === 'stalls' ? ' selected' : ''}>有隔間（一排廁所隔間）</option></select></label>${z.bare ? '<p class="hint">這間的擺設已拆成元件，要套用請先按下面的「恢復自動擺設」。</p>' : ''}` : ''}
       <div class="grid2"><label class="field" for="zs-rot"><span>角度（°）</span><input id="zs-rot" type="number" step="0.1" value="${f2(z.rot || 0)}" inputmode="decimal"></label>
       <div class="field"><span>入口在哪一邊</span><div class="seg" role="group" aria-label="入口">${[['', '自動'], ['n', '上'], ['e', '右'], ['s', '下'], ['w', '左']].map(([k, l]) => `<button type="button" data-door="${k}" aria-pressed="${(z.door || '') === k}">${l}</button>`).join('')}</div></div></div>
       <p class="hint">${esc(z.desc || ZONES[z.type].desc)}　快捷鍵：F 換入口邊、R 轉 90°、Shift+R 對齊外牆；拖選取框上方的圓點可以 360° 轉，靠近外牆角度會自動吸住（按住 Shift 不吸）。</p>
@@ -4556,6 +4723,7 @@ function renderZoneSel() {
     $('zs-del').addEventListener('click', deleteZone);
     $('zs-floor').addEventListener('change', (e) => { pushHistory(); z.floor = e.target.value; planChanged(); renderZoneSel(); });
     $('zs-walls').addEventListener('change', (e) => { pushHistory(); z.walls = e.target.value; planChanged(); renderZoneSel(); });
+    if ($('zs-wcl')) $('zs-wcl').addEventListener('change', (e) => { pushHistory(); if (e.target.value) z.wcl = e.target.value; else delete z.wcl; planChanged(); renderZoneSel(); });
     $('zs-alignw').addEventListener('click', () => { pushHistory(); zoneEdit(z, () => { z.rot = alignToWall(z); }); planChanged(); renderZoneSel(); toast(`已對齊最近的外牆（${f2(z.rot)}°）`); });
     $('zs-rot').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); zoneEdit(z, () => { z.rot = ((v % 360) + 360) % 360; }); planChanged(); renderZoneSel(); });
     for (const b of box.querySelectorAll('[data-door]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.door) z.door = b.dataset.door; else delete z.door; planChanged(); renderZoneSel(); });
@@ -4564,11 +4732,12 @@ function renderZoneSel() {
     box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
       <div class="sel-name">${esc(labelOf(it))}<span class="unit">　${def.court ? `${def.w}×${def.d} m（含緩衝區）` : ''}旋轉 ${it.rot}°</span></div>
       <label class="field" for="is-name"><span>名稱</span><input id="is-name" type="text" maxlength="20" value="${esc(it.label || '')}" placeholder="${esc(def.label)}"></label>
-      ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>` : ''}
+      ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>${it.mode !== 'lines' ? `<div class="colors" id="is-colors">${courtColorHtml(it)}</div>` : ''}` : ''}
       <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="0.1" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
       <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-alignw"${it.locked ? ' disabled' : ''}>對齊外牆</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
       ${it.locked ? '<p class="lock-note">已鎖定：不能拖曳、旋轉或刪除。按「解除鎖定」後才能在平面圖上拖。</p>' : ''}</div>`;
     $('is-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) it.label = v.slice(0, 20); else delete it.label; rerenderOne(it); commit(); renderZoneSel(); });
+    if ($('is-colors')) { wireColorPickers($('is-colors'), (k, v) => setCourtColor(it, k, v, renderZoneSel)); reopenPicker($('is-colors')); }
     for (const b of box.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.mode === 'lines') it.mode = 'lines'; else delete it.mode; renderItems(); commit(); renderZoneSel(); });
     $('is-lock').addEventListener('click', () => { toggleLockSel(); renderZoneSel(); planToolState(); renderPlan(); });
     $('is-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
@@ -4734,6 +4903,7 @@ function startWalk() {
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
   walk.keys.clear(); walk.joy = { x: 0, y: 0 };
   $('walk-ui').hidden = false;
+  updateLockHint();
   if (!walk.actWired) {
     walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract());
     $('vclose').addEventListener('click', closeModals); $('pclose').addEventListener('click', closeModals);
@@ -4742,13 +4912,15 @@ function startWalk() {
   const help = $('walk-help'); help.classList.remove('fade'); clearTimeout(walk.helpT); walk.helpT = setTimeout(() => help.classList.add('fade'), 7000);
   $('zcard').classList.add('out');
   updateWalk(0); updateZoneCard(true); drawScore();
+  for (const it of state.items) if (['aircon', 'standac', 'packac'].includes(it.type)) addWind(it);
   toast('從主入口進場。走進任何一區，左下角會出現那一區的說明');
 }
 function stopWalk() {
-  walk.on = false; window.__walk = false; targetMark.visible = false;
+  walk.on = false; window.__walk = false; targetMark.visible = false; unlockMouse(); updateLockHint();
   walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals();
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
-  walk.spike = null; skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
+  walk.spike = null; walk.serve = null; reachState = null; skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
+  for (const id of [...winds.keys()]) removeWind(id);
   ballsGroup.clear(); balls.length = 0; cans.length = 0; walk.bags.clear(); tweens.length = 0; walk.filling = false;
   for (const d of [...zoneDoors, ...mainDoors]) { d.open = false; } updateDoors(5);
   if (walk.open.size) { walk.open.clear(); renderItems(); }
@@ -4777,6 +4949,8 @@ function collide(x, z) {
 function updateWalk(dt) {
   const k = walk.keys, run = k.has('shift') ? 2.2 : 1;
   if (walk.spike) { updateSpike(dt); applyPose(dt); if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); } return; }
+  if (walk.serve) updateServe(dt);
+  if (reachState) updateReach(dt);
   if (walk.sit) {
     // 坐著：一開始走路（或點地板）就站起來
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((q) => k.has(q)) || Math.hypot(walk.joy.x, walk.joy.y) > 0.2 || walk.target) standUp();
@@ -4813,7 +4987,7 @@ function updateWalk(dt) {
     walk.x = nx; walk.z = nz;
   }
   const bob = mag > 0.01 || walk.target ? Math.sin(performance.now() / 160) * 0.015 : 0;
-  camera.position.set(walk.x, EYE + bob, walk.z);
+  camera.position.set(walk.x, EYE + bob - (skill.dip || 0), walk.z);
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
@@ -4836,10 +5010,11 @@ function actionFor(t, it) {
   if (t === 'shoerack') return '放鞋子';
   if (t === 'panel') return '開／關全館的燈';
   if (t === 'tv') return '開／關電視';
-  if (t === 'desk') return '看電腦裡的影片';
+  if (t === 'desk') return '看比賽影片（南電盃）';
   if (t === 'camera') return '拍下球場裡的自己';
   if (t === 'whiteboard') return '看戰術板';
   if (t === 'sinkrow' || t === 'steelsink') return '洗手';
+  if (t === 'bins') return '丟垃圾（點哪一格丟哪一類）';
   if (t === 'toilet') return '沖水';
   if (t === 'showerstall') return '開熱水';
   return '查看';
@@ -4850,7 +5025,7 @@ function targetFromHits(hits, maxD) {
   for (const h of hits) {
     if (h.object.visible === false || h.object.userData.noPick) continue;
     if (h.object.userData.ball) { if (h.distance <= maxD + 0.5) return { kind: 'ball', b: h.object.userData.ball, label: '撿起球' }; continue; }
-    if (h.object.userData.door) { if (h.distance > maxD) return null; const d = h.object.userData.door; return { kind: 'door', d, label: d.open ? '關門' : '開門' }; }
+    if (h.object.userData.door) { if (h.distance > maxD) return null; const d = h.object.userData.door; return { kind: 'door', d, point: h.point, label: d.open ? '關門' : '開門' }; }
     const id = h.object.userData.itemId;
     if (id) {
       const it = state.items.find((x) => x.id === id); if (!it || CAT[it.type].court) continue;
@@ -4872,7 +5047,8 @@ function updateFocus() {
   const near = !walk.spike && nearNet();
   let t = '';
   if (skill.mode) t = skill.mode === 'set' ? '球回到手上時按 E 繼續舉球（Q 換墊球）' : '球掉到手臂時按 Q 繼續墊球（E 換舉球）';
-  else if (walk.hold) t = near ? 'E 舉球・Q 墊球・R 網前攻擊・點一下丟球' : 'E 舉球・Q 墊球・點一下丟球';
+  else if (walk.serve) t = '';
+  else if (walk.hold) t = near ? 'E 舉球・Q 墊球・V 發球・R 網前攻擊・點一下丟球' : 'E 舉球・Q 墊球・V 發球・點一下丟球';
   else if (walk.sit) t = '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
   else if (near) t = 'R 網前攻擊（跳起來扣球）';
@@ -4880,21 +5056,33 @@ function updateFocus() {
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
 function doInteract(tg) {
-  if (walk.spike) return;
+  if (walk.spike || walk.serve || reachState) return;
   tg = tg || walk.focus;
   if (walk.hold) return skillPress('set');
   if (walk.sit) return standUp();
   if (!tg) return;
   if (tg.kind === 'ball') return pickBall(tg.b);
-  if (tg.kind === 'door') return toggleDoor(tg.d);
+  if (tg.kind === 'door') { const dp = tg.point || null; if (dp) return reach(dp, () => toggleDoor(tg.d)); return toggleDoor(tg.d); }
   useItem(tg.it, tg.point);
   updateFocus();
 }
 function toWorldOf(it, lx, lz) { const r = (it.rot * Math.PI) / 180; return [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)]; }
 function toLocalOf(it, x, z) { const r = (it.rot * Math.PI) / 180, dx = x - it.x, dz = z - it.z; return [dx * Math.cos(r) - dz * Math.sin(r), dx * Math.sin(r) + dz * Math.cos(r)]; }
 const DRINKS = [['運動飲料', '#2F6FB6'], ['礦泉水', '#9FD3F2'], ['綠茶', '#3E8E41'], ['奶茶', '#C9A06A'], ['檸檬汽水', '#E8D44D'], ['黑咖啡', '#3B2A20'], ['可樂', '#B8322B'], ['蘋果西打', '#D98E32']];
-function useItem(it, point) {
+const REACH = new Set(['vending', 'water', 'watertall', 'purifier', 'fridge', 'locker', 'cubby', 'lowcubby', 'shoerack', 'sinkrow', 'steelsink', 'bins', 'ballcart', 'ballbasket', 'panel', 'scoreboard', 'flipscore', 'toilet', 'showerstall', 'standac', 'packac', 'floorfan']);
+function useItem(it, point, noReach) {
   const t = it.type, { w, d } = sizeOf(it), on = !walk.off.has(it.id);
+  // 先伸手過去（洗手兩隻手、丟垃圾拿著垃圾、放包包拿著包包），手到了才發生
+  if (!noReach && REACH.has(t) && point && !walk.hold && !reachState) {
+    let p = point.clone(), opt = {};
+    if (t === 'vending') { const [x, z] = toWorldOf(it, 0, -d / 2 - 0.02); p.set(x, 0.35, z); }
+    if (t === 'sinkrow' || t === 'steelsink') { const [x, z] = toWorldOf(it, clamp(toLocalOf(it, point.x, point.z)[0], -w / 2 + 0.2, w / 2 - 0.2), -0.02); p.set(x, 1.0, z); opt = { both: true, wash: true }; }
+    if (t === 'bins') opt = { prop: trashProp(binSlot(it, point)) };
+    if (['cubby', 'lowcubby'].includes(t)) opt = { prop: bagProp() };
+    if (['water', 'watertall', 'purifier'].includes(t)) opt = { prop: bottleProp() };
+    reach(p, () => useItem(it, point, true), opt);
+    return;
+  }
   const r = (it.rot * Math.PI) / 180;
   const side = point ? (toLocalOf(it, point.x, point.z)[0] < 0 ? 0 : 1) : 0;
   if (SIT_EYE[t] || t === 'bleacher') {
@@ -4908,10 +5096,11 @@ function useItem(it, point) {
     toast(t === 'referee' ? '爬上裁判椅了：從這裡看得到整面網。按 E 或開始走路就會下來' : '坐下了。按 E 或開始走路就會站起來');
     return;
   }
-  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：E 舉球、Q 墊球、在網子前按 R 攻擊，點一下畫面就丟出去'); return; }
+  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：E 舉球、Q 墊球、V 發球、在網子前按 R 攻擊，點一下畫面就丟出去'); return; }
   if (['fan', 'floorfan', 'wallfan', 'exhaust', 'aircon', 'standac', 'packac', 'tv'].includes(t)) {
     if (on) walk.off.add(it.id); else walk.off.delete(it.id);
     const ac = ['aircon', 'standac', 'packac'].includes(t);
+    if (ac) { if (on) removeWind(it.id); else addWind(it); }
     toast(t === 'tv' ? (on ? '電視關掉了' : '電視打開了：正在轉播比賽（示意）') : ac ? (on ? '冷氣關掉了' : '冷氣開了：設定 26°C') : (on ? '電扇關掉了' : '電扇打開了'));
     return;
   }
@@ -4922,10 +5111,11 @@ function useItem(it, point) {
   if (['locker', 'cubby', 'lowcubby'].includes(t)) { toggleBag(it, point); return; }
   if (t === 'shoerack') { toast('鞋子放好了：球場只能穿室內球鞋'); return; }
   if (t === 'panel') { setDark(!walk.dark); toast(walk.dark ? '全館的燈關掉了（再按一次打開）' : '燈全部打開了'); return; }
-  if (t === 'desk') { playVideo('電腦裡的影片'); return; }
+  if (t === 'desk') { playVideo(VIDEO_TITLE); return; }
   if (t === 'camera') { takePhoto(it); return; }
   if (t === 'whiteboard') { toast('戰術板上畫著 5-1 輪轉的站位（示意）'); return; }
-  if (t === 'sinkrow' || t === 'steelsink') { toast('洗好手了，記得擦乾再拿球'); return; }
+  if (t === 'sinkrow' || t === 'steelsink') { washHands(it, point); return; }
+  if (t === 'bins') { throwTrash(it, point); return; }
   if (t === 'toilet') { toast('嘩啦——沖好了'); return; }
   if (t === 'showerstall') { toast('熱水來了（示意）：洗完記得把地板刮乾'); return; }
   showItemCard(it);
@@ -5069,13 +5259,13 @@ function addPoint(side, flip) {
 }
 drawScore();
 // ---- 電腦：播影片
-const VIDEO_SRC = 'video/rally-demo.mp4';   // 之後換成要播的影片
+const VIDEO_SRC = 'video/nandian-2022-fcu-vs-nsysu.mp4', VIDEO_TITLE = '2022 南電盃｜逢甲通訊 A vs 中山機電';
 function playVideo(title) {
   const v = $('vplayer'); if (!v.src) v.src = VIDEO_SRC;
-  $('vtitle').textContent = title; $('vmodal').hidden = false; walk.keys.clear(); walk.paused = true;
+  $('vtitle').textContent = title; $('vmodal').hidden = false; walk.keys.clear(); walk.paused = true; unlockMouse(); updateLockHint();
   v.currentTime = 0; v.play().catch(() => {});
 }
-function closeModals() { const v = $('vplayer'); v.pause(); $('vmodal').hidden = true; $('pmodal').hidden = true; walk.paused = false; }
+function closeModals() { const v = $('vplayer'); v.pause(); $('vmodal').hidden = true; $('pmodal').hidden = true; walk.paused = false; updateLockHint(); }
 // ---- 智慧球場攝影機：從那支攝影機的位置拍你（畫面裡放一個你的人形）
 const avatar = (() => {
   const g = new THREE.Group(), skin = mat('#D9A57E'), jersey = mat('#F2B705', { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
@@ -5101,60 +5291,131 @@ function takePhoto(camIt) {
   renderer.render(scene, pc);
   const url = cv.toDataURL('image/jpeg', 0.9);
   avatar.visible = false; hands.visible = hv; if (camG) camG.visible = camVis; drawFrame(true);
-  $('pimg').src = url; $('pdl').href = url; $('pmodal').hidden = false; walk.keys.clear(); walk.paused = true;
+  $('pimg').src = url; $('pdl').href = url; $('pmodal').hidden = false; walk.keys.clear(); walk.paused = true; unlockMouse(); updateLockHint();
   toast(dist > 20 ? '拍到了，不過你離這支攝影機有點遠' : '喀嚓！智慧球場攝影機拍到你了');
 }
 // ---- 排球：第一人稱雙手。E 舉球、Q 墊球（時機對才接得住）、網前 R 攻擊；點一下丟出去
 const ballsGroup = new THREE.Group(); scene.add(ballsGroup);
 const balls = [];
 const BALL_R = 0.105;
+// 寫實排球：黃、寶藍兩色的弧形扭轉色塊（比賽球那種），色塊之間有接縫，表面是細小的凹凸紋
+// 每個像素換算成球面上的方向，在方向上決定顏色，所以貼回球上不會有接縫歪掉
+const BALL_TEX = (() => {
+  const W = 1024, H = 512;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), img = c.createImageData(W, H), px = img.data;
+  const bv = document.createElement('canvas'); bv.width = W; bv.height = H; const bc = bv.getContext('2d'), bim = bc.createImageData(W, H), bp = bim.data;
+  const Y = [246, 200, 28], B = [26, 48, 150], logo = [0.32, 0.82, 0.47], ll = Math.hypot(...logo);
+  for (let r = 0; r < H; r++) {
+    const th = ((r + 0.5) / H) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
+    for (let q = 0; q < W; q++) {
+      const ph = ((q + 0.5) / W) * Math.PI * 2, x = -Math.cos(ph) * st, y = ct, z = Math.sin(ph) * st;
+      // 繞 y 軸、越往上下越扭的經度 → 兩條藍色彎帶夾著黃色
+      const tw = Math.atan2(z, x) + 3.1 * y + 0.8 * Math.sin(3.0 * y + 0.6);
+      const sv = Math.sin(2 * tw) + 0.18 * Math.sin(5 * y);
+      let col = sv > 0.38 ? B : Y;
+      // 接縫：顏色交界＋每條色帶中間一道
+      const edge = Math.min(Math.abs(sv - 0.38), Math.abs(Math.cos(2 * tw)) * 0.5 + (sv > 0.38 ? 9 : 0)) / Math.max(0.25, Math.sqrt(1 - y * y));
+      let k = 1;
+      if (edge < 0.035) k = 0.62 + 0.38 * (edge / 0.035);
+      // 小圓標（白底藍框）
+      const ld = (x * logo[0] + y * logo[1] + z * logo[2]) / ll;
+      if (ld > 0.9935) col = [240, 240, 236]; else if (ld > 0.9915) col = B;
+      const i = (r * W + q) * 4;
+      px[i] = col[0] * k; px[i + 1] = col[1] * k; px[i + 2] = col[2] * k; px[i + 3] = 255;
+      // 凹凸：細小的圓點紋（約 4 mm 一顆），接縫處凹下去
+      const dots = 0.5 + 0.25 * Math.cos(ph * 150 * Math.max(0.3, st)) * Math.cos(th * 75);
+      const bvv = edge < 0.035 ? 40 : 150 + 90 * dots;
+      bp[i] = bp[i + 1] = bp[i + 2] = bvv; bp[i + 3] = 255;
+    }
+  }
+  c.putImageData(img, 0, 0); bc.putImageData(bim, 0, 0);
+  const map = new THREE.CanvasTexture(cv); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
+  const bump = new THREE.CanvasTexture(bv);
+  return { map, bump };
+})();
 function ballMaterial(hot) {
-  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d');
-  const cols = ['#F2C230', '#2F5D8C', '#F4F4F0', '#F2C230', '#2F5D8C', '#F4F4F0'];
-  cols.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, (i * 128) / cols.length, 256, 128 / cols.length + 1); });
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, emissive: hot ? '#F2B705' : '#000000', emissiveIntensity: hot ? 0.55 : 0 });
+  return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, bumpMap: BALL_TEX.bump, bumpScale: 0.6, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#F2B705' : '#000000', emissiveIntensity: hot ? 0.35 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
-function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat); m.castShadow = true; return m; }
-// 雙手（跟著鏡頭）：前臂、手掌、袖口
+function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 40, 28), ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
+// 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
 const skinM = new THREE.MeshStandardMaterial({ color: '#D9A57E', roughness: 0.6 }), sleeveM = new THREE.MeshStandardMaterial({ color: '#F2B705', roughness: 0.7 });
-function mkArm() {
-  const a = new THREE.Group();
-  const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.037, 0.34, 12), skinM); fore.rotation.x = Math.PI / 2; fore.position.z = -0.17; a.add(fore);
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.028, 0.1), skinM); palm.position.z = -0.38; a.add(palm);
-  const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.022, 0.06), skinM); thumb.position.set(0.045, 0.006, -0.36); thumb.rotation.y = -0.5; a.add(thumb);
-  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12), sleeveM); sleeve.rotation.x = Math.PI / 2; sleeve.position.z = 0.02; a.add(sleeve);
-  a.traverse((o) => { o.userData.noPick = true; });
-  hands.add(a); return a;
+function mkArm(side) {
+  // side：-1 左手、1 右手
+  const fore = new THREE.Group(); hands.add(fore);
+  const fm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.3, 14), skinM); fm.rotation.x = Math.PI / 2; fm.position.z = 0.15; fore.add(fm);
+  const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.07, 14), sleeveM); sl.rotation.x = Math.PI / 2; sl.position.z = 0.01; fore.add(sl);
+  // 手：+z 是手指的方向，+y 是掌心
+  const hand = new THREE.Group(); hands.add(hand);
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.024, 0.088), skinM); palm.position.z = 0.044; hand.add(palm);
+  const fingers = [];
+  [[-0.03, 0.068], [-0.01, 0.082], [0.01, 0.078], [0.03, 0.062]].forEach(([x, L], i) => {
+    const g = new THREE.Group(); g.position.set(x * -side, 0, 0.086); hand.add(g);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0095, L, 8), skinM); m.rotation.x = Math.PI / 2; m.position.z = L / 2; g.add(m);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.0088, 8, 6), skinM); tip.position.z = L; g.add(tip);
+    g.userData.spread = (x / 0.03) * 0.16 * -side; fingers.push(g);
+  });
+  // 拇指在手的內側（掌心朝上、手指朝前時：右手拇指在右、左手在左 → 本地 -x／+x）
+  const th = new THREE.Group(); th.position.set(-side * 0.04, 0.004, 0.026); th.rotation.y = -side * 0.85; hand.add(th);
+  const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.011, 0.058, 8), skinM); tm.rotation.x = Math.PI / 2; tm.position.z = 0.029; th.add(tm);
+  [fore, hand].forEach((o) => o.traverse((q) => { q.userData.noPick = true; }));
+  return { side, fore, hand, fingers, th, cur: null };
 }
-const armL = mkArm(), armR = mkArm();
-armR.children[2].position.x = -0.045; armR.children[2].rotation.y = 0.5;
-// 姿勢：[位置 x,y,z, 旋轉 x,y,z]（鏡頭座標；手臂朝 -z 伸出）
+const armL = mkArm(-1), armR = mkArm(1);
+const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+// 姿勢（鏡頭座標：x 右、y 上、z 往後；鏡頭看 -z）。e 手肘、w 手腕、f 手指方向、n 掌心方向、c 手指彎曲
+const mir = (p) => ({ e: [-p.e[0], p.e[1], p.e[2]], w: [-p.w[0], p.w[1], p.w[2]], f: [-p.f[0], p.f[1], p.f[2]], n: [-p.n[0], p.n[1], p.n[2]], c: p.c });
+function pair(L, ball, pitch) { return { L, R: mir(L), ball, pitch }; }
 const POSE = {
-  hold: { L: [-0.22, -0.36, -0.2, 0.38, -0.27, 0.3], R: [0.22, -0.36, -0.2, 0.38, 0.27, -0.3], ball: [0, -0.2, -0.58] },
-  set: { L: [-0.16, -0.2, -0.25, 0.54, -0.23, 0.4], R: [0.16, -0.2, -0.25, 0.54, 0.23, -0.4], ball: [0, 0.06, -0.62] },
-  bump: { L: [-0.14, -0.42, -0.2, 0.1, -0.34, 0.1], R: [0.14, -0.42, -0.2, 0.1, 0.34, -0.1], ball: [0, -0.32, -0.66] },
-  cock: { L: [-0.16, -0.05, -0.2, 1.2, -0.2, 0.2], R: [0.22, 0.05, 0.05, 1.9, 0.2, -0.3], ball: [0, 0.4, -0.9] },
-  swing: { L: [-0.18, -0.3, -0.1, 0.1, -0.3, 0.3], R: [0.12, -0.1, -0.25, -0.3, 0.1, -0.2], ball: [0, 0.2, -1.2] },
+  // 拿著球：兩手托在球的兩側
+  hold: pair({ e: [-0.22, -0.42, -0.18], w: [-0.12, -0.25, -0.5], f: [0.05, 0.6, -0.8], n: [1, 0.1, 0], c: 0.3 }, [0, -0.17, -0.56]),
+  // 舉球預備：手在額頭前上方，手肘向外，掌心朝上前方對著球，十指張開微彎，兩手拇指與食指圍成三角形的窗
+  set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.17, -0.42], 0.38),
+  // 舉球出手：手臂往球的方向伸直、手腕送出、手指朝上
+  setPush: pair({ e: [-0.19, 0.0, -0.3], w: [-0.08, 0.2, -0.47], f: [-0.08, 0.96, -0.25], n: [0.3, 0.55, -0.78], c: 0.12 }, [0, 0.3, -0.52], 0.38),
+  // 低手墊球預備：兩臂伸直在身體前下方併攏，雙手交握（拇指平行朝下前），前臂內側形成平台
+  bump: pair({ e: [-0.12, -0.36, -0.16], w: [-0.03, -0.27, -0.5], f: [0.02, -0.35, -0.94], n: [1, 0, 0], c: 1.35 }, [0, -0.14, -0.42], -0.3),
+  // 墊球觸球：用腿把平台往上送，手臂不揮
+  bumpHit: pair({ e: [-0.12, -0.31, -0.2], w: [-0.03, -0.19, -0.52], f: [0.02, -0.15, -0.99], n: [1, 0, 0], c: 1.35 }, [0, -0.07, -0.45], -0.3),
 };
+// 攻擊：左手指向球、右手拉弓到頭後上方，再揮下扣球
+POSE.cock = { L: { e: [-0.2, -0.12, -0.25], w: [-0.12, 0.14, -0.5], f: [0.05, 0.75, -0.65], n: [0.2, 0, -1], c: 0.15 }, R: { e: [0.25, 0.0, 0.02], w: [0.2, 0.28, -0.04], f: [0, 1, 0.15], n: [0, 0.15, -1], c: 0.1 }, ball: [0, 0.4, -0.9] };
+POSE.swing = { L: { e: [-0.2, -0.4, -0.1], w: [-0.15, -0.52, -0.32], f: [0, -0.6, -0.8], n: [1, 0, 0], c: 0.5 }, R: { e: [0.16, -0.05, -0.3], w: [0.08, -0.15, -0.6], f: [0, -0.35, -1], n: [0, -0.7, -0.7], c: 0.25 }, ball: [0, 0.2, -1.2] };
 let pose = 'hold';
+const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
 function applyPose(dt, snap) {
-  const P = POSE[pose], k = snap ? 1 : 1 - Math.exp(-dt * 16);
-  for (const [arm, v] of [[armL, P.L], [armR, P.R]]) {
-    arm.position.x += (v[0] - arm.position.x) * k; arm.position.y += (v[1] - arm.position.y) * k; arm.position.z += (v[2] - arm.position.z) * k;
-    arm.rotation.x += (v[3] - arm.rotation.x) * k; arm.rotation.y += (v[4] - arm.rotation.y) * k; arm.rotation.z += (v[5] - arm.rotation.z) * k;
+  camera.updateMatrixWorld(true);
+  const P = POSE[pose], k = snap ? 1 : 1 - Math.exp(-dt * 18);
+  for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
+    if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
+    const c = arm.cur;
+    c.e.lerp(V3(tgt.e), k); c.w.lerp(V3(tgt.w), k); c.f.lerp(V3(tgt.f).normalize(), k).normalize(); c.n.lerp(V3(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
+    // 前臂：手肘 → 手腕
+    arm.fore.position.copy(c.e);
+    hands.localToWorld(_w1.copy(c.w)); arm.fore.lookAt(_w1);
+    arm.fore.scale.set(1, 1, c.e.distanceTo(c.w) / 0.3);
+    // 手：在手腕，手指朝 f，掌心朝 n
+    arm.hand.position.copy(c.w);
+    hands.localToWorld(_w0.set(0, 0, 0)); hands.localToWorld(_w2.copy(c.n));
+    arm.hand.up.copy(_w2.sub(_w0)).normalize();
+    hands.localToWorld(_w1.copy(c.w).add(c.f)); arm.hand.lookAt(_w1);
+    for (const g of arm.fingers) { g.rotation.set(-c.c, g.userData.spread * (1 - Math.min(1, c.c)), 0); }
+    arm.th.rotation.x = -c.c * 0.6;
   }
 }
-const skill = { mode: null, h: 0, v: 0, n: 0, best: 0 };
-const SKV = { set: 4.0, bump: 4.8 };
-function grabBall() { if (walk.hold) return; walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(0); }
+const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0 };
+const SKV = { set: 4.2, bump: 5.0 };
+// 球在鏡頭座標裡沿這個方向飛出去再回來（舉球往上前方、墊球往上前方高一點）
+const SKDIR = { set: [0, 0.75, -0.66, 0.5], bump: [0, 0.8, -0.6, 0.45] };
+function grabBall() { if (walk.hold) return; walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
 function placeHeld() {
   const m = walk.hold; if (!m) return;
-  if (skill.mode) { const c = POSE[skill.mode].ball, sc = skill.mode === 'set' ? 0.55 : 0.5; m.position.set(c[0], c[1] + skill.h * sc, c[2]); }
-  else { const c = POSE.hold.ball; m.position.set(c[0], c[1], c[2]); }
+  if (skill.mode) {
+    const c = POSE[skill.mode].ball, d = SKDIR[skill.mode], h = skill.h * d[3];
+    m.position.set(c[0] + d[0] * h, c[1] + d[1] * h, c[2] + d[2] * h);
+  } else { const c = POSE.hold.ball; m.position.set(c[0], c[1], c[2]); m.material = ballMat; }
 }
 function releaseBall(v) {
   // 手上的球變成場上的球（世界座標＋初速）
@@ -5162,7 +5423,7 @@ function releaseBall(v) {
   const p = new THREE.Vector3(); m.getWorldPosition(p); camera.remove(m); m.position.copy(p); m.material = ballMat; delete m.userData.noPick;
   m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
-  skill.mode = null; hands.visible = false;
+  skill.mode = null; skill.dip = 0; hands.visible = false;
 }
 function throwBall() {
   if (!walk.hold || skill.mode) return;
@@ -5173,19 +5434,22 @@ function pickBall(b) {
   if (walk.hold) return;
   const i = balls.indexOf(b); if (i >= 0) balls.splice(i, 1);
   ballsGroup.remove(b.m); delete b.m.userData.ball; b.m.userData.noPick = true; walk.hold = b.m; camera.add(b.m);
-  pose = 'hold'; hands.visible = true; placeHeld();
+  pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld();
   toast('撿起球了：E 舉球、Q 墊球、網前 R 攻擊，點一下丟出去');
 }
+// 判定：球往下掉、離觸球點在 -0.38～0.6 m 之間按就算接到（球會亮）；剛觸球後 0.22 秒內的連按不算
+const inWindow = () => skill.v < 0 && skill.h < 0.6 && skill.h > -0.38;
 function skillPress(kind) {
   if (!walk.hold || walk.spike) return;
   if (!skill.mode) {
-    skill.mode = kind; skill.h = 0; skill.v = SKV[kind]; skill.n = 0; pose = kind;
-    toast(kind === 'set' ? '舉球！球掉回手上的時候再按 E（球會亮起來）' : '墊球！球掉到手臂的時候再按 Q（球會亮起來）');
+    skill.mode = kind; skill.h = 0; skill.v = SKV[kind]; skill.n = 0; skill.since = 0; skill.kick = 0.16; pose = kind === 'set' ? 'setPush' : 'bumpHit';
+    toast(kind === 'set' ? '舉球：手在額頭前，球掉回手上（球亮起來）時按 E' : '墊球：雙手交握、手臂伸直，球掉到前臂（球亮起來）時按 Q');
     return;
   }
-  const inWin = skill.v < 0 && skill.h < 0.3 && skill.h > -0.22;
-  if (!inWin) return skillMiss(skill.v > 0 || skill.h >= 0.3 ? '太早按了' : '太晚了');
-  skill.mode = kind; pose = kind; skill.v = SKV[kind]; skill.h = Math.max(0, skill.h); skill.n++;
+  if (skill.since < 0.22) return;
+  if (!inWindow()) { if (skill.v > 0 && skill.h < 0.3) return; return skillMiss(skill.v > 0 || skill.h >= 0.6 ? '太早按了' : '太晚了'); }
+  skill.mode = kind; skill.v = SKV[kind]; skill.h = Math.max(0, skill.h); skill.n++; skill.since = 0; skill.kick = 0.16;
+  pose = kind === 'set' ? 'setPush' : 'bumpHit';
   skill.best = Math.max(skill.best, skill.n);
   $('wk-combo').textContent = `${kind === 'set' ? '舉球' : '墊球'} 連續 ${skill.n} 下${skill.best > 1 ? `（最佳 ${skill.best}）` : ''}`; $('wk-combo').hidden = false;
 }
@@ -5198,11 +5462,16 @@ function skillMiss(why) {
 }
 function updateSkill(dt) {
   if (!skill.mode || !walk.hold) return;
+  skill.since += dt;
   skill.v -= 9.8 * dt; skill.h += skill.v * dt;
-  const inWin = skill.v < 0 && skill.h < 0.3 && skill.h > -0.22;
-  walk.hold.material = inWin ? ballHot : ballMat;
+  // 觸球：手臂送出一下再回到預備姿勢，膝蓋微蹲再站起
+  if (skill.kick > 0) { skill.kick -= dt; if (skill.kick <= 0) pose = skill.mode; }
+  skill.dip = skill.since < 0.35 ? Math.sin((skill.since / 0.35) * Math.PI) * 0.05 : 0;
+  // 視線跟著球：舉球抬頭、墊球看前下方（滑鼠還是可以轉）
+  const tp = POSE[skill.mode].pitch; if (tp != null) walk.pitch += (tp - walk.pitch) * (1 - Math.exp(-dt * 4));
+  walk.hold.material = inWindow() ? ballHot : ballMat;
   walk.hold.rotation.x += dt * 6;
-  if (skill.h < -0.4) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前按 E）' : '沒接到（墊球要在球掉到手臂時按 Q）');
+  if (skill.h < -0.55) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前按 E）' : '沒接到（墊球要在球掉到前臂時按 Q）');
 }
 // ---- 網前攻擊：助跑、起跳、揮臂把舊舉過來的球扣過網、落地
 function nearNet() {
@@ -5264,8 +5533,137 @@ function updateSpike(dt) {
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (t > 1.7) { walk.spike = null; hands.visible = !!walk.hold; pose = 'hold'; walk.pitch = -0.04; }
 }
+// ---- 伸手：右手（洗手是兩手）伸向看著的地方，手上可以拿著東西；手到了才觸發效果
+let reachState = null;
+const OFF_L = { e: [-0.3, -0.9, 0.05], w: [-0.25, -0.95, -0.1], f: [0, 0, -1], n: [0, 1, 0], c: 0.5 };
+const OFF_R = { e: [0.3, -0.9, 0.05], w: [0.25, -0.95, -0.1], f: [0, 0, -1], n: [0, 1, 0], c: 0.5 };
+function reach(worldPoint, fn, opt = {}) {
+  if (reachState || walk.hold) { fn(); return; }
+  camera.updateMatrixWorld(true);
+  const local = hands.worldToLocal(worldPoint.clone());
+  const armFor = (sx) => {
+    const sh = new THREE.Vector3(0.2 * sx, -0.3, 0.05), dir = local.clone().add(new THREE.Vector3(0.05 * sx * (opt.both ? 1 : 0), 0, 0)).sub(sh);
+    const L = Math.min(dir.length(), 0.6); dir.normalize();
+    const w = sh.clone().addScaledVector(dir, L), e = sh.clone().addScaledVector(dir, L * 0.42).add(new THREE.Vector3(0.07 * sx, -0.06, 0));
+    return { e: e.toArray(), w: w.toArray(), f: dir.clone().add(new THREE.Vector3(0, -0.15, 0)).toArray(), n: opt.wash ? [0, 1, 0] : [-sx, 0.2, 0], c: opt.prop ? 0.9 : 0.35 };
+  };
+  POSE.reach = { L: opt.both ? armFor(-1) : OFF_L, R: armFor(1), ball: [0, 0, 0] };
+  POSE.rest = { L: OFF_L, R: OFF_R, ball: [0, 0, 0] };
+  pose = 'rest'; applyPose(0, true); hands.visible = true; pose = 'reach';
+  if (opt.prop) { opt.prop.position.set(0, 0.05, 0.12); armR.hand.add(opt.prop); }
+  reachState = { t: 0, fn, fired: false, opt };
+}
+function updateReach(dt) {
+  const r = reachState; r.t += dt;
+  if (r.opt.wash && r.t > 0.3 && r.t < 1.5) { const k = Math.sin(r.t * 22) * 0.025; armL.cur && armL.cur.w.add(new THREE.Vector3(k, 0, 0)); armR.cur && armR.cur.w.add(new THREE.Vector3(-k, 0, 0)); }
+  if (!r.fired && r.t > 0.32) { r.fired = true; if (r.opt.prop && r.opt.prop.parent === armR.hand && !r.opt.keepProp) armR.hand.remove(r.opt.prop); r.fn(); }
+  const back = r.opt.wash ? 1.6 : 0.6;
+  if (r.t > back) pose = 'rest';
+  if (r.t > back + 0.35) { reachState = null; if (r.opt.prop && r.opt.prop.parent) r.opt.prop.parent.remove(r.opt.prop); if (!walk.hold) { hands.visible = false; pose = 'hold'; } }
+}
+// 手上的小東西
+function trashProp(slot) {
+  if (slot === 2) { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.03, 0.18, 14), new THREE.MeshStandardMaterial({ color: '#CFE8F2', transparent: true, opacity: 0.55, roughness: 0.1 })); b.rotation.x = Math.PI / 2; g.add(b); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.02, 10), mat('#2F5FA8')); cap.rotation.x = Math.PI / 2; cap.position.z = 0.1; g.add(cap); return g; }
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 0), mat(slot === 1 ? '#F4F4F0' : '#8E9399', { roughness: 0.95, flatShading: true })); m.scale.set(1, 0.85, 1.1); return m;
+}
+function bagProp() { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.12), mat('#22304A', { roughness: 0.8 })); g.add(b); return g; }
+function bottleProp() { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.18, 14), new THREE.MeshStandardMaterial({ color: '#BFE3F2', transparent: true, opacity: 0.45 })); g.add(b); const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.03, 12), mat('#22304A')); c2.position.y = 0.1; g.add(c2); return g; }
+// ---- 分類回收桶：一般垃圾／紙類／瓶罐，丟進點到的那一格
+function binSlot(it, point) { const { w } = sizeOf(it); return point ? clamp(Math.floor((toLocalOf(it, point.x, point.z)[0] + w / 2) / (w / 3)), 0, 2) : 0; }
+function throwTrash(it, point) {
+  const slot = binSlot(it, point), { w } = sizeOf(it), names = ['一般垃圾', '紙類', '瓶罐'];
+  const [x, z] = toWorldOf(it, -w / 3 + slot * (w / 3), 0);
+  const from = new THREE.Vector3(); armR.hand.getWorldPosition(from);
+  const m = trashProp(slot); m.position.copy(from); ballsGroup.add(m);
+  const to = new THREE.Vector3(x, 0.82, z);
+  tween(0.4, (p) => { m.position.lerpVectors(from, to, p); m.position.y += Math.sin(p * Math.PI) * 0.25; m.rotation.x += 0.2; }, () => { tween(0.2, (p) => { m.position.y = 0.82 - 0.3 * p; }, () => ballsGroup.remove(m)); });
+  toast(`丟進「${names[slot]}」了${slot === 2 ? '（瓶罐要先倒乾淨）' : ''}`);
+}
+// ---- 洗手：水龍頭流水、兩手搓一搓
+function washHands(it, point) {
+  const { w } = sizeOf(it), lx = point ? clamp(toLocalOf(it, point.x, point.z)[0], -w / 2 + 0.2, w / 2 - 0.2) : 0;
+  const [x, z] = toWorldOf(it, lx, 0.06);
+  const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.14, 10), new THREE.MeshStandardMaterial({ color: '#BFE3F2', transparent: true, opacity: 0.65, roughness: 0.05 }));
+  stream.position.set(x, 1.0, z); ballsGroup.add(stream);
+  tween(1.3, (p) => { stream.scale.x = stream.scale.z = 1 + Math.sin(p * 60) * 0.15; }, () => { ballsGroup.remove(stream); toast('洗好手了，記得擦乾再拿球'); });
+}
+// ---- 冷氣涼風：出風口吹出一串淡藍色的點，慢慢散開淡掉（開著才有）
+const winds = new Map();
+const windTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); const g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
+function addWind(it) {
+  if (winds.has(it.id) || walk.off.has(it.id)) return;
+  const { w, d } = sizeOf(it), def = CAT[it.type], N = 140;
+  // 出風口與方向（物件自己的座標）：壁掛冷氣往下前方吹，落地／箱型冷氣從上半部往前吹
+  const wall = !!def.wall, y0 = wall ? (def.mountY || 2.4) + 0.05 : it.type === 'packac' ? 1.75 : 1.45;
+  const o = wall ? [0, y0, d / 2 + 0.05] : [0, y0, -d / 2 - 0.05], dir = wall ? [0, -0.55, 0.84] : [0, -0.12, -1];
+  const geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3), seed = [];
+  for (let i = 0; i < N; i++) seed.push({ t: Math.random(), x: (Math.random() - 0.5) * w * 0.85, y: (Math.random() - 0.5) * 0.12, sp: 0.7 + Math.random() * 0.6 });
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ map: windTex, color: '#B9E4FF', size: 0.09, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const g = new THREE.Group(); g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; g.add(pts); scene.add(g);
+  pts.frustumCulled = false;
+  winds.set(it.id, { g, pts, seed, o, dir, len: wall ? 2.6 : 3.2 });
+}
+function removeWind(id) { const wd = winds.get(id); if (!wd) return; scene.remove(wd.g); wd.pts.geometry.dispose(); winds.delete(id); }
+function updateWind(dt) {
+  for (const wd of winds.values()) {
+    const a = wd.pts.geometry.attributes.position;
+    wd.seed.forEach((s0, i) => {
+      s0.t += dt * 0.45 * s0.sp; if (s0.t > 1) s0.t -= 1;
+      const L = s0.t * wd.len, spread = 1 + s0.t * 1.6;
+      a.setXYZ(i, wd.o[0] + s0.x * spread + wd.dir[0] * L, wd.o[1] + s0.y * spread + wd.dir[1] * L - 0.25 * s0.t * s0.t, wd.o[2] + wd.dir[2] * L);
+    });
+    a.needsUpdate = true;
+  }
+}
+// ---- 發球（V）：左手把球拋到頭前上方，右手拉弓、在最高點附近揮臂，球往你看的方向飛、要過網
+function startServe() {
+  if (walk.serve || walk.spike || walk.sit) return;
+  if (!walk.hold) { toast('先拿一顆球（看著球車按 E）才能發球'); return; }
+  if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
+  const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
+  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; ballsGroup.add(ball);
+  const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
+  const top = new THREE.Vector3(walk.x, EYE + 0.95, walk.z).addScaledVector(fwd, 0.45);
+  walk.serve = { t: 0, ball, from: p, top, fwd, hit: false };
+  hands.visible = true; pose = 'cock';
+  toast('拋球——');
+}
+function updateServe(dt) {
+  const s = walk.serve; s.t += dt; const t = s.t;
+  // 0–0.55s：球從手上拋到最高點再往下一點；0.6s 擊球
+  if (!s.hit) {
+    const p = Math.min(1, t / 0.6), arc = Math.sin(p * Math.PI * 0.85);
+    s.ball.position.lerpVectors(s.from, s.top, Math.min(1, p * 1.15)); s.ball.position.y = s.from.y + (s.top.y - s.from.y) * arc; s.ball.rotation.y += dt * 3;
+    walk.pitch += (0.35 - walk.pitch) * (1 - Math.exp(-dt * 6));
+  }
+  pose = t < 0.55 ? 'cock' : 'swing';
+  if (t >= 0.6 && !s.hit) {
+    s.hit = true;
+    const p0 = s.ball.position.clone();
+    // 對面場地：如果站在排球場附近，瞄準網子另一邊、沿著你看的方向；不然往前 14 m
+    let target = null, court = null, sg = 1;
+    for (const c of state.items) {
+      if (CAT[c.type].court !== 'vb') continue;
+      const [lx, lz] = toLocalOf(c, walk.x, walk.z); if (Math.abs(lx) > 14 || Math.abs(lz) > 7) continue;
+      sg = Math.sign(lx) || 1; court = c;
+      const tx = -sg * (4.5 + Math.random() * 2.5);
+      const [fx, fz] = toLocalOf(c, walk.x + s.fwd.x, walk.z + s.fwd.z), dlx = fx - lx, dlz = fz - lz;
+      const k = Math.abs(dlx) > 0.05 ? (tx - lx) / dlx : 0;
+      const tz = clamp(k > 0 ? lz + dlz * k : lz, -4.2, 4.2);
+      const [wx, wz] = toWorldOf(c, tx, tz); target = new THREE.Vector3(wx, BALL_R, wz); break;
+    }
+    if (!target) target = new THREE.Vector3(walk.x, BALL_R, walk.z).addScaledVector(s.fwd, 14);
+    const D = Math.hypot(target.x - p0.x, target.z - p0.z), T = 0.55 + D * 0.06;
+    const v = new THREE.Vector3((target.x - p0.x) / T, (target.y - p0.y) / T + 0.5 * 9.8 * T, (target.z - p0.z) / T);
+    s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: court ? { c: court, sg } : null, serve: true }; balls.push(s.ball.userData.ball);
+    while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
+    toast('發球！');
+  }
+  if (t > 1.15) { walk.serve = null; hands.visible = false; pose = 'hold'; }
+}
 function updateBalls(dt) {
-  updateTweens(dt); updateDoors(dt);
+  updateTweens(dt); updateDoors(dt); updateWind(dt);
   if (!balls.length || !dt) return;
   const H = state.building.H, steps = 3, h = dt / steps, segs = blockers();
   for (const b of balls) {
@@ -5276,7 +5674,7 @@ function updateBalls(dt) {
       const p = b.m.position;
       if (p.y < BALL_R) {
         p.y = BALL_R;
-        if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(inside ? '漂亮！扣球得分 🏐' : '可惜，出界了'); b.spike = null; }
+        if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
         if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
       }
       if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
@@ -5347,41 +5745,63 @@ addEventListener('keydown', (e) => {
   if (!walk.on) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
-  if (k === 'escape') { e.preventDefault(); if (walk.paused) { closeModals(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
+  if (k === 'escape') { e.preventDefault(); if (walk.paused) { closeModals(); return; } if (locked() || performance.now() - (walk.unlockT || 0) < 400) { unlockMouse(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
   if (walk.paused) return;
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
   if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold) skillPress('bump'); else toast('先拿一顆球（看著球車按 E）才能墊球'); return; }
   if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(); return; }
+  if (k === 'v' && !e.repeat) { e.preventDefault(); startServe(); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('keyup', (e) => { walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
 addEventListener('blur', () => walk.keys.clear());
-// 拖曳轉頭；沒拖動的一下點擊＝走到那裡
+// 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
+// 手機用手指拖。往右移就往右看、往上移就往上看。
+const LOOK_SENS = 0.0022;
+const coarse = () => matchMedia('(pointer: coarse)').matches;
+const locked = () => document.pointerLockElement === renderer.domElement;
+function lockMouse() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
+function unlockMouse() { if (locked()) document.exitPointerLock(); }
+document.addEventListener('mousemove', (e) => {
+  if (!walk.on || !locked() || walk.paused || walk.spike) return;
+  walk.yaw -= e.movementX * LOOK_SENS; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1);
+});
+document.addEventListener('pointerlockchange', () => { if (!locked()) walk.unlockT = performance.now(); updateLockHint(); });
+// 瀏覽器不讓鎖定滑鼠（有些內嵌視窗、舊瀏覽器）：改用按住拖曳轉頭，點一下照樣互動
+document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
+function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock; }
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!walk.on || e.button !== 0) return;
+  if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
   walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
-  const l = walk.look; if (!walk.on || !l || l.id !== e.pointerId) return;
+  const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId) return;
   const dx = e.clientX - l.x, dy = e.clientY - l.y; l.x = e.clientX; l.y = e.clientY;
   if (Math.hypot(e.clientX - l.sx, e.clientY - l.sy) > 5) l.moved = true;
   const sens = e.pointerType === 'touch' ? 0.006 : 0.0042;
-  walk.yaw += dx * sens; walk.pitch = clamp(walk.pitch + dy * sens * 0.85, -1.2, 1.1);
+  walk.yaw -= dx * sens; walk.pitch = clamp(walk.pitch - dy * sens * 0.85, -1.2, 1.1);
 });
 function endLook(e) {
   const l = walk.look; if (!walk.on || !l || l.id !== e.pointerId) return;
   walk.look = null;
-  if (l.moved || performance.now() - l.t > 500) return;
-  setPointer(e);
-  // 拿著球：點一下就丟；點到伸手可及的物件：直接互動
   if (walk.spike || walk.paused) return;
+  let ray = raycaster, maxD = 4;
+  if (l.locked) { ray = centerRay; centerRay.setFromCamera(new THREE.Vector2(0, 0), camera); maxD = 3.4; }
+  else {
+    if (l.moved || performance.now() - l.t > 500) return;
+    // 電腦上第一次點：鎖定滑鼠（這一下不算互動）
+    if (!coarse() && !walk.noLock) { lockMouse(); return; }
+    setPointer(e);
+  }
+  // 拿著球：點一下就丟；點到伸手可及的物件：直接互動
   if (walk.hold) { if (!skill.mode) throwBall(); updateFocus(); return; }
-  const tg = pickTargets(raycaster, 4);
+  const tg = pickTargets(ray, maxD);
   // 單擊互動（稍等一下，雙擊就改成看資訊報表）
   if (tg) { clearTimeout(walk.clickT); walk.clickT = setTimeout(() => doInteract(tg), 260); return; }
   if (walk.sit) { standUp(); return; }
-  const p = floorHit(); if (!p) return;
+  const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(floorPlane, p)) return;
   if (Math.hypot(p.x - walk.x, p.z - walk.z) > 40) return;
   walk.target = [p.x, p.z]; targetMark.position.set(p.x, 0.04, p.z); targetMark.visible = true;
 }
@@ -5420,7 +5840,7 @@ function tick() { requestAnimationFrame(tick); drawFrame(false); }
 function drawFrame(force) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   if (mode === 'plan' || !state) return;
-  if (walk.on) { updateWalk(dt); watchPerf(dt); } else controls.update();
+  if (walk.on) { updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
   frameNo++;
   const e = camera.matrixWorld.elements, pr = camera.projectionMatrix.elements;
   const key = e[12].toFixed(3) + e[13].toFixed(3) + e[14].toFixed(3) + e[8].toFixed(4) + e[9].toFixed(4) + e[10].toFixed(4) + pr[8].toFixed(4) + pr[9].toFixed(4) + pr[0].toFixed(4);
@@ -5446,6 +5866,7 @@ function wireUi() {
   $('v-bird').addEventListener('click', () => frameView('bird'));
   $('v-top').addEventListener('click', () => frameView('top'));
   $('v-player').addEventListener('click', () => frameView('player'));
+  $('v-fly').addEventListener('click', () => setFly(!fly.on));
   $('t-labels').addEventListener('click', () => { showLabels = !showLabels; setPressed($('t-labels'), showLabels); applyLabelVisibility(); for (const o of buildingGroup.children) if (o.isCSS2DObject) o.visible = showLabels; zonesGroup.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; }); window.wakeRender(); });
   $('t-snap').addEventListener('click', () => { snapOn = !snapOn; setPressed($('t-snap'), snapOn); setPressed($('p-snap'), snapOn); });
   $('btn-undo').addEventListener('click', undo); $('btn-undo').disabled = true; $('p-undo').disabled = true;
