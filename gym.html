@@ -63,7 +63,7 @@ h2 .num { font-family: var(--font-mono); font-size: 11px; color: var(--accent); 
 .hint { margin: 0; color: var(--soft); font-size: 12.5px; line-height: 1.6; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field > span { font-size: 12px; color: var(--soft); }
-input[type="text"], input[type="number"], select, textarea { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; min-width: 0; width: 100%; box-sizing: border-box; }
+input[type="text"], input[type="number"], input[type="search"], select, textarea { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; min-width: 0; width: 100%; box-sizing: border-box; }
 textarea { resize: vertical; min-height: 64px; font-size: 12px; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -133,7 +133,13 @@ button.danger { color: var(--warn); }
 .tpl span { font-size: 11px; color: var(--soft); font-variant-numeric: tabular-nums; }
 .pal-group { display: flex; flex-direction: column; gap: 6px; }
 .pal-group + .pal-group { margin-top: 6px; }
-.pal-title { font-size: 11px; color: var(--soft); font-weight: 700; letter-spacing: .1em; }
+.pal-title { font-size: 12px; color: var(--ink); font-weight: 700; letter-spacing: .1em; cursor: pointer; padding: 6px 0; display: flex; justify-content: space-between; list-style: none; }
+.pal-title::-webkit-details-marker { display: none; }
+.pal-title span { font-family: var(--font-mono); font-weight: 500; color: var(--soft); }
+.pal-title::after { content: '＋'; color: var(--soft); margin-left: 8px; }
+details[open] > .pal-title::after { content: '－'; }
+details.pal-group { border-top: 1px solid var(--rule); }
+input.pal-search { margin: 4px 0 6px; padding: 8px 10px; }
 .pal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .pal button { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; min-width: 0; }
 .pal button b { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
@@ -197,9 +203,9 @@ details.more[open] > summary { margin-bottom: 10px; }
 .zoom-ctl { border-radius: 10px; overflow: hidden; position: absolute; z-index: 6; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 12px; display: flex; flex-direction: column; border: 1px solid var(--hl); background: var(--sheet); }
 .zoom-ctl button { border: 0; border-radius: 0; width: 34px; height: 32px; padding: 0; font-family: var(--font-mono); font-size: 16px; background: transparent; }
 .zoom-ctl button + button { border-top: 1px solid var(--rule); }
-.draw-badge { position: absolute; z-index: 7; left: 50%; top: 58px; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); font-size: 13px; padding: 7px 14px; white-space: nowrap; }
+.draw-badge { position: absolute; z-index: 7; left: 50%; bottom: 56px; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); font-size: 13px; padding: 7px 14px; max-width: calc(100% - 24px); box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; text-align: center; border-radius: 10px; }
 .draw-badge[hidden] { display: none; }
-.draw-badge button { margin-left: 10px; font-size: 12px; padding: 2px 8px; background: transparent; color: var(--paper); border-color: var(--faint); }
+.draw-badge button { font-size: 12px; padding: 2px 8px; background: transparent; color: var(--accent-ink); border-color: rgba(0,0,0,.35); }
 
 /* 3D */
 #canvas-host { position: absolute; inset: 0; }
@@ -378,6 +384,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="siteinfo" id="siteinfo" hidden></div>
       <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#map">← 到地圖選場地</a></div></div>
       <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
+      <p class="status-line" id="autosave" aria-live="polite">改動會自動存在這台裝置</p>
     </header>
     <section class="sec" id="sec-plan">
       <h2><span class="num">01</span>目前規劃<small>AREA SCHEDULE</small></h2>
@@ -464,6 +471,8 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="seg" role="group" aria-label="工具">
         <button type="button" id="p-select" aria-pressed="true">選取／移動</button>
         <button type="button" id="p-draw" aria-pressed="false">畫區域</button>
+        <button type="button" id="p-wall" aria-pressed="false">畫牆</button>
+        <button type="button" id="p-align" hidden>建物轉正</button>
         <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
       </div>
       <button type="button" id="p-rot" disabled>旋轉 90°</button>
@@ -552,6 +561,10 @@ const SRC = {
 const FONT_LINK = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">';
 let SAVED = [];
 try { const v = JSON.parse($('saved-designs').textContent || '[]'); if (Array.isArray(v)) SAVED = v; } catch (e) { SAVED = []; }
+// 網站上（不是 Claude 預覽）沒辦法改寫頁面本身，「存成新方案」改存在這台裝置的瀏覽器（localStorage）
+const LOCAL_SAVED_KEY = 'vb.saved.v1';
+const EMBED_IDS = new Set(SAVED.map((x) => x.id));
+try { const v = JSON.parse(localStorage.getItem(LOCAL_SAVED_KEY) || '[]'); if (Array.isArray(v)) SAVED = SAVED.concat(v.filter((x) => x && x.id && x.data && !EMBED_IDS.has(x.id))); } catch (e) { /* ignore */ }
 
 const PING = 3.3058;
 const DRAFT_KEY = 'vbgym3d.draft.v1';
@@ -564,6 +577,9 @@ const SCHEMES = {
   blue: { name: '藍底橘場', base: '#5D7F9E', free: '#2F5D8C', court: '#E07B39', bd: '#2E8B57', pb: '#2F7F86', kitchen: '#4BA3AB', bk: '#B5763E', key: '#8E4F2E' },
   green: { name: '綠底藍場', base: '#5E8A72', free: '#2E6B4F', court: '#3F7FBF', bd: '#3C9A6A', pb: '#2F6F9F', kitchen: '#4B8EC0', bk: '#B07A44', key: '#7E4C2C' },
   wood: { name: '全木地板', base: '#A88458', wood: true, free: '#C79A63', court: '#DDB27A', bd: '#4F9A6B', pb: '#3C7F8C', kitchen: '#5AA1AC', bk: '#C08850', key: '#94582F' },
+  fivb: { name: 'PVC 地墊・國際賽配色（陶紅＋藍綠）', base: '#C9C5BE', hall: 'pvc', free: '#2E8C8C', court: '#C4553A', pad: '#22304A', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
+  tiles: { name: '拼裝式地墊（藍＋橘）', base: '#8E9399', hall: 'concrete', free: '#2D5DA1', court: '#E07B39', tiles: true, pad: '#22304A', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
+  hardwood: { name: '實木地板（楓木）', base: '#C9C5BE', hall: 'concrete', free: '#E3C08C', court: '#E3C08C', grain: true, pad: '#22304A', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
   yb: { name: '黃色球場＋藍灰邊區', base: '#C9C5BE', hall: 'vinyl', free: '#6F8CAF', court: '#E9B53A', pad: '#B8352E', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
   maple: { name: '淺色木紋運動地板', base: '#B9B5AE', hall: 'concrete', free: '#D9B07A', court: '#D9B07A', grain: true, pad: '#C0392B', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
   honey: { name: '蜂蜜色木紋地板', base: '#7C7F84', hall: 'concrete', free: '#D59A55', court: '#D59A55', grain: true, pad: '#2F5FA8', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
@@ -605,6 +621,16 @@ const CAT = {
   steelsink: { label: '不鏽鋼洗手台', group: '休息與服務', w: 0.6, d: 0.5, h: 0.9, color: '#C8CCD0', tag: true },
   purifier: { label: '淨水器', group: '休息與服務', w: 0.3, d: 0.4, h: 0.45, color: '#E9ECEE' },
   ballbasket: { label: '可折疊球籃', group: '比賽設備', w: 0.62, d: 0.62, h: 0.8, color: '#22304A' },
+  flipscore: { label: '翻分板（桌上型）', group: '比賽設備', w: 0.6, d: 0.35, h: 0.6, color: '#F4F4F2' },
+  whiteboard: { label: '戰術白板（移動式）', group: '比賽設備', w: 1.3, d: 0.6, h: 1.85, color: '#F4F4F2', tag: true },
+  packac: { label: '箱型冷氣（落地大台）', group: '空調', w: 1.2, d: 0.6, h: 1.9, color: '#E9ECEE', tag: true },
+  watertall: { label: '飲水機（冰溫熱）', group: '休息與服務', w: 0.45, d: 0.45, h: 1.4, color: '#C8CCD0', tag: true },
+  speaker: { label: '音響喇叭（腳架）', group: '牆面', w: 0.9, d: 0.9, h: 1.95, color: '#1F2124' },
+  bins: { label: '分類回收桶', group: '休息與服務', w: 0.95, d: 0.36, h: 0.78, color: '#8E9399', tag: true },
+  wallfan: { label: '工業壁扇', group: '空調', w: 0.6, d: 0.35, h: 0.6, mountY: 2.6, color: '#1F2124', wall: true, zoneOK: true },
+  exhaust: { label: '排風扇（牆面）', group: '空調', w: 0.64, d: 0.12, h: 0.64, mountY: 4.5, color: '#B9BCC0', wall: true, zoneOK: true },
+  tv: { label: '壁掛電視', group: '牆面', w: 1.24, d: 0.06, h: 0.72, mountY: 2.0, color: '#15181D', wall: true, zoneOK: true, tag: true },
+  clock: { label: '掛鐘', group: '牆面', w: 0.35, d: 0.05, h: 0.35, mountY: 3.0, color: '#1F2124', wall: true, zoneOK: true },
   wc: { label: '廁所（舊版房間）', group: '空間', w: 5, d: 4.5, h: 2.6, color: '#C9D6DC', room: true, resize: true, tag: true },
   shower: { label: '淋浴間（舊版房間）', group: '空間', w: 3, d: 4, h: 2.6, color: '#C3D6D3', room: true, resize: true, tag: true },
   changing: { label: '更衣室（舊版房間）', group: '空間', w: 4, d: 4, h: 2.6, color: '#D3CBDC', room: true, resize: true, tag: true },
@@ -630,11 +656,23 @@ const CAT = {
   camera: { label: '網路攝影機（智慧球場，掛牆）', group: '天花板', w: 0.4, d: 0.4, h: 0.3, color: '#22303F', ceiling: true, tag: true },
 };
 // 「空間」（舊版房間物件）不再放在選單裡，改用平面圖畫區域；舊方案裡的房間照樣顯示
-const GROUPS = ['球場', '休息與服務', '比賽設備', '天花板', '牆面、消防與安全'];
+const GROUPS = ['球場與比賽', '座椅與休息', '櫃台與收納', '飲水與販賣', '空調與照明', '牆面與裝飾', '消防與安全', '智慧球場'];
+const GROUP_OF = {
+  '球場與比賽': ['vb', 'vbs', 'vbt', 'bd', 'pb', 'bk', 'referee', 'scoreboard', 'flipscore', 'whiteboard', 'ballcart', 'ballbasket', 'netwall', 'bleacher'],
+  '座椅與休息': ['sofa', 'bench', 'table', 'foldtable', 'foldchair', 'campchair', 'camptable', 'rug', 'plant'],
+  '櫃台與收納': ['counter', 'desk', 'locker', 'cubby', 'shoerack', 'curtain', 'bins'],
+  '飲水與販賣': ['watertall', 'water', 'purifier', 'vending', 'fridge', 'steelsink'],
+  '空調與照明': ['packac', 'standac', 'aircon', 'fan', 'floorfan', 'wallfan', 'exhaust', 'light'],
+  '牆面與裝飾': ['banner', 'crashpad', 'tv', 'clock', 'speaker'],
+  '消防與安全': ['aed', 'firstaid', 'extinguisher', 'emlight', 'exitsign', 'smoke', 'cctv', 'panel', 'heater'],
+  '智慧球場': ['camera'],
+};
+for (const [g, list] of Object.entries(GROUP_OF)) for (const k of list) if (CAT[k]) CAT[k].group = g;
 
 // ---------------------------------------------------------------- zones (平面圖上畫的區域)
 // enclosed: 用玻璃隔間圍起來（frosted = 霧面，隱私空間）；floor: 地坪材質；en: 圖面英文名
 const ZONES = {
+  floor: { label: '整片地板', en: 'FLOOR', color: '#D9D2C4', floor: 'vinyl', layer: 0, desc: '先鋪整片地板，再在上面畫廁所、休息區；地板永遠墊在其他區域下面。' },
   rest: { label: '休息區', en: 'LOUNGE', color: '#E2CBA6', floor: 'wood', desc: '打完球坐下來喝水、等下一場的地方。木地板、沙發和置物櫃，看得到球場，朋友打球時可以在這裡加油。' },
   reception: { label: '接待櫃台', en: 'RECEPTION', color: '#DDD6CA', floor: 'terrazzo', desc: '進門第一站：報到、付款、借球、買飲料。櫃台面向入口，也看得到整個球場。' },
   locker: { label: '更衣淋浴', en: 'LOCKER & SHOWER', color: '#C9D6DA', floor: 'tile', enclosed: true, frosted: true, desc: '霧面玻璃隔間，裡面有淋浴間、更衣長椅和置物櫃。熱水器與排水要先確認廠房管線。' },
@@ -722,22 +760,35 @@ function sanitizeZone(z) {
   if (ZONE_FLOORS.includes(z.floor)) o.floor = z.floor;
   if (['open', 'glass', 'frost', 'solid', 'net'].includes(z.walls)) o.walls = z.walls;
   if (z.bare === true) o.bare = true;
+  const r = ((num(z.rot, 0) % 360) + 360) % 360; if (r) o.rot = Math.round(r * 10) / 10;
+  if (['n', 'e', 's', 'w'].includes(z.door)) o.door = z.door;
   if (typeof z.desc === 'string' && z.desc.trim()) o.desc = z.desc.slice(0, 160);
   return o;
 }
-const ZONE_FLOORS = ['wood', 'tile', 'terrazzo', 'epoxy', 'mat', 'concrete', 'deck', 'vinyl', 'pvc'];
+const ZONE_FLOORS = ['vinyl', 'wood', 'deck', 'pvc', 'tiles', 'hardwood', 'tile', 'terrazzo', 'epoxy', 'mat', 'concrete'];
+const FLOOR_LABELS = { vinyl: '灰色木紋地板', wood: '木地板（休息區）', deck: '木棧板', pvc: 'PVC 地墊（灰）', tiles: '拼裝式地墊', hardwood: '實木運動地板（楓木）', tile: '磁磚', terrazzo: '磨石子', epoxy: '環氧樹脂', mat: '運動軟墊', concrete: '水泥粉光' };
 function zoneWalls(z) { return z.walls || (ZONES[z.type].enclosed ? (ZONES[z.type].frosted ? 'frost' : 'glass') : 'open'); }
 function zoneFloor(z) { return z.floor || ZONES[z.type].floor; }
+// 自由畫的牆：a、b 兩端（公尺），kind = solid 實心牆、glass 玻璃、half 半牆、net 圍網；h 高度
+const WALL_KINDS = { solid: '實心牆', glass: '玻璃隔間', half: '半牆（1.1 m）', net: '圍網' };
+function sanitizeWall(w) {
+  if (!w || !Array.isArray(w.a) || !Array.isArray(w.b)) return null;
+  const a = [num(w.a[0], 0), num(w.a[1], 0)], b = [num(w.b[0], 0), num(w.b[1], 0)];
+  if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.2) return null;
+  const kind = WALL_KINDS[w.kind] ? w.kind : 'solid';
+  return { id: typeof w.id === 'string' ? w.id : uid(), a, b, kind, h: clamp(num(w.h, kind === 'half' ? 1.1 : 3), 0.5, 15) };
+}
 function sanitize(raw) {
   const s = raw && typeof raw === 'object' ? raw : {};
   const b = s.building || {};
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
     net: NETS[s.net] ? s.net : 'men',
-    zones: (Array.isArray(s.zones) ? s.zones.slice(0, 60) : []).map(sanitizeZone).filter(Boolean),
+    zones: (Array.isArray(s.zones) ? s.zones.slice(0, 80) : []).map(sanitizeZone).filter(Boolean),
+    walls: (Array.isArray(s.walls) ? s.walls.slice(0, 200) : []).map(sanitizeWall).filter(Boolean),
     items: [],
   };
   for (const it of Array.isArray(s.items) ? s.items.slice(0, 400) : []) {
@@ -754,7 +805,7 @@ function sanitize(raw) {
   return out;
 }
 function designData(s = state) {
-  return { name: s.name, building: { ...s.building }, floor: s.floor, net: s.net, zones: s.zones.map((z) => ({ ...z })), items: s.items.map(({ id, ...rest }) => rest) };
+  return { name: s.name, building: { ...s.building }, floor: s.floor, net: s.net, zones: s.zones.map((z) => ({ ...z })), walls: (s.walls || []).map((w) => ({ ...w })), items: s.items.map(({ id, ...rest }) => rest) };
 }
 function fromTemplate(make) { const t = make(); return sanitize({ ...t, id: null }); }
 function sizeOf(it) { const d = CAT[it.type]; return { w: it.w ?? d.w, d: it.d ?? d.d }; }
@@ -918,7 +969,7 @@ function phTex(id, kind, rx, ry = rx) {
 }
 function phMat(id, sizeM, o = {}) {
   const r = 1 / sizeM, ns = o.ns ?? 0.8;
-  const m = new THREE.MeshStandardMaterial({ map: phTex(id, 'diff', r), normalMap: phTex(id, 'nor', r), normalScale: new THREE.Vector2(ns, ns), roughness: o.rough ?? 0.7, metalness: o.metal ?? 0, color: o.color ?? '#ffffff' });
+  const m = new THREE.MeshStandardMaterial({ map: o.noDiff ? null : phTex(id, 'diff', r), normalMap: phTex(id, 'nor', r), normalScale: new THREE.Vector2(ns, ns), roughness: o.rough ?? 0.7, metalness: o.metal ?? 0, color: o.color ?? '#ffffff' });
   m.envMapIntensity = o.env ?? 0.3; m.userData.env = m.envMapIntensity;
   return m;
 }
@@ -933,6 +984,8 @@ const FLOOR_MATS = {
   deck: phMat('oak_wood_planks', 0.6, { rough: 0.7, color: '#B07A4A', env: 0.15 }),
   vinyl: phMat('laminate_floor_02', 1.7, { rough: 0.5, color: '#C9CDD0', env: 0.15 }),
   pvc: phMat('smooth_concrete_floor', 2, { rough: 0.45, color: '#D3D7DC', env: 0.2, ns: 0.3 }),
+  tiles: phMat('rubber_tiles', 0.61, { rough: 0.6, color: '#3F6FB4', env: 0.15, noDiff: true }),  // 拼裝地墊是彩色塑膠，只借貼圖的凹凸
+  hardwood: phMat('laminate_floor_02', 1.7, { rough: 0.35, color: '#F3D9B0', env: 0.25 }),
 };
 const woodMat = phMat('oak_wood_planks', 1.2, { rough: 0.5, ns: 0.5 });
 const leatherCache = new Map();
@@ -989,6 +1042,7 @@ function cyl(g, rTop, rBot, h, color, x = 0, y = 0, z = 0, extra, seg = 16) {
   return m;
 }
 // ---------------------------------------------------------------- 元件素材庫（tools/blender/build_assets.py 建模、烘焙 AO → models/gym-kit.glb）
+const KIT_V = '53';  // 素材庫重建時改這個數字，瀏覽器才會抓新檔
 // 每個模組的材質名稱就是角色（navy、leather、wood…），這裡換成網站自己的材質（貼圖以公尺計），再把烘好的 AO 貼在第二組 UV。
 // 素材庫還沒載入（或載入失敗）時，各元件照舊用程式組出來的版本。
 const KIT = { ready: false, parts: new Map(), mats: new Map(), ao: null };
@@ -1025,6 +1079,7 @@ function kitBase(role) {
     case 'curtain': return S('#7A5A3E', { roughness: 0.9, side: THREE.DoubleSide });
     case 'stainless': return S('#C8CCD0', { roughness: 0.28, metalness: 0.9 });
     case 'canvas': return S('#1F2A40', { roughness: 0.85 });
+    case 'green': return S('#1E9E4A', { roughness: 0.4 });
     default: return S('#9AA5B1');
   }
 }
@@ -1061,10 +1116,10 @@ function loadKit() {
   draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
-  KIT.ao = new THREE.TextureLoader().load('models/gym-kit-ao.jpg');
+  KIT.ao = new THREE.TextureLoader().load('models/gym-kit-ao.jpg?v=' + KIT_V);
   KIT.ao.flipY = false;          // glTF 的 UV 方向
   KIT.ao.channel = 1;            // 第二組 UV（TEXCOORD_1）
-  loader.load('models/gym-kit.glb', (gltf) => {
+  loader.load('models/gym-kit.glb?v=' + KIT_V, (gltf) => {
     for (const node of gltf.scene.children) {
       const parts = [];
       node.traverse((o) => { if (o.isMesh) parts.push({ geometry: o.geometry, role: o.material.name }); });
@@ -1109,6 +1164,11 @@ function courtTexture(kind, fw, fd, mode, schemeKey) {
     c.fillStyle = kind === 'vb' ? sc.free : sc.base; c.fillRect(0, 0, cv.width, cv.height);
     c.fillStyle = ({ vb: sc.court, bd: sc.bd, pb: sc.pb, bk: sc.bk })[kind];
     c.fillRect(P(x0), P(y0), P(cw), P(cd));
+    if (sc.tiles) {   // 拼裝式地墊：30.5 cm 一塊，接縫＋表面的小透氣孔
+      const t = 0.305 * PX;
+      c.fillStyle = 'rgba(0,0,0,.18)'; for (let x = 0; x < cv.width; x += t) c.fillRect(x, 0, 1.2, cv.height); for (let y = 0; y < cv.height; y += t) c.fillRect(0, y, cv.width, 1.2);
+      c.fillStyle = 'rgba(0,0,0,.08)'; for (let x = t / 6; x < cv.width; x += t / 3) for (let y = t / 6; y < cv.height; y += t / 3) c.fillRect(x, y, 2, 2);
+    }
     if (sc.grain) {   // 木紋運動地板：7 cm 寬的長條木板、色差、接縫
       const r = rnd32(5), pl = 0.07 * PX;
       for (let y = 0; y < cv.height; y += pl) {
@@ -1475,6 +1535,7 @@ function buildFurniture(g, it, w, d, def) {
       plantPot(g);
       break;
     case 'aed':
+      if (kit('aed_cabinet', g, 0, 1.35, 0)) break;
       box(g, w, 0.5, d, c, 0, 1.1, 0); box(g, w * 0.7, 0.3, 0.01, '#F4F4F2', 0, 1.2, -d / 2 - 0.005);
       break;
     case 'referee':
@@ -1484,6 +1545,7 @@ function buildFurniture(g, it, w, d, def) {
       for (let i = 1; i < 5; i++) box(g, 0.6, 0.035, 0.06, darkSteel, 0, i * 0.32, -0.42);
       break;
     case 'scoreboard':
+      if (kit('score_stand', g, 0, 0, 0, { sx: w / 1.4 })) break;
       box(g, 0.08, 0.9, 0.08, '#2B3A4F', -0.5, 0, 0); box(g, 0.08, 0.9, 0.08, '#2B3A4F', 0.5, 0, 0);
       box(g, w, 0.7, 0.1, c, 0, 0.9, 0);
       box(g, 0.45, 0.4, 0.01, '#F2B705', -0.32, 1.05, -0.06, { emissive: '#F2B705', emissiveIntensity: 0.4 });
@@ -1505,6 +1567,8 @@ function buildFurniture(g, it, w, d, def) {
       break;
     }
     case 'bleacher': {
+      // 看台：鋁製一節 2 m（三階），依寬度排幾節；素材庫還沒好就用程式組
+      if (KIT.ready && Math.abs(d - 2.4) < 0.6) { const n = Math.max(1, Math.round(w / 2)); for (let i = 0; i < n; i++) kit('bleacher_mod', g, -w / 2 + (w / n) * (i + 0.5), 0, 0, { sx: w / n / 2, sz: d / 2.4 }); break; }
       // 每階 80 cm 深，座墊每 50 cm 一格
       const tiers = Math.max(1, Math.round(d / 0.8)), td = d / tiers, seats = Math.max(1, Math.round(w / 0.5));
       for (let i = 0; i < tiers; i++) {
@@ -1519,6 +1583,24 @@ function buildFurniture(g, it, w, d, def) {
       break;
     case 'purifier':
       if (!kit('purifier', g)) box(g, w, 0.44, d, '#E9ECEE', 0, 0, 0, { roughness: 0.35 });
+      break;
+    case 'flipscore':
+      if (!kit('flip_score', g)) { box(g, 0.6, 0.6, 0.05, '#F4F4F2', 0, 0, 0); }
+      break;
+    case 'whiteboard':
+      if (!kit('whiteboard', g)) { box(g, 1.2, 0.9, 0.03, '#F4F4F2', 0, 0.9, 0); for (const x of [-0.62, 0.62]) box(g, 0.04, 1.9, 0.04, '#B9BCC0', x, 0, 0); }
+      break;
+    case 'packac':
+      if (!kit('package_ac', g, 0, 0, 0, { sx: w / 1.2, sz: d / 0.6 })) { box(g, w, def.h, d, '#E9ECEE', 0, 0, 0, { roughness: 0.35 }); for (let k = 0; k < 10; k++) box(g, w - 0.1, 0.012, 0.02, '#9AA3AC', 0, 0.2 + k * 0.05, -d / 2 - 0.01); }
+      break;
+    case 'watertall':
+      if (!kit('water_tall', g)) box(g, w, def.h, d, '#C8CCD0', 0, 0, 0, { metalness: 0.8, roughness: 0.3 });
+      break;
+    case 'speaker':
+      if (!kit('speaker', g)) { box(g, 0.36, 0.56, 0.32, '#1F2124', 0, 1.4, 0); cyl(g, 0.018, 0.018, 1.4, '#1F2124'); }
+      break;
+    case 'bins':
+      if (!kit('recycle_bins', g)) for (let k = 0; k < 3; k++) box(g, 0.3, 0.76, 0.36, ['#3A3D42', '#2F5FA8', '#2E8B57'][k], -0.32 + k * 0.32, 0, 0);
       break;
     case 'ballbasket':
       if (!kit('ball_basket', g)) { box(g, w, 0.34, d, '#1F2A40', 0, 0.28, 0); for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), mat(i % 2 ? '#F2C230' : '#2F5D8C')); b.position.set(-0.12 + (i % 2) * 0.24, 0.68, -0.12 + Math.floor(i / 2) * 0.24); g.add(b); } }
@@ -1696,13 +1778,22 @@ function buildBuilding() {
 
 // ---------------------------------------------------------------- zones in 3D: floor finish, glass partitions, a few fittings
 // 每個區域的四邊：貼著外牆的邊不做隔間；門開在朝向館內中心的那一邊
+// 區域本地座標 (lx, lz) → 世界座標；旋轉方向和物件相同（corners() 的公式）
+function zoneW(z, lx, lz) { const r = ((z.rot || 0) * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); return [z.x + lx * c + lz * s, z.z - lx * s + lz * c]; }
+function zoneN(z, nx, nz) { const r = ((z.rot || 0) * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); return [nx * c + nz * s, -nx * s + nz * c]; }
+function zoneLocal(z, x, zz) { const r = ((z.rot || 0) * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r), dx = x - z.x, dz = zz - z.z; return [dx * c - dz * s, dx * s + dz * c]; }
+function inZone(z, x, zz) { const [lx, lz] = zoneLocal(z, x, zz); return Math.abs(lx) <= z.w / 2 && Math.abs(lz) <= z.d / 2; }
+// 疊在一起時：整片地板在最下面，其次大的在下、小的在上（點選時優先選到上面那個）
+function zonesInOrder() { return state.zones.slice().sort((a, b) => ((a.type === 'floor' ? 0 : 1) - (b.type === 'floor' ? 0 : 1)) || (b.w * b.d - a.w * a.d)); }
 function zoneLayout(z) {
-  const x0 = z.x - z.w / 2, x1 = z.x + z.w / 2, z0 = z.z - z.d / 2, z1 = z.z + z.d / 2;
+  const hw = z.w / 2, hd = z.d / 2, C = (x, y) => zoneW(z, x, y), N = (x, y) => zoneN(z, x, y);
   const P = outlinePoly();
+  const mk = (k, a, b, n) => ({ k, a, b, nx: n[0], nz: n[1] });
   const sides = [
-    { k: 'n', a: [x0, z0], b: [x1, z0], nx: 0, nz: -1 }, { k: 'e', a: [x1, z0], b: [x1, z1], nx: 1, nz: 0 },
-    { k: 's', a: [x1, z1], b: [x0, z1], nx: 0, nz: 1 }, { k: 'w', a: [x0, z1], b: [x0, z0], nx: -1, nz: 0 },
+    mk('n', C(-hw, -hd), C(hw, -hd), N(0, -1)), mk('e', C(hw, -hd), C(hw, hd), N(1, 0)),
+    mk('s', C(hw, hd), C(-hw, hd), N(0, 1)), mk('w', C(-hw, hd), C(-hw, -hd), N(-1, 0)),
   ];
+  const cs = sides.map((sd) => sd.a), x0 = Math.min(...cs.map((q) => q[0])), x1 = Math.max(...cs.map((q) => q[0])), z0 = Math.min(...cs.map((q) => q[1])), z1 = Math.max(...cs.map((q) => q[1]));
   const B = hallBounds(), cx = (B.x0 + B.x1) / 2, cz = (B.z0 + B.z1) / 2;
   for (const s of sides) {
     s.len = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]);
@@ -1711,12 +1802,13 @@ function zoneLayout(z) {
     s.score = (s.nx * (cx - z.x) + s.nz * (cz - z.z)) / (Math.hypot(cx - z.x, cz - z.z) || 1);
   }
   const open = sides.filter((s) => !s.onWall);
-  const door = zoneWalls(z) !== 'open' && open.length ? open.slice().sort((a, b) => b.score - a.score)[0] : null;
+  const want = z.door && open.find((sd) => sd.k === z.door);
+  const door = zoneWalls(z) !== 'open' && open.length ? (want || open.slice().sort((a, b) => b.score - a.score)[0]) : null;
   const dw = z.type === 'storage' ? 1.6 : 1.0;
   if (door) { const c = door.len / 2; door.door = [Math.max(0.2, c - dw / 2), Math.min(door.len - 0.2, c + dw / 2)]; }
   // 背面：有門就是門的對面；開放區域靠外牆那面，不然是離館內中心最遠的那面
   const back = door ? sides[(sides.indexOf(door) + 2) % 4] : (sides.find((s) => s.onWall) || sides.slice().sort((a, b) => a.score - b.score)[0]);
-  return { sides, door, back, x0, x1, z0, z1 };
+  return { sides, door, back, x0, x1, z0, z1, corners: cs };
 }
 function zoneGlassLen() {
   let clear = 0, frost = 0;
@@ -1726,21 +1818,47 @@ function zoneGlassLen() {
   }
   return { clear, frost };
 }
+// 自由畫的牆：實心（粉刷）、玻璃（框料＋玻璃）、半牆、圍網
+function buildPartitions() {
+  for (const w of state.walls || []) {
+    const g = new THREE.Group(); g.userData.wallId = w.id; zonesGroup.add(g);
+    const [ax, az] = w.a, [bx, bz] = w.b, len = Math.hypot(bx - ax, bz - az), H = Math.min(w.h, state.building.H + 0.9);
+    if (w.kind === 'solid' || w.kind === 'half') {
+      wallBox(g, plasterMat, ax, az, bx, bz, H, 0.15);
+      wallBox(g, steelMat, ax, az, bx, bz, 0.1, 0.17).userData.noInk = true;
+    } else if (w.kind === 'glass') {
+      const pane = wallBox(g, glassMat, ax, az, bx, bz, H - 0.1, 0.025, 0.05); pane.userData.noInk = true; pane.renderOrder = 2;
+      wallBox(g, frameMat, ax, az, bx, bz, 0.06, 0.06, 0); wallBox(g, frameMat, ax, az, bx, bz, 0.06, 0.06, H - 0.06);
+      const n = Math.max(1, Math.round(len / 1.2));
+      for (let k = 0; k <= n; k++) box(g, 0.05, H, 0.06, frameMat, ax + ((bx - ax) * k) / n, 0, az + ((bz - az) * k) / n);
+    } else {
+      const t = netTexture('white').clone(); t.needsUpdate = true; t.repeat.set(len / 1.5, H / 1.5);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(len, H), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+      m.position.set((ax + bx) / 2, H / 2, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(m);
+      for (const [px, pz] of [[ax, az], [bx, bz]]) cyl(g, 0.03, 0.03, H, darkSteel, px, 0, pz);
+    }
+    colliders.push([ax, az, bx, bz]);
+  }
+}
 function buildZones() {
   disposeGroup(zonesGroup);
   const H = 2.7;
-  state.zones.forEach((z, zi) => {
+  zonesInOrder().forEach((z, zi) => {
     const Z = ZONES[z.type], g = new THREE.Group(); g.userData.zoneId = z.id; zonesGroup.add(g);
     const lay = zoneLayout(z);
     // 地坪
     const fm = FLOOR_MATS[zoneFloor(z)] || FLOOR_MATS.concrete;
     const geo = new THREE.PlaneGeometry(z.w, z.d);
-    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (lay.x0 + uv.getX(i) * z.w), -(lay.z1 - uv.getY(i) * z.d));
+    // UV 用世界公尺：區域轉了角度，地板紋路還是對齊同一個方向
+    const pos = geo.attributes.position, uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) { const [wx, wz] = zoneW(z, pos.getX(i), -pos.getY(i)); uv.setXY(i, wx, -wz); }
     const fl = new THREE.Mesh(geo, fm.clone());
-    fl.material.polygonOffset = true; fl.material.polygonOffsetFactor = -2 - zi * 0.1; fl.material.polygonOffsetUnits = -2;
-    fl.rotation.x = -Math.PI / 2; fl.position.set(z.x, 0.008, z.z); fl.receiveShadow = true; fl.userData.noInk = true; g.add(fl);
+    // 整片地板墊在球場底下（球場線畫在它上面），其他區域蓋在球場之上
+    const under = z.type === 'floor';
+    fl.material.polygonOffset = true; fl.material.polygonOffsetFactor = under ? -0.5 : -2 - zi * 0.3; fl.material.polygonOffsetUnits = under ? -0.5 : -2 - zi;
+    fl.rotation.set(-Math.PI / 2, 0, ((z.rot || 0) * Math.PI) / 180); fl.position.set(z.x, (under ? 0.003 : 0.006) + zi * 0.0007, z.z); fl.receiveShadow = true; fl.userData.noInk = true; g.add(fl);
     // 邊框：開放區域在地上畫一圈細黑線（地坪分界條）
-    const rim = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([[lay.x0, lay.z0], [lay.x1, lay.z0], [lay.x1, lay.z1], [lay.x0, lay.z1]].map(([x, zz]) => new THREE.Vector3(x, 0.02, zz))), inkSoft);
+    const rim = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(lay.corners.map(([x, zz]) => new THREE.Vector3(x, 0.02, zz))), inkSoft);
     rim.userData.ink = true; g.add(rim);
     const zw = zoneWalls(z);
     if (zw === 'solid' || zw === 'net') {
@@ -1784,9 +1902,10 @@ function buildZones() {
         }
       }
     }
-    if (!z.bare) zoneDecor(g, z, lay);
-    tag(g, zoneName(z), zw !== 'open' ? H + 0.35 : 0.6, 'zone', z.x, z.z).userData.zoneTag = true;
+    if (!z.bare && z.type !== 'floor') zoneDecor(g, z, lay);
+    if (z.type !== 'floor') tag(g, zoneName(z), zw !== 'open' ? H + 0.35 : 0.6, 'zone', z.x, z.z).userData.zoneTag = true;
   });
+  buildPartitions();
   inkify(zonesGroup);
 }
 // 區域裡的固定設施（不計價，只是讓 3D 看得出用途）；back = 離門最遠的那面
@@ -1932,7 +2051,7 @@ function computeChecks() {
     if (overlap(footprint(a), footprint(b), 0.05)) warns.push({ id: b.id, level: 'bad', text: `${labelOf(a)}和${labelOf(b)}的緩衝區重疊（另一面改成「只畫線」就能疊在一起）` });
   }
   // 區域：超出建物、壓到球場緩衝區、彼此重疊
-  const zRect = (z) => corners(z.x, z.z, z.w, z.d, 0);
+  const zRect = (z) => corners(z.x, z.z, z.w, z.d, z.rot || 0);
   state.zones.forEach((z, i) => {
     if (!inside(zRect(z))) warns.push({ zid: z.id, level: 'bad', text: `${zoneName(z)}超出廠房範圍` });
     for (const c of solidCourts) if (overlap(zRect(z), footprint(c), 0.05)) { warns.push({ zid: z.id, level: 'bad', text: `${zoneName(z)}壓到${labelOf(c)}的緩衝區` }); break; }
@@ -2002,12 +2121,18 @@ function syncBuildingInputs() {
 }
 function renderPalette() {
   const root = $('palette'); root.textContent = '';
+  const q = document.createElement('input'); q.type = 'search'; q.id = 'pal-search'; q.placeholder = '搜尋元件，例如：冷氣、置物櫃'; q.className = 'pal-search';
+  root.appendChild(q);
+  const groups = [];
   for (const grp of GROUPS) {
-    const wrap = document.createElement('div'); wrap.className = 'pal-group';
-    const t = document.createElement('div'); t.className = 'pal-title'; t.textContent = grp;
+    const wrap = document.createElement('details'); wrap.className = 'pal-group'; wrap.open = grp === '球場與比賽' || grp === '座椅與休息';
+    const t = document.createElement('summary'); t.className = 'pal-title';
     const grid = document.createElement('div'); grid.className = 'pal';
+    let n = 0;
+    groups.push(wrap);
     for (const [type, def] of Object.entries(CAT)) {
       if (def.group !== grp) continue;
+      n++;
       const b = document.createElement('button'); b.type = 'button'; b.id = 'add-' + type;
       const bb = document.createElement('b');
       const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = def.color;
@@ -2016,10 +2141,20 @@ function renderPalette() {
       sp.textContent = def.diam ? `Ø${def.w} m` : def.wall ? '掛在牆上' : def.ceiling ? (type === 'camera' ? '掛在牆上' : '掛在天花板') : `${def.w}×${def.d} m`;
       b.append(bb, sp);
       b.addEventListener('click', () => addItem(type));
+      b.dataset.q = def.label;
       grid.appendChild(b);
     }
+    t.innerHTML = `${grp}<span>${n}</span>`;
     wrap.append(t, grid); root.appendChild(wrap);
   }
+  q.addEventListener('input', () => {
+    const v = q.value.trim();
+    for (const g of groups) {
+      let hit = 0;
+      for (const b of g.querySelectorAll('button')) { const ok = !v || b.dataset.q.includes(v); b.hidden = !ok; if (ok) hit++; }
+      g.hidden = !!v && !hit; if (v && hit) g.open = true;
+    }
+  });
 }
 function addItem(type) {
   const def = CAT[type];
@@ -2037,7 +2172,7 @@ function addItem(type) {
 }
 function select(id) {
   selectedId = id;
-  if (id) selZoneId = null;
+  if (id) { selZoneId = null; selWallId = null; }
   updateOutline();
   renderSelection();
   if (typeof renderZoneSel === 'function' && typeof mode !== 'undefined') { renderZoneSel(); planToolState(); if (mode === 'plan') renderPlan(); }
@@ -2112,6 +2247,7 @@ function renderSelection() {
   lockBtn.setAttribute('aria-pressed', it.locked ? 'true' : 'false');
   mkBtn('sel-rot90', '旋轉 90°', () => rotateSel(90)).disabled = !!it.locked;
   mkBtn('sel-rot15', '旋轉 15°', () => rotateSel(15)).disabled = !!it.locked;
+  { const f = numField('sel-rotdeg', '角度（°）', it.rot, 15, (v) => { if (it.locked) return lockedMsg(); pushHistory(); it.rot = ((v % 360) + 360) % 360; moveObj(it); updateOutline(); commit(); renderSelection(); }); f.style.maxWidth = '140px'; wrap.appendChild(f); }
   mkBtn('sel-dup', '複製', duplicateSel);
   mkBtn('sel-del', '刪除', deleteSel, 'danger').disabled = !!it.locked;
   wrap.appendChild(row);
@@ -2200,9 +2336,9 @@ function renderSaved() {
   const m = savedMatch();
   $('save-status').textContent = m ? (isDirty() ? `目前：${m.name}（有還沒存的修改）` : `目前：${m.name}（已存）`) : '目前的配置還沒存成方案';
   $('btn-update').hidden = !m;
-  $('btn-save').disabled = readOnly || !artifactNS; $('btn-update').disabled = readOnly || !artifactNS;
+  $('btn-save').disabled = readOnly; $('btn-update').disabled = readOnly;
   $('save-note').textContent = !artifactNS
-    ? '這個檢視不能存到共用方案；你的配置會先存在這台裝置上，也可以用「複製方案代碼」傳給別人。'
+    ? '方案存在這台裝置的瀏覽器裡（換電腦或清除瀏覽資料就不見）；要給別人，用「複製方案代碼」。'
     : readOnly ? '這個連結只能看，不能存到共用方案。設計好之後按「複製方案代碼」，把代碼傳給可以編輯的人。'
     : '存成方案後，打開這一頁的合夥人都看得到；存檔後頁面會重新載入。';
   const ul = $('saved-list'); ul.textContent = '';
@@ -2215,7 +2351,7 @@ function renderSaved() {
     const load = document.createElement('button'); load.type = 'button'; load.id = 'load-' + s.id; load.textContent = '打開';
     load.addEventListener('click', () => { pushHistory(); state = sanitize({ ...s.data, id: s.id }); selectedId = null; selZoneId = null; fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); toast(`已打開「${s.name}」`); });
     row.appendChild(load);
-    if (artifactNS && !readOnly) {
+    if ((artifactNS && !readOnly) || (!artifactNS && !EMBED_IDS.has(s.id))) {
       const del = document.createElement('button'); del.type = 'button'; del.id = 'del-' + s.id; del.className = 'danger';
       del.textContent = confirmDelete === s.id ? '確定刪除' : '刪除';
       del.addEventListener('click', () => {
@@ -2246,7 +2382,12 @@ function buildPageHtml(designs) {
     + '<script type="module" id="app-script">' + SRC.script + close + '\n</body></html>';
 }
 async function publishDesigns(next, keepState, okMsg) {
-  if (!artifactNS || readOnly) return;
+  if (!artifactNS) {
+    try { localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(next.filter((x) => !EMBED_IDS.has(x.id)))); }
+    catch (e) { toast('存不進去：瀏覽器的儲存空間滿了或被關閉'); return; }
+    SAVED = next; state.id = keepState.id || null; renderSaved(); toast(okMsg + '（存在這台裝置）'); return;
+  }
+  if (readOnly) return;
   try { sessionStorage.setItem(STASH_KEY, JSON.stringify(keepState)); } catch (e) { /* ignore */ }
   for (const b of [$('btn-save'), $('btn-update')]) b.disabled = true;
   toast('存檔中…', 8000);
@@ -2309,10 +2450,28 @@ function undo() {
   if (!prev) return;
   state = sanitize(JSON.parse(prev)); if (!state.items.some((i) => i.id === selectedId)) selectedId = null;
   if (!state.zones.some((z) => z.id === selZoneId)) selZoneId = null;
+  if (!(state.walls || []).some((w) => w.id === selWallId)) selWallId = null;
   fullRefresh(); renderZoneSel(); planToolState();
 }
 let draftTimer = 0;
-function saveDraftSoon() { clearTimeout(draftTimer); if (window.__venueId) return; draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
+// 自動存檔：候選場地存到該場地、現有球館存到該球館、自由規劃存成草稿；改完 0.4 秒存，離開頁面前再存一次
+let draftDirty = false;
+const VENUE_KEY = (id) => 'vb.venue.' + id;
+function saveNow() {
+  if (!state || !draftDirty) return;
+  draftDirty = false;
+  let ok = true;
+  try {
+    if (window.__venueId) localStorage.setItem(VENUE_KEY(window.__venueId), JSON.stringify({ data: designData(), savedAt: new Date().toISOString() }));
+    else if (window.__siteId) { if (window.__generating || typeof saveHall !== 'function') return; saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); }
+    else localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id }));
+  } catch (e) { ok = false; }
+  const el = $('autosave');
+  if (el) { el.textContent = ok ? `已自動存檔 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}（存在這台裝置）` : '自動存檔失敗：瀏覽器不讓網站存資料（無痕模式？）'; el.dataset.kind = ok ? 'ok' : 'warn'; }
+}
+function saveDraftSoon() { draftDirty = true; clearTimeout(draftTimer); draftTimer = setTimeout(saveNow, 400); }
+addEventListener('pagehide', saveNow);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
 function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); buildZones(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 // ---------------------------------------------------------------- camera
@@ -2628,12 +2787,12 @@ async function generateFromSite(id, opts = {}) {
   gen.classList.add('hide');
   toast('球館生成好了：先在平面圖調整區域，再按「加入 3D 元件」', 6000);
 }
-const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "標準規格每面 450 ㎡、精簡 360 ㎡；只含材料", "options": [{"id": "p0", "name": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "price": 480, "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "4.5 mm 捲材，可依尺寸訂製"}, {"id": "p1", "name": "PVC 運動地膠", "brand": "心語家居（網拍）", "price": 423, "link": "https://shopee.tw/product/24532501/55253897635", "note": "4.5 mm"}, {"id": "p2", "name": "PVC 運動地膠", "brand": "MM 居家（網拍）", "price": 419, "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm，10 ㎡ 起訂"}, {"id": "p3", "name": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "price": 650, "link": "https://www.pro360.com.tw/price/pu_floor", "note": "室內 PU 層，不含底層與面材"}, {"id": "p4", "name": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "price": null, "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "國際品牌運動地板捲材"}, {"id": "p5", "name": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "price": null, "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "原廠稱自 1976 年起為奧運地板供應商"}], "def": "p0"}, "net": {"label": "網柱（每面 1 組）", "unit": "組", "qnote": "", "options": [{"id": "p7", "name": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "price": 43500, "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p8", "name": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "price": 31500, "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p9", "name": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "price": 17680, "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": "材質未標示"}, {"id": "p10", "name": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "price": 14800, "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "一組，不含運費"}], "def": "p8"}, "balls": {"label": "球具（每面一套）", "unit": "套", "qnote": "", "options": [{"id": "b-full", "name": "比賽球 ×12＋練習球 ×20＋球車 ×2", "brand": "MIKASA V200W／SUCCESS 4035／5Cgo", "price": 41700, "link": "https://tw.bid.yahoo.com/item/101034460886", "note": ""}, {"id": "b-lite", "name": "練習球 ×30＋球車 ×2（不買比賽球）", "brand": "SUCCESS 4035／5Cgo", "price": 11050, "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": ""}], "def": "b-full"}, "light": {"label": "LED 天井燈", "unit": "盞", "qnote": "", "options": [{"id": "p16", "name": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "price": 4180, "link": "https://biggo.com.tw/s/天井燈+200w", "note": "瓦數可調"}, {"id": "p17", "name": "LED 天井燈 200 W", "brand": "億光 星辰", "price": 5300, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p18", "name": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "price": 6930, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p19", "name": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "price": 3370, "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "內建風扇，保固 1 年"}, {"id": "p20", "name": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "price": 3920, "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "價格區間 2,890–3,920"}], "def": "p16"}, "fan": {"label": "吊扇", "unit": "台", "qnote": "", "options": [{"id": "p21", "name": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "price": 36675, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}, {"id": "p22", "name": "巨型工業吊扇 100 吋", "brand": "宅造印象", "price": 31999, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}], "def": "p21"}, "aed": {"label": "AED", "unit": "台", "qnote": "壁掛收納箱另計約 8,000", "options": [{"id": "p24", "name": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "price": 65000, "link": "https://uptogo.com.tw/?p=160809", "note": "國產，區間 6.5–7 萬"}, {"id": "p25", "name": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "price": 70000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 7–8 萬"}, {"id": "p26", "name": "AED", "brand": "Philips HeartStart", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p27", "name": "AED", "brand": "Defibtech Lifeline", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p28", "name": "AED", "brand": "LIFEPAK CR2", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–15 萬"}], "def": "p24"}, "sofa": {"label": "沙發", "unit": "張", "qnote": "", "options": [{"id": "s0", "name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "note": "耐磨合成皮"}, {"id": "s1", "name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "note": "半皮"}, {"id": "s2", "name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "note": "耐磨合成皮"}, {"id": "s3", "name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "note": "貓抓皮"}, {"id": "s4", "name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s5", "name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s6", "name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "note": "皮革"}, {"id": "s7", "name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "link": "https://www.momoshop.com.tw/product/14325651", "note": "貓抓布（防潑水）"}, {"id": "s8", "name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "note": "布"}, {"id": "s9", "name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "note": "布"}], "def": "s0"}, "aircon": {"label": "冷氣", "unit": "台", "qnote": "台數以冷氣廠商負荷計算為準", "options": [{"id": "tbd", "name": "工業用冷氣（依負荷計算）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "fire": {"label": "消防設備（滅火器、緊急照明、指示燈、偵煙器）", "unit": "個", "qnote": "數量以消防設計為準", "options": [{"id": "tbd", "name": "消防設備（依設備師設計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "crashpad": {"label": "防撞墊", "unit": "m", "qnote": "依牆面長度", "options": [{"id": "tbd", "name": "牆面防撞墊", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "firstaid": {"label": "急救箱", "unit": "個", "qnote": "", "options": [{"id": "tbd", "name": "急救箱（含冰敷、繃帶）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "cctv": {"label": "監視器", "unit": "支", "qnote": "", "options": [{"id": "tbd", "name": "監視器（含錄影主機另計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "heater": {"label": "熱水器", "unit": "台", "qnote": "", "options": [{"id": "tbd", "name": "熱水器（淋浴用）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "panel": {"label": "配電與迴路", "unit": "式", "qnote": "", "options": [{"id": "tbd", "name": "配電盤、分迴路施工", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "camera": {"label": "智慧球場攝影機", "unit": "支", "qnote": "每面球場 1 支，掛牆", "options": [{"id": "c4k", "name": "4K PoE 槍型網路攝影機", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}, {"id": "cpanel", "name": "AI 運動攝影機（自動追球、剪精華）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}], "def": "c4k"}};
+const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "標準規格每面 450 ㎡、精簡 360 ㎡；只含材料", "options": [{"id": "ig-pvc", "name": "PVC 排球地墊 7 mm（國際賽同類）", "brand": "價格區間 1,100–1,540 元／㎡（取低價）", "price": 1100, "link": "https://www.instagram.com/p/CUEmE5vvqQo/", "note": "IG lovetaiwanvolleyball 整理（資料來源：昂陞體育）"}, {"id": "ig-tile", "name": "拼裝式排球地墊（約 30×30 cm 一塊）", "brand": "每塊 150–1,245 元，約 11 塊／㎡（取低價）", "price": 1650, "link": "https://www.instagram.com/p/CUEmE5vvqQo/", "note": "價格因品質差異很大"}, {"id": "ig-wood", "name": "實木地板（楓木／櫸木）", "brand": "約 2,700 元／㎡", "price": 2700, "link": "https://www.instagram.com/p/CUEmE5vvqQo/", "note": "不能拆移、怕潮濕與陽光直射、需定期保養"}, {"id": "p0", "name": "PVC 運動地膠（寶石紋）", "brand": "宜悅家居（網拍）", "price": 480, "link": "https://www.rakuten.com.tw/shop/mengli005/product/e6z82c2oi/", "note": "4.5 mm 捲材，可依尺寸訂製"}, {"id": "p1", "name": "PVC 運動地膠", "brand": "心語家居（網拍）", "price": 423, "link": "https://shopee.tw/product/24532501/55253897635", "note": "4.5 mm"}, {"id": "p2", "name": "PVC 運動地膠", "brand": "MM 居家（網拍）", "price": 419, "link": "https://shopee.tw/product/1712019576/45606880245", "note": "3.5 mm，10 ㎡ 起訂"}, {"id": "p3", "name": "PU 運動地坪（PU 層）", "brand": "PRO360 師傅報價行情", "price": 650, "link": "https://www.pro360.com.tw/price/pu_floor", "note": "室內 PU 層，不含底層與面材"}, {"id": "p4", "name": "專業 PVC 運動地板", "brand": "Enlio 英利奧", "price": null, "link": "https://www.tcvfloor.com.tw/pdt106101.html", "note": "國際品牌運動地板捲材"}, {"id": "p5", "name": "專業 PVC 運動地板", "brand": "Gerflor Taraflex", "price": null, "link": "https://www.gerflor.co.uk/pages/taraflex-champions-sports-flooring", "note": "原廠稱自 1976 年起為奧運地板供應商"}], "def": "p0"}, "net": {"label": "網柱（每面 1 組）", "unit": "組", "qnote": "", "options": [{"id": "p7", "name": "移動式比賽排球柱（不鏽鋼管、大滾輪）", "brand": "必成體育", "price": 43500, "link": "https://www.findprice.com.tw/go/bvecxgf6h29/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p8", "name": "移動式比賽排球柱（鋁管、大滾輪）", "brand": "必成體育", "price": 31500, "link": "https://www.findprice.com.tw/go/bbmtrwjsksk/?s=0&t=5&f=d&k=排球柱", "note": "一組，下單前需先詢問"}, {"id": "p9", "name": "多功能比賽排球柱（移動式）", "brand": "【專業器材】", "price": 17680, "link": "https://www.findprice.com.tw/go/b8rt27qxs7v/?s=0&t=5&f=d&k=排球柱", "note": "材質未標示"}, {"id": "p10", "name": "不鏽鋼排球柱（7.6 cm 管徑）", "brand": "miracleshen", "price": 14800, "link": "https://www.findprice.com.tw/go/bq3nmqu9fnv/?s=0&t=5&f=d&k=排球柱", "note": "一組，不含運費"}], "def": "p8"}, "balls": {"label": "球具（每面一套）", "unit": "套", "qnote": "", "options": [{"id": "b-full", "name": "比賽球 ×12＋練習球 ×20＋球車 ×2", "brand": "MIKASA V200W／SUCCESS 4035／5Cgo", "price": 41700, "link": "https://tw.bid.yahoo.com/item/101034460886", "note": ""}, {"id": "b-lite", "name": "練習球 ×30＋球車 ×2（不買比賽球）", "brand": "SUCCESS 4035／5Cgo", "price": 11050, "link": "https://tw.buy.yahoo.com/gdsale/SUCCESS-成功-5號一般排球-個-4035-11914929.html", "note": ""}], "def": "b-full"}, "light": {"label": "LED 天井燈", "unit": "盞", "qnote": "", "options": [{"id": "p16", "name": "LED 天井燈（撥碼 120–200 W）", "brand": "舞光 戰神 D-HBCS200DP", "price": 4180, "link": "https://biggo.com.tw/s/天井燈+200w", "note": "瓦數可調"}, {"id": "p17", "name": "LED 天井燈 200 W", "brand": "億光 星辰", "price": 5300, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p18", "name": "LED 天井燈 200 W", "brand": "舞光 飛艦 D-HBAS200D", "price": 6930, "link": "https://biggo.com.tw/s/天井燈+200w", "note": ""}, {"id": "p19", "name": "LED 天井燈 150 W", "brand": "台灣歐日光電 BA150C", "price": 3370, "link": "https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=9462891", "note": "內建風扇，保固 1 年"}, {"id": "p20", "name": "LED 天井燈 100／150／200 W", "brand": "Everlight 億光", "price": 3920, "link": "https://www.momoshop.com.tw/TP/TP0007295/goodsDetail/TP00072950000083", "note": "價格區間 2,890–3,920"}], "def": "p16"}, "fan": {"label": "吊扇", "unit": "台", "qnote": "", "options": [{"id": "p21", "name": "DC 吊扇 100 吋（約 2.5 m）", "brand": "VENTO MEGA", "price": 36675, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}, {"id": "p22", "name": "巨型工業吊扇 100 吋", "brand": "宅造印象", "price": 31999, "link": "https://feebee.com.tw/s/大型工業吊扇/", "note": ""}], "def": "p21"}, "aed": {"label": "AED", "unit": "台", "qnote": "壁掛收納箱另計約 8,000", "options": [{"id": "p24", "name": "AED", "brand": "凱樂斯 HeartPlus II NT-381", "price": 65000, "link": "https://uptogo.com.tw/?p=160809", "note": "國產，區間 6.5–7 萬"}, {"id": "p25", "name": "AED", "brand": "NANOOM HeartPlus／HeartResQ", "price": 70000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 7–8 萬"}, {"id": "p26", "name": "AED", "brand": "Philips HeartStart", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p27", "name": "AED", "brand": "Defibtech Lifeline", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–10 萬"}, {"id": "p28", "name": "AED", "brand": "LIFEPAK CR2", "price": 80000, "link": "https://uptogo.com.tw/?p=160809", "note": "區間 8–15 萬"}], "def": "p24"}, "sofa": {"label": "沙發", "unit": "張", "qnote": "", "options": [{"id": "s0", "name": "N shield 耐磨皮革 L 型沙發床 Noark", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210410_01.htm", "note": "耐磨合成皮"}, {"id": "s1", "name": "半皮 3 人座沙發 CAPUCCINO DBR", "brand": "NITORI 宜得利", "price": 17100, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1121492_01.htm", "note": "半皮"}, {"id": "s2", "name": "N shield 耐磨皮革沙發床 ROCK S BK", "brand": "NITORI 宜得利", "price": 9990, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1210392_01.htm", "note": "耐磨合成皮"}, {"id": "s3", "name": "柔韌貓抓皮獨立筒沙發「微笑」", "brand": "IHouse", "price": 15170, "link": "https://www.findprice.com.tw/g/IHouse%20%E5%BE%AE%E7%AC%91%20%E8%B2%93%E6%8A%93%E7%9A%AE%E6%B2%99%E7%99%BC", "note": "貓抓皮"}, {"id": "s4", "name": "貝蒂三人座貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 16687, "link": "https://www.findprice.com.tw/g/ASSARI%20%E8%B2%9D%E8%92%82%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s5", "name": "四人座奧斯曼透氣貓抓皮獨立筒沙發", "brand": "ASSARI", "price": 21659, "link": "https://www.findprice.com.tw/g/ASSARI%20%E5%A5%A7%E6%96%AF%E6%9B%BC%20%E8%B2%93%E6%8A%93%E7%9A%AE", "note": "貓抓皮"}, {"id": "s6", "name": "忍者武藏皮革沙發（單＋雙＋三人）", "brand": "Musashi", "price": 12999, "link": "https://www.findprice.com.tw/g/Musashi%20%E5%BF%8D%E8%80%85%E6%AD%A6%E8%97%8F%20%E6%B2%99%E7%99%BC", "note": "皮革"}, {"id": "s7", "name": "3 人電動可躺式沙發 UM01（貓抓布）", "brand": "NITORI 宜得利", "price": 26910, "link": "https://www.momoshop.com.tw/product/14325651", "note": "貓抓布（防潑水）"}, {"id": "s8", "name": "布沙發 N-DOLCE（2 人）", "brand": "NITORI 宜得利", "price": 9600, "link": "https://www.nitori-net.tw/Goods/ItemDetail_1123458_01.htm", "note": "布"}, {"id": "s9", "name": "北歐網紅布藝沙發 三人位", "brand": "琦琦家居", "price": 8815, "link": "https://www.findprice.com.tw/g/%E5%8C%97%E6%AD%90%E5%B8%83%E8%97%9D%E6%B2%99%E7%99%BC%20%E4%B8%89%E4%BA%BA", "note": "布"}], "def": "s0"}, "aircon": {"label": "冷氣", "unit": "台", "qnote": "台數以冷氣廠商負荷計算為準", "options": [{"id": "tbd", "name": "工業用冷氣（依負荷計算）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "fire": {"label": "消防設備（滅火器、緊急照明、指示燈、偵煙器）", "unit": "個", "qnote": "數量以消防設計為準", "options": [{"id": "tbd", "name": "消防設備（依設備師設計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "crashpad": {"label": "防撞墊", "unit": "m", "qnote": "依牆面長度", "options": [{"id": "tbd", "name": "牆面防撞墊", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "firstaid": {"label": "急救箱", "unit": "個", "qnote": "", "options": [{"id": "tbd", "name": "急救箱（含冰敷、繃帶）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "cctv": {"label": "監視器", "unit": "支", "qnote": "", "options": [{"id": "tbd", "name": "監視器（含錄影主機另計）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "heater": {"label": "熱水器", "unit": "台", "qnote": "", "options": [{"id": "tbd", "name": "熱水器（淋浴用）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "panel": {"label": "配電與迴路", "unit": "式", "qnote": "", "options": [{"id": "tbd", "name": "配電盤、分迴路施工", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價，拿到報價填「自己輸入報價」"}], "def": "tbd"}, "camera": {"label": "智慧球場攝影機", "unit": "支", "qnote": "每面球場 1 支，掛牆", "options": [{"id": "c4k", "name": "4K PoE 槍型網路攝影機", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}, {"id": "cpanel", "name": "AI 運動攝影機（自動追球、剪精華）", "brand": "", "price": null, "link": "", "note": "比價清單還沒有報價"}], "def": "c4k"}};
 
 // ---------------------------------------------------------------- per-venue product picks and total cost
 // CATALOG is injected at build time from the comparison sheet (排球館報價比價清單) + the sofa list.
 const TYPE_CATS = { vb: ['floor', 'net', 'balls'], vbs: ['floor', 'net', 'balls'], vbt: ['floor', 'net', 'balls'], referee: ['net'], netwall: ['net'], ballcart: ['balls'],
-  light: ['light'], fan: ['fan'], aed: ['aed', 'firstaid'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'],
+  light: ['light'], fan: ['fan'], packac: ['aircon'], standac: ['aircon'], aed: ['aed', 'firstaid'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'],
   aircon: ['aircon'], panel: ['panel', 'aircon'], extinguisher: ['fire'], emlight: ['fire'], exitsign: ['fire'], smoke: ['fire'], crashpad: ['crashpad'], firstaid: ['firstaid', 'aed'], cctv: ['cctv'], heater: ['heater'] };
 const PICK_KEY = () => 'vb.picks.' + (window.__siteId || 'free');
 function getPicks() { try { const v = JSON.parse(localStorage.getItem(PICK_KEY()) || '{}'); return v && typeof v === 'object' ? { sel: v.sel || {}, custom: v.custom || {} } : { sel: {}, custom: {} }; } catch (e) { return { sel: {}, custom: {} }; } }
@@ -2642,7 +2801,7 @@ function crashLen() { return Math.round(state.items.filter((i) => i.type === 'cr
 function qtyOf(cat, c) {
   const courts = (c.vb || 0) + (c.vbs || 0) + (c.vbt || 0);
   return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360 + (c.vbt || 0) * 225, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0),
-    aircon: c.aircon || 0, fire: (c.extinguisher || 0) + (c.emlight || 0) + (c.exitsign || 0) + (c.smoke || 0), crashpad: crashLen(), firstaid: c.firstaid || 0, cctv: c.cctv || 0, heater: c.heater || 0, panel: c.panel || 0 }[cat] || 0;
+    aircon: (c.aircon || 0) + (c.packac || 0) + (c.standac || 0), fire: (c.extinguisher || 0) + (c.emlight || 0) + (c.exitsign || 0) + (c.smoke || 0), crashpad: crashLen(), firstaid: c.firstaid || 0, cctv: c.cctv || 0, heater: c.heater || 0, panel: c.panel || 0 }[cat] || 0;
 }
 function chosen(cat, picks) {
   const C = CATALOG[cat]; const id = picks.sel[cat] ?? C.def;
@@ -2827,6 +2986,14 @@ function buildWallItem(g, it, w, d, def) {
   } else if (t === 'smoke') {
     const y2 = state.building.H - 0.08;
     cyl(g, 0.07, 0.07, 0.05, '#F4F4F2', 0, y2, 0, null, 16);
+  } else if (t === 'wallfan') {
+    if (!kit('wall_fan', g, 0, y, 0, { rotY: Math.PI })) { cyl(g, 0.26, 0.26, 0.12, '#1F2124', 0, y - 0.06, 0.12, { transparent: true, opacity: 0.6 }).rotation.x = Math.PI / 2; }
+  } else if (t === 'exhaust') {
+    if (!kit('exhaust_fan', g, 0, y, 0, { rotY: Math.PI })) box(g, 0.64, 0.64, 0.12, '#B9BCC0', 0, y - 0.32, 0);
+  } else if (t === 'tv') {
+    if (!kit('wall_tv', g, 0, y, 0, { rotY: Math.PI, sx: w / 1.24 })) box(g, w, 0.72, 0.04, '#15181D', 0, y - 0.36, 0);
+  } else if (t === 'clock') {
+    if (!kit('wall_clock', g, 0, y, 0, { rotY: Math.PI })) cyl(g, 0.17, 0.17, 0.04, '#F4F4F2', 0, y, 0).rotation.x = Math.PI / 2;
   } else if (t === 'banner') {
     // 牆面布幕：white 白布、dark 深灰布、poster 一排海報（不放任何品牌圖案）
     const hb = def.h, tone = it.tone || 'white';
@@ -3010,14 +3177,25 @@ async function openOutline() {
   else autoOutline(site.lat, site.lng, '候選場地座標附近');
 }
 function closeOutline() { $('outline').hidden = true; }
+// 外框轉正：找最長的那道牆，把整個外框轉到那道牆是水平的（平面圖、球場、區域才不會歪一邊）；回傳轉了幾度
+function alignPoly(P) {
+  let best = null;
+  for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!best || L > best.L) best = { L, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) }; }
+  let ang = best.ang; while (ang > Math.PI / 4) ang -= Math.PI / 2; while (ang < -Math.PI / 4) ang += Math.PI / 2;
+  const c = Math.cos(-ang), sn = Math.sin(-ang);
+  let Q = P.map(([x, z]) => [x * c - z * sn, x * sn + z * c]);
+  const xs = Q.map((q) => q[0]), zs = Q.map((q) => q[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  Q = Q.map(([x, z]) => [Math.round((x - cx) * 10) / 10, Math.round((z - cz) * 10) / 10]);
+  return { P: Q, deg: (ang * 180) / Math.PI, L: Math.max(...Q.map((q) => q[0])) - Math.min(...Q.map((q) => q[0])), W: Math.max(...Q.map((q) => q[1])) - Math.min(...Q.map((q) => q[1])) };
+}
 async function applyOutline() {
   const geo = OUT.pts.map((m) => [m.getLatLng().lat, m.getLatLng().lng]);
-  const { P, L, W } = toLocal(geo);
+  const al = alignPoly(toLocal(geo).P), P = al.P, L = al.L, W = al.W;
   const H = Math.max(4, Math.min(15, Number($('ol-h').value) || 8)), roofH = Number($('ol-roof').value) || null, addr = $('ol-addr').value.trim().slice(0, 80) || null;
   closeOutline();
   pushHistory();
   window.__generating = true;
-  state = sanitize({ name: (OUT.site ? OUT.site.name : '球館') + '（真實外框）', building: { L: Math.round(L * 2) / 2, W: Math.round(W * 2) / 2, H, poly: P, geo, roofH, addr }, floor: state.floor, net: state.net, items: [] });
+  state = sanitize({ name: (OUT.site ? OUT.site.name : '球館') + '（真實外框）', building: { L: Math.round(L * 2) / 2, W: Math.round(W * 2) / 2, H, poly: P, geo, roofH, addr, north: Math.round(al.deg * 10) / 10 }, floor: state.floor, net: state.net, items: [] });
   selectedId = null; selZoneId = null; fullRefresh(); frameView('bird');
   const plan = planPoly(P);
   if (plan) plan.items.forEach(([x, z], i) => state.items.push(sanitize({ items: [{ type: plan.type, x: Math.round(x * 2) / 2, z: Math.round(z * 2) / 2, rot: plan.rot, locked: true, label: `${i + 1} 號場` }] }).items[0]));
@@ -3045,7 +3223,7 @@ function polyOf(b) {
   const L = Math.max(...xs) - Math.min(...xs), W = Math.max(...zs) - Math.min(...zs);
   if (Math.abs(L - num(b.L, 0)) > 1 || Math.abs(W - num(b.W, 0)) > 1) return {};   // size was edited by hand → back to a rectangle
   const geo = Array.isArray(b.geo) && b.geo.length === P.length ? b.geo.map((g) => [Number(g[0]), Number(g[1])]) : null;
-  return { poly: P.map((p) => [Number(p[0]), Number(p[1])]), ...(geo ? { geo } : {}), ...(Number.isFinite(b.roofH) && b.roofH > 0 ? { roofH: b.roofH } : {}), ...(typeof b.addr === 'string' && b.addr ? { addr: b.addr.slice(0, 80) } : {}) };
+  return { poly: P.map((p) => [Number(p[0]), Number(p[1])]), ...(Number.isFinite(b.north) ? { north: b.north } : {}), ...(geo ? { geo } : {}), ...(Number.isFinite(b.roofH) && b.roofH > 0 ? { roofH: b.roofH } : {}), ...(typeof b.addr === 'string' && b.addr ? { addr: b.addr.slice(0, 80) } : {}) };
 }
 initOutline();
 
@@ -3335,7 +3513,8 @@ function courtSvg(it, sel) {
   s += `<g${rotTxt}><text class="ctx" x="0" y="${M(-fd / 2 + 1.0 * fsz + 0.2)}" text-anchor="middle" style="font-size:${M(fsz)}px">${esc(labelOf(it))}${lines ? '（畫線）' : ''}</text>`;
   s += `<text class="csub mono" x="0" y="${M(-fd / 2 + 1.7 * fsz + 0.25)}" text-anchor="middle" style="font-size:${M(fsz * 0.55)}px">${k === 'vb' ? '18 × 9 m' : `${cw} × ${cd} m`}${it.locked ? ' · 已鎖定' : ''}</text></g>`;
   if (sel) s += `<rect class="selbox" x="${M(-fw / 2)}" y="${M(-fd / 2)}" width="${M(fw)}" height="${M(fd)}"/>`;
-  return s + '</g>';
+  const r = (it.rot * Math.PI) / 180, toW = (lx, lz) => [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)];
+  return s + '</g>' + (sel && !it.locked ? rotKnob(it.id, 'hi', toW, fd / 2) : '');
 }
 function itemSvg(it, sel) {
   const { w, d } = sizeOf(it), def = CAT[it.type];
@@ -3344,13 +3523,16 @@ function itemSvg(it, sel) {
   if (it.type === 'locker') for (let x = -w / 2 + 0.45; x < w / 2 - 0.1; x += 0.45) body += `<line class="fl" x1="${M(x)}" y1="${M(-d / 2)}" x2="${M(x)}" y2="${M(d / 2)}"/>`;
   if (it.type === 'netwall') body = `<line class="fnet" x1="${M(-w / 2)}" y1="0" x2="${M(w / 2)}" y2="0"/>`;
   if (sel) body += `<rect class="selbox" x="${M(-w / 2 - 0.1)}" y="${M(-d / 2 - 0.1)}" width="${M(w + 0.2)}" height="${M(d + 0.2)}"/>`;
-  return `<g class="court" data-i="${it.id}" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})">${body}</g>`;
+  const r = (it.rot * Math.PI) / 180, toW = (lx, lz) => [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)];
+  const knob = sel && !it.locked ? rotKnob(it.id, 'hi', toW, d / 2 + 0.1) : '';
+  return `<g class="court" data-i="${it.id}" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})">${body}</g>${knob}`;
 }
 function zoneSvg(z, sel) {
   const Z = ZONES[z.type], lay = zoneLayout(z), K = annoK();
   let s = `<g class="zone" data-z="${z.id}">`;
-  s += `<rect class="zf" x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}" fill="${Z.color}"/>`;
-  s += `<rect x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}" fill="url(#pz-${['deck', 'vinyl'].includes(zoneFloor(z)) ? 'wood' : zoneFloor(z) === 'pvc' ? 'concrete' : zoneFloor(z)})"/>`;
+  const poly = lay.corners.map(PT).join(' ');
+  s += `<polygon class="zf" points="${poly}" fill="${Z.color}"/>`;
+  s += `<polygon points="${poly}" fill="url(#pz-${['deck', 'vinyl'].includes(zoneFloor(z)) ? 'wood' : zoneFloor(z) === 'pvc' ? 'concrete' : zoneFloor(z)})"/>`;
   const zwPlan = zoneWalls(z);
   for (const sd of lay.sides) {
     if (sd.onWall) continue;
@@ -3391,12 +3573,32 @@ function zoneLabelSvg(z, sel) {
     s += `<text class="za mono" x="${X(z.x)}" y="${Y(cy + fs * 1.55)}" text-anchor="middle" style="font-size:${M(fs * 0.5)}px">${fmt1(area)} m² · ${fmt1(area / PING)} 坪</text>`;
   }
   if (sel) {
-    s += `<rect class="selbox" x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}"/>`;
-    const hs = 9 / pv.s;
-    for (const [k, hx, hz] of [['nw', lay.x0, lay.z0], ['n', z.x, lay.z0], ['ne', lay.x1, lay.z0], ['e', lay.x1, z.z], ['se', lay.x1, lay.z1], ['s', z.x, lay.z1], ['sw', lay.x0, lay.z1], ['w', lay.x0, z.z]]) {
+    s += `<polygon class="selbox" points="${lay.corners.map(PT).join(' ')}"/>`;
+    const hs = 9 / pv.s, hw = z.w / 2, hd = z.d / 2;
+    for (const [k, lx, lz] of [['nw', -hw, -hd], ['n', 0, -hd], ['ne', hw, -hd], ['e', hw, 0], ['se', hw, hd], ['s', 0, hd], ['sw', -hw, hd], ['w', -hw, 0]]) {
+      const [hx, hz] = zoneW(z, lx, lz);
       s += `<rect class="handle" data-h="${k}" data-hz="${z.id}" x="${X(hx - hs / 2)}" y="${Y(hz - hs / 2)}" width="${M(hs)}" height="${M(hs)}" style="pointer-events:all;stroke-width:${M(1.5 / pv.s)}px"/>`;
     }
-    s += `<text class="seldim mono" x="${X(z.x)}" y="${Y(lay.z0 - 12 / pv.s)}" text-anchor="middle" style="font-size:${M(12 / pv.s)}px">${fmt1(z.w)} × ${fmt1(z.d)} m</text>`;
+    s += rotKnob(z.id, 'hz', (lx, lz) => zoneW(z, lx, lz), hd);
+    s += `<text class="seldim mono" x="${X(z.x)}" y="${Y(z.z)}" dy="${M(-hd - 1.4 * 28 / pv.s)}" text-anchor="middle" style="font-size:${M(12 / pv.s)}px">${fmt1(z.w)} × ${fmt1(z.d)} m${z.rot ? `・${f2(z.rot)}°` : ''}</text>`;
+  }
+  return s + '</g>';
+}
+// 旋轉把手：選取框上緣中間往外一根短線＋圓點，拖它就能轉任何角度（預設每 15° 一格，按住 Shift 自由轉）
+function rotKnob(id, attr, toW, hd) {
+  const off = hd + 28 / pv.s, [tx, tz] = toW(0, -hd), [kx, kz] = toW(0, -off), r = 6 / pv.s;
+  return `<line x1="${X(tx)}" y1="${Y(tz)}" x2="${X(kx)}" y2="${Y(kz)}" stroke="#C4552A" stroke-width="${M(1.5 / pv.s)}"/><circle class="handle" data-h="rot" data-${attr}="${id}" cx="${X(kx)}" cy="${Y(kz)}" r="${M(r)}" style="pointer-events:all;cursor:grab;stroke-width:${M(1.5 / pv.s)}px"/>`;
+}
+function wallSvg(w, sel) {
+  const W2 = { solid: `stroke="#1F2430" stroke-width="${M(0.15)}"`, half: `stroke="#6F685F" stroke-width="${M(0.15)}" stroke-dasharray="${M(0.3)} ${M(0.1)}"`, glass: `stroke="#3B5C6E" stroke-width="${M(0.06)}"`, net: `class="fnet"` }[w.kind];
+  let s = `<g data-w="${w.id}" style="cursor:move"><line x1="${X(w.a[0])}" y1="${Y(w.a[1])}" x2="${X(w.b[0])}" y2="${Y(w.b[1])}" stroke="transparent" stroke-width="${M(Math.max(0.4, 14 / pv.s))}"/><line x1="${X(w.a[0])}" y1="${Y(w.a[1])}" x2="${X(w.b[0])}" y2="${Y(w.b[1])}" ${W2} stroke-linecap="square"/>`;
+  if (w.kind === 'glass') { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), nx = -(w.b[1] - w.a[1]) / L * 0.06, nz = (w.b[0] - w.a[0]) / L * 0.06; s += `<line class="g2" x1="${X(w.a[0] + nx)}" y1="${Y(w.a[1] + nz)}" x2="${X(w.b[0] + nx)}" y2="${Y(w.b[1] + nz)}"/><line class="g2" x1="${X(w.a[0] - nx)}" y1="${Y(w.a[1] - nz)}" x2="${X(w.b[0] - nx)}" y2="${Y(w.b[1] - nz)}"/>`; }
+  if (sel) {
+    const hs = 10 / pv.s;
+    s += `<line x1="${X(w.a[0])}" y1="${Y(w.a[1])}" x2="${X(w.b[0])}" y2="${Y(w.b[1])}" stroke="#C4552A" stroke-width="${M(2 / pv.s)}" stroke-dasharray="${M(6 / pv.s)} ${M(4 / pv.s)}"/>`;
+    for (const [k, q] of [['wa', w.a], ['wb', w.b]]) s += `<rect class="handle" data-h="${k}" data-hw="${w.id}" x="${X(q[0] - hs / 2)}" y="${Y(q[1] - hs / 2)}" width="${M(hs)}" height="${M(hs)}" style="pointer-events:all;cursor:crosshair;stroke-width:${M(1.5 / pv.s)}px"/>`;
+    const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
+    s += `<text class="seldim mono" x="${X((w.a[0] + w.b[0]) / 2)}" y="${Y((w.a[1] + w.b[1]) / 2)}" dy="${M(-14 / pv.s)}" text-anchor="middle" style="font-size:${M(12 / pv.s)}px">${WALL_KINDS[w.kind]} ${fmt1(L)} m</text>`;
   }
   return s + '</g>';
 }
@@ -3456,10 +3658,14 @@ function renderPlan() {
   for (const gx of xs) a(line(gx, B.z0 - 4.2 * K, gx, B.z1 + 1.2 * K, 'axis'));
   for (const gz of zs) a(line(B.x0 - 4.2 * K, gz, B.x1 + 1.2 * K, gz, 'axis'));
   // 區域、球場、家具
+  // 整片地板在最底層，球場畫在它上面，其他區域再蓋上來
+  for (const z of zonesInOrder()) if (z.type === 'floor') a(zoneSvg(z, z.id === selZoneId));
   for (const it of state.items) if (CAT[it.type].court) a(courtSvg(it, it.id === selectedId));
-  for (const z of state.zones) a(zoneSvg(z, z.id === selZoneId));
+  for (const z of zonesInOrder()) if (z.type !== 'floor') a(zoneSvg(z, z.id === selZoneId));
   for (const it of state.items) if (planItem(it) && !CAT[it.type].court) a(itemSvg(it, it.id === selectedId));
-  for (const z of state.zones) a(zoneLabelSvg(z, z.id === selZoneId));
+  for (const z of zonesInOrder()) if (z.type !== 'floor' || z.id === selZoneId) a(zoneLabelSvg(z, z.id === selZoneId));
+  for (const w of state.walls || []) a(wallSvg(w, w.id === selWallId));
+  if (planDrag && planDrag.kind === 'wdraw' && planDrag.b) a(wallSvg({ id: 'tmp', a: planDrag.a, b: planDrag.b, kind: wallKind }, true));
   for (const it of state.items) if (it.type === 'light') { const { w, d } = sizeOf(it); a(`<rect class="lamp" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})" x="${M(-w / 2)}" y="${M(-d / 2)}" width="${M(w)}" height="${M(d)}"/>`); }
   // 外牆（入口留門洞，畫兩片滑門）
   const ex = ent.e;
@@ -3522,8 +3728,8 @@ function titleBlock(x0, z0, x1, z1, K, text, line, sw) {
   // 指北＋比例尺
   z += 1.25 * K;
   const nx = x1 - 1.3 * K;
-  a(`<circle class="bub" cx="${X(nx)}" cy="${Y(z)}" r="${M(0.62 * K)}"/><polygon points="${X(nx)},${Y(z - 0.52 * K)} ${X(nx - 0.2 * K)},${Y(z + 0.3 * K)} ${X(nx)},${Y(z + 0.15 * K)}" fill="#1F2430"/><polygon points="${X(nx)},${Y(z - 0.52 * K)} ${X(nx + 0.2 * K)},${Y(z + 0.3 * K)} ${X(nx)},${Y(z + 0.15 * K)}" fill="#F8F4EC" stroke="#1F2430" stroke-width="${sw(0.012)}"/>`);
-  a(text(nx, z - 0.8 * K, 'N', 'bt mono', 0.3 * K, ' text-anchor="middle"'));
+  a(`<g transform="rotate(${-(state.building.north || 0)} ${X(nx)} ${Y(z)})"><circle class="bub" cx="${X(nx)}" cy="${Y(z)}" r="${M(0.62 * K)}"/><polygon points="${X(nx)},${Y(z - 0.52 * K)} ${X(nx - 0.2 * K)},${Y(z + 0.3 * K)} ${X(nx)},${Y(z + 0.15 * K)}" fill="#1F2430"/><polygon points="${X(nx)},${Y(z - 0.52 * K)} ${X(nx + 0.2 * K)},${Y(z + 0.3 * K)} ${X(nx)},${Y(z + 0.15 * K)}" fill="#F8F4EC" stroke="#1F2430" stroke-width="${sw(0.012)}"/>`);
+  a(text(nx, z - 0.8 * K, 'N', 'bt mono', 0.3 * K, ' text-anchor="middle"') + '</g>');
   const unit = K > 2 ? 5 : 1, seg = unit * 1;
   for (let i = 0; i < 5; i++) a(`<rect x="${X(cx + i * seg)}" y="${Y(z)}" width="${M(seg)}" height="${M(0.13 * K)}" fill="${i % 2 ? '#F8F4EC' : '#1F2430'}" stroke="#1F2430" stroke-width="${sw(0.01)}"/>`);
   for (const v of [0, 1, 2, 5]) a(text(cx + v * seg, z - 0.16 * K, v === 5 ? `${5 * unit} m` : String(v * unit), 'tk mono', 0.22 * K, ' text-anchor="middle"'));
@@ -3572,21 +3778,30 @@ function titleBlock(x0, z0, x1, z1, K, text, line, sw) {
 // ---------------------------------------------------------------- plan pointer interaction
 function hitAt(e) {
   const t = e.target;
-  const h = t.closest && t.closest('[data-h]'); if (h) return { kind: 'handle', h: h.dataset.h, id: h.dataset.hz };
+  const h = t.closest && t.closest('[data-h]');
+  if (h && h.dataset.hw) return { kind: 'whandle', h: h.dataset.h, id: h.dataset.hw };
+  if (h && h.dataset.hi) return { kind: 'irot', id: h.dataset.hi };
+  if (h && h.dataset.h === 'rot') return { kind: 'zrot', id: h.dataset.hz };
+  if (h) return { kind: 'handle', h: h.dataset.h, id: h.dataset.hz };
+  const wl = t.closest && t.closest('[data-w]'); if (wl && wl.dataset.w !== 'tmp') return { kind: 'wall', id: wl.dataset.w };
   const zi = t.closest && t.closest('[data-i]'); if (zi) return { kind: 'item', id: zi.dataset.i };
   const zz = t.closest && t.closest('[data-z]'); if (zz) return { kind: 'zone', id: zz.dataset.z };
   return null;
 }
-function selectZone(id) { selZoneId = id; if (id) { selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
-function selectPlanItem(id) { selZoneId = null; select(id); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
+let selWallId = null, wallKind = 'solid';
+function selectZone(id) { selZoneId = id; if (id) { selWallId = null; selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
+function selectWall(id) { selWallId = id; if (id) { selZoneId = null; selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); planToolState(); }
+function selectPlanItem(id) { selZoneId = null; selWallId = null; select(id); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
 function planToolState() {
+  { const P = state.building.poly; $('p-align').hidden = !(P && Math.abs(alignPoly(P).deg) >= 0.5); }
   const it = state.items.find((x) => x.id === selectedId);
   $('p-rot').disabled = !it || !!it.locked;
-  $('p-del').disabled = !(selZoneId || (it && !it.locked));
-  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw'); setPressed($('p-entry'), planTool === 'entry');
-  svgEl.classList.toggle('drawing', planTool === 'draw' || planTool === 'entry');
+  $('p-del').disabled = !(selZoneId || selWallId || (it && !it.locked));
+  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw'); setPressed($('p-entry'), planTool === 'entry'); setPressed($('p-wall'), planTool === 'wall');
+  svgEl.classList.toggle('drawing', planTool === 'draw' || planTool === 'entry' || planTool === 'wall');
   const badge = $('draw-badge');
-  badge.hidden = planTool !== 'draw' && planTool !== 'entry';
+  badge.hidden = !['draw', 'entry', 'wall'].includes(planTool);
+  if (planTool === 'wall') badge.innerHTML = `從起點拖到終點畫一道${WALL_KINDS[wallKind]}（自動對齊水平／垂直，按住 Alt 可斜畫）${Object.entries(WALL_KINDS).map(([k, l]) => `<button type="button" data-wk="${k}"${k === wallKind ? ' style="background:var(--accent);color:var(--accent-ink)"' : ''}>${l.replace(/（.*）/, '')}</button>`).join('')}<button type="button" id="draw-cancel">完成</button>`;
   if (planTool === 'draw') badge.innerHTML = `在圖上拖出「${esc(ZONES[drawType].label)}」的範圍<button type="button" id="draw-cancel">取消</button>`;
   if (planTool === 'entry') badge.innerHTML = `點外牆上要開主入口的位置${state.building.entry ? '<button type="button" id="entry-auto">自動</button>' : ''}<button type="button" id="draw-cancel">取消</button>`;
   for (const b of document.querySelectorAll('#zone-palette button')) setPressed(b, planTool === 'draw' && b.dataset.zt === drawType);
@@ -3605,6 +3820,17 @@ svgEl.addEventListener('pointerdown', (e) => {
     toast('主入口改到這面牆上了；要改回自動判斷，再按一次「設定入口」然後點「自動」'); return;
   }
   if (planTool === 'draw' && (!hit || hit.kind !== 'handle')) { planDrag = { ...base, kind: 'draw', r: null }; return; }
+  if (planTool === 'wall' && (!hit || hit.kind !== 'whandle')) { planDrag = { ...base, kind: 'wdraw', a: [snapP(w[0]), snapP(w[1])], b: null }; return; }
+  if (hit && hit.kind === 'whandle') {
+    const wl = state.walls.find((x) => x.id === hit.id); if (!wl) return;
+    planDrag = { ...base, kind: 'wend', end: hit.h === 'wa' ? 'a' : 'b', id: wl.id }; return;
+  }
+  if (hit && hit.kind === 'wall') {
+    const wl = state.walls.find((x) => x.id === hit.id); if (!wl) return;
+    if (selWallId !== hit.id) selectWall(hit.id);
+    planDrag = { ...base, kind: 'wmove', id: wl.id, orig: { a: wl.a.slice(), b: wl.b.slice() } }; return;
+  }
+  if (hit && (hit.kind === 'zrot' || hit.kind === 'irot')) { planDrag = { ...base, kind: hit.kind, id: hit.id }; return; }
   if (hit && hit.kind === 'handle') {
     const z = state.zones.find((x) => x.id === hit.id); if (!z) return;
     planDrag = { ...base, kind: 'resize', h: hit.h, id: z.id, orig: { ...z }, snap: JSON.stringify(designData()) };
@@ -3617,6 +3843,7 @@ svgEl.addEventListener('pointerdown', (e) => {
     if (selectedId !== hit.id) selectPlanItem(hit.id);
     planDrag = { ...base, kind: it && it.locked ? 'locked' : 'imove', id: hit.id, orig: it ? { x: it.x, z: it.z } : null };
   } else planDrag = { ...base, kind: 'pan', ox: pv.ox, oz: pv.oz, empty: true };
+  if (planDrag && planDrag.kind === 'pan' && selWallId) { selWallId = null; renderPlan(); renderZoneSel(); planToolState(); }
 });
 svgEl.addEventListener('pointermove', (e) => {
   if (!pointers.has(e.pointerId)) return;
@@ -3636,6 +3863,30 @@ svgEl.addEventListener('pointermove', (e) => {
     planDrag.r = { x0, x1, z0, z1 }; renderPlan(); return;
   }
   if (planDrag.kind === 'locked') return;
+  if (planDrag.kind === 'wdraw' || planDrag.kind === 'wend') {
+    const fixed = planDrag.kind === 'wdraw' ? planDrag.a : (() => { const wl = state.walls.find((x) => x.id === planDrag.id); return wl[planDrag.end === 'a' ? 'b' : 'a']; })();
+    let px = snapP(w[0]), pz = snapP(w[1]);
+    if (!e.altKey) { if (Math.abs(px - fixed[0]) >= Math.abs(pz - fixed[1])) pz = fixed[1]; else px = fixed[0]; }
+    if (planDrag.kind === 'wdraw') planDrag.b = [px, pz];
+    else { const wl = state.walls.find((x) => x.id === planDrag.id); if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; } wl[planDrag.end] = [px, pz]; }
+    renderPlan(); return;
+  }
+  if (planDrag.kind === 'wmove') {
+    const wl = state.walls.find((x) => x.id === planDrag.id); if (!wl) return;
+    if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
+    const ddx = snapP(dx), ddz = snapP(dz);
+    wl.a = [planDrag.orig.a[0] + ddx, planDrag.orig.a[1] + ddz]; wl.b = [planDrag.orig.b[0] + ddx, planDrag.orig.b[1] + ddz];
+    renderPlan(); return;
+  }
+  if (planDrag.kind === 'zrot' || planDrag.kind === 'irot') {
+    const o = planDrag.kind === 'zrot' ? state.zones.find((x) => x.id === planDrag.id) : state.items.find((x) => x.id === planDrag.id); if (!o) return;
+    if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
+    let deg = (Math.atan2(-(w[0] - o.x), -(w[1] - o.z)) * 180) / Math.PI;
+    deg = e.shiftKey ? Math.round(deg) : Math.round(deg / 15) * 15;
+    o.rot = ((deg % 360) + 360) % 360;
+    if (planDrag.kind === 'irot') moveObj(o);
+    renderPlan(); return;
+  }
   if (planDrag.kind === 'zmove') {
     const z = state.zones.find((x) => x.id === planDrag.id); if (!z) return;
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
@@ -3651,6 +3902,16 @@ svgEl.addEventListener('pointermove', (e) => {
   if (planDrag.kind === 'resize') {
     const z = state.zones.find((x) => x.id === planDrag.id), o = planDrag.orig; if (!z) return;
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
+    if (o.rot) {
+      // 轉過角度的區域：在區域自己的座標裡改大小，尺寸對齊 0.5 m
+      const r = (o.rot * Math.PI) / 180, c = Math.cos(r), sn = Math.sin(r), ldx = dx * c - dz * sn, ldz = dx * sn + dz * c, h = planDrag.h;
+      let l0 = -o.w / 2, l1 = o.w / 2, f0 = -o.d / 2, f1 = o.d / 2;
+      if (h.includes('w')) l0 = l1 - Math.max(0.5, snapP(o.w - ldx)); if (h.includes('e')) l1 = l0 + Math.max(0.5, snapP(o.w + ldx));
+      if (h.includes('n')) f0 = f1 - Math.max(0.5, snapP(o.d - ldz)); if (h.includes('s')) f1 = f0 + Math.max(0.5, snapP(o.d + ldz));
+      const cx = (l0 + l1) / 2, cz = (f0 + f1) / 2;
+      z.w = l1 - l0; z.d = f1 - f0; z.x = o.x + cx * c + cz * sn; z.z = o.z - cx * sn + cz * c;
+      renderPlan(); return;
+    }
     let x0 = o.x - o.w / 2, x1 = o.x + o.w / 2, z0 = o.z - o.d / 2, z1 = o.z + o.d / 2;
     const h = planDrag.h;
     if (h.includes('w')) x0 = Math.min(snapP(x0 + dx), x1 - 0.5);
@@ -3679,6 +3940,14 @@ function endPlanDrag(e) {
     } else { renderPlan(); if (d.moved) toast('範圍太小了，至少要 1 × 1 m'); }
     return;
   }
+  if (d.kind === 'wdraw') {
+    if (d.b && Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]) >= 0.5) {
+      pushHistory(); const wl = sanitizeWall({ a: d.a, b: d.b, kind: wallKind }); state.walls.push(wl); selWallId = wl.id; planChanged(); renderZoneSel(); planToolState();
+      toast(`已畫好一道${WALL_KINDS[wl.kind]}，長 ${fmt1(Math.hypot(wl.b[0] - wl.a[0], wl.b[1] - wl.a[1]))} m；可以接著畫下一道，畫完按「完成」`);
+    } else renderPlan();
+    return;
+  }
+  if (['wend', 'wmove', 'zrot', 'irot'].includes(d.kind) && d.pushed) { if (d.kind === 'irot') { const it = state.items.find((x) => x.id === d.id); if (it) rerenderOne(it); } planChanged(); renderZoneSel(); return; }
   if (d.kind === 'pan' && d.empty && !d.moved) { if (selZoneId || selectedId) { selZoneId = null; select(null); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); } return; }
   if (d.kind === 'locked' && d.moved) { lockedMsg(); return; }
   if ((d.kind === 'zmove' || d.kind === 'imove' || d.kind === 'resize') && d.pushed) planChanged();
@@ -3730,8 +3999,22 @@ function renderZoneSel() {
   const box = $('zone-sel'); if (!box) return;
   const z = state.zones.find((x) => x.id === selZoneId);
   const it = !z && state.items.find((x) => x.id === selectedId);
-  if (!z && !it) { box.hidden = true; box.textContent = ''; return; }
+  const wl = !z && !it && (state.walls || []).find((x) => x.id === selWallId);
+  if (!z && !it && !wl) { box.hidden = true; box.textContent = ''; return; }
   box.hidden = false;
+  if (wl) {
+    const L = Math.hypot(wl.b[0] - wl.a[0], wl.b[1] - wl.a[1]);
+    box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
+      <div class="sel-name">${WALL_KINDS[wl.kind]}<span class="unit">　長 ${fmt1(L)} m</span></div>
+      <div class="grid2"><label class="field" for="ws-kind"><span>種類</span><select id="ws-kind">${Object.entries(WALL_KINDS).map(([k, l]) => `<option value="${k}"${k === wl.kind ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="field" for="ws-h"><span>高度（m）</span><input id="ws-h" type="number" step="0.1" min="0.5" max="15" value="${f2(wl.h)}"></label></div>
+      <p class="hint">拖中間移動整道牆，拖兩端的方塊改長度與方向（按住 Alt 可以斜拉）。</p>
+      <div class="btn-row"><button type="button" class="danger" id="ws-del">刪除這道牆</button></div></div>`;
+    $('ws-kind').addEventListener('change', (e) => { pushHistory(); wl.kind = e.target.value; if (wl.kind === 'half') wl.h = 1.1; planChanged(); renderZoneSel(); });
+    $('ws-h').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); wl.h = clamp(v, 0.5, 15); planChanged(); renderZoneSel(); });
+    $('ws-del').addEventListener('click', deleteWall);
+    return;
+  }
   if (z) {
     const opts = Object.entries(ZONES).map(([k, Z]) => `<option value="${k}"${k === z.type ? ' selected' : ''}>${Z.label}</option>`).join('');
     box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
@@ -3739,28 +4022,51 @@ function renderZoneSel() {
       <div class="grid2"><label class="field" for="zs-name"><span>名稱</span><input id="zs-name" type="text" maxlength="20" value="${esc(z.name || '')}" placeholder="${esc(ZONES[z.type].label)}"></label>
       <label class="field" for="zs-type"><span>用途</span><select id="zs-type">${opts}</select></label></div>
       <div class="grid4">${[['x', 'X'], ['z', 'Z'], ['w', '寬'], ['d', '深']].map(([k, l]) => `<label class="field" for="zs-${k}"><span>${l}（m）</span><input id="zs-${k}" data-k="${k}" type="number" step="0.5" value="${f2(z[k])}" inputmode="decimal"></label>`).join('')}</div>
-      <p class="hint">${esc(ZONES[z.type].desc)}</p>
+      <div class="grid2"><label class="field" for="zs-floor"><span>地坪</span><select id="zs-floor">${ZONE_FLOORS.map((k) => `<option value="${k}"${k === zoneFloor(z) ? ' selected' : ''}>${FLOOR_LABELS[k]}</option>`).join('')}</select></label>
+      <label class="field" for="zs-walls"><span>隔間</span><select id="zs-walls">${Object.entries({ open: '開放（不隔間）', glass: '透明玻璃', frost: '霧面玻璃', solid: '實心牆（組合屋）', net: '圍網' }).map(([k, l]) => `<option value="${k}"${k === zoneWalls(z) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="grid2"><label class="field" for="zs-rot"><span>角度（°）</span><input id="zs-rot" type="number" step="15" value="${f2(z.rot || 0)}" inputmode="decimal"></label>
+      <div class="field"><span>入口在哪一邊</span><div class="seg" role="group" aria-label="入口">${[['', '自動'], ['n', '上'], ['e', '右'], ['s', '下'], ['w', '左']].map(([k, l]) => `<button type="button" data-door="${k}" aria-pressed="${(z.door || '') === k}">${l}</button>`).join('')}</div></div></div>
+      <p class="hint">${esc(z.desc || ZONES[z.type].desc)}　快捷鍵：F 換入口邊、R 轉 90°、Shift+R 轉 15°；也可以拖選取框上方的圓點自由旋轉。</p>
       <div class="btn-row"><button type="button" id="zs-dup">複製</button><button type="button" class="danger" id="zs-del">刪除區域</button></div></div>`;
     $('zs-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) z.name = v.slice(0, 20); else delete z.name; planChanged(); renderZoneSel(); });
     $('zs-type').addEventListener('change', (e) => { pushHistory(); z.type = e.target.value; planChanged(); renderZoneSel(); });
     for (const inp of box.querySelectorAll('input[data-k]')) inp.addEventListener('change', () => { const v = Number(inp.value); if (!Number.isFinite(v)) return; pushHistory(); z[inp.dataset.k] = inp.dataset.k === 'w' || inp.dataset.k === 'd' ? clamp(v, 0.5, 160) : v; planChanged(); renderZoneSel(); });
     $('zs-dup').addEventListener('click', duplicateZone);
     $('zs-del').addEventListener('click', deleteZone);
+    $('zs-floor').addEventListener('change', (e) => { pushHistory(); z.floor = e.target.value; planChanged(); renderZoneSel(); });
+    $('zs-walls').addEventListener('change', (e) => { pushHistory(); z.walls = e.target.value; planChanged(); renderZoneSel(); });
+    $('zs-rot').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); z.rot = ((v % 360) + 360) % 360; planChanged(); renderZoneSel(); });
+    for (const b of box.querySelectorAll('[data-door]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.door) z.door = b.dataset.door; else delete z.door; planChanged(); renderZoneSel(); });
   } else {
     const def = CAT[it.type];
     box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
       <div class="sel-name">${esc(labelOf(it))}<span class="unit">　${def.court ? `${def.w}×${def.d} m（含緩衝區）` : ''}旋轉 ${it.rot}°</span></div>
       <label class="field" for="is-name"><span>名稱</span><input id="is-name" type="text" maxlength="20" value="${esc(it.label || '')}" placeholder="${esc(def.label)}"></label>
       ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>` : ''}
+      <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="15" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
       <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
       ${it.locked ? '<p class="lock-note">已鎖定：不能拖曳、旋轉或刪除。按「解除鎖定」後才能在平面圖上拖。</p>' : ''}</div>`;
     $('is-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) it.label = v.slice(0, 20); else delete it.label; rerenderOne(it); commit(); renderZoneSel(); });
     for (const b of box.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.mode === 'lines') it.mode = 'lines'; else delete it.mode; renderItems(); commit(); renderZoneSel(); });
     $('is-lock').addEventListener('click', () => { toggleLockSel(); renderZoneSel(); planToolState(); renderPlan(); });
     $('is-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
+    $('is-rotdeg').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); it.rot = ((v % 360) + 360) % 360; rerenderOne(it); updateOutline(); commit(); renderZoneSel(); });
     $('is-dup').addEventListener('click', () => { duplicateSel(); renderPlan(); renderZoneSel(); });
     $('is-del').addEventListener('click', () => { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); });
   }
+}
+// 入口換邊：依序換到下一個不貼外牆的邊
+function flipDoor(z) {
+  const lay = zoneLayout(z), order = ['n', 'e', 's', 'w'], open = lay.sides.filter((sd) => !sd.onWall).map((sd) => sd.k);
+  if (!open.length) { toast('這個區域每一邊都貼著外牆，沒有地方開門'); return; }
+  const cur = lay.door ? lay.door.k : null, start = cur ? order.indexOf(cur) : -1;
+  let next = null; for (let k = 1; k <= 4; k++) { const c = order[(start + k + 4) % 4]; if (open.includes(c)) { next = c; break; } }
+  pushHistory(); z.door = next; planChanged(); renderZoneSel();
+  toast(`入口改到${({ n: '上', e: '右', s: '下', w: '左' })[next]}邊`);
+}
+function deleteWall() {
+  const i = (state.walls || []).findIndex((x) => x.id === selWallId); if (i < 0) return;
+  pushHistory(); state.walls.splice(i, 1); selWallId = null; planChanged(); renderZoneSel(); renderPlan(); planToolState(); toast('已刪除這道牆，按「復原」可以拿回來');
 }
 function duplicateZone() {
   const z = state.zones.find((x) => x.id === selZoneId); if (!z) return;
@@ -3815,10 +4121,28 @@ $('btn-add-court').addEventListener('click', () => {
 });
 $('p-select').addEventListener('click', () => setPlanTool('select'));
 $('p-draw').addEventListener('click', () => setPlanTool('draw'));
-$('draw-badge').addEventListener('click', (e) => { if (e.target.id === 'draw-cancel') setPlanTool('select'); if (e.target.id === 'entry-auto') { pushHistory(); delete state.building.entry; setPlanTool('select'); planChanged(); toast('主入口改回自動：開在櫃台貼著的那面牆'); } });
+$('draw-badge').addEventListener('click', (e) => { if (e.target.dataset && e.target.dataset.wk) { wallKind = e.target.dataset.wk; planToolState(); return; } if (e.target.id === 'draw-cancel') setPlanTool('select'); if (e.target.id === 'entry-auto') { pushHistory(); delete state.building.entry; setPlanTool('select'); planChanged(); toast('主入口改回自動：開在櫃台貼著的那面牆'); } });
 $('p-entry').addEventListener('click', () => setPlanTool(planTool === 'entry' ? 'select' : 'entry'));
+$('p-wall').addEventListener('click', () => setPlanTool(planTool === 'wall' ? 'select' : 'wall'));
+$('p-align').addEventListener('click', () => {
+  const P = state.building.poly; if (!P) return;
+  const al = alignPoly(P); if (Math.abs(al.deg) < 0.5) { toast('建物已經是正的了'); return; }
+  pushHistory();
+  // 用同一個旋轉＋位移把區域、物件、牆都搬過去
+  const xs0 = P.map((q) => q[0]), zs0 = P.map((q) => q[1]), r = (-al.deg * Math.PI) / 180, c = Math.cos(r), sn = Math.sin(r);
+  const R = ([x, z]) => [x * c - z * sn, x * sn + z * c];
+  const rp = P.map(R), rx = rp.map((q) => q[0]), rz = rp.map((q) => q[1]), cx = (Math.min(...rx) + Math.max(...rx)) / 2, cz = (Math.min(...rz) + Math.max(...rz)) / 2;
+  const T = (pt) => { const q = R(pt); return [Math.round((q[0] - cx) * 100) / 100, Math.round((q[1] - cz) * 100) / 100]; };
+  for (const o of state.items) { const q = T([o.x, o.z]); o.x = q[0]; o.z = q[1]; o.rot = (((o.rot + al.deg) % 360) + 360) % 360; }
+  for (const z of state.zones) { const q = T([z.x, z.z]); z.x = q[0]; z.z = q[1]; z.rot = ((((z.rot || 0) + al.deg) % 360) + 360) % 360; }
+  for (const w of state.walls || []) { w.a = T(w.a); w.b = T(w.b); }
+  if (state.building.entry) state.building.entry = T(state.building.entry);
+  state.building.poly = al.P; state.building.L = Math.round(al.L * 2) / 2; state.building.W = Math.round(al.W * 2) / 2;
+  state.building.north = Math.round((((state.building.north || 0) + al.deg) % 360) * 10) / 10;
+  fullRefresh(); pv.fitted = false; renderPlan(); toast(`整個建物轉了 ${fmt1(-al.deg)}°，最長的牆現在是水平的`);
+});
 $('p-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
-$('p-del').addEventListener('click', () => { if (selZoneId) deleteZone(); else { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); } });
+$('p-del').addEventListener('click', () => { if (selWallId) deleteWall(); else if (selZoneId) deleteZone(); else { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); } });
 $('p-snap').addEventListener('click', () => { snapOn = !snapOn; setPressed($('p-snap'), snapOn); setPressed($('t-snap'), snapOn); });
 $('p-undo').addEventListener('click', () => undo());
 $('z-in').addEventListener('click', () => zoomAt(1.25));
@@ -3828,7 +4152,10 @@ addEventListener('keydown', (e) => {
   if (mode !== 'plan') return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   if (e.key === 'Escape') { if (planTool === 'draw') setPlanTool('select'); else if (selZoneId) selectZone(null); return; }
+  if (selWallId && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteWall(); return; }
   const z = state.zones.find((x) => x.id === selZoneId); if (!z) return;
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); flipDoor(z); return; }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); pushHistory(); z.rot = (((z.rot || 0) + (e.shiftKey ? 15 : 90)) % 360); planChanged(); renderZoneSel(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteZone(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateZone(); }
   else if (e.key.startsWith('Arrow')) {
@@ -3944,7 +4271,8 @@ function updateWalk(dt) {
 }
 // 走到哪一區：先看畫的區域，再看球場
 function zoneAt(x, z) {
-  for (let i = state.zones.length - 1; i >= 0; i--) { const q = state.zones[i]; if (Math.abs(x - q.x) <= q.w / 2 && Math.abs(z - q.z) <= q.d / 2) return { kind: 'zone', z: q, i }; }
+  const hits = state.zones.map((q, i) => ({ q, i })).filter(({ q }) => inZone(q, x, z)).sort((a, b) => ((a.q.type === 'floor') - (b.q.type === 'floor')) || (a.q.w * a.q.d - b.q.w * b.q.d));
+  if (hits.length) return { kind: 'zone', z: hits[0].q, i: hits[0].i };
   const courts = state.items.filter((c) => CAT[c.type].court && c.mode !== 'lines');
   for (const c of courts) if (pip(x, z, footprint(c))) return { kind: 'court', c };
   return null;
@@ -3958,7 +4286,7 @@ function updateZoneCard(force) {
   if (!hit) { card.classList.add('out'); return; }
   const dl = [];
   if (hit.kind === 'zone') {
-    const q = hit.z, Z = ZONES[q.type], inside = itemsIn((x, z) => Math.abs(x - q.x) <= q.w / 2 && Math.abs(z - q.z) <= q.d / 2);
+    const q = hit.z, Z = ZONES[q.type], inside = itemsIn((x, z) => inZone(q, x, z));
     $('zc-k').textContent = `ZONE ${String(hit.i + 1).padStart(2, '0')} · ${Z.en}`;
     $('zc-n').textContent = ({ open: '開放空間', glass: '玻璃隔間', frost: '霧面玻璃隔間', solid: '組合屋', net: '圍網' })[zoneWalls(q)];
     $('zc-t').textContent = zoneName(q);
@@ -4101,14 +4429,15 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, rebuild: () => planChanged(), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 async function loadVenue(id) {
   let all = null; try { all = await fetch('data/venues.json', { cache: 'no-store' }).then((r) => r.json()); } catch (e) { /* ignore */ }
   const v = all && all.venues.find((x) => x.id === id);
   if (!v) { toast('找不到這間球館的資料'); return; }
   window.__site = { name: v.name, town: v.addr, road: '' };
-  state = sanitize({ ...v.design, name: `${v.name}（現況示意）`, id: null }); selectedId = null; selZoneId = null; history = [];
+  let mine = null; try { mine = JSON.parse(localStorage.getItem(VENUE_KEY(id)) || 'null'); } catch (e) { /* ignore */ }
+  state = sanitize(mine && mine.data ? { ...mine.data, id: null } : { ...v.design, name: `${v.name}（現況示意）`, id: null }); selectedId = null; selZoneId = null; history = [];
   fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); planToolState();
   $('gym-title').textContent = v.name;
   document.querySelector('.rail-head .eyebrow').textContent = 'Existing Venue · 現有球館參考';
@@ -4120,10 +4449,12 @@ async function loadVenue(id) {
     ${cell('地址', e(v.addr), true)}${cell('球場', v.courts != null ? `${v.courts} <small>面</small>` : null)}${cell('挑高', v.height != null ? `${v.height} <small>m</small>` : null, 'r')}
     ${cell('尺寸', v.size && e(v.size), true)}${cell('設施', v.facilities.length ? e(v.facilities.join('、')) : null, true)}
     ${cell('營業時間', v.hours && e(v.hours))}${cell('收費', v.price && e(v.price), 'r')}</dl>
-    <span>${e(v.layoutNote)}查不到的：${e(v.unknown.join('、'))}。這裡改動不會存檔。</span>
+    <span>${e(v.layoutNote)}查不到的：${e(v.unknown.join('、'))}。</span>
+    <span>${mine ? `目前顯示你改過的版本（${new Date(mine.savedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 存）。` : '你在這裡的改動會自動存在這台裝置。'}</span>
     <div class="row">${v.sources.map(([t, u]) => `<a href="${e(u)}" target="_blank" rel="noopener">${e(t)} ↗</a>`).join('')}</div>
-    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button></div>`;
+    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button>${mine ? '<button type="button" id="venue-reset">回到相片版本</button>' : ''}</div>`;
   $('venue-walk').addEventListener('click', () => setMode('walk'));
+  if ($('venue-reset')) $('venue-reset').addEventListener('click', () => { try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } loadVenue(id); });
   toast(`已載入「${v.name}」的示意模型，按「進入導覽」可以走進去`);
 }
 

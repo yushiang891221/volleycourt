@@ -779,6 +779,215 @@ def purifier():
     return p.finish()
 
 
+# ───── 台灣球館常見設備 ─────
+@module
+def package_ac():
+    """箱型冷氣（落地大台，5～10 冷凍噸）120×60×190：上方出風格柵、控制面板、下方進風百葉、底座。正面 -z。"""
+    p = Part('package_ac')
+    p.box(0, 0.98, 0, 1.2, 1.86, 0.6, 'white', 0.02, 3)
+    p.box(0, 0.04, 0, 1.16, 0.08, 0.56, 'darksteel', 0.004)
+    for k in range(12):
+        p.box(-0.5 + k * 0.091, 1.78, -0.302, 0.012, 0.22, 0.03, 'darksteel', 0.0)
+    p.box(0, 1.78, -0.29, 1.1, 0.24, 0.008, 'darksteel', 0)
+    p.box(0, 1.4, -0.302, 1.1, 0.42, 0.006, 'plastic', 0.003)
+    for k in range(4):
+        p.box(0, 1.27 + k * 0.08, -0.307, 1.06, 0.006, 0.006, 'aluminium', 0)
+    p.box(0.35, 1.02, -0.305, 0.22, 0.14, 0.01, 'screen', 0.004)
+    for r in range(3):
+        for c in range(2):
+            p.box(0.28 + c * 0.05, 0.85 - r * 0.045, -0.306, 0.035, 0.03, 0.008, 'aluminium', 0.002)
+    for k in range(16):
+        p.box(0, 0.16 + k * 0.034, -0.302, 1.06, 0.012, 0.02, 'plastic', 0.0, rot=('x', 0.5))
+    return p.finish()
+
+
+@module
+def wall_fan():
+    """工業壁扇 20 吋：壁掛架、搖頭馬達、扇葉、網罩。背面 +z 貼牆。"""
+    p = Part('wall_fan')
+    p.box(0, 0, 0.27, 0.16, 0.22, 0.03, 'darksteel', 0.01)
+    p.tube((0, 0, 0.26), (0, -0.05, 0.12), 0.018, 'darksteel')
+    p.cyl(0, -0.08, 0.06, 0.08, 0.2, 'darksteel', 20, axis='z')
+    for k in range(3):
+        a = k / 3 * math.tau
+        p.box(math.cos(a) * 0.12, -0.08 + math.sin(a) * 0.12, -0.08, 0.1, 0.2, 0.008, 'aluminium', 0.0, rot=('z', a + 0.3))
+    for r in (0.08, 0.17, 0.26):
+        n = 32
+        for k in range(n):
+            a1, a2 = k / n * math.tau, (k + 1) / n * math.tau
+            for zc in (-0.13, -0.02):
+                p.tube((math.cos(a1) * r, -0.08 + math.sin(a1) * r, zc), (math.cos(a2) * r, -0.08 + math.sin(a2) * r, zc), 0.0035, 'darksteel', 6)
+    for k in range(16):
+        a = k / 16 * math.tau
+        p.tube((0, -0.08, -0.14), (math.cos(a) * 0.26, -0.08 + math.sin(a) * 0.26, -0.13), 0.003, 'darksteel', 5)
+    return p.finish()
+
+
+@module
+def exhaust_fan():
+    """牆面排風扇 60×60：方框、外推百葉、護網。背面 +z 嵌牆。"""
+    p = Part('exhaust_fan')
+    p.box(0, 0, 0.05, 0.64, 0.64, 0.12, 'aluminium', 0.01)
+    p.cyl(0, 0, -0.02, 0.27, 0.04, 'darksteel', 40)
+    for k in range(5):
+        a = k / 5 * math.tau
+        p.box(math.cos(a) * 0.13, math.sin(a) * 0.13, -0.03, 0.1, 0.24, 0.006, 'aluminium', 0.0, rot=('z', a + 0.4))
+    for k in range(9):
+        p.box(0, -0.28 + k * 0.07, -0.06, 0.6, 0.005, 0.005, 'darksteel', 0)
+        p.box(-0.28 + k * 0.07, 0, -0.06, 0.005, 0.6, 0.005, 'darksteel', 0)
+    return p.finish()
+
+
+@module
+def water_tall():
+    """台灣常見的立式冰溫熱飲水機 45×45×140：冰（藍）溫熱（紅）三個出水口、按鍵面板、接水盤、下方門板。"""
+    p = Part('water_tall')
+    p.box(0, 0.7, 0, 0.45, 1.4, 0.45, 'stainless', 0.02, 3)
+    p.box(0, 1.0, -0.2, 0.4, 0.3, 0.06, 'darksteel', 0.01)
+    for k, col in enumerate(['ball_b', 'white', 'red']):
+        x = -0.12 + k * 0.12
+        p.box(x, 1.08, -0.235, 0.05, 0.05, 0.03, col, 0.008)
+        p.cyl(x, 1.02, -0.22, 0.012, 0.06, 'chrome', 10)
+    p.box(0, 0.86, -0.21, 0.38, 0.03, 0.12, 'darksteel', 0.006)
+    p.box(0, 1.24, -0.226, 0.3, 0.07, 0.006, 'screen', 0.002)
+    p.box(0, 0.42, -0.226, 0.4, 0.7, 0.006, 'stainless', 0.002)
+    return p.finish()
+
+
+@module
+def flip_score():
+    """桌上型翻分板：A 字架、左右兩組翻頁數字、局數小牌。"""
+    p = Part('flip_score')
+    for s in (-1, 1):
+        p.box(0, 0.3, s * 0.08, 0.6, 0.6, 0.012, 'darksteel', 0.004, rot=('x', s * 0.25))
+    for x in (-0.15, 0.15):
+        for k in range(6):
+            p.box(x, 0.36 - k * 0.004, -0.09 - k * 0.003, 0.22, 0.32, 0.003, 'white' if k else ('red' if x < 0 else 'ball_b'), 0.002, rot=('x', -0.25))
+    for x in (-0.28, 0.28):
+        p.box(x, 0.12, -0.12, 0.08, 0.1, 0.003, 'white', 0.001, rot=('x', -0.25))
+    p.cyl(0, 0.6, 0, 0.012, 0.6, 'aluminium', 10, axis='x')
+    return p.finish()
+
+
+@module
+def score_stand():
+    """電子計分板（立架）140×50：LED 面板（兩隊分數＋局數）、雙腳架。"""
+    p = Part('score_stand')
+    for x in (-0.55, 0.55):
+        p.box(x, 0.45, 0, 0.06, 0.9, 0.06, 'darksteel', 0.004)
+        p.box(x, 0.02, 0, 0.08, 0.04, 0.5, 'darksteel', 0.004)
+    p.box(0, 1.25, 0, 1.4, 0.7, 0.1, 'darksteel', 0.02, 3)
+    for x, col in ((-0.35, 'red'), (0.35, 'ball_b')):
+        p.box(x, 1.3, -0.052, 0.42, 0.36, 0.006, 'screen', 0.002)
+        p.box(x, 1.3, -0.056, 0.3, 0.26, 0.003, 'emit', 0)
+        p.box(x, 1.02, -0.052, 0.4, 0.06, 0.006, col, 0.002)
+    p.box(0, 1.3, -0.052, 0.12, 0.16, 0.006, 'screen', 0.002)
+    return p.finish()
+
+
+@module
+def whiteboard():
+    """戰術白板（移動式）120×90：白板面畫半個球場、鋁框、筆槽、四輪 H 架。"""
+    p = Part('whiteboard')
+    p.box(0, 1.35, 0, 1.2, 0.9, 0.03, 'white', 0.004)
+    p.box(0, 1.35, -0.017, 1.16, 0.86, 0.002, 'plastic', 0)
+    p.box(0, 1.35, -0.02, 0.9, 0.45, 0.001, 'ball_b', 0)
+    p.box(0, 1.35, -0.021, 0.86, 0.41, 0.001, 'white', 0)
+    p.box(0, 1.35, -0.022, 0.006, 0.41, 0.001, 'darksteel', 0)
+    for x in (-0.15, 0.15):
+        p.box(x, 1.35, -0.022, 0.004, 0.41, 0.001, 'ball_b', 0)
+    p.box(0, 0.88, -0.03, 1.0, 0.03, 0.06, 'aluminium', 0.004)
+    for x in (-0.62, 0.62):
+        p.box(x, 0.95, 0, 0.04, 1.9, 0.04, 'aluminium', 0.004)
+        p.box(x, 0.06, 0, 0.05, 0.04, 0.6, 'aluminium', 0.004)
+        for z in (-0.28, 0.28):
+            p.cyl(x, 0.03, z, 0.03, 0.025, 'rubber', 12, axis='x')
+    p.box(0, 0.3, 0, 1.2, 0.03, 0.03, 'aluminium', 0.003)
+    return p.finish()
+
+
+@module
+def speaker():
+    """音響喇叭（三腳架）：箱體、單體、高音號角、三腳架。"""
+    p = Part('speaker')
+    p.box(0, 1.65, 0, 0.36, 0.56, 0.32, 'darksteel', 0.02, 3)
+    p.cyl(0, 1.58, -0.165, 0.13, 0.02, 'rubber', 32, axis='z')
+    p.cyl(0, 1.58, -0.172, 0.04, 0.02, 'darksteel', 20, axis='z')
+    p.box(0, 1.84, -0.165, 0.2, 0.08, 0.02, 'rubber', 0.006)
+    p.cyl(0, 0.95, 0, 0.018, 0.9, 'darksteel', 12)
+    for k in range(3):
+        a = k / 3 * math.tau
+        p.tube((0, 0.7, 0), (math.cos(a) * 0.45, 0.0, math.sin(a) * 0.45), 0.012, 'darksteel')
+    return p.finish()
+
+
+@module
+def wall_tv():
+    """壁掛電視 55 吋：薄框、螢幕、壁掛架。背面 +z。"""
+    p = Part('wall_tv')
+    p.box(0, 0, 0.0, 1.24, 0.72, 0.03, 'darksteel', 0.006)
+    p.box(0, 0, -0.016, 1.2, 0.68, 0.003, 'screen', 0)
+    p.box(0, 0, 0.03, 0.4, 0.3, 0.03, 'darksteel', 0.004)
+    return p.finish()
+
+
+@module
+def wall_clock():
+    """掛鐘 直徑 35 cm：外框、錶面、時針分針。背面 +z。"""
+    p = Part('wall_clock')
+    p.cyl(0, 0, 0, 0.175, 0.04, 'darksteel', 40, axis='z', bevel=0.01)
+    p.cyl(0, 0, -0.02, 0.16, 0.005, 'white', 40, axis='z')
+    for k in range(12):
+        a = k / 12 * math.tau
+        p.box(math.sin(a) * 0.14, math.cos(a) * 0.14, -0.024, 0.008, 0.022, 0.002, 'darksteel', 0, rot=('z', -a))
+    p.box(0.03, 0.02, -0.027, 0.07, 0.008, 0.002, 'darksteel', 0, rot=('z', 0.6))
+    p.box(-0.01, 0.05, -0.028, 0.006, 0.11, 0.002, 'darksteel', 0, rot=('z', 0.2))
+    return p.finish()
+
+
+@module
+def recycle_bins():
+    """分類回收桶（三格）：一般垃圾、紙類、瓶罐，掀蓋與標示色塊。"""
+    p = Part('recycle_bins')
+    for k, col in enumerate(['darksteel', 'ball_b', 'green']):
+        x = -0.32 + k * 0.32
+        p.box(x, 0.36, 0, 0.3, 0.72, 0.36, 'plastic', 0.015, 2)
+        p.box(x, 0.74, 0, 0.31, 0.04, 0.37, col, 0.01)
+        p.box(x, 0.74, -0.08, 0.16, 0.045, 0.06, 'darksteel', 0.004)
+        p.box(x, 0.5, -0.182, 0.16, 0.1, 0.004, col, 0.002)
+    return p.finish()
+
+
+@module
+def bleacher_mod():
+    """鋁製活動看台一節：寬 200 cm、三階（每階深 80、高 40 cm），鋁座板、鋼架、扶手。"""
+    p = Part('bleacher_mod')
+    for i in range(3):
+        y = 0.42 * (i + 1)
+        z = -1.2 + 0.8 * i + 0.4
+        p.box(0, y, z - 0.15, 2.0, 0.04, 0.32, 'aluminium', 0.004)
+        p.box(0, y - 0.21, z + 0.12, 2.0, 0.03, 0.26, 'aluminium', 0.004)
+        for x in (-0.95, 0.0, 0.95):
+            p.box(x, y / 2, z, 0.05, y, 0.05, 'darksteel', 0.003)
+    for x in (-0.95, 0.0, 0.95):
+        p.tube((x, 0.02, -1.15), (x, 1.26, 1.15), 0.02, 'darksteel')
+    for x in (-1.0, 1.0):
+        p.tube((x, 1.3, 0.85), (x, 2.2, 0.85), 0.018, 'chrome')
+    p.tube((-1.0, 2.2, 0.85), (1.0, 2.2, 0.85), 0.018, 'chrome')
+    return p.finish()
+
+
+@module
+def aed_cabinet():
+    """AED 壁掛箱：白色箱體、綠色標示、透明窗、裡面的 AED。背面 +z。"""
+    p = Part('aed_cabinet')
+    p.box(0, 0, 0, 0.42, 0.52, 0.2, 'white', 0.01, 2)
+    p.box(0, 0.05, -0.1, 0.34, 0.32, 0.006, 'glass', 0)
+    p.box(0, 0.05, -0.04, 0.26, 0.24, 0.1, 'green', 0.02)
+    p.box(0, -0.2, -0.102, 0.36, 0.08, 0.004, 'green', 0.002)
+    return p.finish()
+
+
 # ───── 建模、排開（彼此不遮擋）、地板 ─────
 t0 = time.time()
 objs = []
