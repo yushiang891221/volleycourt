@@ -537,6 +537,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const $ = (id) => document.getElementById(id);
 // Page sources, captured before anything changes the DOM, so a save can rebuild the page.
@@ -944,6 +946,86 @@ function cyl(g, rTop, rBot, h, color, x = 0, y = 0, z = 0, extra, seg = 16) {
   g.add(m);
   return m;
 }
+// ---------------------------------------------------------------- 元件素材庫（tools/blender/build_assets.py 建模、烘焙 AO → models/gym-kit.glb）
+// 每個模組的材質名稱就是角色（navy、leather、wood…），這裡換成網站自己的材質（貼圖以公尺計），再把烘好的 AO 貼在第二組 UV。
+// 素材庫還沒載入（或載入失敗）時，各元件照舊用程式組出來的版本。
+const KIT = { ready: false, parts: new Map(), mats: new Map(), ao: null };
+function kitBase(role) {
+  const S = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0, ...o });
+  switch (role) {
+    case 'navy': return S('#22304A', { roughness: 0.45, metalness: 0.15 });
+    case 'navy_pad': return leatherMat('#24345A');
+    case 'leather': return leatherMat(null);
+    case 'cushion': return leatherMat('#3E4A5E');
+    case 'wood': return woodMat;
+    case 'chrome': return chrome;
+    case 'darksteel': return darkSteel;
+    case 'aluminium': return S('#B9BCC0', { roughness: 0.32, metalness: 0.85 });
+    case 'white': return S('#E9ECEE', { roughness: 0.35 });
+    case 'red': return S('#B8352E', { roughness: 0.38 });
+    case 'ceramic': return S('#F6F6F3', { roughness: 0.1 });
+    case 'quartz': return S('#ECEAE5', { roughness: 0.22 });
+    case 'rubber': return S('#141414', { roughness: 0.85 });
+    case 'leaf': return S('#4E7A46', { roughness: 0.65, side: THREE.DoubleSide });
+    case 'pot': return S('#D9CDB8', { roughness: 0.8 });
+    case 'ball_y': return S('#F2C230', { roughness: 0.45 });
+    case 'ball_b': return S('#2F5D8C', { roughness: 0.45 });
+    case 'ball_w': return S('#F4F4F0', { roughness: 0.45 });
+    case 'screen': return S('#10161D', { roughness: 0.15, emissive: '#2E5470', emissiveIntensity: 0.45 });
+    case 'glass': return S('#D7E6EA', { roughness: 0.05, transparent: true, opacity: 0.22, depthWrite: false });
+    case 'emit': return ledMat;
+    case 'can_r': return S('#C0392B', { roughness: 0.3, metalness: 0.5 });
+    case 'can_g': return S('#2E8B57', { roughness: 0.3, metalness: 0.5 });
+    case 'can_y': return S('#E8B019', { roughness: 0.3, metalness: 0.5 });
+    case 'can_w': return S('#E8E8E6', { roughness: 0.3, metalness: 0.5 });
+    default: return S('#9AA5B1');
+  }
+}
+function kitMat(role) {
+  if (!KIT.mats.has(role)) {
+    const m = kitBase(role).clone();
+    if (!m.transparent && role !== 'emit') { m.aoMap = KIT.ao; m.aoMapIntensity = 1; }
+    m.envMapIntensity = m.userData.env ?? 0.3; m.userData.envSet = true;
+    KIT.mats.set(role, m);
+  }
+  return KIT.mats.get(role);
+}
+// 放一個模組到 g；opts: rotY（弧度）、sx/sy/sz（微調比例，只用在格數換算後的 ±10% 以內）。素材庫還沒好就回傳 null
+function kit(name, g, x = 0, y = 0, z = 0, o = {}) {
+  const parts = KIT.ready && KIT.parts.get(name);
+  if (!parts) return null;
+  const grp = new THREE.Group();
+  for (const pt of parts) {
+    const m = new THREE.Mesh(pt.geometry, kitMat(pt.role));
+    if (pt.role === 'glass' || pt.role === 'emit') m.userData.noInk = true;
+    if (pt.role === 'leaf') m.userData.noInk = true;
+    m.userData.softInk = true;
+    grp.add(m);
+  }
+  grp.position.set(x, y, z);
+  if (o.rotY) grp.rotation.y = o.rotY;
+  grp.scale.set(o.sx ?? 1, o.sy ?? 1, o.sz ?? 1);
+  g.add(grp);
+  return grp;
+}
+function loadKit() {
+  const draco = new DRACOLoader();
+  draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+  const loader = new GLTFLoader();
+  loader.setDRACOLoader(draco);
+  KIT.ao = new THREE.TextureLoader().load('models/gym-kit-ao.jpg');
+  KIT.ao.flipY = false;          // glTF 的 UV 方向
+  KIT.ao.channel = 1;            // 第二組 UV（TEXCOORD_1）
+  loader.load('models/gym-kit.glb', (gltf) => {
+    for (const node of gltf.scene.children) {
+      const parts = [];
+      node.traverse((o) => { if (o.isMesh) parts.push({ geometry: o.geometry, role: o.material.name }); });
+      if (parts.length) KIT.parts.set(node.name, parts);
+    }
+    KIT.ready = true;
+    if (state) { buildZones(); renderItems(); window.wakeRender && window.wakeRender(1200); }
+  }, undefined, (err) => { console.warn('素材庫載入失敗，改用程式組出來的元件', err); });
+}
 function tag(g, text, y, cls = '', x = 0, z = 0) {
   const el = document.createElement('div');
   el.className = 'tag ' + cls;
@@ -1056,7 +1138,7 @@ function buildItem(it, courtIndex) {
     if (def.court === 'vb') {
       const nh = NETS[state.net].h;
       // 網柱：鋼管外包深藍防護套，底座配重
-      for (const z of [5.5, -5.5]) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
+      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
       net(g, 10.6, nh, 1.0);
       for (const z of [4.5, -4.5]) {
         const a = cyl(g, 0.006, 0.006, 1.8, '#E23A3A', 0, nh - 1.0, z);
@@ -1101,8 +1183,12 @@ function buildItem(it, courtIndex) {
       // 條狀 LED：吊在屋架下，鋁殼＋朝下的發光面
       const y = H - 0.45;
       for (const s of [-1, 1]) cyl(g, 0.006, 0.006, 0.45, '#5A6676', s * (w / 2 - 0.25), y + 0.07, 0);
-      const housing = box(g, w, 0.07, 0.14, '#C9CCD0', 0, y, 0, { metalness: 0.5, roughness: 0.4 }); housing.userData.pick = true; housing.userData.noShadow = true;
-      const lens = box(g, w - 0.04, 0.012, 0.11, ledMat, 0, y - 0.012, 0); lens.userData.noInk = true; lens.userData.noShadow = true;
+      const strip = kit('led_strip', g, 0, y - 0.012, 0, { sx: w / 2.4 });
+      if (strip) strip.traverse((o) => { if (o.isMesh) { o.userData.pick = true; o.userData.noShadow = true; } });
+      else {
+        const housing = box(g, w, 0.07, 0.14, '#C9CCD0', 0, y, 0, { metalness: 0.5, roughness: 0.4 }); housing.userData.pick = true; housing.userData.noShadow = true;
+        const lens = box(g, w - 0.04, 0.012, 0.11, ledMat, 0, y - 0.012, 0); lens.userData.noInk = true; lens.userData.noShadow = true;
+      }
       const pad = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.8, 1.0), new THREE.MeshBasicMaterial({ color: '#FFF4D8', transparent: true, opacity: 0.16, depthWrite: false }));
       pad.rotation.x = -Math.PI / 2; pad.position.y = 0.04; g.add(pad);
     } else if (it.type === 'smoke') {
@@ -1158,6 +1244,7 @@ function buildItem(it, courtIndex) {
 // 共用模組：長度變了就改格數，不拉長單元（face = 正面朝 -z 或 +z）
 function lockerBank(g, w, h, d, color = '#22304A', face = -1, z0 = 0) {
   const n = Math.max(1, Math.round(w / 0.4)), cw = w / n, fz = z0 + face * d / 2;
+  if (KIT.ready && Math.abs(h - 1.9) < 0.15) { for (let i = 0; i < n; i++) kit('locker_col', g, -w / 2 + cw * (i + 0.5), 0, z0, { rotY: face > 0 ? Math.PI : 0, sx: cw / 0.4, sz: d / 0.5 }); return; }
   box(g, w, 0.08, d - 0.04, '#15161A', 0, 0, z0);
   box(g, w, 0.03, d, color, 0, h - 0.03, z0);
   for (let i = 0; i < n; i++) {
@@ -1168,12 +1255,20 @@ function lockerBank(g, w, h, d, color = '#22304A', face = -1, z0 = 0) {
     for (let k = 0; k < 3; k++) box(g, cw - 0.14, 0.008, 0.004, '#0E141F', x, h - 0.32 + k * 0.045, fz + face * 0.016).userData.noInk = true;
   }
 }
+// 櫃台：中段 60 cm 一節（格數依長度），兩端收邊；face = -1 正面朝 -z、+1 朝 +z
+function counterRun(g, w, face = -1, z0 = 0) {
+  const n = Math.max(1, Math.round((w - 0.12) / 0.6)), sw = (w - 0.12) / n, ry = face > 0 ? Math.PI : 0;
+  for (let i = 0; i < n; i++) kit('counter_mid', g, -w / 2 + 0.06 + sw * (i + 0.5), 0, z0, { rotY: ry, sx: sw / 0.6 });
+  for (const sgn of [-1, 1]) kit('counter_end', g, sgn * (w / 2 - 0.03), 0, z0, { rotY: ry });
+  box(g, w + 0.08, 0.04, 0.76, '#ECEAE5', 0, 1.05, z0 + face * 0.02, { roughness: 0.22 });
+}
 function benchModule(g, w, d = 0.42, z0 = 0) {
   for (let k = 0; k < 3; k++) box(g, w, 0.035, d / 3 - 0.02, woodMat, 0, 0.42, z0 - d / 2 + d / 6 + (k * d) / 3);
   const n = Math.max(2, Math.ceil(w / 1.2) + 1);
-  for (let i = 0; i < n; i++) { const x = -w / 2 + 0.12 + ((w - 0.24) * i) / (n - 1); box(g, 0.05, 0.42, d - 0.06, darkSteel, x, 0, z0); }
+  for (let i = 0; i < n; i++) { const x = -w / 2 + 0.12 + ((w - 0.24) * i) / (n - 1); if (!kit('bench_frame', g, x, 0, z0, { sz: d / 0.42 })) box(g, 0.05, 0.42, d - 0.06, darkSteel, x, 0, z0); }
 }
 function plantPot(g, x = 0, z = 0, s = 1) {
+  if (kit('plant', g, x, 0, z, { sx: s, sy: s, sz: s, rotY: (x * 7 + z * 13) % 6.28 })) return;
   cyl(g, 0.24 * s, 0.18 * s, 0.42 * s, '#D9CDB8', x, 0, z, { roughness: 0.8 }, 20);
   const leaf = mat('#4E7A46', { roughness: 0.8 }), leaf2 = mat('#5F8F52', { roughness: 0.8 });
   for (const [dx, dy, dz, r, m2] of [[0, 0.95, 0, 0.36, leaf], [0.16, 0.75, 0.08, 0.26, leaf2], [-0.15, 0.8, -0.06, 0.27, leaf2], [0.02, 1.2, 0.05, 0.22, leaf]]) {
@@ -1189,6 +1284,11 @@ function buildFurniture(g, it, w, d, def) {
     case 'sofa': {
       // 座墊一格約 70 cm：2.2 m 的沙發是三人座，加長就多一格
       const L = leatherMat(null), n = Math.max(1, Math.round((w - 0.3) / 0.7)), sw = (w - 0.3) / n;
+      if (KIT.ready) {
+        for (let i = 0; i < n; i++) kit('sofa_seat', g, -w / 2 + 0.15 + sw * (i + 0.5), 0, 0, { sx: sw / 0.7, sz: d / 0.9 });
+        for (const sgn of [-1, 1]) kit('sofa_arm', g, sgn * (w / 2 - 0.075), 0, 0, { sx: 0.15 / 0.17, sz: d / 0.9 });
+        break;
+      }
       box(g, w, 0.2, d, L, 0, 0.08, 0);
       for (const [x, z] of [[-w / 2 + 0.08, -d / 2 + 0.08], [w / 2 - 0.08, -d / 2 + 0.08], [-w / 2 + 0.08, d / 2 - 0.08], [w / 2 - 0.08, d / 2 - 0.08]]) box(g, 0.04, 0.08, 0.04, darkSteel, x, 0, z);
       box(g, w, 0.5, 0.14, L, 0, 0.28, d / 2 - 0.07);
@@ -1201,6 +1301,7 @@ function buildFurniture(g, it, w, d, def) {
       break;
     }
     case 'table': {
+      if (KIT.ready) { kit('cafe_table', g); for (const [x, z] of [[0.66, 0], [-0.66, 0], [0, 0.66], [0, -0.66]]) kit('stool', g, x, 0, z); break; }
       cyl(g, 0.45, 0.45, 0.035, woodMat, 0, 0.72, 0, null, 32); cyl(g, 0.035, 0.035, 0.72, darkSteel, 0, 0, 0); cyl(g, 0.25, 0.25, 0.02, darkSteel, 0, 0, 0, null, 24);
       for (const [x, z] of [[0.66, 0], [-0.66, 0], [0, 0.66], [0, -0.66]]) { cyl(g, 0.025, 0.025, 0.42, darkSteel, x, 0, z); cyl(g, 0.18, 0.18, 0.06, leatherMat('#3E4A5E'), x, 0.42, z, null, 20); }
       break;
@@ -1212,6 +1313,7 @@ function buildFurniture(g, it, w, d, def) {
     }
     case 'counter':
       // 本體＋木格柵正面＋石英檯面；長度只改中段，兩端收邊固定 6 cm
+      if (KIT.ready) { counterRun(g, w, -1); break; }
       box(g, w, 1.0, d, c, 0, 0.05, 0);
       box(g, w, 0.05, d - 0.04, '#15161A', 0, 0, 0);
       box(g, w - 0.12, 0.9, 0.03, woodMat, 0, 0.1, -d / 2 - 0.015);
@@ -1219,6 +1321,7 @@ function buildFurniture(g, it, w, d, def) {
       box(g, w + 0.08, 0.04, d + 0.1, '#ECEAE5', 0, 1.05, -0.02, { roughness: 0.25 });
       break;
     case 'vending': {
+      if (kit('vending', g, 0, 0, 0, { sx: w / 1.0, sz: d / 0.8 })) break;
       box(g, w, def.h, d, c, 0, 0, 0, { roughness: 0.4 });
       box(g, w * 0.66, 1.25, 0.02, '#16202B', -w * 0.1, 0.45, -d / 2 - 0.01, { emissive: '#4C7E9E', emissiveIntensity: 0.35, roughness: 0.1 });
       for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) box(g, 0.1, 0.18, 0.02, ['#F2B705', '#E2582B', '#3C8A63', '#F4F4F2'][(r + k) % 4], -w * 0.1 - w * 0.25 + k * (w * 0.5 / 3), 0.55 + r * 0.28, -d / 2 - 0.025).userData.noInk = true;
@@ -1226,6 +1329,7 @@ function buildFurniture(g, it, w, d, def) {
       break;
     }
     case 'water':
+      if (kit('water', g)) break;
       box(g, w, 1.0, d, '#E6EAEE', 0, 0, 0, { roughness: 0.35 });
       box(g, w - 0.1, 0.03, 0.12, darkSteel, 0, 0.55, -d / 2 + 0.05);
       cyl(g, 0.15, 0.15, 0.42, '#8CC4EA', 0, 1.0, 0, { transparent: true, opacity: 0.75, roughness: 0.05 }, 24);
@@ -1240,6 +1344,7 @@ function buildFurniture(g, it, w, d, def) {
       box(g, w, 0.5, d, c, 0, 1.1, 0); box(g, w * 0.7, 0.3, 0.01, '#F4F4F2', 0, 1.2, -d / 2 - 0.005);
       break;
     case 'referee':
+      if (kit('referee_chair', g)) break;
       for (const [x, z] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) cyl(g, 0.025, 0.025, 1.6, chrome, x, 0, z);
       box(g, 0.8, 0.06, 0.8, woodMat, 0, 1.6, 0); box(g, 0.8, 0.5, 0.05, padMat, 0, 1.66, 0.38);
       for (let i = 1; i < 5; i++) box(g, 0.6, 0.035, 0.06, darkSteel, 0, i * 0.32, -0.42);
@@ -1252,6 +1357,11 @@ function buildFurniture(g, it, w, d, def) {
       break;
     case 'ballcart': {
       // 鋼管框＋網面＋排球（黃藍白）
+      if (kit('ball_cart', g, 0, 0, 0, { sx: w / 1.0, sz: d / 0.6 })) {
+        const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(w / 0.12, 0.8 / 0.12);
+        for (const [px, pz, ry, len] of [[0, -d / 2, 0, w], [0, d / 2, 0, w], [-w / 2, 0, Math.PI / 2, d], [w / 2, 0, Math.PI / 2, d]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.8), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.6 })); m.position.set(px, 0.57, pz); m.rotation.y = ry; g.add(m); }
+        break;
+      }
       for (const [x, z] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) { cyl(g, 0.012, 0.012, 0.95, chrome, x, 0.1, z); cyl(g, 0.04, 0.04, 0.06, '#15161A', x, 0, z, null, 10); }
       box(g, w, 0.02, d, chrome, 0, 0.18, 0);
       const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(w / 0.12, 0.8 / 0.12);
@@ -1525,7 +1635,7 @@ function zoneDecor(g, z, lay) {
     const onBack = Math.abs((ent.x - b.a[0]) * b.nx + (ent.z - b.a[1]) * b.nz) < 0.5 && td > -1 && td < along + 1;
     const tc = onBack ? (td < along / 2 ? along * 0.72 : along * 0.28) : along / 2, cw = onBack ? Math.min(3, along * 0.42) : Math.min(3, along - 0.8);
     // 櫃台：正面（朝館內）木格柵、石英檯面；後面一排開放層架
-    put(tc, Math.min(across * 0.6, 3), (o) => { box(o, cw, 1.0, 0.65, '#22304A', 0, 0.05, 0); box(o, cw - 0.1, 0.9, 0.03, woodMat, 0, 0.1, 0.34); box(o, cw + 0.08, 0.04, 0.78, '#ECEAE5', 0, 1.05, 0.02, { roughness: 0.25 }); });
+    put(tc, Math.min(across * 0.6, 3), (o) => { if (KIT.ready) { counterRun(o, cw, 1); return; } box(o, cw, 1.0, 0.65, '#22304A', 0, 0.05, 0); box(o, cw - 0.1, 0.9, 0.03, woodMat, 0, 0.1, 0.34); box(o, cw + 0.08, 0.04, 0.78, '#ECEAE5', 0, 1.05, 0.02, { roughness: 0.25 }); });
     put(tc, 0.25, (o) => { const sw2 = cw + 0.2, nb = Math.max(1, Math.round(sw2 / 0.9)); for (let k = 0; k < 4; k++) box(o, sw2, 0.03, 0.33, woodMat, 0, 0.05 + k * 0.55, 0.02); for (let k = 0; k <= nb; k++) box(o, 0.03, 1.75, 0.35, darkSteel, -sw2 / 2 + (sw2 * k) / nb, 0, 0); });
   } else if (z.type === 'locker') {
     const n = Math.max(1, Math.floor((along - 0.6) / 0.42));
@@ -1533,14 +1643,15 @@ function zoneDecor(g, z, lay) {
     if (across > 2.6) put(along / 2, Math.min(across - 1.2, 1.6), (o) => benchModule(o, Math.min(2.4, along - 1)));
     // 淋浴間：靠一側的三格霧面隔間
     const k = Math.min(3, Math.floor(across / 1.1));
-    if (along >= 4.5 && k >= 1) for (let i = 0; i < k; i++) put(0.6, 0.6 + i * 1.05, (o) => { const p = box(o, 0.025, 2.1, 1.0, frostMat, 0.6, 0, 0); p.userData.noInk = true; box(o, 0.08, 0.06, 0.08, '#B9C0C6', -0.45, 2.0, 0); });
+    if (along >= 4.5 && k >= 1) for (let i = 0; i < k; i++) put(0.6, 0.6 + i * 1.05, (o) => { const p = box(o, 0.025, 2.1, 1.0, frostMat, 0.6, 0, 0); p.userData.noInk = true; if (!kit('shower', o, -0.4, 0, 0, { rotY: Math.PI / 2 })) box(o, 0.08, 0.06, 0.08, '#B9C0C6', -0.45, 2.0, 0); });
   } else if (z.type === 'wc') {
     const n = Math.max(1, Math.floor((along - 0.4) / 1.1));
-    for (let i = 0; i < n; i++) put(0.6 + i * 1.1, 0.4, (o) => { box(o, 0.38, 0.42, 0.6, '#FBFBF8', 0, 0, 0); box(o, 0.4, 0.4, 0.18, '#FBFBF8', 0, 0.42, -0.2); const p = box(o, 0.025, 2.0, 1.4, frostMat, 0.55, 0.1, 0.4); p.userData.noInk = true; });
-    if (across > 2.4) put(along / 2, across - 0.35, (o) => { box(o, Math.min(1.8, along - 0.6), 0.85, 0.5, '#D9D4CB'); box(o, Math.min(1.6, along - 0.8), 0.8, 0.02, '#BFD3DB', 0, 1.1, 0.26, { metalness: 0.6, roughness: 0.1 }); });
+    for (let i = 0; i < n; i++) put(0.6 + i * 1.1, 0.4, (o) => { if (!kit('toilet', o, 0, 0, -0.08, { rotY: Math.PI })) { box(o, 0.38, 0.42, 0.6, '#FBFBF8', 0, 0, 0); box(o, 0.4, 0.4, 0.18, '#FBFBF8', 0, 0.42, -0.2); } const p = box(o, 0.025, 2.0, 1.4, frostMat, 0.55, 0.1, 0.4); p.userData.noInk = true; });
+    // 洗手台：一格 60 cm，依長度排幾個面盆
+    if (across > 2.4) put(along / 2, across - 0.35, (o) => { const L = Math.min(1.8, along - 0.6), ns = Math.max(1, Math.floor(L / 0.6)); if (KIT.ready) { for (let i = 0; i < ns; i++) kit('sink', o, -L / 2 + (L / ns) * (i + 0.5), 0, 0, { sx: L / ns / 0.6 }); box(o, Math.min(1.6, L - 0.2), 0.8, 0.02, '#BFD3DB', 0, 1.15, 0.26, { metalness: 0.6, roughness: 0.1 }); return; } box(o, L, 0.85, 0.5, '#D9D4CB'); box(o, Math.min(1.6, along - 0.8), 0.8, 0.02, '#BFD3DB', 0, 1.1, 0.26, { metalness: 0.6, roughness: 0.1 }); });
   } else if (z.type === 'storage') {
-    put(along / 2, 0.3, (o) => { const w = Math.max(1, along - 0.6), nb = Math.max(1, Math.round(w / 1.0)); for (let k = 0; k < 4; k++) box(o, w, 0.03, 0.5, darkSteel, 0, 0.3 + k * 0.55, 0); for (let k = 0; k <= nb; k++) box(o, 0.035, 2.0, 0.5, darkSteel, -w / 2 + (w * k) / nb, 0, 0);
-      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), mat(k % 2 ? '#F2C230' : '#2F5D8C')); ball.position.set(-w / 2 + 0.2 + k * 0.3, 0.45, 0); o.add(ball); } });
+    put(along / 2, 0.3, (o) => { const w = Math.max(1, along - 0.6), nb = Math.max(1, Math.round(w / 1.0)); if (KIT.ready) for (let k = 0; k < nb; k++) kit('shelf_bay', o, -w / 2 + (w / nb) * (k + 0.5), 0, 0, { sx: w / nb / 1.0 }); else { for (let k = 0; k < 4; k++) box(o, w, 0.03, 0.5, darkSteel, 0, 0.3 + k * 0.55, 0); for (let k = 0; k <= nb; k++) box(o, 0.035, 2.0, 0.5, darkSteel, -w / 2 + (w * k) / nb, 0, 0); }
+      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), mat(k % 2 ? '#F2C230' : '#2F5D8C')); ball.position.set(-w / 2 + 0.2 + k * 0.3, KIT.ready ? 0.82 : 0.45, 0); o.add(ball); } });
   } else if (z.type === 'warmup') {
     for (let i = 0; i < Math.min(4, Math.floor(along / 1.4)); i++) put(0.8 + i * 1.4, Math.min(across / 2, 1.6), (o) => { box(o, 0.6, 0.03, 1.7, i % 2 ? '#C9962E' : '#22304A'); const r = cyl(o, 0.075, 0.075, 0.45, '#1F2933', 0.5, 0.075, 0); r.rotation.z = Math.PI / 2; });
   } else if (z.type === 'office') {
@@ -2525,11 +2636,15 @@ function snapWallItem(it) {
 function buildWallItem(g, it, w, d, def) {
   const y = def.mountY ?? 0;
   const t = it.type;
-  if (t === 'aircon') {
+  if (t === 'aircon' && kit('aircon', g, 0, y, 0, { rotY: Math.PI, sx: w / 1.2 })) {
+    /* 素材庫的壁掛冷氣 */
+  } else if (t === 'aircon') {
     box(g, w, 0.42, d, '#F2F4F6', 0, y, 0);
     box(g, w - 0.1, 0.05, 0.02, '#9AA5B1', 0, y + 0.06, d / 2 + 0.005);
     box(g, w - 0.2, 0.02, 0.06, '#C9D1D9', 0, y + 0.02, d / 2 - 0.02);
     const led = cyl(g, 0.015, 0.015, 0.01, '#4FC3F7', w / 2 - 0.12, y + 0.3, d / 2 + 0.005, { emissive: '#4FC3F7', emissiveIntensity: 1.5 }, 8); led.rotation.x = Math.PI / 2;
+  } else if (t === 'extinguisher' && kit('extinguisher', g, 0, 0, 0, { rotY: Math.PI })) {
+    box(g, 0.3, 0.5, 0.02, '#D7262B', 0, 0.9, -d / 2 + 0.01);
   } else if (t === 'extinguisher') {
     cyl(g, 0.08, 0.08, 0.5, '#D7262B', 0, 0.02, 0, null, 16);
     cyl(g, 0.03, 0.03, 0.08, '#2B2B2B', 0, 0.52, 0, null, 10);
@@ -2546,7 +2661,7 @@ function buildWallItem(g, it, w, d, def) {
     cyl(g, 0.07, 0.07, 0.05, '#F4F4F2', 0, y2, 0, null, 16);
   } else if (t === 'crashpad') {
     const n = Math.max(1, Math.round(w / 1.2)), pw = w / n;
-    for (let i = 0; i < n; i++) box(g, pw - 0.025, 1.95, d, padMat, -w / 2 + pw * (i + 0.5), 0.08, 0);
+    for (let i = 0; i < n; i++) if (!kit('crash_pad', g, -w / 2 + pw * (i + 0.5), 0, 0, { rotY: Math.PI, sx: pw / 1.2 })) box(g, pw - 0.025, 1.95, d, padMat, -w / 2 + pw * (i + 0.5), 0.08, 0);
   } else if (t === 'firstaid') {
     box(g, 0.4, 0.3, 0.14, '#F4F4F2', 0, y, 0);
     box(g, 0.14, 0.04, 0.01, '#D7262B', 0, y + 0.13, 0.075); box(g, 0.04, 0.14, 0.01, '#D7262B', 0, y + 0.08, 0.075);
@@ -3778,6 +3893,7 @@ function wireUi() {
 }
 function start(hot) {
   wireUi();
+  loadKit();
   let note = '';
   if (hot && hot.state) state = sanitize(hot.state);
   if (!state) { try { const s = sessionStorage.getItem(STASH_KEY); if (s) { state = sanitize(JSON.parse(s)); sessionStorage.removeItem(STASH_KEY); } } catch (e) { /* ignore */ } }
@@ -3799,7 +3915,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); } };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 async function loadVenue(id) {
   let all = null; try { all = await fetch('data/venues.json', { cache: 'no-store' }).then((r) => r.json()); } catch (e) { /* ignore */ }

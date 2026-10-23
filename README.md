@@ -25,3 +25,5 @@ npx vercel --prod
 - `data/map.json`：縣市界、現有球館位置。
 - `data/venues.json`：新竹現有球館的 3D 示意（`gym.html?venue=<id>`，地圖上點現有球館的「走進去看」）。只放公開查得到的資訊，查不到的留空。
 - `img/tex/`：3D 材質貼圖，來自 Poly Haven（https://polyhaven.com，CC0，可自由使用），來源列在 `img/tex/credits.json`。
+- `models/gym-kit.glb`、`models/gym-kit-ao.jpg`：3D 元件素材庫（置物櫃一格、沙發座墊、網柱、裁判椅、販賣機、植栽、馬桶、面盆、淋浴、防撞墊、層架、櫃台段、冷氣、滅火器、LED 條燈…），每個元件自己的陰影（AO）已烘焙。網站依長度重複擺這些模組，不拉伸。
+  - 重做素材庫：用 Blender 5.2（免安裝版即可）在網站資料夾執行 `blender -b --factory-startup -P tools/blender/build_assets.py -- . 160`，約 1～2 分鐘（有 NVIDIA 顯卡會用 OptiX）。`tools/` 不會部署（`.vercelignore`）。
