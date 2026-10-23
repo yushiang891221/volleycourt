@@ -390,6 +390,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#map">← 到地圖選場地</a></div></div>
       <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
       <p class="status-line" id="autosave" aria-live="polite">改動會自動存在這台裝置</p>
+      <label class="field hist-row" id="hist-row" for="hist-sel" hidden><span>找回之前的版本（存在這台裝置）</span><select id="hist-sel"></select></label>
     </header>
     <section class="sec" id="sec-plan">
       <h2><span class="num">01</span>目前規劃<small>AREA SCHEDULE</small></h2>
@@ -2584,14 +2585,49 @@ let draftTimer = 0;
 // 自動存檔：候選場地存到該場地、現有球館存到該球館、自由規劃存成草稿；改完 0.4 秒存，離開頁面前再存一次
 let draftDirty = false;
 const VENUE_KEY = (id) => 'vb.venue.' + id;
+// 每次存檔前把上一版留下來（同一個 2 分鐘內只留一版，最多 12 版），存錯了可以從「找回之前的版本」拿回來
+const HIST_KEY = (k) => k + '.hist';
+function keepHistory(key, force) {
+  try {
+    const prev = localStorage.getItem(key); if (!prev) return;
+    const p = JSON.parse(prev), data = p.data || p, at = p.savedAt ? Date.parse(p.savedAt) : Date.now();
+    let hist = []; try { hist = JSON.parse(localStorage.getItem(HIST_KEY(key)) || '[]'); } catch (e) { hist = []; }
+    const last = hist[0];
+    if (last && JSON.stringify(last.data) === JSON.stringify(data)) return;
+    if (!force && last && Date.now() - last.kept < 120000) return;
+    hist.unshift({ at, kept: Date.now(), data });
+    for (let n = 12; n > 0; n--) { try { localStorage.setItem(HIST_KEY(key), JSON.stringify(hist.slice(0, n))); break; } catch (e) { /* 空間不夠就少留幾版 */ } }
+    renderHist();
+  } catch (e) { /* ignore */ }
+}
+function histKey() { return window.__venueId ? VENUE_KEY(window.__venueId) : window.__siteId ? null : DRAFT_KEY; }
+function renderHist() {
+  const row = $('hist-row'), sel = $('hist-sel'); if (!row || !sel) return;
+  const k = histKey(); let hist = [];
+  try { hist = k ? JSON.parse(localStorage.getItem(HIST_KEY(k)) || '[]') : []; } catch (e) { hist = []; }
+  row.hidden = !hist.length;
+  const t = (ms) => new Date(ms).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  sel.innerHTML = `<option value="">選一個時間點…</option>` + hist.map((h, i) => `<option value="${i}">${t(h.at)}・${(h.data.zones || []).length} 區・${(h.data.items || []).length} 件</option>`).join('');
+}
+function restoreHist(i) {
+  const k = histKey(); if (!k) return;
+  let hist = []; try { hist = JSON.parse(localStorage.getItem(HIST_KEY(k)) || '[]'); } catch (e) { return; }
+  const h = hist[i]; if (!h) return;
+  pushHistory();
+  state = sanitize({ ...h.data, id: null }); selectedId = null; selZoneId = null; selWallId = null;
+  fullRefresh(); renderPlan(); renderZoneSel(); planToolState();
+  toast(`已換回 ${new Date(h.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 的版本；不對的話按「復原」`);
+}
 function saveNow() {
   if (!state || !draftDirty) return;
+  // 現有球館：資料還沒載完（畫面上暫時是預設範本）就先不存，免得把你改過的版本蓋掉
+  if (window.__venueId && !window.__venueReady) return;
   draftDirty = false;
   let ok = true;
   try {
-    if (window.__venueId) localStorage.setItem(VENUE_KEY(window.__venueId), JSON.stringify({ data: designData(), savedAt: new Date().toISOString() }));
+    if (window.__venueId) { const k = VENUE_KEY(window.__venueId); keepHistory(k); localStorage.setItem(k, JSON.stringify({ data: designData(), savedAt: new Date().toISOString() })); }
     else if (window.__siteId) { if (window.__generating || typeof saveHall !== 'function') return; saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); }
-    else localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id }));
+    else { keepHistory(DRAFT_KEY); localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id, savedAt: new Date().toISOString() })); }
   } catch (e) { ok = false; }
   const el = $('autosave');
   if (el) { el.textContent = ok ? `已自動存檔 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}（存在這台裝置）` : '自動存檔失敗：瀏覽器不讓網站存資料（無痕模式？）'; el.dataset.kind = ok ? 'ok' : 'warn'; }
@@ -4613,6 +4649,7 @@ function wireUi() {
   $('btn-copy-code').addEventListener('click', copyCode);
   $('btn-paste-toggle').addEventListener('click', () => { const b = $('paste-box'); b.hidden = !b.hidden; if (!b.hidden) $('paste-text').focus(); });
   $('btn-paste-load').addEventListener('click', loadCode);
+  $('hist-sel').addEventListener('change', (e) => { if (e.target.value !== '') restoreHist(Number(e.target.value)); e.target.value = ''; });
 }
 function start(hot) {
   wireUi();
@@ -4629,6 +4666,7 @@ function start(hot) {
   renderPlan(); fitPlan(); renderPlan(); planToolState();
   tick();
   if (note) toast(note);
+  renderHist();
   window.claude?.hot?.snapshot?.(() => ({ state: { ...designData(), id: state.id }, view }));
   const use = window.claude && window.claude.use;
   if (use) {
@@ -4647,6 +4685,7 @@ async function loadVenue(id) {
   window.__site = { name: v.name, town: v.addr, road: '' };
   let mine = null; try { mine = JSON.parse(localStorage.getItem(VENUE_KEY(id)) || 'null'); } catch (e) { /* ignore */ }
   state = sanitize(mine && mine.data ? { ...mine.data, id: null } : { ...v.design, name: `${v.name}（現況示意）`, id: null }); selectedId = null; selZoneId = null; history = [];
+  window.__venueReady = true; renderHist();
   fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); planToolState();
   $('gym-title').textContent = v.name;
   document.querySelector('.rail-head .eyebrow').textContent = 'Existing Venue · 現有球館參考';
@@ -4663,7 +4702,7 @@ async function loadVenue(id) {
     <div class="row">${v.sources.map(([t, u]) => `<a href="${e(u)}" target="_blank" rel="noopener">${e(t)} ↗</a>`).join('')}</div>
     <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button>${mine ? '<button type="button" id="venue-reset">回到相片版本</button>' : ''}</div>`;
   $('venue-walk').addEventListener('click', () => setMode('walk'));
-  if ($('venue-reset')) $('venue-reset').addEventListener('click', () => { try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } loadVenue(id); });
+  if ($('venue-reset')) $('venue-reset').addEventListener('click', () => { keepHistory(VENUE_KEY(id), true); try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } loadVenue(id); toast('已回到相片版本；剛才的版本留在「找回之前的版本」裡'); });
   toast(`已載入「${v.name}」的示意模型，按「進入導覽」可以走進去`);
 }
 
