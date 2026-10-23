@@ -1,5 +1,5 @@
 // 多人連線（排球對打）的通行證：用 Vercel 環境變數 ABLY_API_KEY 簽一張 Ably TokenRequest 給瀏覽器。
-// 金鑰本身不會送到瀏覽器；通行證只能用在 vb-room-* 這些房間頻道，1 小時後失效。
+// 金鑰本身不會送到瀏覽器；通行證只能用在 vb-room:* 這些房間頻道，1 小時後失效。
 // 沒設定 ABLY_API_KEY 時回 501，網頁會顯示「多人連線還沒開啟」。
 //   GET /api/rt-token?clientId=<玩家代號>  → { keyName, ttl, capability, clientId, timestamp, nonce, mac }
 const crypto = require('crypto');
@@ -19,7 +19,8 @@ module.exports = async (req, res) => {
   const q = new URL(req.url, 'http://x').searchParams;
   const clientId = (q.get('clientId') || '').replace(/[^\w-]/g, '').slice(0, 40) || 'p' + crypto.randomBytes(4).toString('hex');
   const ttl = 60 * 60 * 1000;
-  const capability = JSON.stringify({ 'vb-room-*': ['publish', 'subscribe', 'presence'] });
+  // Ably 的萬用權限只認「命名空間:*」：房間頻道叫 vb-room:<代碼>
+  const capability = JSON.stringify({ 'vb-room:*': ['publish', 'subscribe', 'presence'] });
   const timestamp = Date.now();
   const nonce = crypto.randomBytes(16).toString('hex');
   // Ably 的 TokenRequest 簽章：各欄位換行串起來，用金鑰的 secret 做 HMAC-SHA256

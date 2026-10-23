@@ -5907,7 +5907,9 @@ async function ablyTransport(room) {
   if (!pre || pre.status === 501 || !(pre.headers.get('content-type') || '').includes('json')) throw new Error('noserver');
   if (!window.Ably) await loadScript('https://cdn.jsdelivr.net/npm/ably@2.20.0/build/ably.min.js');
   const client = new window.Ably.Realtime({ authUrl: 'api/rt-token?clientId=' + encodeURIComponent(NET.me), clientId: NET.me, echoMessages: false });
-  const ch = client.channels.get('vb-room-' + room);
+  // Ably 的萬用權限只認「命名空間:*」，房間頻道用 vb-room:代碼
+  const ch = client.channels.get('vb-room:' + room);
+  await Promise.race([ch.attach(), new Promise((_, bad) => setTimeout(() => bad(new Error('timeout')), 12000))]).catch((e) => { client.close(); throw new Error(e && e.code === 40160 ? 'denied' : 'attach'); });
   return {
     publish: (t, d) => { ch.publish(t, d).catch(() => {}); },
     subscribe: (fn) => ch.subscribe((m) => fn(m.name, m.data, m.clientId)),
@@ -5948,11 +5950,12 @@ async function netJoin(room) {
   netStatus('連線中…', 'busy');
   let tx;
   try { tx = new URLSearchParams(location.search).has('localnet') ? localTransport(room) : await ablyTransport(room); }
-  catch (e) { netStatus(e.message === 'noserver' ? '多人連線還沒開啟：網站管理者要先照「部署說明」設定 ABLY_API_KEY' : '連不上即時連線服務，請稍後再試', 'warn'); return; }
+  catch (e) { netStatus(e.message === 'noserver' ? '多人連線還沒開啟：網站管理者要先照「部署說明」設定 ABLY_API_KEY' : e.message === 'denied' ? '即時連線服務拒絕進入房間（金鑰權限不足：要有 Publish、Subscribe、Presence）' : '連不上即時連線服務，請稍後再試（公司或學校網路可能擋住）', 'warn'); return; }
   NET.tx = tx; NET.room = room; NET.on = true; NET.peers.clear();
   tx.subscribe(netOnMessage);
   tx.onPresence((action, id, d) => { if (id === NET.me) return; if (action === 'leave' || action === 'absent') netDropPeer(id); else netPeer(id, d); renderMpList(); });
-  const others = (await tx.members()).filter((m) => m.id !== NET.me);
+  let others;
+  try { others = (await tx.members()).filter((m) => m.id !== NET.me); } catch (e) { tx.close(); NET.on = false; NET.tx = null; netStatus('進不了房間，請稍後再試', 'warn'); return; }
   if (others.length >= NET_MAX) { tx.close(); NET.on = false; NET.tx = null; netStatus(`房間 ${room} 已經滿了（最多 ${NET_MAX} 人）`, 'warn'); return; }
   const used = new Set(others.map((m) => m.c)), color = NET_COLORS.find((c) => !used.has(c)) || NET_COLORS[0];
   NET.color = color;
