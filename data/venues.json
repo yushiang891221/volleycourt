@@ -1,116 +1,933 @@
 {
-  "updated": "2026-10-23",
-  "note": "新竹現有排球館的 3D 示意。只放公開查得到的資訊（官網、官方社群）；查不到的欄位留空，模型用示意尺寸。挑高一律查不到，先用 8 m。",
-  "venues": [
-    {
-      "id": "longshot",
-      "name": "龍蝦排球館 LongShot",
-      "addr": "新竹縣寶山鄉大崎一路128號",
-      "courts": 2,
-      "height": null,
-      "size": "打球區 25 × 18 m，另有 5 m 深的休息區與戶外平台",
-      "facilities": ["廁所", "更衣室", "飲水機", "販賣部", "戶外平台"],
-      "hours": "週一至週日 09:00–01:20",
-      "price": null,
-      "layoutNote": "兩面場並排放進 25 × 18 m 的打球區是依官網尺寸推估；廁所、更衣室、販賣部的位置與大小是示意。",
-      "unknown": ["挑高", "淋浴", "收費", "停車", "各區實際位置"],
-      "sources": [["龍蝦排球館官網", "https://longshot.booknow.com.tw/"], ["Threads：新竹私人排球館面數整理", "https://www.threads.com/@siegfried30/post/DL0AaqxvxHG"]],
-      "design": {
-        "building": { "L": 25, "W": 23, "H": 8 },
-        "floor": "pu", "net": "men",
-        "zones": [
-          { "type": "wc", "x": -10.5, "z": 9, "w": 4, "d": 5 },
-          { "type": "locker", "x": -6.5, "z": 9, "w": 4, "d": 5, "name": "更衣室" },
-          { "type": "rest", "x": 2, "z": 9, "w": 13, "d": 5 },
-          { "type": "reception", "x": 10.5, "z": 9, "w": 4, "d": 5, "name": "販賣部" }
-        ],
-        "items": [
-          { "type": "vbt", "x": 0, "z": -7, "rot": 0, "locked": true, "label": "A 場" },
-          { "type": "vbt", "x": 0, "z": 2, "rot": 0, "locked": true, "label": "B 場" },
-          { "type": "water", "x": -4, "z": 11, "rot": 0 },
-          { "type": "bench", "x": 0, "z": 10.8, "rot": 0 },
-          { "type": "bench", "x": 3, "z": 10.8, "rot": 0 }
-        ]
-      }
+ "updated": "2026-10-23",
+ "note": "新竹現有排球館的 3D 示意。格局與擺設依 Google 地圖相片與官方社群整理；尺寸從相片估計，查不到的欄位留空。",
+ "venues": [
+  {
+   "id": "longshot",
+   "name": "龍蝦排球館 LongShot",
+   "addr": "新竹縣寶山鄉大崎一路128號",
+   "courts": 2,
+   "height": null,
+   "size": "打球區 25 × 18 m（官網），另有 5 m 深的休息區與戶外平台",
+   "facilities": [
+    "廁所",
+    "更衣室",
+    "飲水機",
+    "販賣部",
+    "戶外平台",
+    "機車停車（相片）"
+   ],
+   "hours": "週一至週日 09:00–01:20",
+   "price": null,
+   "layoutNote": "依Google 地圖上的店家與使用者相片（2025 年 5 月～2026 年 1 月）配置：鋼板廠房、外露鋼構屋架、黃色球場配藍灰色邊區、四周掛黑色隔網、端牆一大面白色布幕；場邊是灰色木紋地板，放辦公桌、白色折疊桌、一間白色組合屋與球車。官網寫打球區 25 × 18 m（一面標準場的大小），社群說有 2 面，相片只看得到 1 面，第二面的位置不明，先只放 1 面。尺寸是從相片估計的。",
+   "unknown": [
+    "挑高",
+    "淋浴",
+    "收費",
+    "第二面場的位置",
+    "組合屋裡面的配置"
+   ],
+   "sources": [
+    [
+     "龍蝦排球館官網",
+     "https://longshot.booknow.com.tw/"
+    ],
+    [
+     "Google 地圖：龍蝦排球館相片",
+     "https://www.google.com/maps/search/%E9%BE%8D%E8%9D%A6%E6%8E%92%E7%90%83%E9%A4%A8"
+    ],
+    [
+     "Threads：新竹私人排球館面數整理",
+     "https://www.threads.com/@siegfried30/post/DL0AaqxvxHG"
+    ]
+   ],
+   "design": {
+    "building": {
+     "L": 26,
+     "W": 25,
+     "H": 8,
+     "wall": "metal"
     },
-    {
-      "id": "volleychill",
-      "name": "Volley Chill × 排丘排球館",
-      "addr": "新竹縣寶山鄉大崎一路195之9號",
-      "courts": 1,
-      "height": null,
-      "size": null,
-      "facilities": ["露營風休息區", "密碼置物櫃", "廁所", "冷氣"],
-      "hours": null,
-      "price": "室內臨打 100 元（開冷氣也一樣）",
-      "layoutNote": "球場用標準 25 × 18 m（含緩衝區）示意；休息區與廁所的位置、大小是示意。",
-      "unknown": ["挑高", "建物尺寸", "淋浴", "營業時間", "停車"],
-      "sources": [["排丘排球館 Threads", "https://www.threads.com/@volley_chill"], ["排丘排球館 Facebook", "https://www.facebook.com/p/Volley-Chill-x-%E6%8E%92%E4%B8%98%E6%8E%92%E7%90%83%E9%A4%A8-61572774183516/"]],
-      "design": {
-        "building": { "L": 25, "W": 23, "H": 8 },
-        "floor": "pu", "net": "men",
-        "zones": [
-          { "type": "wc", "x": -10.5, "z": 9, "w": 4, "d": 5 },
-          { "type": "rest", "x": 2, "z": 9, "w": 21, "d": 5, "name": "露營風休息區" }
-        ],
-        "items": [
-          { "type": "vb", "x": 0, "z": -2.5, "rot": 0, "locked": true, "label": "球場" },
-          { "type": "locker", "x": 9.5, "z": 11.15, "rot": 0, "w": 3.6 },
-          { "type": "table", "x": 0, "z": 9, "rot": 0 },
-          { "type": "table", "x": 4, "z": 9, "rot": 0 },
-          { "type": "plant", "x": -7.5, "z": 10.8, "rot": 0 },
-          { "type": "aircon", "x": -12.5, "z": -2.5, "rot": 90 },
-          { "type": "aircon", "x": 12.5, "z": -2.5, "rot": -90 }
-        ]
-      }
+    "floor": "yb",
+    "net": "men",
+    "zones": [
+     {
+      "type": "rest",
+      "name": "場邊休息區",
+      "x": 3.5,
+      "z": 9.5,
+      "w": 16,
+      "d": 6,
+      "floor": "vinyl",
+      "bare": true,
+      "desc": "球場旁的灰色木紋地板區，擺白色折疊桌椅，等下一場、喝水都在這裡；球車停在隔網邊。"
+     },
+     {
+      "type": "office",
+      "name": "櫃台／辦公桌",
+      "x": -9.5,
+      "z": 10,
+      "w": 5,
+      "d": 5,
+      "floor": "vinyl",
+      "walls": "open",
+      "bare": true,
+      "desc": "靠牆一張辦公桌和電腦，館方在這裡報到、收費。"
+     },
+     {
+      "type": "wc",
+      "name": "組合屋（廁所、更衣）",
+      "x": -4.8,
+      "z": 10.8,
+      "w": 2.6,
+      "d": 2.6,
+      "walls": "solid",
+      "bare": true,
+      "desc": "場邊一間白色組合屋，相片看得到門，裡面的配置不明。"
+     }
+    ],
+    "items": [
+     {
+      "type": "vb",
+      "x": 0,
+      "z": -3.5,
+      "rot": 0,
+      "locked": true,
+      "label": "球場"
+     },
+     {
+      "type": "netwall",
+      "x": 0,
+      "z": 5.7,
+      "rot": 0,
+      "w": 24,
+      "tone": "black"
+     },
+     {
+      "type": "banner",
+      "x": -12.9,
+      "z": -3.5,
+      "rot": 90,
+      "w": 14,
+      "tone": "white"
+     },
+     {
+      "type": "desk",
+      "x": -10,
+      "z": 9,
+      "rot": 180
+     },
+     {
+      "type": "foldtable",
+      "x": 1,
+      "z": 8.2,
+      "rot": 0,
+      "w": 1.8
+     },
+     {
+      "type": "foldtable",
+      "x": 4,
+      "z": 8.2,
+      "rot": 0,
+      "w": 1.8
+     },
+     {
+      "type": "foldchair",
+      "x": 0.4,
+      "z": 9.0,
+      "rot": 180
+     },
+     {
+      "type": "foldchair",
+      "x": 1.6,
+      "z": 9.0,
+      "rot": 180
+     },
+     {
+      "type": "foldchair",
+      "x": 3.4,
+      "z": 9.0,
+      "rot": 180
+     },
+     {
+      "type": "foldchair",
+      "x": 4.6,
+      "z": 9.0,
+      "rot": 180
+     },
+     {
+      "type": "ballcart",
+      "x": 9,
+      "z": 7,
+      "rot": 0
+     },
+     {
+      "type": "ballcart",
+      "x": 10.5,
+      "z": 7,
+      "rot": 0
+     },
+     {
+      "type": "water",
+      "x": 7,
+      "z": 12.1,
+      "rot": 0
+     },
+     {
+      "type": "cubby",
+      "x": 11,
+      "z": 12.2,
+      "rot": 0,
+      "w": 2
+     },
+     {
+      "type": "light",
+      "x": -8.67,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -8.67,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -8.67,
+      "z": 2.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": 2.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 8.67,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 8.67,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 8.67,
+      "z": 2.5,
+      "rot": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "volleychill",
+   "name": "Volley Chill × 排丘排球館",
+   "addr": "新竹縣寶山鄉大崎一路195之9號",
+   "courts": 1,
+   "height": null,
+   "size": null,
+   "facilities": [
+    "露營風休息區（木製露營椅、小桌）",
+    "密碼置物櫃",
+    "廁所",
+    "冷氣"
+   ],
+   "hours": null,
+   "price": "室內臨打 100 元（開冷氣也一樣）",
+   "layoutNote": "依Google 地圖上的店家與使用者相片（2025 年 5 月～2026 年 1 月）配置：高挑的鋼板廠房、整片淺色木紋運動地板、紅色網柱護套、場邊掛黑色隔網；隔網外是水泥走道，擺木製露營折疊椅和小桌，還有可折疊的球籃。廁所與置物櫃的位置相片看不到，是示意。尺寸是從相片估計的。",
+   "unknown": [
+    "挑高實際數字",
+    "建物尺寸",
+    "淋浴",
+    "營業時間",
+    "廁所位置"
+   ],
+   "sources": [
+    [
+     "Google 地圖：排丘排球館相片",
+     "https://www.google.com/maps/search/Volley+Chill+x+%E6%8E%92%E4%B8%98%E6%8E%92%E7%90%83%E9%A4%A8"
+    ],
+    [
+     "排丘排球館 Threads",
+     "https://www.threads.com/@volley_chill"
+    ]
+   ],
+   "design": {
+    "building": {
+     "L": 30,
+     "W": 25,
+     "H": 9,
+     "wall": "metal"
     },
-    {
-      "id": "jcv",
-      "name": "就醬瘋排球館 JCV",
-      "addr": "園區二路221之2號（門牌屬寶山鄉大崎村）",
-      "courts": 1,
-      "height": null,
-      "size": null,
-      "facilities": ["挑高、明亮（社群描述）", "免費停車"],
-      "hours": null,
-      "price": null,
-      "layoutNote": "只知道有 1 面場；建物用標準球場外加 1 m 示意，裡面沒有放其他區域。",
-      "unknown": ["挑高實際數字", "建物尺寸", "休息區", "更衣淋浴", "收費", "營業時間"],
-      "sources": [["Threads：新竹私人排球館面數整理", "https://www.threads.com/@siegfried30/post/DL0AaqxvxHG"]],
-      "design": {
-        "building": { "L": 27, "W": 20, "H": 8 },
-        "floor": "pu", "net": "men",
-        "zones": [],
-        "items": [
-          { "type": "vb", "x": 0, "z": 0, "rot": 0, "locked": true, "label": "球場" }
-        ]
-      }
+    "floor": "maple",
+    "net": "men",
+    "zones": [
+     {
+      "type": "rest",
+      "name": "露營風休息區",
+      "x": 2,
+      "z": 9.6,
+      "w": 16,
+      "d": 5.5,
+      "floor": "concrete",
+      "bare": true,
+      "desc": "隔網外的水泥走道，擺木製露營折疊椅和小桌，就是官方說的露營風休息區。"
+     },
+     {
+      "type": "wc",
+      "name": "廁所",
+      "x": -12.5,
+      "z": 10.3,
+      "w": 4,
+      "d": 3.4,
+      "walls": "solid",
+      "bare": true,
+      "desc": "官方說有廁所，位置相片看不到，這裡是示意。"
+     }
+    ],
+    "items": [
+     {
+      "type": "vb",
+      "x": 0,
+      "z": -2.5,
+      "rot": 0,
+      "locked": true,
+      "label": "球場"
+     },
+     {
+      "type": "netwall",
+      "x": 0,
+      "z": 6.7,
+      "rot": 0,
+      "w": 28,
+      "tone": "black"
+     },
+     {
+      "type": "campchair",
+      "x": -3,
+      "z": 8.6,
+      "rot": 180
+     },
+     {
+      "type": "campchair",
+      "x": -2,
+      "z": 8.4,
+      "rot": 160
+     },
+     {
+      "type": "campchair",
+      "x": -1,
+      "z": 9.6,
+      "rot": 200
+     },
+     {
+      "type": "campchair",
+      "x": 2.5,
+      "z": 8.6,
+      "rot": 180
+     },
+     {
+      "type": "campchair",
+      "x": 3.6,
+      "z": 9.4,
+      "rot": 210
+     },
+     {
+      "type": "campchair",
+      "x": 6,
+      "z": 8.8,
+      "rot": 170
+     },
+     {
+      "type": "campchair",
+      "x": 7.2,
+      "z": 9.8,
+      "rot": 190
+     },
+     {
+      "type": "campchair",
+      "x": -4.2,
+      "z": 10.6,
+      "rot": 150
+     },
+     {
+      "type": "camptable",
+      "x": -2,
+      "z": 9.6,
+      "rot": 0
+     },
+     {
+      "type": "camptable",
+      "x": 3,
+      "z": 9.9,
+      "rot": 0
+     },
+     {
+      "type": "ballbasket",
+      "x": 9.5,
+      "z": 7.6,
+      "rot": 0
+     },
+     {
+      "type": "locker",
+      "x": 9.5,
+      "z": 12.15,
+      "rot": 0,
+      "w": 3.6
+     },
+     {
+      "type": "aircon",
+      "x": -15,
+      "z": -6,
+      "rot": 90
+     },
+     {
+      "type": "aircon",
+      "x": -15,
+      "z": 1,
+      "rot": 90
+     },
+     {
+      "type": "aircon",
+      "x": 15,
+      "z": -6,
+      "rot": -90
+     },
+     {
+      "type": "aircon",
+      "x": 15,
+      "z": 1,
+      "rot": -90
+     },
+     {
+      "type": "light",
+      "x": -10.0,
+      "z": -9.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -10.0,
+      "z": -4.75,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -10.0,
+      "z": -0.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -10.0,
+      "z": 4.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -9.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -4.75,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -0.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": 4.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 10.0,
+      "z": -9.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 10.0,
+      "z": -4.75,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 10.0,
+      "z": -0.25,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 10.0,
+      "z": 4.25,
+      "rot": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "jcv",
+   "name": "就醬瘋排球館 JCV",
+   "addr": "新竹市東區科園里園區二路221-2號（Google 地圖）",
+   "courts": 1,
+   "height": null,
+   "size": null,
+   "facilities": [
+    "挑高、明亮（社群描述）",
+    "免費停車",
+    "四周牆面深灰色布幕（相片）"
+   ],
+   "hours": null,
+   "price": null,
+   "layoutNote": "依Google 地圖上的店家與使用者相片（2025 年 5 月～2026 年 1 月）配置：鋼板廠房、外露鋼構屋架、整片蜂蜜色木紋運動地板、藍色網柱、四周牆下半部（約 4 m 高）掛深灰色布幕、觀眾那一側掛黑色隔網。場邊的設施相片看不到，只放長椅示意。尺寸是從相片估計的。",
+   "unknown": [
+    "挑高實際數字",
+    "建物尺寸",
+    "休息區",
+    "更衣淋浴",
+    "收費",
+    "營業時間"
+   ],
+   "sources": [
+    [
+     "Google 地圖：就醬瘋排球館相片",
+     "https://www.google.com/maps/search/%E5%B0%B1%E9%86%AC%E7%98%8B%E6%8E%92%E7%90%83%E9%A4%A8"
+    ],
+    [
+     "Threads：新竹私人排球館面數整理",
+     "https://www.threads.com/@siegfried30/post/DL0AaqxvxHG"
+    ]
+   ],
+   "design": {
+    "building": {
+     "L": 28,
+     "W": 21,
+     "H": 8,
+     "wall": "metal"
     },
-    {
-      "id": "papailang",
-      "name": "啪！排郎",
-      "addr": "新竹縣竹北市中正西路1073巷71弄2號",
-      "courts": 1,
-      "height": null,
-      "size": null,
-      "facilities": [],
-      "hours": null,
-      "price": null,
-      "layoutNote": "只知道有 1 面場；建物用標準球場外加 1 m 示意，裡面沒有放其他區域。",
-      "unknown": ["挑高", "建物尺寸", "設施", "收費", "營業時間"],
-      "sources": [["啪！排郎 連結頁", "https://linktr.ee/papailangvolleyball"], ["Threads：新竹私人排球館面數整理", "https://www.threads.com/@siegfried30/post/DL0AaqxvxHG"]],
-      "design": {
-        "building": { "L": 27, "W": 20, "H": 8 },
-        "floor": "pu", "net": "men",
-        "zones": [],
-        "items": [
-          { "type": "vb", "x": 0, "z": 0, "rot": 0, "locked": true, "label": "球場" }
-        ]
-      }
-    }
-  ],
-  "skipped": [
-    { "name": "可利's 排球小棧", "why": "三館共 5 面，但各館面數與二、三館地址查不到" },
-    { "name": "新科國民運動中心", "why": "3 樓綜合球場的公開資料只寫籃球、羽球、桌球，排球場面數查不到" }
-  ]
+    "floor": "honey",
+    "net": "men",
+    "zones": [],
+    "items": [
+     {
+      "type": "vb",
+      "x": 0,
+      "z": -1,
+      "rot": 0,
+      "locked": true,
+      "label": "球場"
+     },
+     {
+      "type": "netwall",
+      "x": 0,
+      "z": 8.2,
+      "rot": 0,
+      "w": 26,
+      "tone": "black"
+     },
+     {
+      "type": "banner",
+      "x": 0,
+      "z": -10.5,
+      "rot": 0,
+      "w": 26,
+      "tone": "dark"
+     },
+     {
+      "type": "banner",
+      "x": -2,
+      "z": 10.5,
+      "rot": 0,
+      "w": 20,
+      "tone": "dark"
+     },
+     {
+      "type": "banner",
+      "x": -14,
+      "z": 0,
+      "rot": 90,
+      "w": 19,
+      "tone": "dark"
+     },
+     {
+      "type": "banner",
+      "x": 14,
+      "z": 0,
+      "rot": -90,
+      "w": 19,
+      "tone": "dark"
+     },
+     {
+      "type": "bench",
+      "x": -6,
+      "z": 9.2,
+      "rot": 0
+     },
+     {
+      "type": "bench",
+      "x": -3,
+      "z": 9.2,
+      "rot": 0
+     },
+     {
+      "type": "bench",
+      "x": 3,
+      "z": 9.2,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.33,
+      "z": -6.67,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.33,
+      "z": -1.0,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.33,
+      "z": 4.67,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -6.67,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -1.0,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": 4.67,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.33,
+      "z": -6.67,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.33,
+      "z": -1.0,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.33,
+      "z": 4.67,
+      "rot": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "papailang",
+   "name": "啪！排郎",
+   "addr": "新竹縣竹北市中正西路1073巷71弄2號",
+   "courts": 1,
+   "height": null,
+   "size": null,
+   "facilities": [
+    "休息區（木棧板地、折疊椅，只能喝水）",
+    "更衣簾",
+    "木格置物櫃",
+    "鞋架",
+    "廁所＆更衣室（組合屋，外面包圍網）",
+    "洗手台、淨水器",
+    "良心冰箱與餅乾",
+    "藍芽音響、WIFI",
+    "落地冷氣、立扇"
+   ],
+   "hours": "打烊時間 22:00（Google 地圖）",
+   "price": null,
+   "layoutNote": "依Google 地圖上的店家與使用者相片（2025 年 5 月～2026 年 1 月）配置（店家在相片上標了各區名稱）：鋼板廠房、橘色球場配綠色邊區、白色圍網、端牆貼一排海報；場外是灰色地墊，有木棧板休息區、更衣簾、木格置物櫃、鞋架、外面包圍網的組合屋（廁所＆更衣室）、洗手台、淨水器、良心冰箱。各區的相對位置與尺寸是從相片估計的。",
+   "unknown": [
+    "挑高",
+    "建物尺寸",
+    "收費",
+    "各區的確切位置"
+   ],
+   "sources": [
+    [
+     "Google 地圖：啪！排郎相片（店家標註各區）",
+     "https://www.google.com/maps/search/%E5%95%AA%EF%BC%81%E6%8E%92%E9%83%8E+%E7%AB%B9%E5%8C%97+%E6%8E%92%E7%90%83"
+    ],
+    [
+     "啪！排郎 連結頁",
+     "https://linktr.ee/papailangvolleyball"
+    ]
+   ],
+   "design": {
+    "building": {
+     "L": 27,
+     "W": 25,
+     "H": 7,
+     "wall": "metal"
+    },
+    "floor": "og",
+    "net": "men",
+    "zones": [
+     {
+      "type": "rest",
+      "name": "休息區（只能喝水）",
+      "x": 8.5,
+      "z": 9.6,
+      "w": 6,
+      "d": 4.6,
+      "floor": "deck",
+      "bare": true,
+      "desc": "木棧板地上放白色折疊桌椅，旁邊有落地冷氣和立扇；店家標註這區只能喝水。"
+     },
+     {
+      "type": "locker",
+      "name": "更衣簾＆置物櫃",
+      "x": -9.5,
+      "z": 10.4,
+      "w": 7,
+      "d": 3.4,
+      "floor": "pvc",
+      "walls": "open",
+      "bare": true,
+      "desc": "牆角一個布簾更衣間，旁邊是木格置物櫃和鞋架。"
+     },
+     {
+      "type": "wc",
+      "name": "廁所＆更衣室",
+      "x": -3.6,
+      "z": 10.6,
+      "w": 2.2,
+      "d": 2.2,
+      "walls": "solid",
+      "bare": true,
+      "desc": "場邊一間組合屋，外面包了一層圍網，是廁所也是更衣室。"
+     }
+    ],
+    "items": [
+     {
+      "type": "vb",
+      "x": 0,
+      "z": -3.5,
+      "rot": 0,
+      "locked": true,
+      "label": "球場"
+     },
+     {
+      "type": "netwall",
+      "x": 0,
+      "z": 5.7,
+      "rot": 0,
+      "w": 25,
+      "tone": "white"
+     },
+     {
+      "type": "banner",
+      "x": 0,
+      "z": -12.4,
+      "rot": 0,
+      "w": 18,
+      "tone": "poster"
+     },
+     {
+      "type": "curtain",
+      "x": -12,
+      "z": 11.4,
+      "rot": 0
+     },
+     {
+      "type": "cubby",
+      "x": -9.8,
+      "z": 12.25,
+      "rot": 0,
+      "w": 1.6
+     },
+     {
+      "type": "shoerack",
+      "x": -8.3,
+      "z": 12.3,
+      "rot": 0
+     },
+     {
+      "type": "purifier",
+      "x": -0.8,
+      "z": 12.15,
+      "rot": 0,
+      "label": "淨水器"
+     },
+     {
+      "type": "steelsink",
+      "x": 0.6,
+      "z": 12.2,
+      "rot": 0,
+      "label": "洗手台"
+     },
+     {
+      "type": "fridge",
+      "x": 2.6,
+      "z": 12.15,
+      "rot": 0,
+      "label": "良心冰箱"
+     },
+     {
+      "type": "foldtable",
+      "x": 7.5,
+      "z": 8.6,
+      "rot": 0,
+      "w": 1.2,
+      "label": "藍芽音響、WIFI"
+     },
+     {
+      "type": "foldchair",
+      "x": 6.6,
+      "z": 9.6,
+      "rot": 180
+     },
+     {
+      "type": "foldchair",
+      "x": 7.6,
+      "z": 9.7,
+      "rot": 180
+     },
+     {
+      "type": "foldchair",
+      "x": 9.4,
+      "z": 9.1,
+      "rot": 200
+     },
+     {
+      "type": "foldchair",
+      "x": 10.2,
+      "z": 10.2,
+      "rot": 220
+     },
+     {
+      "type": "standac",
+      "x": 11,
+      "z": 12.1,
+      "rot": 0
+     },
+     {
+      "type": "floorfan",
+      "x": 9.6,
+      "z": 11.6,
+      "rot": 0
+     },
+     {
+      "type": "floorfan",
+      "x": 6.4,
+      "z": 11.6,
+      "rot": 0
+     },
+     {
+      "type": "plant",
+      "x": 12.6,
+      "z": 8.2,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.0,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.0,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": -9.0,
+      "z": 2.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 0.0,
+      "z": 2.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.0,
+      "z": -9.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.0,
+      "z": -3.5,
+      "rot": 0
+     },
+     {
+      "type": "light",
+      "x": 9.0,
+      "z": 2.5,
+      "rot": 0
+     }
+    ]
+   }
+  }
+ ],
+ "skipped": [
+  {
+   "name": "可利's 排球小棧",
+   "why": "三館共 5 面，但各館面數與二、三館地址查不到"
+  },
+  {
+   "name": "新科國民運動中心",
+   "why": "3 樓綜合球場的公開資料只寫籃球、羽球、桌球，排球場面數查不到"
+  }
+ ]
 }

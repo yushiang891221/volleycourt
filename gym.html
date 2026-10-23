@@ -563,6 +563,10 @@ const SCHEMES = {
   blue: { name: '藍底橘場', base: '#5D7F9E', free: '#2F5D8C', court: '#E07B39', bd: '#2E8B57', pb: '#2F7F86', kitchen: '#4BA3AB', bk: '#B5763E', key: '#8E4F2E' },
   green: { name: '綠底藍場', base: '#5E8A72', free: '#2E6B4F', court: '#3F7FBF', bd: '#3C9A6A', pb: '#2F6F9F', kitchen: '#4B8EC0', bk: '#B07A44', key: '#7E4C2C' },
   wood: { name: '全木地板', base: '#A88458', wood: true, free: '#C79A63', court: '#DDB27A', bd: '#4F9A6B', pb: '#3C7F8C', kitchen: '#5AA1AC', bk: '#C08850', key: '#94582F' },
+  yb: { name: '黃色球場＋藍灰邊區', base: '#C9C5BE', hall: 'vinyl', free: '#6F8CAF', court: '#E9B53A', pad: '#B8352E', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
+  maple: { name: '淺色木紋運動地板', base: '#B9B5AE', hall: 'concrete', free: '#D9B07A', court: '#D9B07A', grain: true, pad: '#C0392B', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
+  honey: { name: '蜂蜜色木紋地板', base: '#7C7F84', hall: 'concrete', free: '#D59A55', court: '#D59A55', grain: true, pad: '#2F5FA8', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
+  og: { name: '橘色球場＋綠色邊區', base: '#8E9399', hall: 'pvc', free: '#2F8A6A', court: '#E2843A', pad: '#2F5FA8', bd: '#3C8A63', pb: '#2F6F86', kitchen: '#4B93A6', bk: '#B5763E', key: '#8E4F2E' },
   grey: { name: '灰底紅場', base: '#7A828C', free: '#5B6470', court: '#B5473A', bd: '#3E8C62', pb: '#3B7480', kitchen: '#5296A0', bk: '#A9733F', key: '#7C4A2B' },
 };
 const NETS = { men: { label: '男網 2.43 m', h: 2.43 }, women: { label: '女網 2.24 m', h: 2.24 }, mixed: { label: '混網 2.35 m', h: 2.35 } };
@@ -586,6 +590,20 @@ const CAT = {
   locker: { label: '置物櫃', group: '休息與服務', w: 1.8, d: 0.5, h: 1.9, color: '#5E6B7A', resize: true, tag: true },
   plant: { label: '植栽', group: '休息與服務', w: 0.6, d: 0.6, h: 1.5, color: '#4F7A4A' },
   aed: { label: 'AED', group: '休息與服務', w: 0.45, d: 0.2, h: 0.5, color: '#2E9E5B', tag: true },
+  foldtable: { label: '白色折疊桌', group: '休息與服務', w: 1.8, d: 0.75, h: 0.74, color: '#EDEFF0', resize: true },
+  foldchair: { label: '折疊椅', group: '休息與服務', w: 0.46, d: 0.5, h: 0.82, color: '#ECEEF0' },
+  campchair: { label: '木製露營椅', group: '休息與服務', w: 0.55, d: 0.62, h: 0.8, color: '#9C7A55' },
+  camptable: { label: '木製露營小桌', group: '休息與服務', w: 0.6, d: 0.6, h: 0.6, color: '#9C7A55' },
+  desk: { label: '辦公桌（電腦）', group: '休息與服務', w: 1.4, d: 0.7, h: 0.75, color: '#F2F2F0' },
+  cubby: { label: '木格置物櫃', group: '休息與服務', w: 1.6, d: 0.35, h: 1.5, color: '#C89A62', resize: 'w', tag: true },
+  shoerack: { label: '鞋架', group: '休息與服務', w: 0.6, d: 0.3, h: 1.0, color: '#1F2124' },
+  fridge: { label: '小冰箱', group: '休息與服務', w: 0.55, d: 0.55, h: 1.3, color: '#E9ECEE', tag: true },
+  standac: { label: '落地冷氣', group: '休息與服務', w: 0.55, d: 0.38, h: 1.8, color: '#F1F2F3' },
+  floorfan: { label: '立扇', group: '休息與服務', w: 0.45, d: 0.45, h: 1.2, color: '#1F2124' },
+  curtain: { label: '更衣簾', group: '休息與服務', w: 1.2, d: 1.0, h: 2.1, color: '#7A5A3E', tag: true },
+  steelsink: { label: '不鏽鋼洗手台', group: '休息與服務', w: 0.6, d: 0.5, h: 0.9, color: '#C8CCD0', tag: true },
+  purifier: { label: '淨水器', group: '休息與服務', w: 0.3, d: 0.4, h: 0.45, color: '#E9ECEE' },
+  ballbasket: { label: '可折疊球籃', group: '比賽設備', w: 0.62, d: 0.62, h: 0.8, color: '#22304A' },
   wc: { label: '廁所（舊版房間）', group: '空間', w: 5, d: 4.5, h: 2.6, color: '#C9D6DC', room: true, resize: true, tag: true },
   shower: { label: '淋浴間（舊版房間）', group: '空間', w: 3, d: 4, h: 2.6, color: '#C3D6D3', room: true, resize: true, tag: true },
   changing: { label: '更衣室（舊版房間）', group: '空間', w: 4, d: 4, h: 2.6, color: '#D3CBDC', room: true, resize: true, tag: true },
@@ -595,6 +613,7 @@ const CAT = {
   ballcart: { label: '球車', group: '比賽設備', w: 1, d: 0.6, h: 1, color: '#E0B33A' },
   bleacher: { label: '觀眾席', group: '比賽設備', w: 6, d: 2.4, h: 1.2, color: '#8D99A6', resize: true, tag: true },
   netwall: { label: '隔網', group: '比賽設備', w: 18, d: 0.1, h: 5, color: '#1F2933', resize: 'w', tag: true },
+  banner: { label: '牆面布幕／海報', group: '牆面、消防與安全', w: 8, d: 0.04, h: 3.6, mountY: 0.4, color: '#E9E9E6', wall: true, zoneOK: true, resize: 'w' },
   aircon: { label: '冷氣（掛牆）', group: '牆面、消防與安全', w: 1.2, d: 0.32, h: 0.42, mountY: 2.8, color: '#F2F4F6', wall: true, zoneOK: true },
   extinguisher: { label: '滅火器', group: '牆面、消防與安全', w: 0.35, d: 0.3, h: 0.6, mountY: 0, color: '#D7262B', wall: true, zoneOK: true },
   emlight: { label: '緊急照明燈', group: '牆面、消防與安全', w: 0.4, d: 0.12, h: 0.15, mountY: 2.6, color: '#F4F4F2', wall: true, zoneOK: true },
@@ -698,15 +717,23 @@ function sanitizeZone(z) {
   if (!z || !ZONES[z.type]) return null;
   const o = { id: typeof z.id === 'string' ? z.id : uid(), type: z.type, x: num(z.x, 0), z: num(z.z, 0), w: clamp(num(z.w, 4), 0.5, 160), d: clamp(num(z.d, 4), 0.5, 160) };
   if (typeof z.name === 'string' && z.name.trim()) o.name = z.name.slice(0, 20);
+  // 照現況調整：地坪材質、隔間做法（open 開放、glass、frost、solid 實牆組合屋、net 圍網）、bare = 不自動擺設施
+  if (ZONE_FLOORS.includes(z.floor)) o.floor = z.floor;
+  if (['open', 'glass', 'frost', 'solid', 'net'].includes(z.walls)) o.walls = z.walls;
+  if (z.bare === true) o.bare = true;
+  if (typeof z.desc === 'string' && z.desc.trim()) o.desc = z.desc.slice(0, 160);
   return o;
 }
+const ZONE_FLOORS = ['wood', 'tile', 'terrazzo', 'epoxy', 'mat', 'concrete', 'deck', 'vinyl', 'pvc'];
+function zoneWalls(z) { return z.walls || (ZONES[z.type].enclosed ? (ZONES[z.type].frosted ? 'frost' : 'glass') : 'open'); }
+function zoneFloor(z) { return z.floor || ZONES[z.type].floor; }
 function sanitize(raw) {
   const s = raw && typeof raw === 'object' ? raw : {};
   const b = s.building || {};
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
     net: NETS[s.net] ? s.net : 'men',
     zones: (Array.isArray(s.zones) ? s.zones.slice(0, 60) : []).map(sanitizeZone).filter(Boolean),
@@ -718,6 +745,7 @@ function sanitize(raw) {
     const o = { id: typeof it.id === 'string' ? it.id : uid(), type: it.type, x: num(it.x, 0), z: num(it.z, 0), rot: ((num(it.rot, 0) % 360) + 360) % 360 };
     if (def.resize || def.diam) { o.w = clamp(num(it.w, def.w), 0.3, 60); o.d = def.resize === 'w' ? def.d : clamp(num(it.d, def.d), 0.1, 60); if (def.diam) o.d = o.w; }
     if (def.court && it.mode === 'lines') o.mode = 'lines';
+    if (['white', 'dark', 'poster', 'black'].includes(it.tone)) o.tone = it.tone;
     if (typeof it.label === 'string' && it.label.trim()) o.label = it.label.slice(0, 20);
     if (it.locked === true) o.locked = true;
     out.items.push(o);
@@ -901,6 +929,9 @@ const FLOOR_MATS = {
   mat: phMat('rubber_tiles', 2, { rough: 0.9, env: 0.2 }),
   concrete: phMat('smooth_concrete_floor', 2, { rough: 0.6 }),
   hall: phMat('smooth_concrete_floor', 2, { rough: 0.55, color: '#E6E3DD', env: 0.2 }),
+  deck: phMat('oak_wood_planks', 0.6, { rough: 0.7, color: '#B07A4A', env: 0.15 }),
+  vinyl: phMat('laminate_floor_02', 1.7, { rough: 0.5, color: '#C9CDD0', env: 0.15 }),
+  pvc: phMat('smooth_concrete_floor', 2, { rough: 0.45, color: '#D3D7DC', env: 0.2, ns: 0.3 }),
 };
 const woodMat = phMat('oak_wood_planks', 1.2, { rough: 0.5, ns: 0.5 });
 const leatherCache = new Map();
@@ -916,7 +947,17 @@ function leatherMat(color) {
 const glassMat = new THREE.MeshStandardMaterial({ color: '#D7E6EA', roughness: 0.06, metalness: 0.1, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
 const frostMat = new THREE.MeshStandardMaterial({ color: '#E4E9EA', roughness: 0.55, metalness: 0, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
 const frameMat = new THREE.MeshStandardMaterial({ color: '#22304A', roughness: 0.5, metalness: 0.35 });
+const prefabMat = new THREE.MeshStandardMaterial({ color: '#E8E4DA', roughness: 0.6 });
+const prefabTrim = new THREE.MeshStandardMaterial({ color: '#8E9399', roughness: 0.5, metalness: 0.3 });
 // 牆：Poly Haven 的灰泥顏色圖偏灰、有污漬，只拿它的法線做粉刷面的細微起伏，顏色用乾淨的米白漆
+// 波浪鋼板：每 25 cm 一道起伏的法線貼圖（程式畫的），顏色淺灰白
+const ribNormal = (() => {
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 4; const c = cv.getContext('2d');
+  for (let x = 0; x < 64; x++) { const sl = Math.cos((x / 64) * Math.PI * 2) * 0.85; const r = Math.round((sl * 0.5 + 0.5) * 255); c.fillStyle = `rgb(${r},128,${Math.round(Math.sqrt(Math.max(0, 1 - sl * sl)) * 127 + 128)})`; c.fillRect(x, 0, 1, 4); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1 / 0.25, 1); return t;
+})();
+const metalWallMat = new THREE.MeshStandardMaterial({ color: '#DADDDF', roughness: 0.45, metalness: 0.35, normalMap: ribNormal, normalScale: new THREE.Vector2(0.9, 0.9) });
+metalWallMat.envMapIntensity = metalWallMat.userData.env = 0.35;
 const plasterMat = new THREE.MeshStandardMaterial({ color: '#EFEBE4', roughness: 0.92, normalMap: phTex('white_plaster_02', 'nor', 1), normalScale: new THREE.Vector2(0.35, 0.35) });
 plasterMat.userData.env = plasterMat.envMapIntensity = 0.2;
 const padMat = leatherMat('#24345A');
@@ -978,17 +1019,23 @@ function kitBase(role) {
     case 'can_g': return S('#2E8B57', { roughness: 0.3, metalness: 0.5 });
     case 'can_y': return S('#E8B019', { roughness: 0.3, metalness: 0.5 });
     case 'can_w': return S('#E8E8E6', { roughness: 0.3, metalness: 0.5 });
+    case 'plastic': return S('#EEF0F1', { roughness: 0.42 });
+    case 'fabric_w': return S('#ECEBE7', { roughness: 0.95, side: THREE.DoubleSide });
+    case 'curtain': return S('#7A5A3E', { roughness: 0.9, side: THREE.DoubleSide });
+    case 'stainless': return S('#C8CCD0', { roughness: 0.28, metalness: 0.9 });
+    case 'canvas': return S('#1F2A40', { roughness: 0.85 });
     default: return S('#9AA5B1');
   }
 }
-function kitMat(role) {
-  if (!KIT.mats.has(role)) {
-    const m = kitBase(role).clone();
+function kitMat(role, tint) {
+  const key = tint ? role + tint : role;
+  if (!KIT.mats.has(key)) {
+    const m = (tint ? (role === 'navy_pad' ? leatherMat(tint) : new THREE.MeshStandardMaterial({ color: tint, roughness: 0.9, side: THREE.DoubleSide })) : kitBase(role)).clone();
     if (!m.transparent && role !== 'emit') { m.aoMap = KIT.ao; m.aoMapIntensity = 1; }
     m.envMapIntensity = m.userData.env ?? 0.3; m.userData.envSet = true;
-    KIT.mats.set(role, m);
+    KIT.mats.set(key, m);
   }
-  return KIT.mats.get(role);
+  return KIT.mats.get(key);
 }
 // 放一個模組到 g；opts: rotY（弧度）、sx/sy/sz（微調比例，只用在格數換算後的 ±10% 以內）。素材庫還沒好就回傳 null
 function kit(name, g, x = 0, y = 0, z = 0, o = {}) {
@@ -996,7 +1043,7 @@ function kit(name, g, x = 0, y = 0, z = 0, o = {}) {
   if (!parts) return null;
   const grp = new THREE.Group();
   for (const pt of parts) {
-    const m = new THREE.Mesh(pt.geometry, kitMat(pt.role));
+    const m = new THREE.Mesh(pt.geometry, kitMat(pt.role, o.tint && o.tint[pt.role]));
     if (pt.role === 'glass' || pt.role === 'emit') m.userData.noInk = true;
     if (pt.role === 'leaf') m.userData.noInk = true;
     m.userData.softInk = true;
@@ -1061,6 +1108,14 @@ function courtTexture(kind, fw, fd, mode, schemeKey) {
     c.fillStyle = kind === 'vb' ? sc.free : sc.base; c.fillRect(0, 0, cv.width, cv.height);
     c.fillStyle = ({ vb: sc.court, bd: sc.bd, pb: sc.pb, bk: sc.bk })[kind];
     c.fillRect(P(x0), P(y0), P(cw), P(cd));
+    if (sc.grain) {   // 木紋運動地板：7 cm 寬的長條木板、色差、接縫
+      const r = rnd32(5), pl = 0.07 * PX;
+      for (let y = 0; y < cv.height; y += pl) {
+        let x = -r() * 120;
+        while (x < cv.width) { const len = 60 + r() * 140; c.fillStyle = `rgba(${r() < 0.5 ? '90,55,20' : '255,235,200'},${0.05 + r() * 0.09})`; c.fillRect(x, y, len, pl); c.fillStyle = 'rgba(80,50,20,.18)'; c.fillRect(x, y, 1, pl); x += len; }
+        c.fillStyle = 'rgba(80,50,20,.12)'; c.fillRect(0, y, cv.width, 1);
+      }
+    }
   }
   if (kind === 'vb') {
     rectLine(x0, y0, cw, cd);
@@ -1097,7 +1152,11 @@ function courtTexture(kind, fw, fd, mode, schemeKey) {
   return tex;
 }
 let netTex = null;
-function netTexture() {
+const netTexW = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d'); c.strokeStyle = 'rgba(245,245,240,0.9)'; c.lineWidth = 1.4;
+  for (let x = 0; x <= 256; x += 8) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, 64); c.stroke(); } for (let y = 0; y <= 64; y += 8) { c.beginPath(); c.moveTo(0, y); c.lineTo(256, y); c.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+function netTexture(tone) {
+  if (tone === 'white') return netTexW;
   if (netTex) return netTex;
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
   const c = cv.getContext('2d');
@@ -1138,7 +1197,7 @@ function buildItem(it, courtIndex) {
     if (def.court === 'vb') {
       const nh = NETS[state.net].h;
       // 網柱：鋼管外包深藍防護套，底座配重
-      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
+      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: SCHEMES[state.floor].pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
       net(g, 10.6, nh, 1.0);
       for (const z of [4.5, -4.5]) {
         const a = cyl(g, 0.006, 0.006, 1.8, '#E23A3A', 0, nh - 1.0, z);
@@ -1337,6 +1396,80 @@ function buildFurniture(g, it, w, d, def) {
     case 'locker':
       lockerBank(g, w, def.h, d, '#22304A', -1);
       break;
+    case 'foldtable': {
+      if (kit('fold_table', g, 0, 0, 0, { sx: w / 1.8, sz: d / 0.75 })) break;
+      box(g, w, 0.04, d, '#EDEFF0', 0, 0.7, 0, { roughness: 0.4 });
+      for (const sx of [-1, 1]) { box(g, 0.03, 0.7, 0.03, '#8E9399', sx * (w / 2 - 0.15), 0, -d / 2 + 0.08); box(g, 0.03, 0.7, 0.03, '#8E9399', sx * (w / 2 - 0.15), 0, d / 2 - 0.08); box(g, 0.03, 0.03, d - 0.16, '#8E9399', sx * (w / 2 - 0.15), 0.05, 0); }
+      break;
+    }
+    case 'foldchair':
+      if (kit('fold_chair', g)) break;
+      box(g, 0.42, 0.03, 0.4, '#ECEEF0', 0, 0.45, 0.02, { roughness: 0.4 }); box(g, 0.42, 0.3, 0.03, '#ECEEF0', 0, 0.5, 0.22, { roughness: 0.4 });
+      for (const sx of [-0.19, 0.19]) { const a = box(g, 0.02, 0.85, 0.02, '#B9BCC0', sx, 0, 0.2); a.rotation.x = -0.18; const b = box(g, 0.02, 0.5, 0.02, '#B9BCC0', sx, 0, -0.15); b.rotation.x = 0.35; }
+      break;
+    case 'campchair': {
+      if (kit('camp_chair', g)) break;
+      const W = mat('#9C7A55', { roughness: 0.7 });
+      for (let k = 0; k < 5; k++) box(g, 0.48, 0.025, 0.07, woodMat, 0, 0.42, -0.2 + k * 0.09);
+      for (let k = 0; k < 4; k++) { const sl = box(g, 0.48, 0.07, 0.025, woodMat, 0, 0.5 + k * 0.08, 0.26); sl.rotation.x = -0.25; }
+      for (const sx of [-0.25, 0.25]) { const a = box(g, 0.035, 0.85, 0.035, W, sx, 0, 0.05); a.rotation.x = 0.45; const b = box(g, 0.035, 0.6, 0.035, W, sx, 0, -0.05); b.rotation.x = -0.45; }
+      break;
+    }
+    case 'camptable':
+      if (kit('camp_table', g, 0, 0, 0, { sx: w / 0.6, sz: d / 0.6 })) break;
+      for (let k = 0; k < 6; k++) box(g, w, 0.025, d / 6 - 0.01, woodMat, 0, 0.58, -d / 2 + d / 12 + (k * d) / 6);
+      for (const sx of [-1, 1]) { const a = box(g, 0.035, 0.66, 0.035, '#9C7A55', sx * (w / 2 - 0.08), 0, 0); a.rotation.z = sx * 0.4; const b = box(g, 0.035, 0.66, 0.035, '#9C7A55', sx * (w / 2 - 0.08), 0, 0); b.rotation.z = -sx * 0.4; }
+      break;
+    case 'desk':
+      if (kit('desk', g, 0, 0, 0, { sx: w / 1.4, sz: d / 0.7 })) { kit('office_chair', g, -0.2, 0, -0.6, { rotY: Math.PI }); break; }
+      box(g, w, 0.03, d, '#F2F2F0', 0, 0.72, 0, { roughness: 0.35 });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.035, 0.72, 0.035, '#B9BCC0', sx * (w / 2 - 0.05), 0, sz * (d / 2 - 0.05));
+      box(g, 0.55, 0.34, 0.03, '#15181D', -0.2, 0.92, 0.18, { roughness: 0.2 }); box(g, 0.05, 0.18, 0.05, '#15181D', -0.2, 0.75, 0.2);
+      box(g, 0.2, 0.42, 0.42, '#1C1E22', w / 2 - 0.25, 0, 0.05);
+      { const ch = new THREE.Group(); ch.position.set(-0.2, 0, -0.55); box(ch, 0.48, 0.08, 0.46, '#2A2D33', 0, 0.45, 0); box(ch, 0.46, 0.55, 0.06, '#2A2D33', 0, 0.55, 0.22); cyl(ch, 0.025, 0.025, 0.42, chrome, 0, 0.03, 0); cyl(ch, 0.3, 0.3, 0.03, darkSteel, 0, 0, 0, null, 5); g.add(ch); }
+      break;
+    case 'cubby': {
+      // 木格櫃：每格 40 cm 寬、30 cm 高
+      const cols = Math.max(1, Math.round(w / 0.4)), rows = Math.max(1, Math.round(def.h / 0.3)), cw = w / cols, rh = def.h / rows;
+      if (KIT.ready) { for (let i = 0; i < cols; i++) kit('cubby_col', g, -w / 2 + cw * (i + 0.5), 0, 0, { sx: cw / 0.4, sz: d / 0.35 }); break; }
+      box(g, w, 0.02, d, woodMat, 0, 0, 0); box(g, w, 0.02, d, woodMat, 0, def.h - 0.02, 0); box(g, w, def.h, 0.012, woodMat, 0, 0, d / 2 - 0.006);
+      for (let i = 0; i <= cols; i++) box(g, 0.02, def.h, d, woodMat, -w / 2 + cw * i, 0, 0);
+      for (let r = 1; r < rows; r++) box(g, w, 0.018, d, woodMat, 0, rh * r, 0);
+      break;
+    }
+    case 'shoerack':
+      if (kit('shoe_rack', g, 0, 0, 0, { sx: w / 0.6 })) break;
+      for (let k = 0; k < 5; k++) box(g, w, 0.02, d, '#1F2124', 0, 0.06 + k * 0.22, k % 2 ? 0.02 : -0.02, { metalness: 0.5, roughness: 0.5 });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.02, def.h, 0.02, '#1F2124', sx * (w / 2 - 0.01), 0, sz * (d / 2 - 0.01), { metalness: 0.5 });
+      break;
+    case 'fridge':
+      if (kit('fridge', g, 0, 0, 0, { sx: w / 0.55, sz: d / 0.55 })) break;
+      box(g, w, def.h, d, '#E9ECEE', 0, 0, 0, { roughness: 0.35 });
+      box(g, w - 0.06, def.h - 0.12, 0.02, '#1D2A33', 0, 0.06, -d / 2 - 0.01, { roughness: 0.08, emissive: '#3F6F8A', emissiveIntensity: 0.25 });
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) cyl(g, 0.03, 0.03, 0.2, ['#C0392B', '#2E8B57', '#E8B019', '#2F5D8C'][(r + k) % 4], -0.18 + k * 0.12, 0.15 + r * 0.28, -d / 2 + 0.08, null, 10);
+      box(g, 0.02, 0.4, 0.03, chrome, w / 2 - 0.06, def.h * 0.5, -d / 2 - 0.03);
+      break;
+    case 'standac':
+      if (kit('stand_ac', g)) break;
+      box(g, w, def.h, d, '#F1F2F3', 0, 0, 0, { roughness: 0.35 });
+      box(g, w - 0.08, 0.5, 0.02, '#C9CDD1', 0, def.h - 0.7, -d / 2 - 0.01);
+      for (let k = 0; k < 6; k++) box(g, w - 0.1, 0.012, 0.02, '#9AA3AC', 0, def.h - 0.65 + k * 0.07, -d / 2 - 0.02);
+      box(g, 0.12, 0.05, 0.01, '#15181D', 0, def.h - 0.12, -d / 2 - 0.01, { emissive: '#3BA3FF', emissiveIntensity: 0.6 });
+      break;
+    case 'floorfan':
+      if (kit('floor_fan', g)) break;
+      cyl(g, 0.2, 0.22, 0.04, '#1F2124', 0, 0, 0, null, 24); cyl(g, 0.02, 0.02, 0.9, '#B9BCC0', 0, 0.04, 0);
+      { const h = cyl(g, 0.22, 0.22, 0.12, '#1F2124', 0, 1.0, 0, { transparent: true, opacity: 0.55 }, 24); h.rotation.x = Math.PI / 2; h.userData.noInk = true; cyl(g, 0.06, 0.06, 0.14, '#1F2124', 0, 1.02, 0.06).rotation.x = Math.PI / 2; }
+      break;
+    case 'curtain': {
+      // 更衣簾：L 型鋼管＋布簾（皺褶用一排細長方塊做）
+      if (kit('curtain_booth', g, 0, 0, 0, { sx: w / 1.2, sz: d / 1.0 })) break;
+      cyl(g, 0.015, 0.015, def.h, chrome, -w / 2, 0, -d / 2); cyl(g, 0.015, 0.015, def.h, chrome, w / 2, 0, -d / 2);
+      box(g, w, 0.03, 0.03, chrome, 0, def.h - 0.03, -d / 2);
+      const n = Math.max(6, Math.round(w / 0.1));
+      for (let k = 0; k < n; k++) box(g, w / n + 0.01, def.h - 0.15, 0.03, mat('#7A5A3E', { roughness: 0.9 }), -w / 2 + (w / n) * (k + 0.5), 0.05, -d / 2 + (k % 2 ? 0.03 : -0.03)).userData.softInk = true;
+      break;
+    }
     case 'plant':
       plantPot(g);
       break;
@@ -1380,13 +1513,22 @@ function buildFurniture(g, it, w, d, def) {
       }
       break;
     }
+    case 'steelsink':
+      if (!kit('steel_sink', g)) { box(g, w, 0.04, d, '#C8CCD0', 0, 0.86, 0, { metalness: 0.9, roughness: 0.3 }); for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.03, 0.86, 0.03, '#C8CCD0', sx * (w / 2 - 0.04), 0, sz * (d / 2 - 0.04), { metalness: 0.9 }); }
+      break;
+    case 'purifier':
+      if (!kit('purifier', g)) box(g, w, 0.44, d, '#E9ECEE', 0, 0, 0, { roughness: 0.35 });
+      break;
+    case 'ballbasket':
+      if (!kit('ball_basket', g)) { box(g, w, 0.34, d, '#1F2A40', 0, 0.28, 0); for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), mat(i % 2 ? '#F2C230' : '#2F5D8C')); b.position.set(-0.12 + (i % 2) * 0.24, 0.68, -0.12 + Math.floor(i / 2) * 0.24); g.add(b); } }
+      break;
     case 'netwall': {
       const hh = Math.min(def.h, state.building.H - 0.2);
-      const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(w / 1.5, hh / 1.5);
+      const t = netTexture(it.tone).clone(); t.needsUpdate = true; t.repeat.set(w / 1.5, hh / 1.5);
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.8 }));
       m.position.y = hh / 2; g.add(m);
       const n = Math.max(1, Math.round(w / 6));
-      for (let i = 0; i <= n; i++) cyl(g, 0.04, 0.04, hh, darkSteel, -w / 2 + (w * i) / n, 0, 0);
+      for (let i = 0; i <= n; i++) if (!kit('net_pole', g, -w / 2 + (w * i) / n, 0, 0, { sy: hh / 5 })) cyl(g, 0.04, 0.04, hh, darkSteel, -w / 2 + (w * i) / n, 0, 0);
       box(g, w, 0.03, 0.03, darkSteel, 0, hh - 0.03, 0);
       const hit = box(g, w, hh, 0.12, '#000000', 0, 0, 0, { transparent: true, opacity: 0 });
       hit.material.depthWrite = false;
@@ -1450,7 +1592,7 @@ function buildBuilding() {
   fitShadow(Math.max(B.x1 - B.x0, B.z1 - B.z0));
   // 地坪：木地板（UV＝公尺）
   const shape = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
-  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), sc.wood ? FLOOR_MATS.wood : state.floor === 'pu' ? FLOOR_MATS.hall : new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.85 }));
+  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), sc.wood ? FLOOR_MATS.wood : sc.hall ? (FLOOR_MATS[sc.hall] || FLOOR_MATS.hall) : state.floor === 'pu' ? FLOOR_MATS.hall : new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.85 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.userData.noInk = true;
   buildingGroup.add(floor);
   // 外牆：白色粉刷牆，底下一圈深色踢腳；入口那一面留 3 m 的玻璃自動門
@@ -1462,7 +1604,7 @@ function buildBuilding() {
     for (const [s0, s1] of segs) {
       const ax = e.a[0] + e.dx * s0 + ox, az = e.a[1] + e.dz * s0 + oz, bx = e.a[0] + e.dx * s1 + ox, bz = e.a[1] + e.dz * s1 + oz;
       const ex = s0 === 0 ? t / 2 : 0, ey = s1 === e.len ? t / 2 : 0;   // 轉角接起來
-      wallBox(grp, plasterMat, ax - e.dx * ex, az - e.dz * ex, bx + e.dx * ey, bz + e.dz * ey, eave, t);
+      wallBox(grp, state.building.wall === 'metal' ? metalWallMat : plasterMat, ax - e.dx * ex, az - e.dz * ex, bx + e.dx * ey, bz + e.dz * ey, eave, t);
       wallBox(grp, steelMat, ax - e.nx * 0.13, az - e.nz * 0.13, bx - e.nx * 0.13, bz - e.nz * 0.13, 0.12, 0.02).userData.noInk = true;
       colliders.push([e.a[0] + e.dx * s0, e.a[1] + e.dz * s0, e.a[0] + e.dx * s1, e.a[1] + e.dz * s1]);
     }
@@ -1498,7 +1640,8 @@ function buildBuilding() {
   for (const [px, pz] of columnPoints()) {
     const c = new THREE.Group(); c.position.set(px, 0, pz);
     box(c, 0.3, eave, 0.08, steelMat, 0, 0, -0.11); box(c, 0.3, eave, 0.08, steelMat, 0, 0, 0.11); box(c, 0.06, eave, 0.22, steelMat, 0, 0, 0);
-    c.userData.structure = true; buildingGroup.add(c);
+    if (state.building.wall !== 'metal') c.userData.structure = true;   // 鋼板廠房的柱子本來就外露
+    buildingGroup.add(c);
   }
   // 屋架：每 6 m 一榀 H 型鋼樑，屋頂底下是金屬浪板
   ceilingGroup = new THREE.Group(); ceilingGroup.userData.overhead = true; buildingGroup.add(ceilingGroup);
@@ -1561,7 +1704,7 @@ function zoneLayout(z) {
     s.score = (s.nx * (cx - z.x) + s.nz * (cz - z.z)) / (Math.hypot(cx - z.x, cz - z.z) || 1);
   }
   const open = sides.filter((s) => !s.onWall);
-  const door = ZONES[z.type].enclosed && open.length ? open.slice().sort((a, b) => b.score - a.score)[0] : null;
+  const door = zoneWalls(z) !== 'open' && open.length ? open.slice().sort((a, b) => b.score - a.score)[0] : null;
   const dw = z.type === 'storage' ? 1.6 : 1.0;
   if (door) { const c = door.len / 2; door.door = [Math.max(0.2, c - dw / 2), Math.min(door.len - 0.2, c + dw / 2)]; }
   // 背面：有門就是門的對面；開放區域靠外牆那面，不然是離館內中心最遠的那面
@@ -1571,8 +1714,8 @@ function zoneLayout(z) {
 function zoneGlassLen() {
   let clear = 0, frost = 0;
   for (const z of state.zones) {
-    const Z = ZONES[z.type]; if (!Z.enclosed) continue;
-    for (const s of zoneLayout(z).sides) if (!s.onWall) { const l = s.len - (s.door ? s.door[1] - s.door[0] : 0); if (Z.frosted) frost += l; else clear += l; }
+    const zw = zoneWalls(z); if (zw !== 'glass' && zw !== 'frost') continue;
+    for (const s of zoneLayout(z).sides) if (!s.onWall) { const l = s.len - (s.door ? s.door[1] - s.door[0] : 0); if (zw === 'frost') frost += l; else clear += l; }
   }
   return { clear, frost };
 }
@@ -1583,7 +1726,7 @@ function buildZones() {
     const Z = ZONES[z.type], g = new THREE.Group(); g.userData.zoneId = z.id; zonesGroup.add(g);
     const lay = zoneLayout(z);
     // 地坪
-    const fm = FLOOR_MATS[Z.floor] || FLOOR_MATS.concrete;
+    const fm = FLOOR_MATS[zoneFloor(z)] || FLOOR_MATS.concrete;
     const geo = new THREE.PlaneGeometry(z.w, z.d);
     const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (lay.x0 + uv.getX(i) * z.w), -(lay.z1 - uv.getY(i) * z.d));
     const fl = new THREE.Mesh(geo, fm.clone());
@@ -1592,8 +1735,26 @@ function buildZones() {
     // 邊框：開放區域在地上畫一圈細黑線（地坪分界條）
     const rim = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([[lay.x0, lay.z0], [lay.x1, lay.z0], [lay.x1, lay.z1], [lay.x0, lay.z1]].map(([x, zz]) => new THREE.Vector3(x, 0.02, zz))), inkSoft);
     rim.userData.ink = true; g.add(rim);
-    if (Z.enclosed) {
-      const gm = Z.frosted ? frostMat : glassMat;
+    const zw = zoneWalls(z);
+    if (zw === 'solid' || zw === 'net') {
+      // 組合屋（白色板牆＋屋頂）或圍網
+      for (const s of lay.sides) {
+        if (s.onWall) continue;
+        const ux = (s.b[0] - s.a[0]) / s.len, uz = (s.b[1] - s.a[1]) / s.len, P = (t) => [s.a[0] + ux * t, s.a[1] + uz * t];
+        const parts = s.door ? [[0, s.door[0]], [s.door[1], s.len]] : [[0, s.len]];
+        for (const [t0, t1] of parts) {
+          if (t1 - t0 < 0.05) continue;
+          const [ax, az] = P(t0), [bx, bz] = P(t1);
+          if (zw === 'solid') { wallBox(g, prefabMat, ax, az, bx, bz, 2.4, 0.06, 0); wallBox(g, prefabTrim, ax, az, bx, bz, 0.06, 0.08, 0); }
+          else { const len = Math.hypot(bx - ax, bz - az), t = netTexture('white').clone(); t.needsUpdate = true; t.repeat.set(len / 1.5, 2.6 / 1.5); const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.6), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false })); m.position.set((ax + bx) / 2, 1.3, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(m); }
+          colliders.push([ax, az, bx, bz]);
+        }
+        if (s.door && zw === 'solid') { const [ax, az] = P(s.door[0]), [bx, bz] = P(s.door[1]); wallBox(g, prefabMat, ax, az, bx, bz, 0.35, 0.06, 2.05); const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (!kit('prefab_door', g, mx, 0, mz, { rotY: Math.atan2(-s.nx, -s.nz), sx: Math.hypot(bx - ax, bz - az) / 0.9 })) wallBox(g, prefabTrim, ax, az, ax + ux * 0.04, az + uz * 0.04, 2.05, 0.08, 0); }
+      }
+      if (zw === 'solid') { const roofM = new THREE.Mesh(new THREE.BoxGeometry(z.w, 0.06, z.d), prefabMat); roofM.position.set(z.x, 2.43, z.z); g.add(roofM); }
+    }
+    if (zw === 'glass' || zw === 'frost') {
+      const gm = zw === 'frost' ? frostMat : glassMat;
       for (const s of lay.sides) {
         if (s.onWall) continue;
         const ux = (s.b[0] - s.a[0]) / s.len, uz = (s.b[1] - s.a[1]) / s.len;
@@ -1616,8 +1777,8 @@ function buildZones() {
         }
       }
     }
-    zoneDecor(g, z, lay);
-    tag(g, zoneName(z), Z.enclosed ? H + 0.35 : 0.6, 'zone', z.x, z.z).userData.zoneTag = true;
+    if (!z.bare) zoneDecor(g, z, lay);
+    tag(g, zoneName(z), zw !== 'open' ? H + 0.35 : 0.6, 'zone', z.x, z.z).userData.zoneTag = true;
   });
   inkify(zonesGroup);
 }
@@ -2504,7 +2665,7 @@ function renderCostCard() {
   // 施工數量：照平面圖量出來，單價等廠商報價
   const bq = $('build-qty');
   if (bq && state) {
-    const g = zoneGlassLen(), area = (t) => state.zones.filter((z) => ZONES[z.type].floor === t).reduce((s, z) => s + z.w * z.d, 0);
+    const g = zoneGlassLen(), area = (t) => state.zones.filter((z) => zoneFloor(z) === t).reduce((s, z) => s + z.w * z.d, 0);
     const hall = Math.abs(polyArea(outlinePoly()));
     const courtA = state.items.filter((i) => CAT[i.type].court && i.mode !== 'lines').reduce((s, c) => s + CAT[c.type].w * CAT[c.type].d, 0);
     const pad = crashLen();
@@ -2659,6 +2820,14 @@ function buildWallItem(g, it, w, d, def) {
   } else if (t === 'smoke') {
     const y2 = state.building.H - 0.08;
     cyl(g, 0.07, 0.07, 0.05, '#F4F4F2', 0, y2, 0, null, 16);
+  } else if (t === 'banner') {
+    // 牆面布幕：white 白布、dark 深灰布、poster 一排海報（不放任何品牌圖案）
+    const hb = def.h, tone = it.tone || 'white';
+    const fab = mat(tone === 'dark' ? '#3B414B' : '#ECEBE7', { roughness: 0.95, side: THREE.DoubleSide });
+    const n = Math.max(1, Math.round(w / 1.6));
+    for (let k = 0; k < n; k++) if (!kit('banner_panel', g, -w / 2 + (w / n) * (k + 0.5), y, 0.03, { sx: (w / n - 0.04) / 1.58, sy: hb / 3.6, tint: tone === 'dark' ? { fabric_w: '#3B414B' } : null })) { const p = box(g, w / n - 0.04, hb, 0.02, fab, -w / 2 + (w / n) * (k + 0.5), y, 0.02); p.userData.softInk = true; }
+    if (tone === 'poster') { const cols = ['#2F5FA8', '#C0392B', '#3C8A63', '#E8B019', '#22304A']; for (let k = 0; k < Math.max(1, Math.floor(w / 1.4)); k++) box(g, 1.0, 1.6, 0.01, cols[k % cols.length], -w / 2 + 0.7 + k * 1.4, y + hb - 2.2, 0.04, { roughness: 0.6 }).userData.softInk = true; }
+    box(g, w, 0.04, 0.04, darkSteel, 0, y + hb, 0.02);
   } else if (t === 'crashpad') {
     const n = Math.max(1, Math.round(w / 1.2)), pw = w / n;
     for (let i = 0; i < n; i++) if (!kit('crash_pad', g, -w / 2 + pw * (i + 0.5), 0, 0, { rotY: Math.PI, sx: pw / 1.2 })) box(g, pw - 0.025, 1.95, d, padMat, -w / 2 + pw * (i + 0.5), 0.08, 0);
@@ -3173,7 +3342,8 @@ function zoneSvg(z, sel) {
   const Z = ZONES[z.type], lay = zoneLayout(z), K = annoK();
   let s = `<g class="zone" data-z="${z.id}">`;
   s += `<rect class="zf" x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}" fill="${Z.color}"/>`;
-  s += `<rect x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}" fill="url(#pz-${Z.floor})"/>`;
+  s += `<rect x="${X(lay.x0)}" y="${Y(lay.z0)}" width="${M(z.w)}" height="${M(z.d)}" fill="url(#pz-${['deck', 'vinyl'].includes(zoneFloor(z)) ? 'wood' : zoneFloor(z) === 'pvc' ? 'concrete' : zoneFloor(z)})"/>`;
+  const zwPlan = zoneWalls(z);
   for (const sd of lay.sides) {
     if (sd.onWall) continue;
     const ux = (sd.b[0] - sd.a[0]) / sd.len, uz = (sd.b[1] - sd.a[1]) / sd.len, P = (t) => [sd.a[0] + ux * t, sd.a[1] + uz * t];
@@ -3181,7 +3351,9 @@ function zoneSvg(z, sel) {
     for (const [t0, t1] of parts) {
       if (t1 - t0 < 0.02) continue;
       const a = P(t0), b = P(t1);
-      if (Z.enclosed) {
+      if (zwPlan === 'solid') s += `<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="#1F2430" stroke-width="${M(0.08)}"/>`;
+      else if (zwPlan === 'net') s += `<line class="fnet" x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}"/>`;
+      else if (zwPlan !== 'open') {
         const o = 0.06;   // 玻璃：雙細線
         s += `<line class="g2" x1="${X(a[0] + sd.nx * o)}" y1="${Y(a[1] + sd.nz * o)}" x2="${X(b[0] + sd.nx * o)}" y2="${Y(b[1] + sd.nz * o)}"/><line class="g2" x1="${X(a[0] - sd.nx * o)}" y1="${Y(a[1] - sd.nz * o)}" x2="${X(b[0] - sd.nx * o)}" y2="${Y(b[1] - sd.nz * o)}"/>`;
         const n = Math.max(1, Math.round((t1 - t0) / 1.2));
@@ -3774,9 +3946,9 @@ function updateZoneCard(force) {
   if (hit.kind === 'zone') {
     const q = hit.z, Z = ZONES[q.type], inside = itemsIn((x, z) => Math.abs(x - q.x) <= q.w / 2 && Math.abs(z - q.z) <= q.d / 2);
     $('zc-k').textContent = `ZONE ${String(hit.i + 1).padStart(2, '0')} · ${Z.en}`;
-    $('zc-n').textContent = Z.enclosed ? (Z.frosted ? '霧面玻璃隔間' : '玻璃隔間') : '開放空間';
+    $('zc-n').textContent = ({ open: '開放空間', glass: '玻璃隔間', frost: '霧面玻璃隔間', solid: '組合屋', net: '圍網' })[zoneWalls(q)];
     $('zc-t').textContent = zoneName(q);
-    $('zc-d').textContent = Z.desc;
+    $('zc-d').textContent = q.desc || Z.desc;
     dl.push(['面積', `${fmt1(q.w * q.d)} m²`], ['坪數', `${fmt1(q.w * q.d / PING)} 坪`], ['設備', inside.length ? `${inside.length} 件` : '—']);
   } else {
     const c = hit.c, def = CAT[c.type], fp = footprint(c);

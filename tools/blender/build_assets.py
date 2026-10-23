@@ -19,7 +19,7 @@ args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 ROOT = os.path.abspath(args[0] if args else '.')
 SAMPLES = int(args[1]) if len(args) > 1 else 160
 OUT = os.path.join(ROOT, 'models')
-ATLAS = 2048
+ATLAS = 3072
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -34,6 +34,8 @@ ROLES = {
     'ball_y': (0.85, 0.65, 0.05, 0.45, 0), 'ball_b': (0.05, 0.15, 0.45, 0.45, 0), 'ball_w': (0.9, 0.9, 0.88, 0.45, 0),
     'screen': (0.02, 0.05, 0.08, 0.2, 0), 'glass': (0.6, 0.7, 0.75, 0.05, 0), 'emit': (1, 1, 1, 0.3, 0), 'aluminium': (0.7, 0.71, 0.72, 0.35, 0.8),
     'can_r': (0.7, 0.1, 0.08, 0.3, 0.6), 'can_g': (0.1, 0.5, 0.25, 0.3, 0.6), 'can_y': (0.85, 0.6, 0.05, 0.3, 0.6), 'can_w': (0.85, 0.85, 0.85, 0.3, 0.6),
+    'plastic': (0.82, 0.83, 0.84, 0.45, 0), 'fabric_w': (0.85, 0.84, 0.82, 0.95, 0), 'curtain': (0.3, 0.2, 0.12, 0.9, 0),
+    'stainless': (0.75, 0.76, 0.78, 0.3, 0.9), 'canvas': (0.08, 0.1, 0.16, 0.85, 0),
 }
 MATS = {}
 for name, (r, g, b, rough, metal) in ROLES.items():
@@ -480,6 +482,300 @@ def led_strip():
         p.box(x, 0.035, 0, 0.01, 0.065, 0.125, 'darksteel', 0.002)
     for x in (-0.95, 0.95):
         p.cyl(x, 0.075, 0, 0.012, 0.02, 'chrome', 10)
+    return p.finish()
+
+
+# ───── 現有球館相片裡看到的物件（龍蝦、排丘、就醬瘋、排郎）─────
+def x_legs(p, w, d, h, mat, r=0.014, inset=0.06):
+    """折疊家具的 X 型腳：兩側各一組交叉管。"""
+    for sx in (-1, 1):
+        x = sx * (w / 2 - inset)
+        p.tube((x, 0.01, -d / 2 + inset), (x, h, d / 2 - inset), r, mat)
+        p.tube((x, 0.01, d / 2 - inset), (x, h, -d / 2 + inset), r, mat)
+    p.tube((-w / 2 + inset, 0.04, 0), (w / 2 - inset, 0.04, 0), r * 0.8, mat)
+
+
+@module
+def fold_table():
+    """白色折疊桌 180×75 cm：吹塑桌面（圓邊）、灰色鋼管 U 型腳＋撐桿。"""
+    p = Part('fold_table')
+    p.box(0, 0.715, 0, 1.8, 0.05, 0.75, 'plastic', 0.02, 3)
+    p.box(0, 0.68, 0, 1.7, 0.02, 0.65, 'plastic', 0.004)
+    for sx in (-1, 1):
+        x = sx * 0.72
+        p.tube((x, 0.0, -0.3), (x, 0.69, -0.3), 0.014, 'aluminium')
+        p.tube((x, 0.0, 0.3), (x, 0.69, 0.3), 0.014, 'aluminium')
+        p.tube((x, 0.05, -0.3), (x, 0.05, 0.3), 0.012, 'aluminium')
+        p.tube((x, 0.68, 0.0), (x * 0.4, 0.68, 0.0), 0.01, 'aluminium')
+        for z in (-0.3, 0.3):
+            p.cyl(x, 0.006, z, 0.018, 0.012, 'rubber', 10)
+    return p.finish()
+
+
+@module
+def fold_chair():
+    """白色折疊椅：塑膠座板與靠背、鋼管交叉腳。正面 -z。"""
+    p = Part('fold_chair')
+    p.box(0, 0.45, -0.02, 0.42, 0.03, 0.4, 'plastic', 0.012, 3)
+    p.box(0, 0.68, 0.21, 0.42, 0.24, 0.025, 'plastic', 0.01, 3, rot=('x', -0.12))
+    for sx in (-0.2, 0.2):
+        p.tube((sx, 0.0, 0.24), (sx, 0.82, 0.19), 0.011, 'aluminium')
+        p.tube((sx, 0.0, -0.2), (sx, 0.45, 0.08), 0.011, 'aluminium')
+    p.tube((-0.2, 0.43, -0.2), (0.2, 0.43, -0.2), 0.009, 'aluminium')
+    p.tube((-0.2, 0.1, 0.23), (0.2, 0.1, 0.23), 0.009, 'aluminium')
+    return p.finish()
+
+
+@module
+def camp_chair():
+    """木製露營折疊椅：板條座面與靠背、X 型木腳。正面 -z。"""
+    p = Part('camp_chair')
+    for k in range(5):
+        p.box(0, 0.42, -0.2 + k * 0.085, 0.46, 0.022, 0.07, 'wood', 0.006, 2)
+    for k in range(4):
+        p.box(0, 0.52 + k * 0.085, 0.27 + k * 0.012, 0.46, 0.07, 0.022, 'wood', 0.006, 2, rot=('x', -0.2))
+    for sx in (-0.255, 0.255):
+        p.box(sx, 0.4, 0.0, 0.035, 0.035, 0.62, 'wood', 0.006)
+        p.box(sx, 0.36, 0.06, 0.035, 0.8, 0.035, 'wood', 0.006, rot=('x', 0.55))
+        p.box(sx, 0.32, -0.06, 0.035, 0.68, 0.035, 'wood', 0.006, rot=('x', -0.55))
+        p.box(sx, 0.62, 0.3, 0.035, 0.5, 0.035, 'wood', 0.006, rot=('x', -0.2))
+    p.cyl(0.255, 0.3, 0, 0.012, 0.08, 'darksteel', 10, axis='x')
+    p.cyl(-0.255, 0.3, 0, 0.012, 0.08, 'darksteel', 10, axis='x')
+    return p.finish()
+
+
+@module
+def camp_table():
+    """木製露營小桌 60×60 cm：板條桌面、X 型腳。"""
+    p = Part('camp_table')
+    for k in range(6):
+        p.box(0, 0.585, -0.25 + k * 0.1, 0.6, 0.022, 0.09, 'wood', 0.005, 2)
+    p.box(0, 0.56, 0, 0.56, 0.03, 0.04, 'wood', 0.004)
+    for sx in (-0.24, 0.24):
+        p.box(sx, 0.29, 0, 0.035, 0.66, 0.035, 'wood', 0.006, rot=('z', 0.42))
+        p.box(sx, 0.29, 0, 0.035, 0.66, 0.035, 'wood', 0.006, rot=('z', -0.42))
+    return p.finish()
+
+
+@module
+def desk():
+    """辦公桌 140×70：白色桌面、鋼腳、螢幕、鍵盤、主機。正面（坐的人那側）朝 -z。"""
+    p = Part('desk')
+    p.box(0, 0.735, 0, 1.4, 0.03, 0.7, 'plastic', 0.006)
+    for sx in (-0.66, 0.66):
+        for sz in (-0.3, 0.3):
+            p.box(sx, 0.36, sz, 0.035, 0.72, 0.035, 'aluminium', 0.004)
+        p.box(sx, 0.7, 0, 0.035, 0.035, 0.62, 'aluminium', 0.004)
+    p.box(-0.2, 0.98, 0.18, 0.56, 0.34, 0.025, 'darksteel', 0.008)
+    p.box(-0.2, 0.98, 0.165, 0.53, 0.31, 0.005, 'screen', 0.0)
+    p.box(-0.2, 0.8, 0.21, 0.05, 0.14, 0.03, 'darksteel', 0.004)
+    p.box(-0.2, 0.755, 0.2, 0.2, 0.012, 0.16, 'darksteel', 0.004)
+    p.box(-0.2, 0.757, -0.08, 0.42, 0.015, 0.14, 'darksteel', 0.004)
+    p.box(0.18, 0.755, -0.08, 0.07, 0.02, 0.11, 'darksteel', 0.008)
+    p.box(0.5, 0.22, 0.08, 0.2, 0.44, 0.42, 'darksteel', 0.008)
+    p.box(0.5, 0.36, -0.135, 0.15, 0.08, 0.005, 'aluminium', 0)
+    return p.finish()
+
+
+@module
+def office_chair():
+    p = Part('office_chair')
+    p.box(0, 0.47, 0, 0.48, 0.08, 0.46, 'cushion', 0.03, 3)
+    p.box(0, 0.8, 0.23, 0.44, 0.52, 0.06, 'cushion', 0.03, 3, rot=('x', -0.1))
+    p.cyl(0, 0.27, 0, 0.025, 0.36, 'chrome', 16)
+    for k in range(5):
+        a = k / 5 * math.tau
+        p.tube((0, 0.07, 0), (math.cos(a) * 0.3, 0.05, math.sin(a) * 0.3), 0.018, 'darksteel')
+        p.sphere(math.cos(a) * 0.3, 0.03, math.sin(a) * 0.3, 0.03, 'rubber', 10)
+    for sx in (-0.26, 0.26):
+        p.box(sx, 0.62, 0.02, 0.04, 0.03, 0.26, 'darksteel', 0.008)
+    return p.finish()
+
+
+@module
+def cubby_col():
+    """木格置物櫃一欄：寬 40、高 150、深 35 cm，五格。"""
+    p = Part('cubby_col')
+    for sx in (-0.19, 0.19):
+        p.box(sx, 0.75, 0, 0.02, 1.5, 0.35, 'wood', 0.003)
+    for k in range(6):
+        p.box(0, 0.01 + k * 0.296, 0, 0.36, 0.018, 0.35, 'wood', 0.003)
+    p.box(0, 0.75, 0.17, 0.38, 1.48, 0.008, 'wood', 0)
+    return p.finish()
+
+
+@module
+def shoe_rack():
+    """鞋架 60 cm：黑色鐵管四層斜架。"""
+    p = Part('shoe_rack')
+    for sx in (-0.29, 0.29):
+        for sz in (-0.13, 0.13):
+            p.tube((sx, 0, sz), (sx, 1.0, sz), 0.008, 'darksteel')
+    for k in range(4):
+        y = 0.12 + k * 0.24
+        for zz in (-0.12, 0.0, 0.12):
+            p.tube((-0.29, y + (0.03 if zz > 0 else 0.0) - zz * 0.25, zz), (0.29, y + (0.03 if zz > 0 else 0.0) - zz * 0.25, zz), 0.006, 'darksteel')
+    for k in range(3):
+        p.box(-0.12 + k * 0.13, 0.17 + k * 0.24, 0, 0.1, 0.07, 0.26, 'red' if k == 1 else 'white', 0.02, 2)
+    return p.finish()
+
+
+@module
+def fridge():
+    """玻璃門冷藏櫃 55×55×130：門框、玻璃、層板、飲料、把手、底部散熱格柵。"""
+    p = Part('fridge')
+    p.box(0, 0.65, 0.02, 0.55, 1.3, 0.51, 'white', 0.015, 3)
+    p.box(0, 0.67, -0.25, 0.52, 1.18, 0.035, 'darksteel', 0.01)
+    for k in range(4):
+        y = 0.22 + k * 0.28
+        p.box(0, y, -0.02, 0.44, 0.01, 0.4, 'glass', 0)
+        for j in range(4):
+            p.cyl(-0.15 + j * 0.1, y + 0.1, -0.12, 0.03, 0.19, ['can_r', 'can_g', 'can_y', 'can_w'][(k + j) % 4], 14)
+    p.box(0, 0.67, -0.27, 0.46, 1.1, 0.006, 'glass', 0)
+    p.box(0.23, 0.75, -0.29, 0.02, 0.4, 0.02, 'chrome', 0.004)
+    p.box(0, 0.05, -0.25, 0.5, 0.06, 0.02, 'darksteel', 0)
+    return p.finish()
+
+
+@module
+def stand_ac():
+    """落地冷氣 55×38×180：圓角機身、上方出風導葉、中段面板與顯示、下方進風格柵。"""
+    p = Part('stand_ac')
+    p.box(0, 0.9, 0, 0.55, 1.8, 0.38, 'white', 0.06, 4)
+    for k in range(7):
+        p.box(0, 1.35 + k * 0.05, -0.19, 0.44, 0.012, 0.03, 'aluminium', 0.003, rot=('x', 0.35))
+    p.box(0, 1.0, -0.195, 0.4, 0.22, 0.01, 'plastic', 0.004)
+    p.box(0, 1.05, -0.2, 0.12, 0.04, 0.005, 'screen', 0)
+    for k in range(10):
+        p.box(0, 0.2 + k * 0.035, -0.192, 0.42, 0.012, 0.01, 'darksteel', 0)
+    return p.finish()
+
+
+@module
+def floor_fan():
+    """立扇：底座、伸縮立桿、馬達、扇葉、前後網罩（圓環＋輻條）。"""
+    p = Part('floor_fan')
+    p.cyl(0, 0.03, 0, 0.2, 0.05, 'darksteel', 32, r2=0.17, bevel=0.01)
+    p.cyl(0, 0.5, 0, 0.018, 0.9, 'chrome', 12)
+    p.cyl(0, 1.02, 0.07, 0.07, 0.16, 'darksteel', 20, axis='z')
+    for k in range(3):
+        a = k / 3 * math.tau
+        p.box(math.cos(a) * 0.1, 1.02 + math.sin(a) * 0.1, -0.03, 0.08, 0.17, 0.008, 'plastic', 0.0, rot=('z', a + 0.3))
+    for r in (0.06, 0.13, 0.2):
+        bm_r = r
+        n = 28
+        for k in range(n):
+            a1, a2 = k / n * math.tau, (k + 1) / n * math.tau
+            for zc in (-0.07, 0.03):
+                p.tube((math.cos(a1) * bm_r, 1.02 + math.sin(a1) * bm_r, zc), (math.cos(a2) * bm_r, 1.02 + math.sin(a2) * bm_r, zc), 0.0035, 'darksteel', 6)
+    for k in range(12):
+        a = k / 12 * math.tau
+        p.tube((0, 1.02, -0.08), (math.cos(a) * 0.2, 1.02 + math.sin(a) * 0.2, -0.07), 0.003, 'darksteel', 5)
+    return p.finish()
+
+
+@module
+def curtain_booth():
+    """更衣簾 120×100：L 型鋼管框，布簾有皺褶（波浪面）。"""
+    p = Part('curtain_booth')
+    for x in (-0.6, 0.6):
+        p.tube((x, 0, -0.5), (x, 2.1, -0.5), 0.016, 'chrome')
+    p.tube((-0.6, 2.08, -0.5), (0.6, 2.08, -0.5), 0.016, 'chrome')
+    p.tube((0.6, 2.08, -0.5), (0.6, 2.08, 0.5), 0.016, 'chrome')
+    # 皺褶簾：沿 x 的正弦波面
+    bm = bmesh.new()
+    nx, ny = 48, 2
+    verts = []
+    for j in range(ny + 1):
+        row = []
+        for i in range(nx + 1):
+            x = -0.58 + 1.16 * i / nx
+            z = -0.5 + 0.035 * math.sin(i / nx * math.tau * 8)
+            y = 0.08 + 1.95 * j / ny
+            row.append(bm.verts.new(to_b(x, y, z)))
+        verts.append(row)
+    for j in range(ny):
+        for i in range(nx):
+            bm.faces.new((verts[j][i], verts[j][i + 1], verts[j + 1][i + 1], verts[j + 1][i]))
+    o = p._obj(bm, 'curtain', 0, 2, 0, smooth_angle=80)
+    sol = o.modifiers.new('sol', 'SOLIDIFY')
+    sol.thickness = 0.01
+    return p.finish()
+
+
+@module
+def banner_panel():
+    """牆面布幕一幅：寬 160、高 360 cm，上下穿桿、布面微微下垂。"""
+    p = Part('banner_panel')
+    p.box(0, 1.8, 0, 1.58, 3.56, 0.012, 'fabric_w', 0.004)
+    p.cyl(0, 3.62, 0.0, 0.016, 1.62, 'aluminium', 12, axis='x')
+    p.cyl(0, 0.0, 0.0, 0.014, 1.6, 'aluminium', 12, axis='x')
+    for x in (-0.7, 0.7):
+        p.cyl(x, 3.66, 0.02, 0.012, 0.03, 'darksteel', 8)
+    return p.finish()
+
+
+@module
+def net_pole():
+    """隔網立柱：鋼管、底座配重、頂部掛網鉤。"""
+    p = Part('net_pole')
+    p.cyl(0, 2.5, 0, 0.03, 5.0, 'darksteel', 16)
+    p.cyl(0, 0.04, 0, 0.2, 0.08, 'darksteel', 24, bevel=0.01)
+    for y in (1.0, 2.5, 4.0, 4.9):
+        p.box(0, y, 0.04, 0.03, 0.03, 0.06, 'chrome', 0.004)
+    return p.finish()
+
+
+@module
+def prefab_door():
+    """組合屋門：門框、門片（上方百葉通風）、把手。寬 80、高 205 cm，正面 -z。"""
+    p = Part('prefab_door')
+    p.box(0, 1.03, 0, 0.9, 2.1, 0.07, 'aluminium', 0.004)
+    p.box(0, 1.02, -0.03, 0.8, 2.02, 0.04, 'white', 0.006, 2)
+    for k in range(5):
+        p.box(0, 1.65 + k * 0.05, -0.055, 0.5, 0.012, 0.012, 'aluminium', 0.002, rot=('x', 0.4))
+    p.box(0.3, 1.0, -0.07, 0.12, 0.02, 0.02, 'chrome', 0.004)
+    return p.finish()
+
+
+@module
+def ball_basket():
+    """可折疊球籃：鋁管 X 腳、深藍帆布籃、上面一層排球（藍黃）。"""
+    p = Part('ball_basket')
+    x_legs(p, 0.62, 0.62, 0.62, 'aluminium', 0.012, 0.04)
+    for (a, b) in [((-0.3, 0.62, -0.3), (0.3, 0.62, -0.3)), ((-0.3, 0.62, 0.3), (0.3, 0.62, 0.3)), ((-0.3, 0.62, -0.3), (-0.3, 0.62, 0.3)), ((0.3, 0.62, -0.3), (0.3, 0.62, 0.3))]:
+        p.tube(a, b, 0.012, 'aluminium')
+    p.box(0, 0.45, 0, 0.6, 0.34, 0.6, 'canvas', 0.03, 2)
+    for i in range(3):
+        for j in range(3):
+            p.sphere(-0.18 + i * 0.18, 0.68, -0.18 + j * 0.18, 0.1, 'ball_y' if (i + j) % 2 else 'ball_b', 18)
+    return p.finish()
+
+
+@module
+def steel_sink():
+    """不鏽鋼洗手台：水槽、立水龍頭、四支腳、下層棚板。"""
+    p = Part('steel_sink')
+    p.box(0, 0.86, 0, 0.6, 0.04, 0.5, 'stainless', 0.004)
+    p.box(0, 0.78, 0, 0.42, 0.14, 0.36, 'stainless', 0.008)
+    p.box(0, 0.9, 0.24, 0.6, 0.1, 0.02, 'stainless', 0.003)
+    p.tube((0, 0.88, 0.18), (0, 1.12, 0.18), 0.014, 'chrome')
+    p.tube((0, 1.12, 0.18), (0, 1.1, 0.04), 0.012, 'chrome')
+    for sx in (-0.27, 0.27):
+        for sz in (-0.22, 0.22):
+            p.cyl(sx, 0.38, sz, 0.018, 0.76, 'stainless', 12)
+    p.box(0, 0.2, 0, 0.56, 0.02, 0.46, 'stainless', 0.003)
+    return p.finish()
+
+
+@module
+def purifier():
+    """淨水器（桌上型）：白色機身、出水口、水盤。"""
+    p = Part('purifier')
+    p.box(0, 0.22, 0, 0.26, 0.44, 0.38, 'white', 0.03, 3)
+    p.box(0, 0.3, -0.19, 0.18, 0.12, 0.02, 'screen', 0.005)
+    p.cyl(0, 0.2, -0.17, 0.012, 0.05, 'chrome', 10)
+    p.box(0, 0.02, -0.15, 0.2, 0.03, 0.1, 'darksteel', 0.005)
     return p.finish()
 
 
