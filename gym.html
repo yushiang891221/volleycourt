@@ -98,6 +98,9 @@ button.danger { color: var(--warn); }
 .siteinfo .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .siteinfo .row a { font-size: 12px; color: var(--ink); }
 .siteinfo .memo { color: var(--ok) !important; }
+#cloud-status:empty { display: none; }
+#cloud-status[data-kind=ok] { color: var(--ok); }
+#cloud-status[data-kind=warn], #cloud-status[data-kind=key] { color: var(--warn); }
 .siteinfo .memo[data-kind=warn], .siteinfo .memo[data-kind=key] { color: var(--warn) !important; }
 .siteinfo .memo[data-kind=busy] { color: var(--soft) !important; }
 .siteinfo .keybtn { align-self: flex-start; }
@@ -390,6 +393,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#map">← 到地圖選場地</a></div></div>
       <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
       <p class="status-line" id="autosave" aria-live="polite">改動會自動存在這台裝置</p>
+      <p class="status-line cloud" id="cloud-status" aria-live="polite"></p>
       <label class="field hist-row" id="hist-row" for="hist-sel" hidden><span>找回之前的版本（存在這台裝置）</span><select id="hist-sel"></select></label>
     </header>
     <section class="sec" id="sec-plan">
@@ -2625,14 +2629,16 @@ function saveNow() {
   draftDirty = false;
   let ok = true;
   try {
-    if (window.__venueId) { const k = VENUE_KEY(window.__venueId); keepHistory(k); localStorage.setItem(k, JSON.stringify({ data: designData(), savedAt: new Date().toISOString() })); }
+    if (window.__venueId) { const k = VENUE_KEY(window.__venueId); keepHistory(k); localStorage.setItem(k, JSON.stringify({ data: designData(), savedAt: new Date().toISOString() })); if (!window.__applyingShared) queueShared(cloudId()); const rb = $('venue-reset'); if (rb) rb.hidden = false; }
     else if (window.__siteId) { if (window.__generating || typeof saveHall !== 'function') return; saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); }
-    else { keepHistory(DRAFT_KEY); localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id, savedAt: new Date().toISOString() })); }
+    else { keepHistory(DRAFT_KEY); localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id, savedAt: new Date().toISOString() })); if (!window.__applyingShared) queueShared(cloudId()); }
   } catch (e) { ok = false; }
   const el = $('autosave');
   if (el) { el.textContent = ok ? `已自動存檔 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}（存在這台裝置）` : '自動存檔失敗：瀏覽器不讓網站存資料（無痕模式？）'; el.dataset.kind = ok ? 'ok' : 'warn'; }
 }
 function saveDraftSoon() { draftDirty = true; clearTimeout(draftTimer); draftTimer = setTimeout(saveNow, 400); }
+// 剛載入的配置不算改動：不要存、也不要傳到雲端
+function markClean() { draftDirty = false; clearTimeout(draftTimer); }
 addEventListener('pagehide', saveNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
 function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); }
@@ -3052,15 +3058,17 @@ function initPicker() {
 // ---------------------------------------------------------------- shared venue memory (Vercel API + Upstash Redis)
 // Local copy is always written first (works offline / before sharing is enabled); the shared copy is what everyone sees.
 const share = { mode: 'unknown', known: null, timer: null, busy: false, pending: false };
+// 雲端上的編號：候選場地用場地 id，現有球館用 venue-<id>，自由規劃大家共用一份 free-plan
+function cloudId() { return window.__siteId || (window.__venueId ? 'venue-' + window.__venueId : 'free-plan'); }
 const editKey = () => { try { return localStorage.getItem('vb.editKey') || ''; } catch (e) { return ''; } };
 const hm = (t) => new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 function shareStatus(msg, kind) {
-  const el = document.querySelector('.siteinfo .memo'); if (!el) return;
+  const el = document.querySelector('.siteinfo .memo') || $('cloud-status'); if (!el) return;
   el.textContent = msg; el.dataset.kind = kind || '';
   const old = el.parentNode.querySelector('.keybtn'); if (old) old.remove();
   if (kind === 'key') {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'keybtn'; b.textContent = '輸入編輯密碼';
-    b.addEventListener('click', () => { const k = window.prompt('這個網站的共用配置有設編輯密碼，請輸入：'); if (k) { try { localStorage.setItem('vb.editKey', k); } catch (e) {} pushShared(window.__siteId); } });
+    b.addEventListener('click', () => { const k = window.prompt('這個網站的共用配置有設編輯密碼，請輸入：'); if (k) { try { localStorage.setItem('vb.editKey', k); } catch (e) {} pushShared(cloudId()); } });
     el.after(b);
   }
 }
@@ -3079,7 +3087,12 @@ function applyShared(id, rec, quiet) {
   pushHistory();
   state = sanitize({ ...rec.data, id: null }); selectedId = null; selZoneId = null;
   if (rec.picks) setPicks(rec.picks);
-  try { localStorage.setItem(HALL_KEY(id), JSON.stringify({ data: rec.data, savedAt: rec.savedAt, name: rec.name, courts: rec.courts, total: rec.total })); } catch (e) {}
+  // 本機留一份雲端版；本機原本那份先放進「找回之前的版本」
+  try {
+    if (window.__siteId) localStorage.setItem(HALL_KEY(id), JSON.stringify({ data: rec.data, savedAt: rec.savedAt, name: rec.name, courts: rec.courts, total: rec.total }));
+    else if (window.__venueId) { const k = VENUE_KEY(window.__venueId); keepHistory(k, true); localStorage.setItem(k, JSON.stringify({ data: rec.data, savedAt: rec.savedAt })); }
+    else { keepHistory(DRAFT_KEY, true); localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...rec.data, savedAt: rec.savedAt })); }
+  } catch (e) {}
   share.known = rec.savedAt;
   // loading someone's copy is not an edit: skip the autosave that the refresh triggers
   share.quietUntil = Date.now() + 1500;
@@ -3102,7 +3115,7 @@ async function pushShared(id) {
     const rep = costReport();
     const body = { site: id, data: designData(), picks: getPicks(), name: state.name, courts: state.items.filter((i) => CAT[i.type].court === 'vb').length, total: rep.total };
     const r = await fetch('api/hall', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-edit-key': editKey() }, body: JSON.stringify(body) });
-    if (r.status === 501 || r.status === 404 || r.status === 405) { share.mode = 'off'; shareStatus('💾 這個場館的配置存在這台裝置（共用功能還沒開啟）', ''); return; }
+    if (r.status === 501 || r.status === 404 || r.status === 405) { share.mode = 'off'; shareStatus('💾 存在這台裝置（雲端共用還沒開啟）', ''); return; }
     if (r.status === 403) { shareStatus('🔒 共用配置有設編輯密碼，輸入後才能存上去（目前只存在這台裝置）', 'key'); return; }
     if (!r.ok) throw new Error('save ' + r.status);
     const j = await r.json(); share.known = j.savedAt; share.mode = 'on'; share.pending = false;
@@ -3112,9 +3125,9 @@ async function pushShared(id) {
 }
 // someone else may have edited while this tab was in the background
 document.addEventListener('visibilitychange', async () => {
-  const id = window.__siteId; if (document.hidden || !id || share.mode !== 'on' || share.pending || window.__generating) return;
+  const id = cloudId(); if (document.hidden || share.mode !== 'on' || share.pending || window.__generating || (window.__venueId && !window.__venueReady)) return;
   const rec = await pullShared(id);
-  if (rec && rec.savedAt && (!share.known || rec.savedAt > share.known)) { applyShared(id, rec, true); toast('有人更新了這個場館，已載入最新版'); }
+  if (rec && rec.savedAt && (!share.known || rec.savedAt > share.known)) { applyShared(id, rec, true); toast('有人（或你在別台裝置）更新了這份配置，已載入最新版；要退回按「復原」'); }
 });
 // ---------------------------------------------------------------- wall-mounted / safety items (aircon, fire equipment, pads…)
 function snapWallItem(it) {
@@ -4658,6 +4671,7 @@ function start(hot) {
   if (hot && hot.state) state = sanitize(hot.state);
   if (!state) { try { const s = sessionStorage.getItem(STASH_KEY); if (s) { state = sanitize(JSON.parse(s)); sessionStorage.removeItem(STASH_KEY); } } catch (e) { /* ignore */ } }
   if (!state && window.__siteId) { const m = loadHall(window.__siteId); if (m) { state = sanitize({ ...m.data, id: null }); window.__hallLoaded = true; } else window.__generating = true; }
+  const viaLink = !!state;
   if (!state && !window.__siteId && !window.__venueId) { try { const d = localStorage.getItem(DRAFT_KEY); if (d) { state = sanitize(JSON.parse(d)); note = '已載回你上次在這台裝置的配置'; } } catch (e) { /* ignore */ } }
   if (!state) state = fromTemplate(T_PRO);
   if (!state.items.some((i) => i.type === 'camera')) { let n = 1; for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) state.items.push(cameraFor(c, n++)); }
@@ -4667,6 +4681,7 @@ function start(hot) {
   tick();
   if (note) toast(note);
   renderHist();
+  if (!window.__siteId && !window.__venueId && !viaLink) { markClean(); syncFreePlan(); }
   window.claude?.hot?.snapshot?.(() => ({ state: { ...designData(), id: state.id }, view }));
   const use = window.claude && window.claude.use;
   if (use) {
@@ -4678,7 +4693,17 @@ function start(hot) {
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
 if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
-async function loadVenue(id) {
+// 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
+async function syncFreePlan() {
+  let local = null; try { local = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { local = null; }
+  shareStatus('☁️ 讀取網路上的版本中…', 'busy');
+  const rec = await pullShared('free-plan');
+  if (rec && rec.data && (!local || !local.savedAt || rec.savedAt > local.savedAt)) { applyShared('free-plan', rec, true); toast(`已載入網路上最新的自由規劃（${hm(rec.savedAt)}）`); }
+  else if (share.mode === 'off') shareStatus('💾 存在這台裝置（雲端共用還沒開啟）', '');
+  else if (local) { share.known = rec ? rec.savedAt : null; queueShared('free-plan'); }
+  else { share.known = null; shareStatus('☁️ 共用中：改動會自動存到網路上，大家看到同一份', 'ok'); }
+}
+async function loadVenue(id, fresh) {
   let all = null; try { all = await fetch('data/venues.json', { cache: 'no-store' }).then((r) => r.json()); } catch (e) { /* ignore */ }
   const v = all && all.venues.find((x) => x.id === id);
   if (!v) { toast('找不到這間球館的資料'); return; }
@@ -4686,7 +4711,7 @@ async function loadVenue(id) {
   let mine = null; try { mine = JSON.parse(localStorage.getItem(VENUE_KEY(id)) || 'null'); } catch (e) { /* ignore */ }
   state = sanitize(mine && mine.data ? { ...mine.data, id: null } : { ...v.design, name: `${v.name}（現況示意）`, id: null }); selectedId = null; selZoneId = null; history = [];
   window.__venueReady = true; renderHist();
-  fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); planToolState();
+  fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); planToolState(); markClean();
   $('gym-title').textContent = v.name;
   document.querySelector('.rail-head .eyebrow').textContent = 'Existing Venue · 現有球館參考';
   $('site-none').hidden = true;
@@ -4698,12 +4723,22 @@ async function loadVenue(id) {
     ${cell('尺寸', v.size && e(v.size), true)}${cell('設施', v.facilities.length ? e(v.facilities.join('、')) : null, true)}
     ${cell('營業時間', v.hours && e(v.hours))}${cell('收費', v.price && e(v.price), 'r')}</dl>
     <span>${e(v.layoutNote)}查不到的：${e(v.unknown.join('、'))}。</span>
-    <span>${mine ? `目前顯示你改過的版本（${new Date(mine.savedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 存）。` : '你在這裡的改動會自動存在這台裝置。'}</span>
+    <span>${mine ? `目前顯示改過的版本（${new Date(mine.savedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 存）。` : '你在這裡的改動會自動存到網路上，大家看到同一份。'}</span>
+    <span class="memo"></span>
     <div class="row">${v.sources.map(([t, u]) => `<a href="${e(u)}" target="_blank" rel="noopener">${e(t)} ↗</a>`).join('')}</div>
-    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button>${mine ? '<button type="button" id="venue-reset">回到相片版本</button>' : ''}</div>`;
+    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button><button type="button" id="venue-reset"${mine ? '' : ' hidden'}>回到相片版本</button></div>`;
   $('venue-walk').addEventListener('click', () => setMode('walk'));
-  if ($('venue-reset')) $('venue-reset').addEventListener('click', () => { keepHistory(VENUE_KEY(id), true); try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } loadVenue(id); toast('已回到相片版本；剛才的版本留在「找回之前的版本」裡'); });
+  $('venue-reset').addEventListener('click', async () => { keepHistory(VENUE_KEY(id), true); try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } await loadVenue(id, true); saveDraftSoon(); toast('已回到相片版本（也同步到網路上）；剛才的版本留在「找回之前的版本」裡'); });
+  if (fresh) return;
   toast(`已載入「${v.name}」的示意模型，按「進入導覽」可以走進去`);
+  // 雲端：網路上的版本比這台新就換上；這台改過、網路上沒有或比較舊，就把這台的傳上去
+  shareStatus('☁️ 讀取網路上的版本中…', 'busy');
+  const cid = 'venue-' + id, rec = await pullShared(cid);
+  if (window.__venueId !== id) return;
+  if (rec && rec.data && (!mine || !mine.savedAt || rec.savedAt > mine.savedAt)) { applyShared(cid, rec, true); $('venue-reset').hidden = false; toast(`已載入「${v.name}」網路上最新的版本（${hm(rec.savedAt)}）`); }
+  else if (share.mode === 'off') shareStatus('💾 存在這台裝置（雲端共用還沒開啟）', '');
+  else if (mine) { share.known = rec ? rec.savedAt : null; queueShared(cid); }
+  else { share.known = null; shareStatus('☁️ 共用中：改動會自動存到網路上，大家看到同一份', 'ok'); }
 }
 
 const SITE_ID = new URLSearchParams(location.search).get('site');
