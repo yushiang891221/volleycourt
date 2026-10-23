@@ -165,6 +165,9 @@ details.pal-group { border-top: 1px solid var(--rule); }
 .cp-rgb input[type=range] { width: 100%; min-width: 0; }
 .cp-rgb input[type=number] { padding: 2px 4px; }
 .cp-hex { font-family: var(--font-mono); font-size: 11px; color: var(--soft); }
+.comp-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+.comp .chk { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.comp .chk i { width: 14px; height: 4px; border-radius: 2px; border: 1px solid rgba(0,0,0,.3); }
 input.pal-search { margin: 4px 0 6px; padding: 8px 10px; }
 .pal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .pal button { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; min-width: 0; }
@@ -309,6 +312,8 @@ details.more[open] > summary { margin-bottom: 10px; }
 .pc-task { min-height: 0; padding: 4px 10px; font-size: 12px; background: rgba(255,255,255,.12); color: #fff; border: 0; border-bottom: 2px solid #F2B705; }
 .pc-clock { white-space: pre; text-align: right; font-size: 11px; line-height: 1.3; color: #DDE3EA; }
 .pc-bar #pc-off { min-height: 0; padding: 4px 10px; font-size: 12px; }
+.co-badge { position: absolute; left: 12px; top: 58px; z-index: 6; background: rgba(27,38,56,.9); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #F2B705; max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.co-badge[hidden] { display: none !important; }
 .wk-lock { position: absolute; left: 50%; top: calc(50% + 26px); transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: rgba(27,38,56,.82); color: #fff; font-size: 13px; pointer-events: none !important; white-space: nowrap; }
 .wk-lock[hidden] { display: none !important; }
 .wk-combo { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: #F2B705; color: #1B2638; font-weight: 800; font-size: 15px; pointer-events: none !important; }
@@ -565,6 +570,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <button type="button" id="p-draw" aria-pressed="false">畫區域</button>
         <button type="button" id="p-wall" aria-pressed="false">畫牆</button>
         <button type="button" id="p-align" hidden>建物轉正</button>
+        <button type="button" id="p-ortho" hidden title="自己點的外框有誤差時，把每一邊拉直、牆角變直角">校正成矩形</button>
         <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
         <button type="button" id="p-box" aria-pressed="false" title="拖一個框選多個物件（電腦上也可以按住 Shift 拖）">框選</button>
       </div>
@@ -589,10 +595,11 @@ details.more[open] > summary { margin-bottom: 10px; }
       <button type="button" id="t-snap" aria-pressed="true">對齊 0.5 m</button>
       <button type="button" id="btn-undo">復原</button>
     </div>
+    <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>拿著球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 墊球（時機對才接得住）、<kbd>F</kbd> 傳給面前的人、<kbd>V</kbd> 發球、網前 <kbd>R</kbd> 攻擊<br><kbd>Esc</kbd> 離開導覽</p>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 接球（墊球）、<kbd>F</kbd> 傳給面前的人、<kbd>V</kbd> 發球、<kbd>R</kbd> 站著扣、<kbd>空白鍵</kbd>＋<kbd>R</kbd> 跳起來扣（空白鍵是跳）<br><kbd>Esc</kbd> 離開導覽</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -602,7 +609,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <div class="pc-bar"><span class="pc-start">🏐 新竹排球館</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
       </div></div></div>
       <div class="mp" id="mp" hidden>
-        <div class="mp-h"><b>多人連線（最多 4 人）</b><button type="button" id="mp-x" aria-label="收起">✕</button></div>
+        <div class="mp-h"><b>多人連線（最多 12 人）</b><button type="button" id="mp-x" aria-label="收起">✕</button></div>
         <label class="field" for="mp-name"><span>你的名字</span><input id="mp-name" type="text" maxlength="12" placeholder="例如：翔哥"></label>
         <div id="mp-out"><div class="btn-row"><button type="button" class="primary" id="mp-new">開新房間</button></div>
           <div class="mp-join"><input id="mp-code" type="text" maxlength="8" placeholder="房間代碼" aria-label="房間代碼"><button type="button" id="mp-go">加入</button></div></div>
@@ -735,6 +742,7 @@ const CAT = {
   curtain: { label: '更衣簾', group: '休息與服務', w: 1.2, d: 1.0, h: 2.1, color: '#7A5A3E', tag: true },
   steelsink: { label: '不鏽鋼洗手台', group: '休息與服務', w: 0.6, d: 0.5, h: 0.9, color: '#C8CCD0', tag: true },
   purifier: { label: '淨水器', group: '休息與服務', w: 0.3, d: 0.4, h: 0.45, color: '#E9ECEE' },
+  coffee: { label: '長茶几（矮桌）', group: '休息與服務', w: 1.2, d: 0.5, h: 0.42, color: '#B98A57', resize: 'w' },
   lowcubby: { label: '矮木格置物櫃', group: '休息與服務', w: 1.2, d: 0.35, h: 0.9, color: '#C89A62', resize: 'w', tag: true },
   shelf: { label: '置物鐵架', group: '休息與服務', w: 1.8, d: 0.45, h: 2.0, color: '#2A2F3A', resize: 'w' },
   toilet: { label: '馬桶', group: '休息與服務', w: 0.45, d: 0.7, h: 0.8, color: '#F6F6F3', zoneOK: true },
@@ -782,7 +790,7 @@ const CAT = {
 const GROUPS = ['球場與比賽', '座椅與休息', '櫃台與收納', '衛浴與更衣', '飲水與販賣', '空調與照明', '牆面與裝飾', '消防與安全', '智慧球場'];
 const GROUP_OF = {
   '球場與比賽': ['vb', 'vbs', 'vbt', 'bd', 'pb', 'bk', 'referee', 'scoreboard', 'flipscore', 'whiteboard', 'ballcart', 'ballbasket', 'netwall', 'bleacher', 'warmmat'],
-  '座椅與休息': ['sofa', 'bench', 'table', 'foldtable', 'foldchair', 'campchair', 'camptable', 'rug', 'plant'],
+  '座椅與休息': ['sofa', 'bench', 'table', 'coffee', 'foldtable', 'foldchair', 'campchair', 'camptable', 'rug', 'plant'],
   '櫃台與收納': ['counter', 'desk', 'locker', 'cubby', 'lowcubby', 'shelf', 'shoerack', 'curtain', 'bins'],
   '衛浴與更衣': ['toilet', 'stall', 'urinal', 'sinkrow', 'showerstall'],
   '飲水與販賣': ['watertall', 'water', 'purifier', 'vending', 'fridge', 'steelsink'],
@@ -944,6 +952,12 @@ function sanitize(raw) {
     if (['white', 'dark', 'poster', 'black', 'red', 'blue'].includes(it.tone)) o.tone = it.tone;
     if (typeof it.label === 'string' && it.label.trim()) o.label = it.label.slice(0, 20);
     if (it.locked === true) o.locked = true;
+    if (def.court) {
+      const ex = Array.isArray(it.extra) ? it.extra.filter((k) => ['vb', 'bd', 'pb', 'bk'].includes(k) && k !== def.court) : [];
+      if (ex.length) o.extra = [...new Set(ex)];
+      if (['vb', 'bd', 'pb', 'bk', 'none'].includes(it.use) && it.use !== def.court) o.use = it.use;
+      if (COURT_SURF[it.surf] && it.surf) o.surf = it.surf;
+    }
     if (def.court && it.cc && typeof it.cc === 'object') { const cc = {}; for (const k of ['court', 'free']) if (/^#[0-9a-f]{6}$/i.test(String(it.cc[k] || ''))) cc[k] = it.cc[k]; if (Object.keys(cc).length) o.cc = cc; }
     if (typeof it.zone === 'string' && it.zone) o.zone = it.zone.slice(0, 40);
     out.items.push(o);
@@ -1318,10 +1332,45 @@ function tag(g, text, y, cls = '', x = 0, z = 0) {
 // ---------------------------------------------------------------- court textures
 const PX = 40; // pixels per metre
 const texCache = new Map();
-function courtTexture(kind, fw, fd, mode, schemeKey, cc) {
-  const key = [kind, fw, fd, mode, schemeKey, JSON.stringify(state.colors || {}), JSON.stringify(cc || {})].join('|');
+// 複合球場：同一塊地板上加畫其他球場的線（各用不同顏色），可以選現在架哪一種網；每面球場也可以選地板
+const PLAY = { vb: [18, 9], bd: [13.4, 6.1], pb: [13.41, 6.1], bk: [15, 11] };
+const SPORT = { vb: '排球', bd: '羽球', pb: '匹克球', bk: '籃球' };
+const EXTRA_COL = { vb: '#FFFFFF', bd: '#F2C230', pb: '#5BC0EB', bk: '#FF7A2F' };
+const COURT_SURF = { '': '跟全館一樣', pvc: 'PVC 運動地墊', pu: 'PU 地坪', wood: '木質地板', tiles: '拼裝式地墊' };
+// 在 fw×fd 的地板上排幾面 kind 球場（同方向或轉 90°，取放得多的那種）；回傳中心（本地座標）與是否轉向
+function extraLayout(kind, fw, fd) {
+  const [pw, pd] = PLAY[kind];
+  if (kind === 'bk' || kind === 'vb') return [{ x: 0, z: 0, r: (fw >= fd) !== (pw >= pd) }];
+  const gap = 0.9, m = 0.3, fit = (a, b) => Math.max(0, Math.floor((a - 2 * m + gap) / (b + gap)));
+  const A = [fit(fw, pw), fit(fd, pd)], Bv = [fit(fw, pd), fit(fd, pw)];
+  const useB = Bv[0] * Bv[1] > A[0] * A[1], [nx, nz] = useB ? Bv : A, [sx, sz] = useB ? [pd, pw] : [pw, pd];
+  const out = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) out.push({ x: (i - (nx - 1) / 2) * (sx + gap), z: (j - (nz - 1) / 2) * (sz + gap), r: useB });
+  return out.slice(0, 6);
+}
+// 畫一面球場的線：中心 (cx, cy)（公尺，畫布座標），r＝轉 90°
+function drawCourtLines(c, kind, cx, cy, r, color, PXm) {
+  const [cw, cd] = PLAY[kind], P = (m) => m * PXm, lw = 0.05 * PXm;
+  c.save(); c.translate(P(cx), P(cy)); if (r) c.rotate(Math.PI / 2);
+  c.strokeStyle = color; c.lineWidth = lw;
+  const x0 = -cw / 2, y0 = -cd / 2, line = (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(P(x1), P(y1)); c.lineTo(P(x2), P(y2)); c.stroke(); };
+  c.strokeRect(P(x0) + lw / 2, P(y0) + lw / 2, P(cw) - lw, P(cd) - lw);
+  if (kind === 'vb') { line(0, y0, 0, -y0); line(-3, y0, -3, -y0); line(3, y0, 3, -y0); }
+  else if (kind === 'bd') { line(x0, y0 + 0.46, -x0, y0 + 0.46); line(x0, -y0 - 0.46, -x0, -y0 - 0.46); line(-1.98, y0, -1.98, -y0); line(1.98, y0, 1.98, -y0); line(x0 + 0.76, y0, x0 + 0.76, -y0); line(-x0 - 0.76, y0, -x0 - 0.76, -y0); line(x0, 0, -1.98, 0); line(1.98, 0, -x0, 0); }
+  else if (kind === 'pb') { line(-2.13, y0, -2.13, -y0); line(2.13, y0, 2.13, -y0); line(x0, 0, -2.13, 0); line(2.13, 0, -x0, 0); }
+  else if (kind === 'bk') {
+    // 半場：籃框在 y0 那一端
+    const hy = y0 + 1.575; c.strokeRect(P(-2.45), P(y0), P(4.9), P(5.8));
+    c.beginPath(); c.arc(0, P(y0 + 5.8), P(1.8), 0, Math.PI * 2); c.stroke();
+    c.save(); c.beginPath(); c.rect(P(x0), P(y0), P(cw), P(cd)); c.clip(); c.beginPath(); c.arc(0, P(hy), P(6.75), 0, Math.PI); c.stroke(); line(-6.75, y0, -6.75, hy); line(6.75, y0, 6.75, hy); c.restore();
+  }
+  c.restore();
+}
+function courtTexture(kind, fw, fd, mode, schemeKey, cc, extra, surf) {
+  const key = [kind, fw, fd, mode, schemeKey, JSON.stringify(state.colors || {}), JSON.stringify(cc || {}), (extra || []).join(','), surf || ''].join('|');
   if (texCache.has(key)) return texCache.get(key);
   const sc = { ...(schemeKey === state.floor ? scheme() : SCHEMES[schemeKey]), ...(cc || {}) };
+  if (surf) { sc.grain = surf === 'wood'; sc.tiles = surf === 'tiles'; if (surf === 'wood' && !(cc && cc.court)) { sc.court = '#E3C08C'; if (!(cc && cc.free)) sc.free = '#D9B27A'; } }
   const cv = document.createElement('canvas');
   cv.width = Math.round(fw * PX); cv.height = Math.round(fd * PX);
   const c = cv.getContext('2d');
@@ -1380,6 +1429,8 @@ function courtTexture(kind, fw, fd, mode, schemeKey, cc) {
     line(cx - 6.75, y0, cx - 6.75, hy); line(cx + 6.75, y0, cx + 6.75, hy);
     c.restore();
   }
+  // 複合球場：其他球場的線（不同顏色）
+  for (const k2 of extra || []) for (const L of extraLayout(k2, fw, fd)) drawCourtLines(c, k2, fw / 2 + L.x, fd / 2 + L.z, L.r, EXTRA_COL[k2], PX);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -1401,6 +1452,42 @@ function netTexture(tone) {
   netTex = new THREE.CanvasTexture(cv);
   netTex.wrapS = netTex.wrapT = THREE.RepeatWrapping;
   return netTex;
+}
+// 網架：羽球＝滾筒式移動羽球柱（鋁管＋可推的滾筒底座）；匹克球＝綠色鋼架移動網架（底部橫桿＋斜撐＋腳座）；籃球＝籃架
+function netSet(g, kind, x, z, r) {
+  const o = new THREE.Group(); o.position.set(x, 0, z); if (r) o.rotation.y = Math.PI / 2; g.add(o);
+  if (kind === 'bd') {
+    for (const s2 of [1, -1]) {
+      const zz = s2 * 3.05;
+      cyl(o, 0.024, 0.024, 1.55, chrome, 0, 0.12, zz);
+      cyl(o, 0.032, 0.032, 0.08, '#C0392B', 0, 1.62, zz);                       // 圓頭
+      const rol = cyl(o, 0.12, 0.12, 0.6, '#B9BCC0', 0, 0.12, zz + s2 * 0.18, { metalness: 0.7, roughness: 0.35 }); rol.rotation.z = Math.PI / 2; rol.position.y = 0.12;
+      for (const sx of [-1, 1]) { const wh = cyl(o, 0.12, 0.12, 0.035, '#1F2124', sx * 0.31, 0.12, zz + s2 * 0.18); wh.rotation.z = Math.PI / 2; wh.position.y = 0.12; }
+      box(o, 0.05, 0.05, 0.3, chrome, 0, 0.18, zz + s2 * 0.08);
+    }
+    net(o, 6.1, 1.55, 0.76);
+  } else if (kind === 'pb') {
+    const green = '#1E6B3A', hw = 3.35;
+    for (const s2 of [1, -1]) {
+      box(o, 0.06, 0.914, 0.06, green, 0, 0, s2 * hw);
+      box(o, 0.7, 0.05, 0.06, green, 0, 0, s2 * hw);                                // 腳座
+      for (const sx of [-1, 1]) cyl(o, 0.025, 0.025, 0.03, '#1F2124', sx * 0.32, 0, s2 * hw);
+      const br = box(o, 0.04, 0.55, 0.04, green, 0, 0.05, s2 * (hw - 0.22)); br.rotation.x = s2 * 0.75;   // 斜撐
+      if (s2 > 0) { const cr = box(o, 0.02, 0.12, 0.02, '#B9BCC0', 0.05, 0.62, hw + 0.05); cr.rotation.z = 0.6; }  // 搖桿
+    }
+    box(o, 0.06, 0.06, hw * 2, green, 0, 0, 0);                                     // 底部橫桿
+    net(o, 6.7, 0.914, 0.8);
+  } else if (kind === 'bk') {
+    const zb = -PLAY.bk[1] / 2;
+    box(o, 1.8, 1.05, 0.05, '#F4F7FA', 0, 2.9, zb + 1.2, { transparent: true, opacity: 0.85 });
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.012, 8, 28), mat('#E2582B')); rim.rotation.x = Math.PI / 2; rim.position.set(0, 3.05, zb + 1.575); o.add(rim);
+    cyl(o, 0.08, 0.08, 3.5, '#2B3A4F', 0, 0, zb - 0.5); box(o, 0.1, 0.1, 1.75, '#2B3A4F', 0, 3.25, zb + 0.35); box(o, 1.2, 0.3, 1.6, '#2B3A4F', 0, 0, zb - 0.7);
+  } else if (kind === 'vb') {
+    const nh = NETS[state.net].h;
+    for (const zz of [5.5, -5.5]) { cyl(o, 0.045, 0.045, nh + 0.25, chrome, 0, 0, zz); cyl(o, 0.13, 0.13, 1.9, padMat, 0, 0.05, zz, null, 20); }
+    net(o, 10.6, nh, 1.0);
+  }
+  return o;
 }
 function net(g, span, top, depth, tape = '#FFFFFF') {
   const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(span / 2, depth / 0.5);
@@ -1424,7 +1511,7 @@ function buildItem(it, courtIndex) {
   const g = new THREE.Group();
   g.userData.itemId = it.id;
   if (def.court) {
-    const tex = courtTexture(def.court, def.w, def.d, it.mode, state.floor, it.cc);
+    const tex = courtTexture(def.court, def.w, def.d, it.mode, state.floor, it.cc, it.extra, it.surf);
     const lines = it.mode === 'lines';
     const cm = new THREE.MeshStandardMaterial({ map: tex, transparent: lines, roughness: 0.5, normalMap: phTex('smooth_concrete_floor', 'nor', def.w / 2, def.d / 2), normalScale: new THREE.Vector2(0.25, 0.25), polygonOffset: true, polygonOffsetFactor: -1 - courtIndex, polygonOffsetUnits: -1 - courtIndex });
     cm.userData.env = cm.envMapIntensity = 0.12;
@@ -1433,8 +1520,10 @@ function buildItem(it, courtIndex) {
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = (lines ? 0.014 : 0.006) + courtIndex * 0.0015;
     g.add(plane);
-    const pc = '#22304A';
-    if (def.court === 'vb') {
+    const pc = '#22304A', use = it.use || def.court;
+    if (use !== def.court && use !== 'none') for (const L of extraLayout(use, def.w, def.d)) netSet(g, use, L.x, L.z, L.r);
+    if (use !== def.court) { /* 主場地的網收起來了 */ }
+    else if (def.court === 'vb') {
       const nh = NETS[state.net].h;
       // 網柱：鋼管外包深藍防護套，底座配重
       for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: scheme().pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
@@ -1443,12 +1532,8 @@ function buildItem(it, courtIndex) {
         const a = cyl(g, 0.006, 0.006, 1.8, '#E23A3A', 0, nh - 1.0, z);
         a.material = mat('#E23A3A');
       }
-    } else if (def.court === 'bd') {
-      cyl(g, 0.03, 0.03, 1.55, pc, 0, 0, 3.05); cyl(g, 0.03, 0.03, 1.55, pc, 0, 0, -3.05);
-      net(g, 6.1, 1.55, 0.76);
-    } else if (def.court === 'pb') {
-      cyl(g, 0.03, 0.03, 0.914, pc, 0, 0, 3.35); cyl(g, 0.03, 0.03, 0.914, pc, 0, 0, -3.35);
-      net(g, 6.7, 0.914, 0.8);
+    } else if (def.court === 'bd' || def.court === 'pb') {
+      netSet(g, def.court, 0, 0, false);
     } else if (def.court === 'bk') {
       const zb = -def.d / 2 + 1;               // baseline (local z)
       box(g, 1.8, 1.05, 0.05, '#F4F7FA', 0, 2.9, zb + 1.2, { transparent: true, opacity: 0.85 });
@@ -1668,6 +1753,12 @@ function buildFurniture(g, it, w, d, def) {
       box(g, 0.2, 0.42, 0.42, '#1C1E22', w / 2 - 0.25, 0, 0.05);
       { const ch = new THREE.Group(); ch.position.set(-0.2, 0, -0.55); box(ch, 0.48, 0.08, 0.46, '#2A2D33', 0, 0.45, 0); box(ch, 0.46, 0.55, 0.06, '#2A2D33', 0, 0.55, 0.22); cyl(ch, 0.025, 0.025, 0.42, chrome, 0, 0.03, 0); cyl(ch, 0.3, 0.3, 0.03, darkSteel, 0, 0, 0, null, 5); g.add(ch); }
       break;
+    case 'coffee': {
+      // 長茶几：木頭桌面（圓角）＋下層置物板＋黑色鐵腳
+      box(g, w, 0.04, d, woodMat, 0, 0.38, 0); box(g, w - 0.1, 0.02, d - 0.1, woodMat, 0, 0.12, 0);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.035, 0.38, 0.035, darkSteel, sx * (w / 2 - 0.06), 0, sz * (d / 2 - 0.06));
+      break;
+    }
     case 'lowcubby':
     case 'cubby': {
       // 木格櫃：每格 40 cm 寬、30 cm 高（矮櫃 90 cm 三格）
@@ -2018,16 +2109,17 @@ function buildBuilding() {
   }
   // 屋脊一根
   beam(W3(u0 + 0.1, eave + rise - 0.05, vc), W3(u1 - 0.1, eave + rise - 0.05, vc), 0.3, 0.15);
-  // 兩片斜屋面（浪板，往下順著斜面）
-  const slopeLen = Math.hypot(halfV + 0.4, rise + 0.4 * (rise / halfV)), spanU = u1 - u0 + 0.8;
+  // 兩片斜屋面（浪板，往下順著斜面）：直接用四個角組出四邊形，屋簷往外伸 0.4 m
+  const ov = 0.4, spanU0 = u0 - ov, spanU1 = u1 + ov;
   for (const sd of [-1, 1]) {
-    const geo = new THREE.PlaneGeometry(spanU, slopeLen); const uv = geo.attributes.uv;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * spanU, uv.getY(i) * slopeLen);
-    const pl = new THREE.Mesh(geo, roofSheetMat);
-    const mv = vc + (sd * (halfV + 0.4)) / 2, my = eave + rise / 2 - 0.2 * (rise / halfV);
-    if (alongX) { pl.rotation.set(-Math.PI / 2 - sd * slopeA, 0, 0); pl.position.set((u0 + u1) / 2, my + 0.02, mv); }
-    else { pl.rotation.order = 'YXZ'; pl.rotation.set(-Math.PI / 2 - sd * slopeA, Math.PI / 2, 0); pl.position.set(mv, my + 0.02, (u0 + u1) / 2); }
-    pl.userData.noShadow = true; roof.add(pl);
+    const vE = vc + sd * (halfV + ov), yE = eave - ov * (rise / halfV), yR = eave + rise;
+    const pts = [W3(spanU0, yR, vc), W3(spanU1, yR, vc), W3(spanU1, yE, vE), W3(spanU0, yE, vE)];
+    const slope = Math.hypot(halfV + ov, yR - yE), spanU = spanU1 - spanU0;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap((q) => [q.x, q.y, q.z]), 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, slope, spanU, slope, spanU, 0, 0, 0], 2));
+    geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals();
+    const pl = new THREE.Mesh(geo, roofSheetMat); pl.userData.noShadow = true; roof.add(pl);
   }
   // 山牆（兩端的三角形）：也是浪板
   for (const sd of [-1, 1]) {
@@ -2528,6 +2620,25 @@ function courtColorHtml(it) {
   const sc = scheme(), cc = it.cc || {};
   return `<p class="hint" style="margin:4px 0">這一面球場的顏色（沒改就跟全館一樣）</p>` + [['court', '球場內場'], ['free', '球場外圍（緩衝區）']].map(([k, l]) => colorPickerHtml(k, l, cc[k] || sc[k], !!cc[k], COLOR_SWATCH[k])).join('');
 }
+function compositeHtml(it, idp) {
+  const def = CAT[it.type], ex = it.extra || [], use = it.use || def.court;
+  const others = Object.keys(SPORT).filter((k) => k !== def.court);
+  return `<div class="comp"><p class="hint" style="margin:6px 0 4px"><b>複合球場</b>：同一塊地板也畫這些線（顏色不同）</p>
+    <div class="comp-row">${others.map((k) => `<label class="chk"><input type="checkbox" data-ex="${k}"${ex.includes(k) ? ' checked' : ''}><i style="background:${EXTRA_COL[k]}"></i>${SPORT[k]}</label>`).join('')}</div>
+    <div class="grid2"><label class="field" for="${idp}-use"><span>現在架哪一種網</span><select id="${idp}-use">${[def.court, ...ex].map((k) => `<option value="${k}"${use === k ? ' selected' : ''}>${SPORT[k]}${k === def.court ? '（主要）' : ''}</option>`).join('')}<option value="none"${use === 'none' ? ' selected' : ''}>都收起來（空場地）</option></select></label>
+    <label class="field" for="${idp}-surf"><span>這面的地板</span><select id="${idp}-surf">${Object.entries(COURT_SURF).map(([k, l]) => `<option value="${k}"${(it.surf || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div></div>`;
+}
+function wireComposite(root, it, idp, rerender) {
+  root.addEventListener('change', (e) => {
+    const t = e.target; if (!t) return;
+    pushHistory();
+    if (t.dataset.ex) { const ex = new Set(it.extra || []); if (t.checked) ex.add(t.dataset.ex); else { ex.delete(t.dataset.ex); if (it.use === t.dataset.ex) delete it.use; } if (ex.size) it.extra = [...ex]; else delete it.extra; }
+    else if (t.id === idp + '-use') { if (t.value === CAT[it.type].court) delete it.use; else it.use = t.value; }
+    else if (t.id === idp + '-surf') { if (t.value) it.surf = t.value; else delete it.surf; }
+    rerenderOne(it); commit(); rerender && rerender();
+    if (t.dataset.ex && t.checked) toast(`加畫了${SPORT[t.dataset.ex]}線（${t.dataset.ex === 'bd' || t.dataset.ex === 'pb' ? extraLayout(t.dataset.ex, CAT[it.type].w, CAT[it.type].d).length + ' 面' : '1 面'}），要打${SPORT[t.dataset.ex]}時在「現在架哪一種網」切換`);
+  });
+}
 function setCourtColor(it, k, v, rerender) {
   pushHistory(); it.cc = { ...(it.cc || {}) };
   if (v) it.cc[k] = v; else delete it.cc[k];
@@ -2594,13 +2705,25 @@ function addItem(type) {
   pushHistory();
   const it = { id: uid(), type, x: snap(clamp(controls.target.x, -L / 2 + 1, L / 2 - 1)), z: snap(clamp(controls.target.z, -W / 2 + 1, W / 2 - 1)), rot: type === 'light' ? 90 : 0 };
   if (def.resize || def.diam) { it.w = def.w; it.d = def.d; }
-  if (def.court && state.items.some((i) => CAT[i.type].court === 'vb' && i.mode !== 'lines') && def.court !== 'vb') it.mode = 'lines';
+  let overlay = false;
+  if (def.court) {
+    // 找一塊空地：不壓到其他整片上色的球場、整面在廠房裡；離畫面中心最近的優先
+    const others = state.items.filter((i) => CAT[i.type].court && i.mode !== 'lines'), B = hallBounds();
+    let best = null;
+    for (const rot of [0, 90]) for (let x = B.x0; x <= B.x1; x += 0.5) for (let z = B.z0; z <= B.z1; z += 0.5) {
+      const fp = corners(x, z, def.w, def.d, rot);
+      if (!inside(fp) || others.some((o2) => overlap(fp, footprint(o2), 0.05))) continue;
+      const dd = Math.hypot(x - it.x, z - it.z); if (!best || dd < best.d) best = { x, z, rot, d: dd };
+    }
+    if (best) { it.x = best.x; it.z = best.z; it.rot = best.rot; }
+    else if (others.length) { it.mode = 'lines'; overlay = true; }
+  }
   state.items.push(it);
   rerenderOne(it);
   if (def.court === 'vb') { const cam = cameraFor(it, state.items.filter((i) => i.type === 'camera').length + 1); state.items.push(cam); rerenderOne(cam); }
   select(it.id);
   commit();
-  toast(def.court === 'vb' ? `已加入${def.label}，球場邊也自動架好攝影機` : `已加入${def.label}，直接在畫面裡拖曳移動`);
+  toast(overlay ? `館內沒有空地放一整面${def.label}，先用「只畫線」疊在現有球場上（也可以選取排球場，在「複合球場」勾${def.label.replace(/（.*/, '')}線）` : def.court === 'vb' ? `已加入${def.label}，球場邊也自動架好攝影機` : `已加入${def.label}（有自己的地板），直接在畫面裡拖曳移動`);
 }
 function select(id) {
   selectedId = id; selSet.clear(); if (id) selSet.add(id);
@@ -2703,6 +2826,7 @@ function renderSelection() {
     }
     const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = '同一塊地板畫多種球場時，第二種以後選「只畫線」。';
     wrap.append(seg, hint);
+    if (it.mode !== 'lines') { const cx2 = document.createElement('div'); cx2.innerHTML = compositeHtml(it, 'sx'); wrap.appendChild(cx2); wireComposite(cx2, it, 'sx', renderSelection); }
     if (it.mode !== 'lines') { const cw = document.createElement('div'); cw.className = 'colors'; cw.id = 'sel-colors'; cw.innerHTML = courtColorHtml(it); wireColorPickers(cw, (k, v) => setCourtColor(it, k, v, renderSelection)); reopenPicker(cw); wrap.appendChild(cw); }
   }
   const row = document.createElement('div'); row.className = 'btn-row';
@@ -3021,7 +3145,7 @@ function saveDraftSoon() { draftDirty = true; clearTimeout(draftTimer); draftTim
 function markClean() { draftDirty = false; clearTimeout(draftTimer); }
 addEventListener('pagehide', saveNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
-function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); }
+function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); if (typeof coQueue === 'function') coQueue(); }
 function fullRefresh() { buildBuilding(); buildZones(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 // ---------------------------------------------------------------- camera
 let view = 'bird';
@@ -3814,6 +3938,36 @@ async function openOutline() {
 }
 function closeOutline() { $('outline').hidden = true; }
 // 外框轉正：找最長的那道牆，把整個外框轉到那道牆是水平的（平面圖、球場、區域才不會歪一邊）；回傳轉了幾度
+// 外框校正：自己在地圖上點的角會有誤差，牆就歪歪的。找出建物的主方向，每一邊拉成跟主方向平行或垂直
+// （保留那一邊的中點位置），再用相鄰兩邊的交點當新的牆角。四邊形 → 標準矩形；L 形等多邊形 → 牆角都是直角
+function polyOrthoInfo(P) {
+  const n = P.length; let sx = 0, sy = 0, worst = 0;
+  const E = P.map((a, i) => { const b = P[(i + 1) % n], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), th = Math.atan2(dz, dx); sx += L * Math.cos(4 * th); sy += L * Math.sin(4 * th); return { a, b, L, th }; });
+  const main = Math.atan2(sy, sx) / 4;
+  for (const e of E) { let d = (e.th - main) % (Math.PI / 2); if (d > Math.PI / 4) d -= Math.PI / 2; if (d < -Math.PI / 4) d += Math.PI / 2; e.dev = d; worst = Math.max(worst, Math.abs(d)); }
+  return { E, main, worst };
+}
+function orthoPoly(P, maxDev = (25 * Math.PI) / 180) {
+  if (!P || P.length < 4) return null;
+  const { E, main, worst } = polyOrthoInfo(P);
+  if (worst > maxDev) return null;
+  // 每一邊：方向轉成主方向的 0／90／180／270°，通過原本的中點
+  const L = E.map((e) => { const th = e.th - e.dev, mx = (e.a[0] + e.b[0]) / 2, mz = (e.a[1] + e.b[1]) / 2; return { mx, mz, dx: Math.cos(th), dz: Math.sin(th) }; });
+  // 同方向的相鄰兩邊（幾乎共線）先合併
+  const M = [];
+  for (const l of L) { const q = M[M.length - 1]; if (q && Math.abs(q.dx * l.dz - q.dz * l.dx) < 1e-6) { q.mx = (q.mx + l.mx) / 2; q.mz = (q.mz + l.mz) / 2; } else M.push({ ...l }); }
+  if (M.length > 2 && Math.abs(M[0].dx * M[M.length - 1].dz - M[0].dz * M[M.length - 1].dx) < 1e-6) { const q = M.pop(); M[0].mx = (M[0].mx + q.mx) / 2; M[0].mz = (M[0].mz + q.mz) / 2; }
+  if (M.length < 4) return null;
+  const out = [];
+  for (let i = 0; i < M.length; i++) {
+    const a = M[(i + M.length - 1) % M.length], b = M[i], den = a.dx * b.dz - a.dz * b.dx;
+    if (Math.abs(den) < 1e-6) return null;
+    const t = ((b.mx - a.mx) * b.dz - (b.mz - a.mz) * b.dx) / den;
+    out.push([Math.round((a.mx + a.dx * t) * 100) / 100, Math.round((a.mz + a.dz * t) * 100) / 100]);
+  }
+  return out;
+}
+const needsOrtho = (P) => !!P && P.length >= 4 && polyOrthoInfo(P).worst > (0.4 * Math.PI) / 180;
 function alignPoly(P) {
   let best = null;
   for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!best || L > best.L) best = { L, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) }; }
@@ -3826,7 +3980,8 @@ function alignPoly(P) {
 }
 async function applyOutline() {
   const geo = OUT.pts.map((m) => [m.getLatLng().lat, m.getLatLng().lng]);
-  const al = alignPoly(toLocal(geo).P), P = al.P, L = al.L, W = al.W;
+  const raw = toLocal(geo).P, sq = orthoPoly(raw, (15 * Math.PI) / 180);
+  const al = alignPoly(sq || raw), P = al.P, L = al.L, W = al.W;
   const H = Math.max(4, Math.min(15, Number($('ol-h').value) || 8)), roofH = Number($('ol-roof').value) || null, addr = $('ol-addr').value.trim().slice(0, 80) || null;
   closeOutline();
   pushHistory();
@@ -3840,7 +3995,7 @@ async function applyOutline() {
   state.zones = autoZones();
   window.__generating = false;
   fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan();
-  toast(plan ? `照真實外框放進 ${plan.n} 面排球場（${plan.label}）` : '外框裡放不下標準排球場，可以手動擺精簡場');
+  toast((sq ? '外框的牆角已自動拉成直角。' : '') + (plan ? `照真實外框放進 ${plan.n} 面排球場（${plan.label}）` : '外框裡放不下標準排球場，可以手動擺精簡場'));
   if (window.__siteId) saveHall(window.__siteId);
 }
 function initOutline() {
@@ -4493,7 +4648,7 @@ function selectZone(id) { selZoneId = id; if (id) { selWallId = null; selectedId
 function selectWall(id) { selWallId = id; if (id) { selZoneId = null; selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); planToolState(); }
 function selectPlanItem(id) { selZoneId = null; selWallId = null; select(id); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
 function planToolState() {
-  { const P = state.building.poly; $('p-align').hidden = !(P && Math.abs(alignPoly(P).deg) >= 0.5); }
+  { const P = state.building.poly; $('p-align').hidden = !(P && Math.abs(alignPoly(P).deg) >= 0.5); $('p-ortho').hidden = !needsOrtho(P); }
   const it = state.items.find((x) => x.id === selectedId);
   $('p-rot').disabled = !it || (!!it.locked && selItems().length < 2);
   $('p-del').disabled = !(selZoneId || selWallId || (it && (!it.locked || selItems().length > 1)));
@@ -4793,12 +4948,13 @@ function renderZoneSel() {
     box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
       <div class="sel-name">${esc(labelOf(it))}<span class="unit">　${def.court ? `${def.w}×${def.d} m（含緩衝區）` : ''}旋轉 ${it.rot}°</span></div>
       <label class="field" for="is-name"><span>名稱</span><input id="is-name" type="text" maxlength="20" value="${esc(it.label || '')}" placeholder="${esc(def.label)}"></label>
-      ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>${it.mode !== 'lines' ? `<div class="colors" id="is-colors">${courtColorHtml(it)}</div>` : ''}` : ''}
+      ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>${it.mode !== 'lines' ? `<div id="is-comp">${compositeHtml(it, 'ix')}</div><div class="colors" id="is-colors">${courtColorHtml(it)}</div>` : ''}` : ''}
       <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="0.1" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
       <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-alignw"${it.locked ? ' disabled' : ''}>對齊外牆</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
       ${it.locked ? '<p class="lock-note">已鎖定：不能拖曳、旋轉或刪除。按「解除鎖定」後才能在平面圖上拖。</p>' : ''}</div>`;
     $('is-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) it.label = v.slice(0, 20); else delete it.label; rerenderOne(it); commit(); renderZoneSel(); });
     if ($('is-colors')) { wireColorPickers($('is-colors'), (k, v) => setCourtColor(it, k, v, renderZoneSel)); reopenPicker($('is-colors')); }
+    if ($('is-comp')) wireComposite($('is-comp'), it, 'ix', () => { renderZoneSel(); renderPlan(); });
     for (const b of box.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.mode === 'lines') it.mode = 'lines'; else delete it.mode; renderItems(); commit(); renderZoneSel(); });
     $('is-lock').addEventListener('click', () => { toggleLockSel(); renderZoneSel(); planToolState(); renderPlan(); });
     $('is-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
@@ -4879,6 +5035,16 @@ $('draw-badge').addEventListener('click', (e) => { if (e.target.dataset && e.tar
 $('p-entry').addEventListener('click', () => setPlanTool(planTool === 'entry' ? 'select' : 'entry'));
 $('p-box').addEventListener('click', () => { setPlanTool(planTool === 'box' ? 'select' : 'box'); if (planTool === 'box') toast('在圖上拖一個框，框到的物件會一起選起來'); });
 $('p-wall').addEventListener('click', () => setPlanTool(planTool === 'wall' ? 'select' : 'wall'));
+$('p-ortho').addEventListener('click', () => {
+  const P = state.building.poly; if (!P) return;
+  const Q = orthoPoly(P);
+  if (!Q) { toast('外框的邊歪太多（超過 25°），沒辦法自動判斷，請在「描真實建物外框」裡重新點'); return; }
+  pushHistory(); state.building.poly = Q;
+  const xs = Q.map((q) => q[0]), zs = Q.map((q) => q[1]);
+  state.building.L = Math.round((Math.max(...xs) - Math.min(...xs)) * 2) / 2; state.building.W = Math.round((Math.max(...zs) - Math.min(...zs)) * 2) / 2;
+  planChanged(); pv.fitted = false; renderPlan(); planToolState();
+  toast(`外框校正好了：${Q.length} 個牆角都是直角${Math.abs(alignPoly(Q).deg) >= 0.5 ? '；要讓建物跟圖紙對齊，再按「建物轉正」' : ''}`);
+});
 $('p-align').addEventListener('click', () => {
   const P = state.building.poly; if (!P) return;
   const al = alignPoly(P); if (Math.abs(al.deg) < 0.5) { toast('建物已經是正的了'); return; }
@@ -5064,7 +5230,7 @@ function updateWalk(dt) {
     walk.x = nx; walk.z = nz;
   }
   const bob = mag > 0.01 || walk.target ? Math.sin(performance.now() / 160) * 0.015 : 0;
-  camera.position.set(walk.x, EYE + bob - (skill.dip || 0), walk.z);
+  camera.position.set(walk.x, EYE + bob - (skill.dip || 0) + jumpY(dt), walk.z);
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
@@ -5131,10 +5297,10 @@ function updateFocus() {
   let t = '';
   if (skill.mode) t = skill.mode === 'set' ? '球回到手上時按 E 繼續舉球（Q 換墊球）' : '球掉到手臂時按 Q 繼續墊球（E 換舉球）';
   else if (walk.serve) t = '';
-  else if (walk.hold) t = near ? 'E 舉球・Q 墊球・F 傳給面前的人・V 發球・R 攻擊' : 'E 舉球・Q 墊球・F 傳給面前的人・V 發球・點一下丟球';
+  else if (walk.hold) t = 'E 舉球・Q 接球・F 傳給面前的人・V 發球・R 扣球（空白鍵＋R 跳扣）';
   else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
-  else if (near) t = 'R 網前攻擊（跳起來扣球）';
+  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = 'R 扣球・空白鍵＋R 跳起來扣';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
@@ -5467,51 +5633,20 @@ const balls = [];
 const BALL_R = 0.105;
 // 寫實排球：黃、寶藍兩色的弧形扭轉色塊（比賽球那種），色塊之間有接縫，表面是細小的凹凸紋
 // 每個像素換算成球面上的方向，在方向上決定顏色，所以貼回球上不會有接縫歪掉
+// 寫實排球貼圖：tools/ball_texture.py 事先算好（顏色、法線：面板鼓起、接縫凹、點狀紋；粗糙度）
 const BALL_TEX = (() => {
-  // 比賽球的花紋：以一條軸為準，三條藍色弧帶從一端的 Y 字會合點繞成螺旋，一路到另一端再會合成 Y；
-  // 帶子中間寬、兩端窄，其餘是黃色。帶子邊緣與黃色區中間有接縫，整顆球有細小的點狀紋。
-  const W = 1024, H = 512;
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), img = c.createImageData(W, H), px = img.data;
-  const bv = document.createElement('canvas'); bv.width = W; bv.height = H; const bc = bv.getContext('2d'), bim = bc.createImageData(W, H), bp = bim.data;
-  const Y = [255, 194, 0], B = [22, 46, 170], TW = 0.68;
-  const wrap = (a) => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
-  const badge = [0.62, 0.35, 0.7], bl = Math.hypot(...badge);
-  for (let r = 0; r < H; r++) {
-    const th = ((r + 0.5) / H) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
-    for (let q = 0; q < W; q++) {
-      const ph = ((q + 0.5) / W) * Math.PI * 2, x = -Math.cos(ph) * st, y = ct, z = Math.sin(ph) * st;
-      // 以 x 軸當花紋的軸：polar = 和 x 軸的夾角，az = 繞 x 軸的角度
-      const pol = Math.acos(Math.max(-1, Math.min(1, x))), sp = Math.sin(pol), az = Math.atan2(z, y);
-      const width = 0.5 + 0.42 * sp;                          // 帶子的弧寬（球面上的弧長，單位＝半徑）
-      let dmin = 9;
-      for (let k = 0; k < 3; k++) dmin = Math.min(dmin, Math.abs(wrap(az - (k * 2 * Math.PI) / 3 - TW * pol)) * Math.max(sp, 0.02));
-      const blue = dmin < width / 2;
-      // 黃色區中間的接縫（兩條帶子正中間）
-      let dmid = 9;
-      for (let k = 0; k < 3; k++) dmid = Math.min(dmid, Math.abs(wrap(az - (k * 2 * Math.PI) / 3 - Math.PI / 3 - TW * pol)) * Math.max(sp, 0.02));
-      const edge = Math.abs(dmin - width / 2), seam = Math.min(edge, blue ? 9 : dmid);
-      let col = blue ? B : Y, k2 = 1;
-      if (seam < 0.012) k2 = 0.55 + 0.45 * (seam / 0.012);
-      // 小圓章（黃色區上一個深色圓環）
-      const bd = (x * badge[0] + y * badge[1] + z * badge[2]) / bl;
-      if (bd > 0.9972) col = [250, 214, 70]; else if (bd > 0.9955) col = [40, 40, 44];
-      const i = (r * W + q) * 4;
-      px[i] = col[0] * k2; px[i + 1] = col[1] * k2; px[i + 2] = col[2] * k2; px[i + 3] = 255;
-      // 點狀紋：用球面座標做的細格點，約 3–4 mm 一點；接縫凹下去
-      const dots = Math.sin(x * 190) * Math.sin(y * 190) * Math.sin(z * 190);
-      bp[i] = bp[i + 1] = bp[i + 2] = seam < 0.012 ? 40 : 170 + 70 * dots; bp[i + 3] = 255;
-    }
-  }
-  c.putImageData(img, 0, 0); bc.putImageData(bim, 0, 0);
-  const map = new THREE.CanvasTexture(cv); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
-  const bump = new THREE.CanvasTexture(bv);
-  return { map, bump };
+  const L = new THREE.TextureLoader();
+  const map = L.load('img/ball/ball_color.jpg'), normal = L.load('img/ball/ball_normal.png'), rough = L.load('img/ball/ball_rough.jpg');
+  map.colorSpace = THREE.SRGBColorSpace;
+  for (const t of [map, normal, rough]) t.anisotropy = 8;
+  return { map, normal, rough };
 })();
 function ballMaterial(hot) {
-  return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, bumpMap: BALL_TEX.bump, bumpScale: 0.35, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
+  return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, normalMap: BALL_TEX.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: BALL_TEX.rough, roughness: 1, sheen: 0.25, sheenRoughness: 0.6, sheenColor: '#FFF6D0', clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
-function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 40, 28), ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
+const BALL_GEO = new THREE.SphereGeometry(BALL_R, 56, 36);   // 所有球共用一份（輪廓夠圓）
+function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
@@ -5656,77 +5791,112 @@ function updateSkill(dt) {
   if (skill.h < -0.55) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前按 E）' : '沒接到（墊球要在球掉到前臂時按 Q）');
 }
 // ---- 網前攻擊：助跑、起跳、揮臂把舊舉過來的球扣過網、落地
-function nearNet() {
+// ---- 扣球：R 站著扣（手臂揮下去，球從頭上打過網）；按住空白鍵再按 R（或跳起來時按 R）＝助跑起跳扣球
+// 球要是真的：手上的球自己拋起來打，或是飛到附近的球（隊友舉過來的）
+function courtAt(x, z, far) {
+  let best = null;
   for (const c of state.items) {
     if (CAT[c.type].court !== 'vb' || c.mode === 'lines') continue;
-    const [lx, lz] = toLocalOf(c, walk.x, walk.z);
-    if (Math.abs(lx) < 4 && Math.abs(lz) < 4.6) return { c, lx, lz };
+    const [lx, lz] = toLocalOf(c, x, z);
+    if (Math.abs(lx) < (far ? 15 : 4) && Math.abs(lz) < (far ? 8 : 4.6)) { const d = Math.abs(lx); if (!best || d < best.d) best = { c, lx, lz, d }; }
   }
-  return null;
+  return best;
 }
-function startSpike() {
-  if (walk.spike || walk.sit) return;
-  const nn = nearNet();
-  if (!nn) { toast('走到排球網前面（4 m 內）再按 R 攻擊'); return; }
-  // 要有球才能攻擊：手上的球（自己拋起來打），或是飛到附近的球（隊友舉過來的）
+const nearNet = () => courtAt(walk.x, walk.z, false);
+// 出手速度：讓球落在 (tx, tz)，而且如果要過網，經過網子時高度至少 2.6 m（不夠就把弧線拉高）
+function solveShot(p0, tx, tz, court, sg, Tmin) {
+  for (let T = Tmin; T < 2.6; T += 0.03) {
+    const v = new THREE.Vector3((tx - p0.x) / T, (BALL_R - p0.y) / T + 4.9 * T, (tz - p0.z) / T);
+    if (!court) return v;
+    const [l0] = toLocalOf(court, p0.x, p0.z), [l1] = toLocalOf(court, tx, tz);
+    if (Math.sign(l0) === Math.sign(l1) || l0 === l1) return v;
+    const f = l0 / (l0 - l1), t = f * T, y = p0.y + v.y * t - 4.9 * t * t;
+    if (y >= 2.6) return v;
+  }
+  return new THREE.Vector3((tx - p0.x) / 2.6, (BALL_R - p0.y) / 2.6 + 4.9 * 2.6, (tz - p0.z) / 2.6);
+}
+function startSpike(jump) {
+  if (walk.spike || walk.sit || walk.serve) return;
   let own = null, incoming = null;
   if (walk.hold) { const p0 = new THREE.Vector3(); walk.hold.getWorldPosition(p0); own = walk.hold; camera.remove(own); own.position.copy(p0); own.material = ballMat; delete own.userData.noPick; ballsGroup.add(own); walk.hold = null; skill.mode = null; $('wk-combo').hidden = true; }
   else {
     let best = null;
-    for (const b of balls) { if (b.rest > 0.3 || b.m.position.y < 1.2) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < 3.2 && (!best || d < best.d)) best = { b, d }; }
-    if (!best) { toast('要有球才能攻擊：拿著球按 R 自己拋起來打，或等隊友把球舉到網前時按 R'); return; }
+    for (const b of balls) { if (b.rest > 0.3 || b.m.position.y < 1.0) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < (jump ? 3.4 : 2.2) && (!best || d < best.d)) best = { b, d }; }
+    if (!best) { toast('要有球才能扣：拿著球按 R（站著扣）或空白鍵＋R（跳起來扣），或等隊友把球舉過來時再按'); return; }
     incoming = best.b; balls.splice(balls.indexOf(incoming), 1); if (incoming.room) netGrab();
   }
-  const sg = Math.sign(nn.lx) || 1, r = (nn.c.rot * Math.PI) / 180;
-  // 不改你的方向：沿著你面向的地方助跑（最多 2.2 m，不會衝過網）
+  const ct = courtAt(walk.x, walk.z, true), sg = ct ? Math.sign(ct.lx) || 1 : 1;
+  // 跳扣：沿著你面向的方向助跑（最多 2.2 m，不跨過網）；站著扣不助跑
   const dir = [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
-  const toNet = [-sg * Math.cos(r), sg * Math.sin(r)], along = dir[0] * toNet[0] + dir[1] * toNet[1];
-  const run = along > 0.2 ? Math.max(0, Math.min(2.2, (Math.abs(nn.lx) - 0.9) / along)) : 1.2;
-  walk.pitch = 0.05; walk.target = null; targetMark.visible = false;
+  let run = 0;
+  if (jump) {
+    if (ct) { const r = (ct.c.rot * Math.PI) / 180, toNet = [-sg * Math.cos(r), sg * Math.sin(r)], along = dir[0] * toNet[0] + dir[1] * toNet[1]; run = along > 0.2 ? Math.max(0, Math.min(2.2, (Math.abs(ct.lx) - 0.9) / along)) : 1.2; }
+    else run = 1.2;
+  }
+  walk.target = null; targetMark.visible = false; walk.jump = null;
   const ball = own || incoming.m; delete ball.userData.ball;
-  walk.spike = { t: 0, nn, sg, dir, x0: walk.x, z0: walk.z, run, hit: false, ball, from: ball.position.clone(), self: !!own };
+  walk.spike = { t: 0, jump: !!jump, ct, sg, dir, x0: walk.x, z0: walk.z, run, hit: false, ball, from: ball.position.clone(), self: !!own, hitT: jump ? 1.0 : 0.5, endT: jump ? 1.7 : 0.95 };
   hands.visible = true; pose = 'cock';
 }
 function updateSpike(dt) {
   const s = walk.spike; s.t += dt; const t = s.t;
-  // 助跑 0–0.45s、蹲 0.45–0.65、跳 0.65–1.0、擊球 1.0、落地 1.0–1.45、站穩 1.7
-  const runP = ease(clamp(t / 0.45, 0, 1));
-  // 助跑：不跨過網子那條線
-  const nx = s.x0 + s.dir[0] * s.run * runP, nz = s.z0 + s.dir[1] * s.run * runP, [nlx] = toLocalOf(s.nn.c, nx, nz);
-  if (Math.sign(nlx) === s.sg && Math.abs(nlx) > 0.5) { [walk.x, walk.z] = collide(nx, nz); }
   let eye = EYE;
-  if (t < 0.45) eye = EYE + Math.sin(t * 20) * 0.02;
-  else if (t < 0.65) eye = EYE - 0.32 * ease((t - 0.45) / 0.2);
-  else if (t < 1.0) eye = EYE - 0.32 + 1.05 * Math.sin(((t - 0.65) / 0.35) * Math.PI / 2);
-  else if (t < 1.45) eye = EYE + 0.73 - 0.73 * ((t - 1.0) / 0.45) ** 2 - 0.12 * Math.max(0, (t - 1.35) / 0.1);
-  else eye = EYE - 0.12 * (1 - ease((t - 1.45) / 0.25));
-  walk.pitch = t < 0.45 ? 0.05 : t < 1.0 ? 0.05 + 0.4 * ease((t - 0.45) / 0.55) : 0.45 - 0.75 * ease(Math.min(1, (t - 1.0) / 0.4));
-  // 舉過來的球：從網邊 3 m 的舉球員位置拋到擊球點
-  // 擊球點跟著你現在面向的方向（助跑、起跳時還可以用滑鼠微調）
+  if (s.jump) {
+    // 助跑 0–0.45s、蹲 0.45–0.65、跳 0.65–1.0、擊球 1.0、落地 1.0–1.45、站穩 1.7
+    const runP = ease(clamp(t / 0.45, 0, 1));
+    const nx = s.x0 + s.dir[0] * s.run * runP, nz = s.z0 + s.dir[1] * s.run * runP;
+    const ok = !s.ct || (() => { const [nlx] = toLocalOf(s.ct.c, nx, nz); return Math.sign(nlx) === s.sg && Math.abs(nlx) > 0.5; })();
+    if (ok) [walk.x, walk.z] = collide(nx, nz);
+    if (t < 0.45) eye = EYE + Math.sin(t * 20) * 0.02;
+    else if (t < 0.65) eye = EYE - 0.32 * ease((t - 0.45) / 0.2);
+    else if (t < 1.0) eye = EYE - 0.32 + 1.05 * Math.sin(((t - 0.65) / 0.35) * Math.PI / 2);
+    else if (t < 1.45) eye = EYE + 0.73 - 0.73 * ((t - 1.0) / 0.45) ** 2 - 0.12 * Math.max(0, (t - 1.35) / 0.1);
+    else eye = EYE - 0.12 * (1 - ease((t - 1.45) / 0.25));
+    walk.pitch = t < 0.45 ? 0.05 : t < 1.0 ? 0.05 + 0.4 * ease((t - 0.45) / 0.55) : 0.45 - 0.75 * ease(Math.min(1, (t - 1.0) / 0.4));
+  } else {
+    // 站著扣：拉弓（0–0.45s）、揮臂擊球（0.5s）、收手
+    eye = EYE - 0.04 * Math.sin(clamp(t / s.endT, 0, 1) * Math.PI);
+    walk.pitch += ((t < s.hitT ? 0.3 : -0.1) - walk.pitch) * (1 - Math.exp(-dt * 8));
+  }
+  // 擊球點跟著你現在面向的方向（還沒打到之前都可以用滑鼠微調）
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
-  const hitP = new THREE.Vector3(walk.x + fx * 0.45, EYE + 0.73 + 0.55, walk.z + fz * 0.45);
+  const reachY = s.jump ? EYE + 0.73 + 0.55 : EYE + 0.62;
+  const hitP = new THREE.Vector3(walk.x + fx * 0.45, reachY, walk.z + fz * 0.45);
   // 球：自己的球從手上往前上方拋；隊友舉來的球從它現在的位置飄到擊球點
   if (s.ball && !s.hit) {
-    const p = clamp(t / 1.0, 0, 1), arc = Math.sin(p * Math.PI) * (s.self ? 1.6 : 0.6);
+    const p = clamp(t / s.hitT, 0, 1), arc = Math.sin(p * Math.PI) * (s.self ? (s.jump ? 1.6 : 0.9) : 0.5);
     s.ball.position.lerpVectors(s.from, hitP, p); s.ball.position.y += arc; s.ball.rotation.x += dt * 8;
   }
-  pose = t < 0.98 ? 'cock' : 'swing';
-  if (t >= 1.0 && !s.hit) {
+  pose = t < s.hitT - 0.02 ? 'cock' : 'swing';
+  if (t >= s.hitT && !s.hit) {
     s.hit = true;
-    // 落點＝你面向的那條線：面向對面就落在網後 4～7 m 那段，面向別處就照方向往前 6 m（瞄出界就是出界）
-    const [lx, lz] = toLocalOf(s.nn.c, walk.x, walk.z), [ax, az] = toLocalOf(s.nn.c, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
-    const depth = 4 + Math.random() * 3, k = dlx * -s.sg > 0.05 ? (-s.sg * depth - lx) / dlx : 0;
-    const [tx, tz] = k > 0 ? toWorldOf(s.nn.c, lx + dlx * k, lz + dlz * k) : [walk.x + fx * 6, walk.z + fz * 6];
-    const p0 = s.ball.position.clone(), T = clamp(Math.hypot(tx - p0.x, tz - p0.z) * 0.06, 0.32, 0.75);
-    const v = new THREE.Vector3((tx - p0.x) / T, (BALL_R - p0.y) / T + 0.5 * 9.8 * T, (tz - p0.z) / T);
-    s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: { c: s.nn.c, sg: s.sg } }; balls.push(s.ball.userData.ball);
-    if (NET.on) netBallHit(s.ball.userData.ball);
+    // 落點＝你面向的那條線：面向對面就落在網後（跳扣 4～7 m、站著扣 5～8 m），面向別處就照方向往前；瞄出界就是出界
+    let tx = walk.x + fx * (s.jump ? 6 : 8), tz = walk.z + fz * (s.jump ? 6 : 8);
+    const c = s.ct && s.ct.c;
+    if (c) {
+      const [lx, lz] = toLocalOf(c, walk.x, walk.z), [ax, az] = toLocalOf(c, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
+      const depth = s.jump ? 4 + Math.random() * 3 : 5 + Math.random() * 3, k = dlx * -s.sg > 0.05 ? (-s.sg * depth - lx) / dlx : 0;
+      if (k > 0) [tx, tz] = toWorldOf(c, lx + dlx * k, lz + dlz * k);
+    }
+    const p0 = s.ball.position.clone(), D = Math.hypot(tx - p0.x, tz - p0.z);
+    const v = solveShot(p0, tx, tz, c, s.sg, s.jump ? clamp(D * 0.05, 0.3, 0.7) : clamp(D * 0.07, 0.5, 1.0));
+    s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: c ? { c, sg: s.sg } : null }; balls.push(s.ball.userData.ball);
+    if (NET.on) netBallHit(s.ball.userData.ball, s.jump ? 'spike' : 'hit');
+    recHit({ x: p0.x, y: p0.y, z: p0.z, v: v.length(), by: NET.me || 'me', kind: s.jump ? 'spike' : 'hit' });
     while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
-    toast('扣——！');
+    toast(s.jump ? '跳起來扣——！' : '扣！');
   }
   camera.position.set(walk.x, eye, walk.z);
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
-  if (t > 1.7) { walk.spike = null; hands.visible = !!walk.hold; pose = 'hold'; walk.pitch = -0.04; }
+  if (t > s.endT) { walk.spike = null; hands.visible = !!walk.hold; pose = 'hold'; if (s.jump) walk.pitch = -0.04; }
+}
+// ---- 跳（空白鍵）：原地或邊走邊跳，0.6 秒、最高 0.5 m；跳起來時按 R 就是跳扣
+function startJump() { if (walk.jump || walk.spike || walk.sit || walk.serve || walk.paused) return; walk.jump = { t: 0 }; }
+function jumpY(dt) {
+  if (!walk.jump) return 0;
+  walk.jump.t += dt; const t = walk.jump.t;
+  if (t > 0.62) { walk.jump = null; return 0; }
+  return 0.5 * Math.sin((t / 0.62) * Math.PI);
 }
 // ---- 伸手：右手（洗手是兩手）伸向看著的地方，手上可以拿著東西；手到了才觸發效果
 let reachState = null;
@@ -5861,7 +6031,7 @@ function updateServe(dt) {
 function updateBalls(dt) {
   updateTweens(dt); updateDoors(dt); updateWind(dt);
   if (!balls.length || !dt) return;
-  const H = state.building.H, steps = 3, h = dt / steps, segs = blockers();
+  const H = state.building.H, steps = 3, h = dt / steps, segs = blockers(), netCourts = state.items.filter((c) => CAT[c.type].court === 'vb' && c.mode !== 'lines');
   for (const b of balls) {
     if (b.rest > 2) continue;
     for (let k = 0; k < steps; k++) {
@@ -5880,7 +6050,18 @@ function updateBalls(dt) {
         if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
       }
       if (p.y <= BALL_R + 1e-3) { const f = Math.max(0, 1 - 1.2 * h); b.v.x *= f; b.v.z *= f; }
+      // 球網：每面排球場中線上 9.5 m 寬、網高 2.43 m（網子下緣 1.43 m）；沒過網就被網子擋回來
+      for (const c of netCourts) {
+        const [lx, lz] = toLocalOf(c, p.x, p.z), [px0] = toLocalOf(c, p.x - b.v.x * h, p.z - b.v.z * h);
+        if (Math.sign(lx) !== Math.sign(px0) && Math.abs(lz) < 4.75 && p.y < NETS[state.net].h + BALL_R && p.y > NETS[state.net].h - 1.0) {
+          const r = (c.rot * Math.PI) / 180, nx = Math.cos(r), nz = -Math.sin(r), vn = b.v.x * nx + b.v.z * nz;
+          b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz; b.v.multiplyScalar(0.5);
+          const back = Math.sign(px0) * (BALL_R + 0.02) - lx; p.x += nx * back; p.z += nz * back;
+          if (b.spike) { toast('掛網了！'); b.spike = null; }
+        }
+      }
     }
+    if (b.err) { const kk = Math.min(1, dt * 7); b.m.position.addScaledVector(b.err, kk); b.err.multiplyScalar(1 - kk); if (b.err.lengthSq() < 1e-5) b.err = null; }
     const sp = Math.hypot(b.v.x, b.v.z);
     if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
@@ -5936,15 +6117,17 @@ function hitWorldBall(b, kind) {
 }
 // ---------------------------------------------------------------- 多人連線：一間房最多 4 人，互相看得到、共用一顆球
 // 連線方式：正式站用 Ably（api/rt-token 發通行證）；網址加 &localnet 時改用同一個瀏覽器的分頁互傳（不用帳號，開發測試用）
-const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, seq: 0, ownBall: false };
-const NET_MAX = 4;
-const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C'];
+// hitN：擊球序號，只有「擊球、接球、撿球」才會加一；位置更新沿用同一個序號，不會蓋掉別人的擊球。
+// 同一個序號兩個人同時打到：代號比較大的那一下算數（每台電腦都用同一條規則，結果一致）
+const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null };
+const NET_MAX = 12;
+const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C', '#8E4EC6', '#F76B15', '#12A594', '#D6409F', '#0090FF', '#978365', '#E54666', '#46A758'];
 function loadScript(src) { return new Promise((ok, bad) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = ok; s2.onerror = bad; document.head.appendChild(s2); }); }
-async function ablyTransport(room) {
-  const pre = await fetch('api/rt-token?clientId=' + encodeURIComponent(NET.me), { cache: 'no-store' }).catch(() => null);
+async function ablyTransport(room, cid = NET.me) {
+  const pre = await fetch('api/rt-token?clientId=' + encodeURIComponent(cid), { cache: 'no-store' }).catch(() => null);
   if (!pre || pre.status === 501 || !(pre.headers.get('content-type') || '').includes('json')) throw new Error('noserver');
   if (!window.Ably) await loadScript('https://cdn.jsdelivr.net/npm/ably@2.20.0/build/ably.min.js');
-  const client = new window.Ably.Realtime({ authUrl: 'api/rt-token?clientId=' + encodeURIComponent(NET.me), clientId: NET.me, echoMessages: false });
+  const client = new window.Ably.Realtime({ authUrl: 'api/rt-token?clientId=' + encodeURIComponent(cid), clientId: cid, echoMessages: false });
   // Ably 的萬用權限只認「命名空間:*」，房間頻道用 vb-room:代碼
   const ch = client.channels.get('vb-room:' + room);
   await Promise.race([ch.attach(), new Promise((_, bad) => setTimeout(() => bad(new Error('timeout')), 12000))]).catch((e) => { client.close(); throw new Error(e && e.code === 40160 ? 'denied' : 'attach'); });
@@ -5957,21 +6140,21 @@ async function ablyTransport(room) {
     close: () => { try { ch.presence.leave(); client.close(); } catch (e) { /* ignore */ } },
   };
 }
-function localTransport(room) {
+function localTransport(room, cid = NET.me) {
   const bc = new BroadcastChannel('vb-room-' + room), members = new Map(); let onMsg = null, onPres = null, mine = null;
   bc.onmessage = (e) => {
     const { t, d, from } = e.data || {};
-    if (t === '__enter' || t === '__here') { const isNew = !members.has(from); members.set(from, d); if (isNew && onPres) onPres('enter', from, d); if (t === '__enter' && mine) bc.postMessage({ t: '__here', d: mine, from: NET.me }); return; }
+    if (t === '__enter' || t === '__here') { const isNew = !members.has(from); members.set(from, d); if (isNew && onPres) onPres('enter', from, d); if (t === '__enter' && mine) bc.postMessage({ t: '__here', d: mine, from: cid }); return; }
     if (t === '__leave') { members.delete(from); onPres && onPres('leave', from, d); return; }
     onMsg && onMsg(t, d, from);
   };
   return {
-    publish: (t, d) => bc.postMessage({ t, d, from: NET.me }),
+    publish: (t, d) => bc.postMessage({ t, d, from: cid }),
     subscribe: (fn) => { onMsg = fn; },
-    enter: async (info) => { mine = info; members.set(NET.me, info); bc.postMessage({ t: '__enter', d: info, from: NET.me }); },
+    enter: async (info) => { mine = info; members.set(cid, info); bc.postMessage({ t: '__enter', d: info, from: cid }); },
     members: async () => { await new Promise((r) => setTimeout(r, 250)); return [...members].map(([id, d]) => ({ id, ...d })); },
     onPresence: (fn) => { onPres = fn; },
-    close: () => { bc.postMessage({ t: '__leave', d: {}, from: NET.me }); bc.close(); },
+    close: () => { bc.postMessage({ t: '__leave', d: {}, from: cid }); bc.close(); },
   };
 }
 function netStatus(msg, kind) { const el = $('mp-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
@@ -6019,15 +6202,17 @@ function renderMpList() {
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 function makeAvatar(color) {
-  const g = new THREE.Group(), skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
-  const add = (geo, m, x, y, z, parent = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
-  for (const sx of [-1, 1]) { add(new THREE.CylinderGeometry(0.065, 0.055, 0.82, 12), skin, sx * 0.1, 0.43, 0); add(new THREE.BoxGeometry(0.11, 0.08, 0.26), mat('#F4F4F2'), sx * 0.1, 0.04, -0.04); }
+  // 人形：腿、手臂都有關節（臀部、肩膀）可以擺動；身體在 body 群組裡，跳的時候整個往上
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
+  const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  const legs = [-1, 1].map((sx) => { const hip = new THREE.Group(); hip.position.set(sx * 0.1, 0.86, 0); body.add(hip); add(new THREE.CylinderGeometry(0.065, 0.055, 0.82, 12), skin, 0, -0.43, 0, hip); add(new THREE.BoxGeometry(0.11, 0.08, 0.26), mat('#F4F4F2'), 0, -0.82, -0.04, hip); return hip; });
   add(new THREE.CylinderGeometry(0.17, 0.15, 0.24, 16), dark, 0, 0.92, 0);
   add(new THREE.CylinderGeometry(0.18, 0.16, 0.52, 16), jersey, 0, 1.3, 0);
-  const arms = [-1, 1].map((sx) => { const sh = new THREE.Group(); sh.position.set(sx * 0.22, 1.52, 0); g.add(sh); add(new THREE.CylinderGeometry(0.045, 0.04, 0.62, 10), skin, 0, -0.31, 0, sh); return sh; });
+  const arms = [-1, 1].map((sx) => { const sh = new THREE.Group(); sh.position.set(sx * 0.22, 1.52, 0); body.add(sh); add(new THREE.CylinderGeometry(0.045, 0.04, 0.62, 10), skin, 0, -0.31, 0, sh); add(new THREE.SphereGeometry(0.045, 10, 8), skin, 0, -0.64, 0, sh); return sh; });
   add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 1.72, 0);
   add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 1.75, 0);
-  return { g, arms };
+  return { g, body, arms, legs, phase: 0 };
 }
 function netPeer(id, d) {
   let p2 = NET.peers.get(id);
@@ -6036,7 +6221,7 @@ function netPeer(id, d) {
     const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = d.n || '球友';
     const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag);
     scene.add(av.g);
-    p2 = { id, n: d.n || '球友', c: d.c || '#3E63DD', av, tag, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pose: 0, ball: null, seen: false };
+    p2 = { id, n: d.n || '球友', c: d.c || '#3E63DD', av, tag, x: 0, z: 0, y: 0, yaw: 0, pose: 0, ball: null, buf: [], vx: 0, vz: 0 };
     NET.peers.set(id, p2);
     if (NET.on) toast(`${p2.n} 進來了`);
   } else { p2.n = d.n || p2.n; p2.tag.element.textContent = p2.n; }
@@ -6048,57 +6233,191 @@ function netDropPeer(id) {
   NET.peers.delete(id); toast(`${p2.n} 離開了`);
 }
 // 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
-function myPoseCode() { if (walk.spike || walk.serve) return 4; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
+function myPoseCode() { if (walk.spike || walk.serve || walk.swing) return 4; if (walk.jump) return 5; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'st') {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
-    p2.tx = d.x; p2.tz = d.z; p2.tyaw = d.yaw; p2.ty = d.y || 0; p2.pose = d.p;
-    if (!p2.seen) { p2.x = d.x; p2.z = d.z; p2.yaw = d.yaw; p2.seen = true; }
-    if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ball.position.set(d.b[0], d.b[1], d.b[2]); p2.ball.visible = true; }
+    // 收到的位置放進時間軸，畫面上落後 130 ms 播放，兩筆之間內插 → 動作連續不跳
+    p2.buf.push({ t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw }); if (p2.buf.length > 30) p2.buf.shift();
+    p2.pose = d.p;
+    if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
-    // 共用的那顆球：序號比較新的才接受；收到後由對方負責（自己不再廣播）
-    if (d.s <= NET.seq) return;
-    NET.seq = d.s; NET.ownBall = false;
+    // 擊球序號：比我新的＝別人打到了；一樣的序號而且是現在負責的人＝一般位置更新；一樣的序號但不同人＝同時打到，代號大的算
+    const newer = d.h > NET.hitN, sameOwner = d.h === NET.hitN && d.by === NET.hitBy, tie = d.h === NET.hitN && d.by !== NET.hitBy && d.by > NET.hitBy;
+    if (!newer && !sameOwner && !tie) return;
+    if (newer || tie) { NET.hitN = d.h; NET.hitBy = d.by; NET.ownBall = false; }
     let b = balls.find((q) => q.room);
-    if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); }
-    b.m.position.set(d.p[0], d.p[1], d.p[2]); b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = null;
+    const P = new THREE.Vector3(d.p[0], d.p[1], d.p[2]);
+    if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); b.m.position.copy(P); }
+    // 位置修正：差很多（新的擊球）就直接換；差一點就在 0.15 秒內慢慢拉過去，不會閃
+    const err = P.clone().sub(b.m.position);
+    if (newer || tie || err.length() > 1.2) { b.m.position.copy(P); b.err = null; } else b.err = err;
+    b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
+    if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   } else if (t === 'grab') {
-    if (d.s <= NET.seq) return; NET.seq = d.s; NET.ownBall = false;
+    if (d.h < NET.hitN || (d.h === NET.hitN && d.by <= NET.hitBy)) return;
+    NET.hitN = d.h; NET.hitBy = d.by; NET.ownBall = false;
     for (const q of balls.filter((q2) => q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   }
 }
 // 我碰到／丟出球：這顆變成房間共用的球，由我廣播它的位置與速度
-function netBallHit(b) {
+function netBallHit(b, kind) {
   if (!NET.on) return;
   for (const q of balls) if (q !== b && q.room) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
-  b.room = true; NET.seq++; NET.ownBall = true; NET.lastBall = 0;
-  NET.tx.publish('ball', { s: NET.seq, p: b.m.position.toArray().map((v) => +v.toFixed(3)), v: b.v.toArray().map((v) => +v.toFixed(3)) });
+  b.room = true; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = true; NET.lastBall = performance.now(); b.err = null;
+  NET.tx.publish('ball', netBallMsg(b, kind));
 }
-function netGrab() { if (!NET.on) return; NET.seq++; NET.ownBall = false; NET.tx.publish('grab', { s: NET.seq }); }
+function recHit(e) { if (typeof recEvent === 'function') recEvent('hit', e); }
+function netBallMsg(b, kind) {
+  const m = { h: NET.hitN, by: NET.me, p: b.m.position.toArray().map((v) => +v.toFixed(3)), v: b.v.toArray().map((v) => +v.toFixed(3)) };
+  if (kind) m.w = kind;
+  if (b.spike && b.spike.c) m.k = { c: b.spike.c.id, sg: b.spike.sg };
+  return m;
+}
+function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
 function netTick(dt, now) {
   if (!NET.on) return;
-  // 我的狀態：每秒 8 次
-  if (now - NET.lastSt > 125) {
-    NET.lastSt = now;
-    let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-    NET.tx.publish('st', { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(camera.position.y - EYE).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp });
-  }
-  // 我負責的球：飛行中每秒 10 次校正
+  // 我的狀態：有在動就每秒 12 次，站著不動每 0.5 秒一次（省流量）
+  let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
+  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +Math.max(0, camera.position.y - EYE).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp };
+  const L = NET.lastSent, moved = !L || Math.hypot(st.x - L.x, st.z - L.z) > 0.02 || Math.abs(st.yaw - L.yaw) > 0.01 || st.p !== L.p || Math.abs(st.y - L.y) > 0.02 || !!st.b !== !!L.b || !!st.b;
+  if ((moved && now - NET.lastSt > 83) || now - NET.lastSt > 500) { NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
+  // 我負責的球：飛行中每秒 10 次位置更新（擊球序號不變）
   const rb = NET.ownBall && balls.find((q) => q.room);
-  if (rb && rb.rest < 0.5 && now - NET.lastBall > 100) { NET.lastBall = now; NET.tx.publish('ball', { s: ++NET.seq, p: rb.m.position.toArray().map((v) => +v.toFixed(3)), v: rb.v.toArray().map((v) => +v.toFixed(3)) }); }
-  // 對方的人形：平滑移動到收到的位置
-  const k = 1 - Math.exp(-dt * 10);
+  if (rb && rb.rest < 0.5 && now - NET.lastBall > 100) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
+  // 對方的人形：照時間軸內插（落後 130 ms），走路擺腿、跳、手臂動作
+  const rt = now - 130, k = 1 - Math.exp(-dt * 14);
   for (const p2 of NET.peers.values()) {
-    p2.x += (p2.tx - p2.x) * k; p2.z += (p2.tz - p2.z) * k;
-    let dy = p2.tyaw - p2.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); p2.yaw += dy * k;
-    p2.av.g.position.set(p2.x, p2.ty > 0 ? p2.ty : 0, p2.z); p2.av.g.rotation.y = p2.yaw + Math.PI;
-    const up = p2.pose === 2 || p2.pose === 4 ? -2.6 : p2.pose === 3 ? -1.2 : p2.pose === 1 ? -0.9 : 0;
-    for (const a of p2.av.arms) a.rotation.x += (up - a.rotation.x) * k;
+    const B = p2.buf; if (!B.length) continue;
+    let a = B[0], b2 = B[B.length - 1];
+    for (let i = 0; i < B.length - 1; i++) if (B[i].t <= rt && B[i + 1].t >= rt) { a = B[i]; b2 = B[i + 1]; break; }
+    let x, z, y, yaw;
+    if (rt >= b2.t) { const ex = Math.min(0.15, (rt - b2.t) / 1000); x = b2.x + p2.vx * ex; z = b2.z + p2.vz * ex; y = b2.y; yaw = b2.yaw; }
+    else if (rt <= a.t) { x = a.x; z = a.z; y = a.y; yaw = a.yaw; }
+    else { const f = (rt - a.t) / Math.max(1, b2.t - a.t); x = a.x + (b2.x - a.x) * f; z = a.z + (b2.z - a.z) * f; y = a.y + (b2.y - a.y) * f; let dy = b2.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); yaw = a.yaw + dy * f;
+      p2.vx = (b2.x - a.x) / Math.max(0.03, (b2.t - a.t) / 1000); p2.vz = (b2.z - a.z) / Math.max(0.03, (b2.t - a.t) / 1000); }
+    const sp = Math.hypot(x - p2.x, z - p2.z) / Math.max(dt, 1e-3);
+    p2.x = x; p2.z = z; p2.y = y; p2.yaw = yaw;
+    const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y += (y - av.body.position.y) * k;
+    // 走路：速度越快腿擺越大；空中時兩腳收起
+    av.phase += dt * Math.min(12, sp * 5.5);
+    const swing = y > 0.08 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
+    av.legs[0].rotation.x += (swing - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-swing - av.legs[1].rotation.x) * k;
+    // 手臂：0 一般（跟著走路擺）、1 拿球、2 舉球（兩手高舉）、3 墊球（兩手併攏往前下）、4 攻擊（右手高舉）、5 跳
+    const P2 = p2.pose;
+    const tgt = P2 === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : P2 === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : P2 === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : P2 === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : P2 === 5 ? [[-2.2, 0.2], [-2.2, -0.2]] : [[-swing * 0.8, 0.06], [swing * 0.8, -0.06]];
+    av.arms.forEach((arm, i) => { arm.rotation.x += (tgt[i][0] - arm.rotation.x) * k; arm.rotation.z += (tgt[i][1] - arm.rotation.z) * k; });
+    if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
   }
 }
+// ---------------------------------------------------------------- 即時共同編輯：同一個球館（候選場地／現有球館／自由規劃）頁面的人自動連在一起
+// 改了什麼（元件、區域、牆、建物、顏色…）只送「差異」，別人那邊立刻套用；新進來的人先跟已經在的人同步一次完整配置
+const CO = { on: false, tx: null, me: '', name: '', last: null, timer: 0, applying: false, peers: new Map(), parts: new Map(), toastT: 0 };
+function coSnap() {
+  return { name: state.name, building: JSON.parse(JSON.stringify(state.building)), floor: state.floor, colors: { ...(state.colors || {}) }, net: state.net,
+    zones: state.zones.map((z) => ({ ...z })), walls: (state.walls || []).map((w) => ({ ...w })), items: state.items.map((i) => ({ ...i })) };
+}
+function coDiff(a, b) {
+  const d = {}; let any = false;
+  for (const k of ['name', 'building', 'floor', 'colors', 'net']) if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) { d[k] = b[k]; any = true; }
+  for (const [k, ku, kr] of [['items', 'iu', 'ir'], ['zones', 'zu', 'zr'], ['walls', 'wu', 'wr']]) {
+    const A = new Map(a[k].map((x) => [x.id, JSON.stringify(x)])), Bm = new Map(b[k].map((x) => [x.id, x]));
+    const up = b[k].filter((x) => A.get(x.id) !== JSON.stringify(x)), rm = [...A.keys()].filter((id) => !Bm.has(id));
+    if (up.length) { d[ku] = up; any = true; } if (rm.length) { d[kr] = rm; any = true; }
+    if (up.length || rm.length) d[k + 'O'] = b[k].map((x) => x.id);   // 順序（疊放順序會影響畫面）
+  }
+  return any ? d : null;
+}
+function coApplyDiff(d) {
+  const s0 = coSnap();
+  for (const k of ['name', 'building', 'floor', 'colors', 'net']) if (k in d) s0[k] = d[k];
+  for (const [k, ku, kr] of [['items', 'iu', 'ir'], ['zones', 'zu', 'zr'], ['walls', 'wu', 'wr']]) {
+    const M = new Map(s0[k].map((x) => [x.id, x]));
+    for (const id of d[kr] || []) M.delete(id);
+    for (const x of d[ku] || []) M.set(x.id, x);
+    const order = d[k + 'O'];
+    s0[k] = order ? order.map((id) => M.get(id)).filter(Boolean).concat([...M.values()].filter((x) => !order.includes(x.id))) : [...M.values()];
+  }
+  coReplace(s0);
+}
+// 收到別人的修改前：我這邊還沒送出去的修改先送（不然會被蓋掉）
+function coFlush() {
+  if (!CO.on || !CO.timer) return;
+  clearTimeout(CO.timer); CO.timer = 0;
+  const now = coSnap(), d = CO.last && coDiff(CO.last, now); CO.last = now;
+  if (d) { const msg = JSON.stringify(d); if (msg.length < 48000) CO.tx.publish('ed', d); else coSendFull(); }
+}
+function coReplace(raw) {
+  const keepSel = selectedId, keepZone = selZoneId;
+  CO.applying = true;
+  state = sanitize({ ...raw, id: state.id });
+  if (keepSel && !state.items.some((i) => i.id === keepSel)) selectedId = null;
+  if (keepZone && !state.zones.some((z) => z.id === keepZone)) selZoneId = null;
+  fullRefresh(); if (mode === 'plan') renderPlan(); renderZoneSel(); renderZoneTable(); planToolState();
+  CO.last = coSnap(); CO.applying = false;
+}
+function coQueue() {
+  if (!CO.on || CO.applying) return;
+  clearTimeout(CO.timer);
+  CO.timer = setTimeout(() => {
+    CO.timer = 0;
+    const now = coSnap(), d = CO.last && coDiff(CO.last, now);
+    CO.last = now;
+    if (!d) return;
+    const msg = JSON.stringify(d);
+    if (msg.length < 48000) CO.tx.publish('ed', d); else coSendFull();
+  }, 160);
+}
+// 完整配置：太大就切成好幾段送（每段 40 KB）
+function coSendFull(to) {
+  const txt = JSON.stringify(coSnap()), id = Math.random().toString(36).slice(2, 8), n = Math.ceil(txt.length / 40000);
+  for (let i = 0; i < n; i++) CO.tx.publish('full', { id, i, n, to: to || '', part: txt.slice(i * 40000, (i + 1) * 40000) });
+}
+function coOnMessage(t, d, from) {
+  if (from === CO.me) return;
+  if (t === 'ed') { coFlush(); coApplyDiff(d); coNotice(from); }
+  else if (t === 'full') {
+    if (d.to && d.to !== CO.me) return;
+    const P = CO.parts.get(d.id) || []; P[d.i] = d.part; CO.parts.set(d.id, P);
+    if (P.filter((x) => x != null).length === d.n) { CO.parts.delete(d.id); try { coFlush(); coReplace(JSON.parse(P.join(''))); coNotice(from, true); } catch (e) { /* 壞掉的就略過 */ } }
+  } else if (t === 'sync?') {
+    // 只有代號最小的老成員回覆，避免大家一起送
+    const elders = [CO.me, ...[...CO.peers.keys()].filter((id) => id !== from)].sort();
+    if (elders[0] === CO.me) coSendFull(from);
+  }
+}
+function coNotice(from, full) {
+  const p2 = CO.peers.get(from), who = (p2 && p2.n) || '有人';
+  if (performance.now() - CO.toastT > 4000) { CO.toastT = performance.now(); toast(full ? `已和 ${who} 同步成最新的配置` : `${who} 改了配置（你這邊已經更新）`); }
+}
+function coRender() {
+  const el = $('co-badge'); if (!el) return;
+  const names = [...CO.peers.values()].map((p2) => p2.n);
+  el.hidden = !CO.on || !names.length;
+  el.innerHTML = `<b>👥 ${names.length + 1} 人一起編輯</b>：你、${names.map(esc).join('、')}`;
+}
+async function coStart() {
+  if (CO.on || walk.on) return;
+  CO.me = 'e' + Math.random().toString(36).slice(2, 9);
+  try { CO.name = (localStorage.getItem('vb.mp.name') || '').slice(0, 12); } catch (e) { CO.name = ''; }
+  CO.name = CO.name || '球友' + CO.me.slice(-3);
+  const room = ('EDIT-' + cloudId()).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+  let tx;
+  try { tx = new URLSearchParams(location.search).has('localnet') ? localTransport(room, CO.me) : await ablyTransport(room, CO.me); }
+  catch (e) { return; }   // 沒開即時服務就算了，照常用（自動存到雲端）
+  CO.tx = tx; CO.on = true; CO.last = coSnap();
+  tx.subscribe(coOnMessage);
+  tx.onPresence((action, id, d) => { if (id === CO.me) return; if (action === 'leave' || action === 'absent') CO.peers.delete(id); else CO.peers.set(id, { n: d.n || '球友' }); coRender(); });
+  await tx.enter({ n: CO.name });
+  let others = []; try { others = (await tx.members()).filter((m) => m.id !== CO.me); } catch (e) { others = []; }
+  for (const m of others) CO.peers.set(m.id, { n: m.n || '球友' });
+  coRender();
+  if (others.length) tx.publish('sync?', {});
+}
+addEventListener('pagehide', () => { if (CO.on) try { CO.tx.close(); } catch (e) { /* ignore */ } });
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
 const zoneDoors = [], mainDoors = [], zoneRoofs = [];
 const doorMat = new THREE.MeshStandardMaterial({ color: '#E9E6DF', roughness: 0.6 });
@@ -6158,7 +6477,8 @@ addEventListener('keydown', (e) => {
   if (walk.paused) return;
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
   if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold || incomingBall('bump')) skillPress('bump'); else toast('先拿一顆球（看著球車按 E），或等球飛到手邊再按 Q'); return; }
-  if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(); return; }
+  if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(walk.keys.has(' ') || !!walk.jump); return; }
+  if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) startJump(); return; }
   if (k === 'v' && !e.repeat) { e.preventDefault(); startServe(); return; }
   if (k === 'f' && !e.repeat) { e.preventDefault(); passToFacing(); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
@@ -6308,6 +6628,8 @@ function start(hot) {
   if (note) toast(note);
   renderHist();
   if (!window.__siteId && !window.__venueId && !viaLink) { markClean(); syncFreePlan(); }
+  // 即時共同編輯：等雲端版本載完再連（3 秒）
+  setTimeout(() => coStart(), 3000);
   window.claude?.hot?.snapshot?.(() => ({ state: { ...designData(), id: state.id }, view }));
   const use = window.claude && window.claude.use;
   if (use) {
