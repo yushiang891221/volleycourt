@@ -90,9 +90,8 @@ button.danger { color: var(--warn); }
 .siteinfo span { font-size: 12px; color: var(--soft); line-height: 1.6; }
 .siteinfo dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--rule); }
 .siteinfo dl > div { padding: 7px 0 6px; border-bottom: 1px solid var(--rule); min-width: 0; }
-.siteinfo dl > div:nth-child(odd) { padding-right: 10px; border-right: 1px solid var(--rule); }
-.siteinfo dl > div:nth-child(even) { padding-left: 10px; }
-.siteinfo dl > div.wide { grid-column: 1 / -1; border-right: 0; padding-left: 0; }
+.siteinfo dl > div.r { padding-left: 10px; border-left: 1px solid var(--rule); }
+.siteinfo dl > div.wide { grid-column: 1 / -1; }
 .siteinfo dt { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; color: var(--soft); }
 .siteinfo dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .siteinfo dd small { font-size: 11px; font-weight: 500; color: var(--soft); }
@@ -514,10 +513,10 @@ details.more[open] > summary { margin-bottom: 10px; }
 
 <script type="application/json" id="saved-designs">[{"id":"dmvjcd5m1","name":"2 面專業排球（標準規格）","savedAt":"2026-10-22T09:31:29.065Z","data":{"name":"2 面專業排球（標準規格）","building":{"L":36,"W":30,"H":9},"floor":"blue","net":"men","items":[{"type":"vb","x":-9,"z":-2.5,"rot":90},{"type":"vb","x":9,"z":-2.5,"rot":90},{"type":"referee","x":-15.2,"z":-2.5,"rot":0},{"type":"referee","x":15.2,"z":-2.5,"rot":0},{"type":"wc","x":-15.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"男廁"},{"type":"wc","x":-10.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"女廁"},{"type":"changing","x":-5.5,"z":12.75,"rot":0,"w":5,"d":4.5},{"type":"rug","x":2.5,"z":12.5,"rot":0,"w":7,"d":4},{"type":"sofa","x":0.8,"z":14.2,"rot":0},{"type":"sofa","x":4.2,"z":14.2,"rot":0},{"type":"table","x":2.5,"z":12,"rot":0},{"type":"locker","x":7,"z":14.6,"rot":0,"w":1.8,"d":0.5},{"type":"counter","x":10,"z":13.5,"rot":0,"w":3,"d":0.8},{"type":"vending","x":14.5,"z":14.4,"rot":0},{"type":"water","x":16.2,"z":14.5,"rot":0},{"type":"bench","x":12.6,"z":11,"rot":0},{"type":"ballcart","x":15.5,"z":11.2,"rot":0},{"type":"aed","x":17.8,"z":11,"rot":90},{"type":"light","x":-15.5,"z":-12,"rot":0},{"type":"light","x":-15.5,"z":-6,"rot":0},{"type":"light","x":-15.5,"z":0,"rot":0},{"type":"light","x":-15.5,"z":6,"rot":0},{"type":"light","x":-3,"z":-12,"rot":0},{"type":"light","x":-3,"z":-6,"rot":0},{"type":"light","x":-3,"z":0,"rot":0},{"type":"light","x":-3,"z":6,"rot":0},{"type":"light","x":3,"z":-12,"rot":0},{"type":"light","x":3,"z":-6,"rot":0},{"type":"light","x":3,"z":0,"rot":0},{"type":"light","x":3,"z":6,"rot":0},{"type":"light","x":15.5,"z":-12,"rot":0},{"type":"light","x":15.5,"z":-6,"rot":0},{"type":"light","x":15.5,"z":0,"rot":0},{"type":"light","x":15.5,"z":6,"rot":0},{"type":"netwall","x":0,"z":-2.5,"rot":90,"w":25,"d":0.1},{"type":"netwall","x":9,"z":10,"rot":0,"w":18,"d":0.1},{"type":"netwall","x":-9,"z":10,"rot":0,"w":18,"d":0.1}]}}]</script>
 <script>
-window.evalLabel = (type) => type === 'camera' ? '看智慧球場（比賽辨識 Demo）→' : ({"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "air": "冷氣與用電量評估 →", "fire": "消防設備評估 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"})[({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service'];
+window.evalLabel = (type) => type === 'camera' ? '看智慧球場（比賽辨識 Demo）→' : ({"floor": "地板評估與畫線方案 →", "camera": "打開智慧球場 Agent →", "sofa": "看沙發比價 →", "light": "照明評估與報價 →", "fan": "吊扇評估與報價 →", "air": "冷氣與用電量評估 →", "fire": "消防設備評估 →", "net": "網柱與球網報價 →", "aed": "AED 報價 →", "room": "廁所淋浴更衣評估 →", "service": "休息區設備評估 →"})[({"vb": "floor", "vbs": "floor", "vbt": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service'];
 window.evalUrl = (type, label) => {
   if (type === 'camera' || type === 'scoreboard') return 'demo.html?cam=' + encodeURIComponent(label || '攝影機');
-  return 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + (({"vb": "floor", "vbs": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service');
+  return 'eval.html?from=' + encodeURIComponent(label || '') + '#eval/' + (({"vb": "floor", "vbs": "floor", "vbt": "floor", "bd": "floor", "pb": "floor", "bk": "floor", "floor": "floor", "rug": "floor", "camera": "camera", "scoreboard": "camera", "sofa": "sofa", "light": "light", "fan": "fan", "referee": "net", "netwall": "net", "ballcart": "net", "aed": "aed", "firstaid": "aed", "crashpad": "aed", "cctv": "aed", "extinguisher": "fire", "emlight": "fire", "exitsign": "fire", "smoke": "fire", "aircon": "air", "panel": "air", "heater": "room", "wc": "room", "shower": "room", "changing": "room", "office": "room", "counter": "service", "locker": "service", "vending": "service", "water": "service", "plant": "service", "table": "service", "bench": "service", "bleacher": "service"})[type] || 'service');
 };
 window.openEval = (type, label) => {
   try { sessionStorage.setItem('vb.counts', JSON.stringify(window.gymCounts ? window.gymCounts().counts : {})); } catch (e) {}
@@ -563,6 +562,7 @@ const NETS = { men: { label: '男網 2.43 m', h: 2.43 }, women: { label: '女網
 const CAT = {
   vb: { label: '排球場（標準規格）', group: '球場', w: 25, d: 18, court: 'vb', play: [18, 9], color: '#4E9468', tag: true },
   vbs: { label: '排球場（精簡）', group: '球場', w: 24, d: 15, court: 'vb', play: [18, 9], color: '#4E9468', tag: true },
+  vbt: { label: '排球場（並排、兩側不留緩衝）', group: '球場', w: 25, d: 9, court: 'vb', play: [18, 9], color: '#4E9468', tag: true },
   bd: { label: '羽球場', group: '球場', w: 17.4, d: 8.1, court: 'bd', play: [13.4, 6.1], color: '#3C8A63', tag: true },
   pb: { label: '匹克球場', group: '球場', w: 18.3, d: 9.1, court: 'pb', play: [13.41, 6.1], color: '#2F6F86', tag: true },
   bk: { label: '籃球 3 對 3 半場', group: '球場', w: 17, d: 13, court: 'bk', play: [15, 11], color: '#B5763E', tag: true },
@@ -1917,7 +1917,7 @@ function undo() {
   fullRefresh(); renderZoneSel(); planToolState();
 }
 let draftTimer = 0;
-function saveDraftSoon() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
+function saveDraftSoon() { clearTimeout(draftTimer); if (window.__venueId) return; draftTimer = setTimeout(() => { if (window.__siteId) { if (!window.__generating && typeof saveHall === 'function') { saveHall(window.__siteId); if (share.mode === 'off') window.__hallMemo && window.__hallMemo(new Date().toISOString()); } return; } try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...designData(), id: state.id })); } catch (e) { /* ignore */ } }, 500); }
 function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); }
 function fullRefresh() { buildBuilding(); buildZones(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 // ---------------------------------------------------------------- camera
@@ -2155,9 +2155,9 @@ async function generateFromSite(id, opts = {}) {
   sp.innerHTML = [
     ['地址（路段）', `${e2(site.town || '')}・${e2(site.road || '—')}`, 'wide'],
     ['坪數', site.ping != null ? `${fmtW(site.ping)} <small>坪${site.split ? `・可分租約 ${fmtW(site.split)} 坪` : ''}</small>` : '待查'],
-    ['月租', site.rent != null ? `${fmtW(site.rent / 10000)} <small>萬${perPing ? `・每坪 ${fmtW(perPing)} 元` : ''}</small>` : '待查'],
+    ['月租', site.rent != null ? `${fmtW(site.rent / 10000)} <small>萬${perPing ? `・每坪 ${fmtW(perPing)} 元` : ''}</small>` : '待查', 'r'],
     ['挑高', site.height != null ? `${site.height} <small>m</small>` : '待量 <small>先用 8 m</small>'],
-    ['分區', e2(site.zone || '—')],
+    ['分區', e2(site.zone || '—'), 'r'],
     ['現在用途', e2(site.usage || '—'), 'wide'],
   ].map(([k, v, c]) => `<div${c ? ` class="${c}"` : ''}><dt>${k}</dt><dd>${v}</dd></div>`).join('');
   const sp2 = document.createElement('span');
@@ -2237,7 +2237,7 @@ const CATALOG = {"floor": {"label": "運動地板", "unit": "㎡", "qnote": "標
 
 // ---------------------------------------------------------------- per-venue product picks and total cost
 // CATALOG is injected at build time from the comparison sheet (排球館報價比價清單) + the sofa list.
-const TYPE_CATS = { vb: ['floor', 'net', 'balls'], vbs: ['floor', 'net', 'balls'], referee: ['net'], netwall: ['net'], ballcart: ['balls'],
+const TYPE_CATS = { vb: ['floor', 'net', 'balls'], vbs: ['floor', 'net', 'balls'], vbt: ['floor', 'net', 'balls'], referee: ['net'], netwall: ['net'], ballcart: ['balls'],
   light: ['light'], fan: ['fan'], aed: ['aed', 'firstaid'], sofa: ['sofa'], camera: ['camera'], scoreboard: ['camera'],
   aircon: ['aircon'], panel: ['panel', 'aircon'], extinguisher: ['fire'], emlight: ['fire'], exitsign: ['fire'], smoke: ['fire'], crashpad: ['crashpad'], firstaid: ['firstaid', 'aed'], cctv: ['cctv'], heater: ['heater'] };
 const PICK_KEY = () => 'vb.picks.' + (window.__siteId || 'free');
@@ -2245,8 +2245,8 @@ function getPicks() { try { const v = JSON.parse(localStorage.getItem(PICK_KEY()
 function setPicks(p) { try { localStorage.setItem(PICK_KEY(), JSON.stringify(p)); } catch (e) { /* ignore */ } }
 function crashLen() { return Math.round(state.items.filter((i) => i.type === 'crashpad').reduce((a, i) => a + (i.w || CAT.crashpad.w), 0)); }
 function qtyOf(cat, c) {
-  const courts = (c.vb || 0) + (c.vbs || 0);
-  return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0),
+  const courts = (c.vb || 0) + (c.vbs || 0) + (c.vbt || 0);
+  return { floor: (c.vb || 0) * 450 + (c.vbs || 0) * 360 + (c.vbt || 0) * 225, net: courts, balls: courts, light: c.light || 0, fan: c.fan || 0, aed: c.aed || 0, sofa: c.sofa || 0, camera: (c.camera || 0),
     aircon: c.aircon || 0, fire: (c.extinguisher || 0) + (c.emlight || 0) + (c.exitsign || 0) + (c.smoke || 0), crashpad: crashLen(), firstaid: c.firstaid || 0, cctv: c.cctv || 0, heater: c.heater || 0, panel: c.panel || 0 }[cat] || 0;
 }
 function chosen(cat, picks) {
@@ -3663,7 +3663,7 @@ function start(hot) {
   if (hot && hot.state) state = sanitize(hot.state);
   if (!state) { try { const s = sessionStorage.getItem(STASH_KEY); if (s) { state = sanitize(JSON.parse(s)); sessionStorage.removeItem(STASH_KEY); } } catch (e) { /* ignore */ } }
   if (!state && window.__siteId) { const m = loadHall(window.__siteId); if (m) { state = sanitize({ ...m.data, id: null }); window.__hallLoaded = true; } else window.__generating = true; }
-  if (!state && !window.__siteId) { try { const d = localStorage.getItem(DRAFT_KEY); if (d) { state = sanitize(JSON.parse(d)); note = '已載回你上次在這台裝置的配置'; } } catch (e) { /* ignore */ } }
+  if (!state && !window.__siteId && !window.__venueId) { try { const d = localStorage.getItem(DRAFT_KEY); if (d) { state = sanitize(JSON.parse(d)); note = '已載回你上次在這台裝置的配置'; } } catch (e) { /* ignore */ } }
   if (!state) state = fromTemplate(T_PRO);
   if (!state.items.some((i) => i.type === 'camera')) { let n = 1; for (const c of state.items.filter((i) => CAT[i.type].court === 'vb')) state.items.push(cameraFor(c, n++)); }
   if (state.id && !SAVED.some((s) => s.id === state.id)) state.id = null;
@@ -3681,10 +3681,38 @@ function start(hot) {
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
 if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); } };
+// ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
+async function loadVenue(id) {
+  let all = null; try { all = await fetch('data/venues.json', { cache: 'no-store' }).then((r) => r.json()); } catch (e) { /* ignore */ }
+  const v = all && all.venues.find((x) => x.id === id);
+  if (!v) { toast('找不到這間球館的資料'); return; }
+  window.__site = { name: v.name, town: v.addr, road: '' };
+  state = sanitize({ ...v.design, name: `${v.name}（現況示意）`, id: null }); selectedId = null; selZoneId = null; history = [];
+  fullRefresh(); frameView('bird'); pv.fitted = false; renderPlan(); planToolState();
+  $('gym-title').textContent = v.name;
+  document.querySelector('.rail-head .eyebrow').textContent = 'Existing Venue · 現有球館參考';
+  $('site-none').hidden = true;
+  const info = $('siteinfo'); info.hidden = false;
+  const e = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+  const cell = (k, val, cls) => `<div${cls ? ` class="${cls === true ? 'wide' : cls}"` : ''}><dt>${k}</dt><dd>${val == null || val === '' ? '<small>查不到</small>' : val}</dd></div>`;
+  info.innerHTML = `<b>現有球館（依公開資料示意）</b><dl>
+    ${cell('地址', e(v.addr), true)}${cell('球場', v.courts != null ? `${v.courts} <small>面</small>` : null)}${cell('挑高', v.height != null ? `${v.height} <small>m</small>` : null, 'r')}
+    ${cell('尺寸', v.size && e(v.size), true)}${cell('設施', v.facilities.length ? e(v.facilities.join('、')) : null, true)}
+    ${cell('營業時間', v.hours && e(v.hours))}${cell('收費', v.price && e(v.price), 'r')}</dl>
+    <span>${e(v.layoutNote)}查不到的：${e(v.unknown.join('、'))}。這裡改動不會存檔。</span>
+    <div class="row">${v.sources.map(([t, u]) => `<a href="${e(u)}" target="_blank" rel="noopener">${e(t)} ↗</a>`).join('')}</div>
+    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button></div>`;
+  $('venue-walk').addEventListener('click', () => setMode('walk'));
+  toast(`已載入「${v.name}」的示意模型，按「進入導覽」可以走進去`);
+}
+
 const SITE_ID = new URLSearchParams(location.search).get('site');
+const VENUE_ID = SITE_ID ? null : new URLSearchParams(location.search).get('venue');
 window.__siteId = SITE_ID;
+window.__venueId = VENUE_ID;
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 if (SITE_ID) generateFromSite(SITE_ID);
+if (VENUE_ID) loadVenue(VENUE_ID);
 
 </script>
 <script src="allnav.js" defer></script>

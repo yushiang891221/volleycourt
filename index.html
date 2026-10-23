@@ -1209,7 +1209,7 @@ function addLayers() {
     const pub = v.kind === 'public';
     L.marker([v.lat, v.lon], { icon: L.divIcon({ className: '', html: `<div class="vpin${pub ? ' pub' : ''}">${pub ? '公' : v.courts}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] }), zIndexOffset: 500 })
       .bindTooltip(v.name.replace(' LongShot', ''), { direction: 'top', offset: [0, -14], className: 'vlabel' })
-      .bindPopup(`<b>${esc(v.name)}</b><br><span style="color:#A9B4C2">${esc(v.addr)}</span><br>${v.courts ? v.courts + ' 面場・' : ''}${esc(v.note)}`, { className: 'card' })
+      .bindPopup(`<b>${esc(v.name)}</b><br><span style="color:#A9B4C2">${esc(v.addr)}</span><br>${v.courts ? v.courts + ' 面場・' : ''}${esc(v.note)}${v.vid ? `<a class="enter" style="margin-top:10px;font-size:14px;padding:9px" href="gym.html?venue=${encodeURIComponent(v.vid)}">走進去看 3D 示意 →</a>` : ''}`, { className: 'card' })
       .addTo(map);
   });
   // candidate pins (staggered)
