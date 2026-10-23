@@ -314,6 +314,14 @@ details.more[open] > summary { margin-bottom: 10px; }
 .pc-bar #pc-off { min-height: 0; padding: 4px 10px; font-size: 12px; }
 .co-badge { position: absolute; left: 12px; top: 58px; z-index: 6; background: rgba(27,38,56,.9); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #F2B705; max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .co-badge[hidden] { display: none !important; }
+.rp { position: absolute; left: 0; right: 0; bottom: 0; z-index: 12; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; background: linear-gradient(to top, rgba(14,20,32,.92), rgba(14,20,32,.6)); color: #fff; font-size: 13px; }
+.rp[hidden] { display: none !important; }
+.rp-stats b { color: #F2B705; font-size: 15px; }
+.rp-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rp-bar input[type=range] { flex: 1; min-width: 120px; accent-color: #F2B705; }
+.rp-bar button { min-height: 0; padding: 4px 10px; font-size: 12px; }
+.rp-bar .seg { display: inline-flex; }
+#cv-rec.on { background: #E5484D; color: #fff; border-color: #E5484D; }
 .wk-lock { position: absolute; left: 50%; top: calc(50% + 26px); transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: rgba(27,38,56,.82); color: #fff; font-size: 13px; pointer-events: none !important; white-space: nowrap; }
 .wk-lock[hidden] { display: none !important; }
 .wk-combo { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: #F2B705; color: #1B2638; font-weight: 800; font-size: 15px; pointer-events: none !important; }
@@ -603,6 +611,13 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
+      <div class="rp" id="rp" hidden>
+        <div class="rp-stats" id="rp-stats"></div>
+        <div class="rp-bar"><button type="button" id="rp-play">⏸</button><input type="range" id="rp-time" min="0" max="1" step="0.01" value="0" aria-label="時間"><span id="rp-clock"></span>
+          <span class="seg"><button type="button" data-rps="0.5">0.5×</button><button type="button" data-rps="1" aria-pressed="true">1×</button><button type="button" data-rps="2">2×</button></span>
+          <span class="seg"><button type="button" data-rpv="cam">攝影機</button><button type="button" data-rpv="top">俯視</button><button type="button" data-rpv="follow">跟著球</button></span>
+          <button type="button" id="rp-dl">下載影片</button><button type="button" id="rp-x">關閉（Esc）</button></div>
+      </div>
       <div class="pcwin" id="pcwin" hidden><div class="pc-mon"><div class="pc-screen">
         <div class="pc-desk" id="pc-desk"></div>
         <div class="pc-app" id="pc-app" hidden><div class="pc-tb"><span id="pc-title"></span><button type="button" id="pc-min" aria-label="最小化">–</button><button type="button" id="pc-close" aria-label="關閉視窗">✕</button></div><div class="pc-body" id="pc-body"></div></div>
@@ -617,7 +632,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <p class="mp-st" id="mp-status"></p><ul class="mp-list" id="mp-list"></ul>
         <p class="hint"><b>怎麼對碰：</b>一個人到球車拿球（E），面向隊友按 <b>F</b> 拋給他；球飛到手邊時按 <b>E</b> 舉球或 <b>Q</b> 墊球，大致面向誰就傳給誰（往上看再按是自己往上打）。隊友把球舉到網前時，按 <b>R</b> 跳起來扣。</p>
       </div>
-      <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
+      <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
       <div class="wk-lock" id="wk-lock" hidden>點一下畫面：之後移動滑鼠就能轉頭看（Esc 放開滑鼠）</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
@@ -5135,6 +5150,12 @@ function startWalk() {
     walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract());
     $('vclose').addEventListener('click', closeModals); $('pclose').addEventListener('click', closeModals);
     $('cv-x').addEventListener('click', closeCamView); $('cv-snap').addEventListener('click', snapCamView);
+    $('cv-rec').addEventListener('click', recToggle); $('cv-play').addEventListener('click', openReplay);
+    $('rp-play').addEventListener('click', () => { if (RP.t >= RP.A.dur) RP.t = 0; rpSetPlay(!RP.playing); });
+    $('rp-time').addEventListener('input', (e) => { RP.t = Number(e.target.value); RP.followJump = true; rpSetPlay(false); });
+    for (const b of document.querySelectorAll('[data-rps]')) b.addEventListener('click', () => { RP.speed = Number(b.dataset.rps); for (const q of document.querySelectorAll('[data-rps]')) setPressed(q, q === b); });
+    for (const b of document.querySelectorAll('[data-rpv]')) b.addEventListener('click', () => rpView(b.dataset.rpv));
+    $('rp-dl').addEventListener('click', rpDownload); $('rp-x').addEventListener('click', closeReplay);
     $('pc-desk').addEventListener('click', (e) => { const b = e.target.closest('[data-app]'); if (b) pcOpen(b.dataset.app); });
     $('pc-tasks').addEventListener('click', () => $('pc-app').classList.toggle('min'));
     $('pc-min').addEventListener('click', () => $('pc-app').classList.add('min'));
@@ -5162,7 +5183,7 @@ function stopWalk() {
   walk.on = false; window.__walk = false; targetMark.visible = false; unlockMouse(); updateLockHint();
   walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals(); closeCamView(); closePC(); netLeave(true); $('mp').hidden = true;
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
-  walk.spike = null; walk.serve = null; reachState = null; skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
+  walk.spike = null; walk.serve = null; reachState = null; closeReplay(); if (REC.on) recToggle(); skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
   for (const id of [...winds.keys()]) removeWind(id);
   ballsGroup.clear(); balls.length = 0; cans.length = 0; walk.bags.clear(); tweens.length = 0; walk.filling = false;
   for (const d of [...zoneDoors, ...mainDoors]) { d.open = false; } updateDoors(5);
@@ -5733,7 +5754,8 @@ function releaseBall(v) {
   m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
   skill.mode = null; skill.dip = 0; hands.visible = false;
-  if (NET.on) netBallHit(m.userData.ball);
+  if (NET.on) netBallHit(m.userData.ball, 'throw');
+  recHit({ x: m.position.x, y: m.position.y, z: m.position.z, v: v.length(), kind: 'throw' });
 }
 function throwBall() {
   if (!walk.hold || skill.mode) return;
@@ -6022,7 +6044,8 @@ function updateServe(dt) {
     const D = Math.hypot(target.x - p0.x, target.z - p0.z), T = 0.55 + D * 0.06;
     const v = new THREE.Vector3((target.x - p0.x) / T, (target.y - p0.y) / T + 0.5 * 9.8 * T, (target.z - p0.z) / T);
     s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: court ? { c: court, sg } : null, serve: true }; balls.push(s.ball.userData.ball);
-    if (NET.on) netBallHit(s.ball.userData.ball);
+    if (NET.on) netBallHit(s.ball.userData.ball, 'serve');
+    recHit({ x: p0.x, y: p0.y, z: p0.z, v: v.length(), kind: 'serve' });
     while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
     toast('發球！');
   }
@@ -6112,7 +6135,8 @@ function hitWorldBall(b, kind) {
   b.rest = 0; b.spike = null; b.serve = false;
   pose = kind === 'set' ? 'setPush' : 'bumpHit'; hands.visible = true; applyPose(0, true); walk.flash = 0.45;
   skill.dip = 0.05;
-  if (NET.on) netBallHit(b);
+  if (NET.on) netBallHit(b, kind);
+  recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind });
   toast(up ? (kind === 'set' ? '手打平往上舉' : '往上墊高') : kind === 'set' ? '舉球傳出去！' : '墊球傳出去！', 1200);
 }
 // ---------------------------------------------------------------- 多人連線：一間房最多 4 人，互相看得到、共用一顆球
@@ -6418,6 +6442,187 @@ async function coStart() {
   if (others.length) tx.publish('sync?', {});
 }
 addEventListener('pagehide', () => { if (CO.on) try { CO.tx.close(); } catch (e) { /* ignore */ } });
+// ---------------------------------------------------------------- 錄影＋球路回放：攝影機小視窗按「● 錄影」，每秒記錄 30 次球與人的位置、每一次擊球；
+// 「▶ 球路回放」從那支攝影機（或俯視、跟球）重播：軌跡線、落點圈、擊球球速、最高點，統計擊球次數、最快球速、過網次數，可以下載影片
+const REC = { on: false, t0: 0, last: 0, frames: [], events: [], cam: null, ids: new Map(), nid: 0 };
+function recId(o) { if (!REC.ids.has(o.uuid)) REC.ids.set(o.uuid, ++REC.nid); return REC.ids.get(o.uuid); }
+function recToggle() {
+  if (REC.on) { REC.on = false; $('cv-rec').textContent = '● 錄影'; $('cv-rec').classList.remove('on'); $('cv-play').disabled = REC.frames.length < 10; toast(`錄好了（${(REC.frames.length / 30).toFixed(1)} 秒）：按「▶ 球路回放」看球路`); return; }
+  if (!camView.cam) { toast('先打開一支智慧球場攝影機'); return; }
+  REC.on = true; REC.t0 = performance.now(); REC.last = 0; REC.frames = []; REC.events = []; REC.ids.clear(); REC.nid = 0;
+  REC.cam = { p: camView.cam.position.clone(), q: camView.cam.quaternion.clone(), fov: camView.cam.fov };
+  $('cv-rec').textContent = '■ 停止'; $('cv-rec').classList.add('on'); $('cv-play').disabled = true;
+  toast('開始錄影（最多 3 分鐘）：去打球吧，打完按「■ 停止」');
+}
+function recEvent(type, e) { if (REC.on) REC.events.push({ type, t: (performance.now() - REC.t0) / 1000, ...e }); }
+function recTick(now) {
+  if (!REC.on || now - REC.last < 33) return;
+  REC.last = now;
+  const t = (now - REC.t0) / 1000;
+  if (t > 180) { recToggle(); return; }
+  const bl = [];
+  // 第 5 欄：1＝在手上（拿著、拋球中），這段不算擊球
+  for (const b of balls) bl.push([recId(b.m), +b.m.position.x.toFixed(3), +b.m.position.y.toFixed(3), +b.m.position.z.toFixed(3), 0]);
+  if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bl.push([recId(walk.hold), +v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3), 1]); }
+  for (const s0 of [walk.spike, walk.serve]) if (s0 && s0.ball && !s0.hit) bl.push([recId(s0.ball), +s0.ball.position.x.toFixed(3), +s0.ball.position.y.toFixed(3), +s0.ball.position.z.toFixed(3), 1]);
+  for (const p2 of NET.peers.values()) if (p2.ball && p2.ball.visible) bl.push([recId(p2.ball), +p2.ball.position.x.toFixed(3), +p2.ball.position.y.toFixed(3), +p2.ball.position.z.toFixed(3), 1]);
+  const ppl = [['me', walk.x, walk.z, Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你']];
+  for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n]);
+  REC.frames.push({ t, b: bl, p: ppl });
+}
+// ---- 分析：每顆球的時間序列 → 落地點、擊球點與球速、最高點、過網次數
+function recAnalyze(frames, events) {
+  const tracks = new Map();
+  for (const f of frames) for (const [id, x, y, z, held] of f.b) { if (!tracks.has(id)) tracks.set(id, []); tracks.get(id).push({ t: f.t, x, y, z, held: !!held }); }
+  const bounces = [], hits = [], apex = [];
+  let top = 0, fast = 0, crossings = 0;
+  const courts = state.items.filter((c) => CAT[c.type].court === 'vb' && c.mode !== 'lines');
+  for (const [id, T] of tracks) {
+    let upFrom = null;
+    for (let i = 1; i < T.length - 1; i++) {
+      const a = T[i - 1], b = T[i], c = T[i + 1], dt1 = b.t - a.t || 1 / 30, dt2 = c.t - b.t || 1 / 30;
+      const v1 = [(b.x - a.x) / dt1, (b.y - a.y) / dt1, (b.z - a.z) / dt1], v2 = [(c.x - b.x) / dt2, (c.y - b.y) / dt2, (c.z - b.z) / dt2];
+      const sp2 = Math.hypot(...v2);
+      // 手上的球、瞬間跳很遠（換位置）的資料不拿來判斷
+      if (a.held || b.held || c.held || sp2 > 45 || Math.hypot(...v1) > 45) continue;
+      if (b.y < 0.16 && v1[1] < -0.3 && v2[1] >= -0.05) bounces.push({ t: b.t, x: b.x, z: b.z, id });
+      // 速度方向突然改變、而且不是在地上 → 擊球（如果事件表裡沒有）
+      const dot = (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) / ((Math.hypot(...v1) || 1) * (sp2 || 1));
+      if (b.y > 0.5 && sp2 > 3 && (dot < 0.6 || sp2 > Math.hypot(...v1) * 1.6) && !events.some((e) => e.type === 'hit' && Math.abs(e.t - b.t) < 0.15)) hits.push({ t: b.t, x: b.x, y: b.y, z: b.z, v: sp2, auto: true });
+      if (v1[1] > 0 && v2[1] <= 0 && b.y > 1.2) apex.push({ t: b.t, x: b.x, y: b.y, z: b.z });
+      top = Math.max(top, b.y); fast = Math.max(fast, sp2 < 45 ? sp2 : 0);
+      for (const ct of courts) { const [l0] = toLocalOf(ct, a.x, a.z), [l1] = toLocalOf(ct, b.x, b.z), [, lz] = toLocalOf(ct, b.x, b.z); if (Math.sign(l0) !== Math.sign(l1) && Math.abs(lz) < 4.75 && b.y > 2) crossings++; }
+      void upFrom;
+    }
+  }
+  for (const e of events) if (e.type === 'hit' && (e.v || 0) < 45) { hits.push({ t: e.t, x: e.x, y: e.y, z: e.z, v: e.v, kind: e.kind }); fast = Math.max(fast, e.v || 0); }
+  hits.sort((a, b) => a.t - b.t);
+  return { tracks, bounces, hits, apex, top, fast, crossings, dur: frames.length ? frames[frames.length - 1].t : 0 };
+}
+// ---- 回放
+const RP = { on: false, t: 0, playing: true, speed: 1, view: 'cam', A: null, g: null, actors: new Map(), ballsM: new Map(), trails: new Map(), marks: [], hud: null, hudT: 0, recorder: null, chunks: [] };
+const KMH = (v) => Math.round(v * 3.6);
+function labelSprite(text, color = '#F2B705', scale = 1) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(27,38,56,.88)'; c.beginPath(); c.roundRect ? c.roundRect(2, 2, 252, 60, 14) : c.rect(2, 2, 252, 60); c.fill();
+  c.strokeStyle = color; c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 128, 33);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+  sp.scale.set(1.1 * scale, 0.275 * scale, 1); sp.renderOrder = 20; return sp;
+}
+function openReplay() {
+  if (REC.on) recToggle();
+  if (REC.frames.length < 10) { toast('還沒有錄影：先按「● 錄影」，打完球再按停止'); return; }
+  const A = recAnalyze(REC.frames, REC.events);
+  RP.on = true; RP.A = A; RP.t = 0; RP.playing = true; RP.speed = 1; RP.view = REC.cam ? 'cam' : 'top';
+  RP.g = new THREE.Group(); scene.add(RP.g); RP.actors.clear(); RP.ballsM.clear(); RP.trails.clear(); RP.marks = [];
+  // 現場的東西先藏起來，換成回放的人形與球
+  ballsGroup.visible = false; hands.visible = false; for (const p2 of NET.peers.values()) { p2.av.g.visible = false; if (p2.ball) p2.ball.visible = false; }
+  walk.paused = true; walk.keys.clear(); unlockMouse(); closeCamView(true);
+  // 落地點、擊球點、最高點標記（時間到了才出現）
+  for (const b of A.bounces) { const ring = new THREE.Mesh(new THREE.RingGeometry(0.14, 0.24, 32), new THREE.MeshBasicMaterial({ color: '#FF4D4F', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(b.x, 0.03, b.z); ring.visible = false; RP.g.add(ring); RP.marks.push({ t: b.t, o: ring, life: 4 }); }
+  for (const h of A.hits) { const sp = labelSprite(`${KMH(h.v || 0)} km/h`, '#F2B705'); sp.position.set(h.x, h.y + 0.55, h.z); sp.visible = false; RP.g.add(sp); RP.marks.push({ t: h.t, o: sp, life: 2.2 }); }
+  for (const a of A.apex) { const sp = labelSprite(`最高 ${a.y.toFixed(1)} m`, '#5BC0EB', 0.8); sp.position.set(a.x, a.y + 0.35, a.z); sp.visible = false; RP.g.add(sp); RP.marks.push({ t: a.t, o: sp, life: 1.6 }); }
+  // 畫面角落的資訊（錄進影片裡）
+  const hcv = document.createElement('canvas'); hcv.width = 512; hcv.height = 160; RP.hudCv = hcv;
+  RP.hud = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(hcv), depthTest: false, transparent: true })); RP.hud.renderOrder = 30; camera.add(RP.hud);
+  $('rp').hidden = false; $('rp-time').max = A.dur.toFixed(2);
+  $('rp-stats').innerHTML = `擊球 <b>${A.hits.length}</b> 次・最快 <b>${KMH(A.fast)}</b> km/h・最高 <b>${A.top.toFixed(1)}</b> m・過網 <b>${A.crossings}</b> 次・落地 <b>${A.bounces.length}</b> 次`;
+  rpView(RP.view); rpSetPlay(true);
+}
+function closeReplay() {
+  if (!RP.on) return;
+  if (RP.recorder && RP.recorder.state !== 'inactive') RP.recorder.stop();
+  RP.on = false; scene.remove(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); RP.hud = null; }
+  ballsGroup.visible = true; for (const p2 of NET.peers.values()) p2.av.g.visible = true; hands.visible = !!walk.hold;
+  walk.paused = false; $('rp').hidden = true; camera.fov = 70; camera.updateProjectionMatrix();
+  if (ceilingGroup) ceilingGroup.visible = true; if (typeof applyOverhead === 'function') applyOverhead();
+}
+function rpSetPlay(on) { RP.playing = on; $('rp-play').textContent = on ? '⏸' : '▶'; }
+function rpView(v) { RP.view = v; RP.followJump = true; for (const b of document.querySelectorAll('[data-rpv]')) setPressed(b, b.dataset.rpv === v); }
+function rpFrameAt(t) { const F = REC.frames; let lo = 0, hi = F.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= t) lo = m; else hi = m - 1; } return [F[lo], F[Math.min(F.length - 1, lo + 1)]]; }
+function updateReplay(dt) {
+  const A = RP.A;
+  if (RP.playing) { RP.t += dt * RP.speed; if (RP.t >= A.dur) { RP.t = A.dur; rpSetPlay(false); if (RP.recorder && RP.recorder.state === 'recording') RP.recorder.stop(); } }
+  $('rp-time').value = RP.t; $('rp-clock').textContent = `${RP.t.toFixed(1)} / ${A.dur.toFixed(1)} 秒`;
+  const [f0, f1] = rpFrameAt(RP.t), k = f1.t > f0.t ? clamp((RP.t - f0.t) / (f1.t - f0.t), 0, 1) : 0;
+  // 人
+  const seen = new Set();
+  for (const p0 of f0.p) {
+    const [id, x, z, y, yaw, poseC, col] = p0, q = f1.p.find((r2) => r2[0] === id) || p0;
+    let av = RP.actors.get(id); if (!av) { av = makeAvatar(col || '#F2B705'); RP.g.add(av.g); RP.actors.set(id, av); }
+    seen.add(id); av.g.visible = true;
+    const X = x + (q[1] - x) * k, Z = z + (q[2] - z) * k; let dy = q[4] - yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    const sp = Math.hypot(q[1] - x, q[2] - z) * 30;
+    av.g.position.set(X, 0, Z); av.g.rotation.y = yaw + dy * k + Math.PI; av.body.position.y = y + (q[3] - y) * k;
+    av.phase += dt * Math.min(12, sp * 5.5) * RP.speed; const sw = av.body.position.y > 0.08 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
+    av.legs[0].rotation.x = sw; av.legs[1].rotation.x = -sw;
+    const tg = poseC === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : poseC === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : poseC === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : poseC === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : [[-sw * 0.8, 0.06], [sw * 0.8, -0.06]];
+    av.arms.forEach((arm, i) => { arm.rotation.x += (tg[i][0] - arm.rotation.x) * 0.4; arm.rotation.z += (tg[i][1] - arm.rotation.z) * 0.4; });
+  }
+  for (const [id, av] of RP.actors) if (!seen.has(id)) av.g.visible = false;
+  // 球＋軌跡（最近 2.5 秒，越舊越淡）
+  const live = new Set();
+  for (const [id, x, y, z] of f0.b) {
+    const q = f1.b.find((r2) => r2[0] === id) || [id, x, y, z];
+    let m = RP.ballsM.get(id); if (!m) { m = newBallMesh(); RP.g.add(m); RP.ballsM.set(id, m); }
+    m.visible = true; m.position.set(x + (q[1] - x) * k, y + (q[2] - y) * k, z + (q[3] - z) * k); m.rotation.x += dt * 6 * RP.speed; live.add(id);
+    const T = A.tracks.get(id) || [], pts = T.filter((p0) => p0.t <= RP.t && p0.t >= RP.t - 2.5);
+    let tr = RP.trails.get(id);
+    if (!tr) { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(80 * 3), 3)); geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(80 * 3), 3)); tr = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95, depthTest: false })); tr.renderOrder = 15; tr.frustumCulled = false; RP.g.add(tr); RP.trails.set(id, tr); }
+    const step = Math.max(1, Math.ceil(pts.length / 79)), use = pts.filter((_, i) => i % step === 0).concat([{ x: m.position.x, y: m.position.y, z: m.position.z, t: RP.t }]);
+    const pa = tr.geometry.attributes.position, ca = tr.geometry.attributes.color;
+    use.forEach((p0, i) => { pa.setXYZ(i, p0.x, p0.y, p0.z); const a = i / Math.max(1, use.length - 1); ca.setXYZ(i, 0.95 * a + 0.1, 0.72 * a + 0.1, 0.05 + 0.1 * (1 - a)); });
+    pa.needsUpdate = ca.needsUpdate = true; tr.geometry.setDrawRange(0, use.length); tr.visible = true;
+  }
+  for (const [id, m] of RP.ballsM) if (!live.has(id)) { m.visible = false; const tr = RP.trails.get(id); if (tr) tr.visible = false; }
+  for (const mk of RP.marks) { const age = RP.t - mk.t; mk.o.visible = age >= 0 && age < mk.life; if (mk.o.visible && mk.o.material) mk.o.material.opacity = Math.min(1, 1.4 - age / mk.life); }
+  // 鏡頭
+  if (RP.view === 'cam' && REC.cam) { camera.position.copy(REC.cam.p); camera.quaternion.copy(REC.cam.q); camera.fov = REC.cam.fov; }
+  else if (RP.view === 'top') { const c = state.items.find((i) => CAT[i.type].court === 'vb') || { x: 0, z: 0 }; camera.position.set(c.x + 0.01, 24, c.z + 9); camera.lookAt(c.x, 0, c.z); camera.fov = 55; }
+  else {
+    // 跟著球：鏡頭擺在球往館內（最近的球場中心）那一側，並限制在建物裡面，不會穿到牆外
+    const m = [...RP.ballsM.values()].find((q) => q.visible);
+    if (m) {
+      const tgt = m.position, cs = state.items.filter((i) => CAT[i.type].court);
+      const c = cs.sort((a, b) => Math.hypot(a.x - tgt.x, a.z - tgt.z) - Math.hypot(b.x - tgt.x, b.z - tgt.z))[0] || { x: 0, z: 0 };
+      const back = new THREE.Vector3(c.x - tgt.x, 0, c.z - tgt.z); if (back.lengthSq() < 1) back.set(0, 0, 1); back.normalize().multiplyScalar(6);
+      const P = outlinePoly(), xs = P.map((q) => q[0]), zs = P.map((q) => q[1]);
+      const want = new THREE.Vector3(THREE.MathUtils.clamp(tgt.x + back.x, Math.min(...xs) + 0.8, Math.max(...xs) - 0.8), Math.min(Math.max(2.2, tgt.y + 1.5), Math.max(2.5, state.building.H - 0.8)), THREE.MathUtils.clamp(tgt.z + back.z, Math.min(...zs) + 0.8, Math.max(...zs) - 0.8));
+      if (RP.followJump) { camera.position.copy(want); RP.followJump = false; } else camera.position.lerp(want, 0.12);
+      camera.lookAt(tgt);
+    }
+    camera.fov = 60;
+  }
+  camera.updateProjectionMatrix();
+  // 角落資訊
+  if (RP.hud && performance.now() - RP.hudT > 100) {
+    RP.hudT = performance.now();
+    const c = RP.hudCv.getContext('2d'); c.clearRect(0, 0, 512, 160); c.fillStyle = 'rgba(27,38,56,.82)'; c.fillRect(0, 0, 512, 160); c.fillStyle = '#F2B705'; c.fillRect(0, 0, 6, 160);
+    c.fillStyle = '#F2B705'; c.font = 'bold 30px sans-serif'; c.fillText('球路偵測回放', 22, 42);
+    const hitsSoFar = A.hits.filter((h) => h.t <= RP.t), lastHit = hitsSoFar[hitsSoFar.length - 1];
+    c.fillStyle = '#fff'; c.font = '24px sans-serif';
+    c.fillText(`擊球 ${hitsSoFar.length}　最快 ${KMH(Math.max(0, ...hitsSoFar.map((h) => h.v || 0)))} km/h`, 22, 84);
+    c.fillText(`${lastHit ? '上一球 ' + KMH(lastHit.v || 0) + ' km/h　' : ''}${RP.t.toFixed(1)} 秒`, 22, 120);
+    RP.hud.material.map.needsUpdate = true;
+  }
+  const aspect = renderer.domElement.width / renderer.domElement.height, dist = 1, hh = Math.tan(((camera.fov / 2) * Math.PI) / 180) * dist;
+  if (RP.hud) { RP.hud.position.set(-hh * aspect + 0.36, hh - 0.13, -dist); RP.hud.scale.set(0.64, 0.2, 1); }
+}
+// 下載影片：從頭用 1 倍速播一次，同時錄下畫面（WebM）
+function rpDownload() {
+  const cv = renderer.domElement;
+  if (!cv.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return; }
+  const type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t2) => MediaRecorder.isTypeSupported(t2)) || 'video/webm';
+  RP.chunks = []; RP.recorder = new MediaRecorder(cv.captureStream(30), { mimeType: type, videoBitsPerSecond: 6e6 });
+  RP.recorder.ondataavailable = (e) => { if (e.data.size) RP.chunks.push(e.data); };
+  RP.recorder.onstop = () => {
+    const blob = new Blob(RP.chunks, { type: 'video/webm' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `球路回放-${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.webm`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('影片存好了（WebM，可以用瀏覽器或 VLC 播）'); $('rp-dl').disabled = false;
+  };
+  RP.t = 0; RP.speed = 1; rpSetPlay(true); RP.recorder.start(200); $('rp-dl').disabled = true;
+  toast('錄製中：從頭播一次，播完就會下載');
+}
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
 const zoneDoors = [], mainDoors = [], zoneRoofs = [];
 const doorMat = new THREE.MeshStandardMaterial({ color: '#E9E6DF', roughness: 0.6 });
@@ -6473,6 +6678,7 @@ addEventListener('keydown', (e) => {
   if (!walk.on) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
+  if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (locked() || performance.now() - (walk.unlockT || 0) < 400) { unlockMouse(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
   if (walk.paused) return;
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
@@ -6570,7 +6776,7 @@ function tick() { requestAnimationFrame(tick); drawFrame(false); }
 function drawFrame(force) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   if (mode === 'plan' || !state) return;
-  if (walk.on) { updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
+  if (RP.on) updateReplay(dt); else if (walk.on) { updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
   frameNo++;
   const e = camera.matrixWorld.elements, pr = camera.projectionMatrix.elements;
   const key = e[12].toFixed(3) + e[13].toFixed(3) + e[14].toFixed(3) + e[8].toFixed(4) + e[9].toFixed(4) + e[10].toFixed(4) + pr[8].toFixed(4) + pr[9].toFixed(4) + pr[0].toFixed(4);
@@ -6580,10 +6786,11 @@ function drawFrame(force) {
   const cp = camera.position;
   const { H } = state.building;
   walls.forEach((wl, i) => { wl.visible = walk.on || (typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true); });
-  if (roof) roof.visible = walk.on || cp.y < H + 0.5;
-  for (const r of zoneRoofs) r.visible = walk.on;
+  if (roof) roof.visible = (walk.on && !RP.on) || cp.y < H + 0.5;
+  for (const r of zoneRoofs) r.visible = walk.on && !RP.on;
+  if (ceilingGroup && RP.on) ceilingGroup.visible = cp.y < H + 0.5;
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
-  if (walk.on) { renderCamView(now); renderCctv(now); netTick(dt, now); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
+  if (walk.on) { recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   renderScene();
   labelRenderer.render(scene, camera);
@@ -6639,7 +6846,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
