@@ -24,3 +24,4 @@ npx vercel --prod
 - `data/criteria.json`：自動搜尋的條件（地區、最小坪數、最小挑高、月租上限）。
 - `data/map.json`：縣市界、現有球館位置。
 - `data/venues.json`：新竹現有球館的 3D 示意（`gym.html?venue=<id>`，地圖上點現有球館的「走進去看」）。只放公開查得到的資訊，查不到的留空。
+- `img/tex/`：3D 材質貼圖，來自 Poly Haven（https://polyhaven.com，CC0，可自由使用），來源列在 `img/tex/credits.json`。

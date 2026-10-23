@@ -1,0 +1,45 @@
+{
+ "source": "Poly Haven（https://polyhaven.com），CC0",
+ "textures": {
+  "smooth_concrete_floor": {
+   "size_m": 2.0,
+   "name": "Smooth Concrete Floor",
+   "url": "https://polyhaven.com/a/smooth_concrete_floor"
+  },
+  "white_plaster_02": {
+   "size_m": 1.0,
+   "name": "White Plaster 02",
+   "url": "https://polyhaven.com/a/white_plaster_02"
+  },
+  "laminate_floor_02": {
+   "size_m": 1.7,
+   "name": "Laminate Floor 02",
+   "url": "https://polyhaven.com/a/laminate_floor_02"
+  },
+  "terrazzo_tiles": {
+   "size_m": 2.0,
+   "name": "Terrazzo Tiles",
+   "url": "https://polyhaven.com/a/terrazzo_tiles"
+  },
+  "long_white_tiles": {
+   "size_m": 1.27,
+   "name": "Long White Tiles",
+   "url": "https://polyhaven.com/a/long_white_tiles"
+  },
+  "rubber_tiles": {
+   "size_m": 2.0,
+   "name": "Rubber Tiles",
+   "url": "https://polyhaven.com/a/rubber_tiles"
+  },
+  "fabric_leather_02": {
+   "size_m": 0.5,
+   "name": "Fabric Leather 02",
+   "url": "https://polyhaven.com/a/fabric_leather_02"
+  },
+  "oak_wood_planks": {
+   "size_m": 1.2,
+   "name": "Oak Wood Planks",
+   "url": "https://polyhaven.com/a/oak_wood_planks"
+  }
+ }
+}
