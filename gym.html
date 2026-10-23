@@ -5656,9 +5656,11 @@ function startSpike() {
   if (!nn) { toast('走到排球網前面（4 m 內）再按 R 攻擊'); return; }
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; skill.mode = null; $('wk-combo').hidden = true; }
   const sg = Math.sign(nn.lx) || 1, r = (nn.c.rot * Math.PI) / 180;
-  const dir = [-sg * Math.cos(r), sg * Math.sin(r)];   // 朝網子的方向（世界座標）
-  walk.yaw = Math.atan2(-dir[0], -dir[1]); walk.pitch = 0.05; walk.target = null; targetMark.visible = false;
-  const run = Math.max(0, Math.min(2.2, Math.abs(nn.lx) - 0.9));
+  // 不改你的方向：沿著你面向的地方助跑（最多 2.2 m，不會衝過網）
+  const dir = [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
+  const toNet = [-sg * Math.cos(r), sg * Math.sin(r)], along = dir[0] * toNet[0] + dir[1] * toNet[1];
+  const run = along > 0.2 ? Math.max(0, Math.min(2.2, (Math.abs(nn.lx) - 0.9) / along)) : 1.2;
+  walk.pitch = 0.05; walk.target = null; targetMark.visible = false;
   walk.spike = { t: 0, nn, sg, dir, x0: walk.x, z0: walk.z, run, hit: false, ball: null };
   hands.visible = true; pose = 'cock';
 }
@@ -5666,7 +5668,9 @@ function updateSpike(dt) {
   const s = walk.spike; s.t += dt; const t = s.t;
   // 助跑 0–0.45s、蹲 0.45–0.65、跳 0.65–1.0、擊球 1.0、落地 1.0–1.45、站穩 1.7
   const runP = ease(clamp(t / 0.45, 0, 1));
-  walk.x = s.x0 + s.dir[0] * s.run * runP; walk.z = s.z0 + s.dir[1] * s.run * runP;
+  // 助跑：不跨過網子那條線
+  const nx = s.x0 + s.dir[0] * s.run * runP, nz = s.z0 + s.dir[1] * s.run * runP, [nlx] = toLocalOf(s.nn.c, nx, nz);
+  if (Math.sign(nlx) === s.sg && Math.abs(nlx) > 0.5) { [walk.x, walk.z] = collide(nx, nz); }
   let eye = EYE;
   if (t < 0.45) eye = EYE + Math.sin(t * 20) * 0.02;
   else if (t < 0.65) eye = EYE - 0.32 * ease((t - 0.45) / 0.2);
@@ -5675,7 +5679,9 @@ function updateSpike(dt) {
   else eye = EYE - 0.12 * (1 - ease((t - 1.45) / 0.25));
   walk.pitch = t < 0.45 ? 0.05 : t < 1.0 ? 0.05 + 0.4 * ease((t - 0.45) / 0.55) : 0.45 - 0.75 * ease(Math.min(1, (t - 1.0) / 0.4));
   // 舉過來的球：從網邊 3 m 的舉球員位置拋到擊球點
-  const hitP = new THREE.Vector3(walk.x + s.dir[0] * 0.45, EYE + 0.73 + 0.55, walk.z + s.dir[1] * 0.45);
+  // 擊球點跟著你現在面向的方向（助跑、起跳時還可以用滑鼠微調）
+  const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
+  const hitP = new THREE.Vector3(walk.x + fx * 0.45, EYE + 0.73 + 0.55, walk.z + fz * 0.45);
   if (t >= 0.35 && !s.ball && !s.hit) {
     s.ball = newBallMesh(); ballsGroup.add(s.ball);
     const r = (s.nn.c.rot * Math.PI) / 180, side = s.nn.lz > 0 ? -1 : 1;
@@ -5689,9 +5695,11 @@ function updateSpike(dt) {
   pose = t < 0.98 ? 'cock' : 'swing';
   if (t >= 1.0 && !s.hit) {
     s.hit = true;
-    const [lx] = toLocalOf(s.nn.c, walk.x, walk.z);
-    const [tx, tz] = toWorldOf(s.nn.c, -s.sg * (4 + Math.random() * 3), clamp(s.nn.lz + (Math.random() - 0.5) * 4, -4, 4));
-    const T = 0.5, p0 = s.ball.position.clone();
+    // 落點＝你面向的那條線：面向對面就落在網後 4～7 m 那段，面向別處就照方向往前 6 m（瞄出界就是出界）
+    const [lx, lz] = toLocalOf(s.nn.c, walk.x, walk.z), [ax, az] = toLocalOf(s.nn.c, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
+    const depth = 4 + Math.random() * 3, k = dlx * -s.sg > 0.05 ? (-s.sg * depth - lx) / dlx : 0;
+    const [tx, tz] = k > 0 ? toWorldOf(s.nn.c, lx + dlx * k, lz + dlz * k) : [walk.x + fx * 6, walk.z + fz * 6];
+    const p0 = s.ball.position.clone(), T = clamp(Math.hypot(tx - p0.x, tz - p0.z) * 0.06, 0.32, 0.75);
     const v = new THREE.Vector3((tx - p0.x) / T, (BALL_R - p0.y) / T + 0.5 * 9.8 * T, (tz - p0.z) / T);
     s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: { c: s.nn.c, sg: s.sg } }; balls.push(s.ball.userData.ball);
     if (NET.on) netBallHit(s.ball.userData.ball);
@@ -6123,7 +6131,7 @@ const locked = () => document.pointerLockElement === renderer.domElement;
 function lockMouse() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
 function unlockMouse() { if (locked()) document.exitPointerLock(); }
 document.addEventListener('mousemove', (e) => {
-  if (!walk.on || !locked() || walk.paused || walk.spike) return;
+  if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
   walk.yaw -= e.movementX * LOOK_SENS; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1);
 });
 document.addEventListener('pointerlockchange', () => { if (!locked()) walk.unlockT = performance.now(); updateLockHint(); });
@@ -6137,7 +6145,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
-  const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId) return;
+  const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId || (walk.spike && walk.spike.t > 0.98)) return;
   const dx = e.clientX - l.x, dy = e.clientY - l.y; l.x = e.clientX; l.y = e.clientY;
   if (Math.hypot(e.clientX - l.sx, e.clientY - l.sy) > 5) l.moved = true;
   const sens = e.pointerType === 'touch' ? 0.006 : 0.0042;
