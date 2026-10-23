@@ -3719,6 +3719,8 @@ async function pushShared(id) {
 }
 // someone else may have edited while this tab was in the background
 document.addEventListener('visibilitychange', async () => {
+  // 正在跟別人即時共同編輯時，畫面本來就是最新的，不用再去拉網路上的版本（拉到稍舊的會把剛收到的改動蓋掉）
+  if (typeof CO !== 'undefined' && CO.on && CO.peers.size) return;
   const id = cloudId(); if (document.hidden || share.mode !== 'on' || share.pending || window.__generating || (window.__venueId && !window.__venueReady)) return;
   const rec = await pullShared(id);
   if (rec && rec.savedAt && (!share.known || rec.savedAt > share.known)) { applyShared(id, rec, true); toast('有人（或你在別台裝置）更新了這份配置，已載入最新版；要退回按「復原」'); }
@@ -6156,7 +6158,7 @@ async function ablyTransport(room, cid = NET.me) {
   const ch = client.channels.get('vb-room:' + room);
   await Promise.race([ch.attach(), new Promise((_, bad) => setTimeout(() => bad(new Error('timeout')), 12000))]).catch((e) => { client.close(); throw new Error(e && e.code === 40160 ? 'denied' : 'attach'); });
   return {
-    publish: (t, d) => { ch.publish(t, d).catch(() => {}); },
+    publish: (t, d) => { ch.publish(t, d).catch((e) => console.warn('[即時] 送出失敗', t, e && e.message)); },
     subscribe: (fn) => ch.subscribe((m) => fn(m.name, m.data, m.clientId)),
     enter: (info) => ch.presence.enter(info),
     members: async () => (await ch.presence.get()).map((m) => ({ id: m.clientId, ...(m.data || {}) })),
@@ -6402,6 +6404,7 @@ function coSendFull(to) {
 }
 function coOnMessage(t, d, from) {
   if (from === CO.me) return;
+  CO.rx = (CO.rx || 0) + 1;
   if (t === 'ed') { coFlush(); coApplyDiff(d); coNotice(from); }
   else if (t === 'full') {
     if (d.to && d.to !== CO.me) return;
@@ -6846,7 +6849,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
