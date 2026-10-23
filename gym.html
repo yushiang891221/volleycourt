@@ -255,6 +255,14 @@ details.more[open] > summary { margin-bottom: 10px; }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
 .wk-cross.on { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: transparent; box-shadow: 0 0 0 2px #F2B705, 0 0 0 3.5px rgba(27,38,56,.5); }
 .wk-act { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(27,38,56,.88); color: #fff; border: 1px solid #F2B705; font-size: 14px; font-weight: 700; }
+.wk-combo { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: #F2B705; color: #1B2638; font-weight: 800; font-size: 15px; pointer-events: none !important; }
+.wk-combo[hidden], .vmodal[hidden] { display: none !important; }
+.vmodal { position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(10,14,22,.62); padding: 16px; }
+.vbox { width: min(880px, 100%); background: #1B2638; border: 1px solid #F2B705; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.vbox video, .vbox img { width: 100%; max-height: 70vh; border-radius: 8px; background: #000; object-fit: contain; }
+.vrow { display: flex; gap: 8px; align-items: center; color: #fff; }
+.vrow b { flex: 1; }
+.vrow .btn { color: #1B2638; background: #F2B705; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; }
 .wk-act kbd { font-family: var(--font-mono); font-size: 12px; background: #F2B705; color: #1B2638; border-radius: 4px; padding: 1px 6px; }
 @media (pointer: coarse) { .wk-act kbd { display: none; } .wk-cross { display: none; } }
 .walk-help kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--ink-2); border-bottom-width: 2px; padding: 0 4px; background: var(--sheet); }
@@ -456,6 +464,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="grid2">
         <label class="field" for="b-floor"><span>球場配色</span><select id="b-floor"></select></label>
         <label class="field" for="b-net"><span>排球網高</span><select id="b-net"></select></label>
+        <label class="field" for="b-entryW"><span>主入口寬度（m）</span><input id="b-entryW" type="number" min="0.9" max="12" step="0.1" inputmode="decimal"></label>
       </div>
       <div class="colors" id="b-colors"></div>
       </details>
@@ -525,9 +534,12 @@ details.more[open] > summary { margin-bottom: 10px; }
     <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜鎖定的物件不會動｜拖曳空白處轉視角｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>按住滑鼠拖曳轉頭<br>點地板直接走過去<br>看著物件按 <kbd>E</kbd>（或直接點它）互動：坐下、拿球丟球、開電扇、按計分板…<br><kbd>Esc</kbd> 離開導覽</p>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>按住滑鼠拖曳轉頭・點地板直接走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>拿著球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 墊球（時機對才接得住）、網前 <kbd>R</kbd> 攻擊<br><kbd>Esc</kbd> 離開導覽</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
+      <div class="wk-combo" id="wk-combo" hidden></div>
+      <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
+      <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
       <div class="joy" id="joy" hidden><i></i></div>
     </div>
@@ -651,6 +663,7 @@ const CAT = {
   purifier: { label: '淨水器', group: '休息與服務', w: 0.3, d: 0.4, h: 0.45, color: '#E9ECEE' },
   lowcubby: { label: '矮木格置物櫃', group: '休息與服務', w: 1.2, d: 0.35, h: 0.9, color: '#C89A62', resize: 'w', tag: true },
   shelf: { label: '置物鐵架', group: '休息與服務', w: 1.8, d: 0.45, h: 2.0, color: '#2A2F3A', resize: 'w' },
+  toilet: { label: '馬桶', group: '休息與服務', w: 0.45, d: 0.7, h: 0.8, color: '#F6F6F3', zoneOK: true },
   stall: { label: '廁所隔間（含馬桶）', group: '休息與服務', w: 0.95, d: 1.5, h: 2.0, color: '#D9D4CB', resize: true, zoneOK: true },
   urinal: { label: '小便斗', group: '休息與服務', w: 0.45, d: 0.4, h: 1.4, color: '#F6F6F3', zoneOK: true },
   sinkrow: { label: '洗手台（含鏡子）', group: '休息與服務', w: 1.2, d: 0.55, h: 1.9, color: '#ECEAE5', resize: 'w', zoneOK: true },
@@ -697,7 +710,7 @@ const GROUP_OF = {
   '球場與比賽': ['vb', 'vbs', 'vbt', 'bd', 'pb', 'bk', 'referee', 'scoreboard', 'flipscore', 'whiteboard', 'ballcart', 'ballbasket', 'netwall', 'bleacher', 'warmmat'],
   '座椅與休息': ['sofa', 'bench', 'table', 'foldtable', 'foldchair', 'campchair', 'camptable', 'rug', 'plant'],
   '櫃台與收納': ['counter', 'desk', 'locker', 'cubby', 'lowcubby', 'shelf', 'shoerack', 'curtain', 'bins'],
-  '衛浴與更衣': ['stall', 'urinal', 'sinkrow', 'showerstall'],
+  '衛浴與更衣': ['toilet', 'stall', 'urinal', 'sinkrow', 'showerstall'],
   '飲水與販賣': ['watertall', 'water', 'purifier', 'vending', 'fridge', 'steelsink'],
   '空調與照明': ['packac', 'standac', 'aircon', 'fan', 'floorfan', 'wallfan', 'exhaust', 'light'],
   '牆面與裝飾': ['banner', 'crashpad', 'tv', 'clock', 'speaker'],
@@ -712,8 +725,8 @@ const ZONES = {
   floor: { label: '整片地板', en: 'FLOOR', color: '#D9D2C4', floor: 'vinyl', layer: 0, desc: '先鋪整片地板，再在上面畫廁所、休息區；地板永遠墊在其他區域下面。' },
   rest: { label: '休息區', en: 'LOUNGE', color: '#E2CBA6', floor: 'wood', desc: '打完球坐下來喝水、等下一場的地方。木地板、沙發和置物櫃，看得到球場，朋友打球時可以在這裡加油。' },
   reception: { label: '接待櫃台', en: 'RECEPTION', color: '#DDD6CA', floor: 'terrazzo', desc: '進門第一站：報到、付款、借球、買飲料。櫃台面向入口，也看得到整個球場。' },
-  locker: { label: '更衣淋浴', en: 'LOCKER & SHOWER', color: '#C9D6DA', floor: 'tile', enclosed: true, frosted: true, desc: '霧面玻璃隔間，裡面有淋浴間、更衣長椅和置物櫃。熱水器與排水要先確認廠房管線。' },
-  wc: { label: '廁所', en: 'RESTROOM', color: '#CCD8DE', floor: 'tile', enclosed: true, frosted: true, desc: '男女分開，靠外牆比較好接排水。數量以使用人數與建管規定為準。' },
+  locker: { label: '更衣淋浴', en: 'LOCKER & SHOWER', color: '#C9D6DA', floor: 'tile', enclosed: true, solid: true, desc: '實心隔間＋門（看不到裡面），裡面有淋浴間、更衣長椅和置物櫃。熱水器與排水要先確認廠房管線。' },
+  wc: { label: '廁所', en: 'RESTROOM', color: '#CCD8DE', floor: 'tile', enclosed: true, solid: true, desc: '實心隔間＋門（看不到裡面）。小間的就是一間馬桶＋洗手台，大間的才有隔間。男女分開，靠外牆比較好接排水。數量以使用人數與建管規定為準。' },
   storage: { label: '器材室', en: 'STORAGE', color: '#C9C2B6', floor: 'epoxy', enclosed: true, desc: '球車、網柱、備用球網、清潔用品都收在這裡。門要夠寬，網柱推得進去。' },
   warmup: { label: '暖身區', en: 'WARM-UP', color: '#9FAAB4', floor: 'mat', desc: '上場前拉筋、跳繩、滾筒放鬆。鋪運動軟墊，不佔用球場的緩衝區。' },
   office: { label: '辦公室', en: 'OFFICE', color: '#D6C9B2', floor: 'wood', enclosed: true, desc: '店長與教練辦公、監視器主機、配電盤旁邊。透明玻璃，看得到場內狀況。' },
@@ -808,7 +821,7 @@ function sanitizeZone(z) {
 }
 const ZONE_FLOORS = ['vinyl', 'wood', 'deck', 'pvc', 'tiles', 'hardwood', 'tile', 'terrazzo', 'epoxy', 'mat', 'concrete'];
 const FLOOR_LABELS = { vinyl: '灰色木紋地板', wood: '木地板（休息區）', deck: '木棧板', pvc: 'PVC 地墊（灰）', tiles: '拼裝式地墊', hardwood: '實木運動地板（楓木）', tile: '磁磚', terrazzo: '磨石子', epoxy: '環氧樹脂', mat: '運動軟墊', concrete: '水泥粉光' };
-function zoneWalls(z) { return z.walls || (ZONES[z.type].enclosed ? (ZONES[z.type].frosted ? 'frost' : 'glass') : 'open'); }
+function zoneWalls(z) { return z.walls || (ZONES[z.type].enclosed ? (ZONES[z.type].solid ? 'solid' : ZONES[z.type].frosted ? 'frost' : 'glass') : 'open'); }
 function zoneFloor(z) { return z.floor || ZONES[z.type].floor; }
 // 自由畫的牆：a、b 兩端（公尺），kind = solid 實心牆、glass 玻璃、half 半牆、net 圍網；h 高度
 const WALL_KINDS = { solid: '實心牆', glass: '玻璃隔間', half: '半牆（1.1 m）', net: '圍網' };
@@ -839,7 +852,7 @@ function sanitize(raw) {
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Number.isFinite(b.entryW) ? { entryW: clamp(num(b.entryW, 3), 0.9, 12) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
     colors: Object.fromEntries(Object.entries(s.colors && typeof s.colors === 'object' ? s.colors : {}).filter(([k, v]) => COLOR_KEYS.includes(k) && /^#[0-9a-f]{6}$/i.test(String(v)))),
     net: NETS[s.net] ? s.net : 'men',
@@ -1563,8 +1576,20 @@ function buildFurniture(g, it, w, d, def) {
       for (let k = 0; k < 5; k++) box(g, w, 0.02, d, '#1F2124', 0, 0.06 + k * 0.22, k % 2 ? 0.02 : -0.02, { metalness: 0.5, roughness: 0.5 });
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.02, def.h, 0.02, '#1F2124', sx * (w / 2 - 0.01), 0, sz * (d / 2 - 0.01), { metalness: 0.5 });
       break;
-    case 'fridge':
-      if (kit('fridge', g, 0, 0, 0, { sx: w / 0.55, sz: d / 0.55 })) break;
+    case 'fridge': {
+      // 機身（前面開口）、空的內膽與層板、內燈；門片可以打開
+      const H2 = def.h, body = '#E9ECEE', inner = '#F7F8F9';
+      box(g, w, 0.04, d, body, 0, 0, 0); box(g, w, 0.04, d, body, 0, H2 - 0.04, 0); box(g, w, H2, 0.03, body, 0, 0, d / 2 - 0.015);
+      for (const sx of [-1, 1]) box(g, 0.03, H2, d, body, sx * (w / 2 - 0.015), 0, 0, { roughness: 0.35 });
+      box(g, w - 0.08, H2 - 0.1, 0.01, inner, 0, 0.05, d / 2 - 0.035, { emissive: '#FFFFFF', emissiveIntensity: 0.15 });
+      for (const y of [0.35, 0.7, 1.0]) if (y < H2 - 0.1) box(g, w - 0.07, 0.01, d - 0.08, new THREE.MeshStandardMaterial({ color: '#D7E6EA', transparent: true, opacity: 0.4, roughness: 0.1 }), 0, y, 0.01);
+      const pv = new THREE.Group(); pv.position.set(-w / 2, 0, -d / 2); pv.userData.fridgeOf = it.id; g.add(pv);
+      box(pv, w, H2 - 0.02, 0.05, body, w / 2, 0.01, -0.025, { roughness: 0.35 });
+      box(pv, 0.025, 0.4, 0.03, '#B9BCC0', w - 0.06, H2 * 0.45, -0.065, { metalness: 0.8, roughness: 0.3 });
+      if (walk.open.has(it.id)) pv.rotation.y = 1.95;
+      break;
+    }
+    case 'fridge_old':
       box(g, w, def.h, d, '#E9ECEE', 0, 0, 0, { roughness: 0.35 });
       box(g, w - 0.06, def.h - 0.12, 0.02, '#1D2A33', 0, 0.06, -d / 2 - 0.01, { roughness: 0.08, emissive: '#3F6F8A', emissiveIntensity: 0.25 });
       for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) cyl(g, 0.03, 0.03, 0.2, ['#C0392B', '#2E8B57', '#E8B019', '#2F5D8C'][(r + k) % 4], -0.18 + k * 0.12, 0.15 + r * 0.28, -d / 2 + 0.08, null, 10);
@@ -1605,7 +1630,7 @@ function buildFurniture(g, it, w, d, def) {
       for (let i = 1; i < 5; i++) box(g, 0.6, 0.035, 0.06, darkSteel, 0, i * 0.32, -0.42);
       break;
     case 'scoreboard':
-      if (kit('score_stand', g, 0, 0, 0, { sx: w / 1.4 })) break;
+      if (kit('score_stand', g, 0, 0, 0, { sx: w / 1.4 })) { const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshBasicMaterial({ map: scoreTex, toneMapped: false })); sp.position.set(0, 1.25, -0.058); sp.rotation.y = Math.PI; sp.userData.noInk = true; g.add(sp); break; }
       box(g, 0.08, 0.9, 0.08, '#2B3A4F', -0.5, 0, 0); box(g, 0.08, 0.9, 0.08, '#2B3A4F', 0.5, 0, 0);
       box(g, w, 0.7, 0.1, c, 0, 0.9, 0);
       box(g, 0.45, 0.4, 0.01, '#F2B705', -0.32, 1.05, -0.06, { emissive: '#F2B705', emissiveIntensity: 0.4 });
@@ -1662,6 +1687,10 @@ function buildFurniture(g, it, w, d, def) {
       if (!kit('toilet', g, 0, 0, d / 2 - 0.36)) { box(g, 0.38, 0.42, 0.6, '#FBFBF8', 0, 0, d / 2 - 0.5); box(g, 0.4, 0.4, 0.18, '#FBFBF8', 0, 0.42, d / 2 - 0.12); }
       break;
     }
+    case 'toilet':
+      if (!kit('toilet', g, 0, 0, d / 2 - 0.36)) { box(g, 0.38, 0.42, 0.6, '#FBFBF8', 0, 0, d / 2 - 0.5); box(g, 0.4, 0.4, 0.18, '#FBFBF8', 0, 0.42, d / 2 - 0.12); }
+      { const [pc] = [cyl(g, 0.06, 0.06, 0.1, chrome, w / 2 + 0.05, 0.7, 0)]; pc.rotation.z = Math.PI / 2; }
+      break;
     case 'urinal':
       if (!kit('urinal', g, 0, 0, d / 2 - 0.2)) box(g, 0.36, 0.62, 0.3, '#F6F6F3', 0, 0.55, d / 2 - 0.15);
       break;
@@ -1690,6 +1719,7 @@ function buildFurniture(g, it, w, d, def) {
     }
     case 'flipscore':
       if (!kit('flip_score', g)) { box(g, 0.6, 0.6, 0.05, '#F4F4F2', 0, 0, 0); }
+      { const sp = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.32), new THREE.MeshBasicMaterial({ map: scoreTex, toneMapped: false })); sp.position.set(0, 0.36, -0.115); sp.rotation.set(-0.25, Math.PI, 0); sp.userData.noInk = true; g.add(sp); }
       break;
     case 'whiteboard':
       if (!kit('whiteboard', g)) { box(g, 1.2, 0.9, 0.03, '#F4F4F2', 0, 0.9, 0); for (const x of [-0.62, 0.62]) box(g, 0.04, 1.9, 0.04, '#B9BCC0', x, 0, 0); }
@@ -1744,7 +1774,7 @@ function entryInfo() {
   const P = outlinePoly(), E = edgesOf(P);
   if (state.building.entry) {
     // 指定了入口：門開在離那一點最近的外牆上
-    const ne = nearestEdge(state.building.entry[0], state.building.entry[1], P), wD = Math.min(3, ne.e.len - 1);
+    const ne = nearestEdge(state.building.entry[0], state.building.entry[1], P), wD = Math.min(state.building.entryW || 3, ne.e.len - 1);
     const tt = clamp(ne.t, wD / 2 + 0.3, ne.e.len - wD / 2 - 0.3);
     return { e: ne.e, t: tt, w: wD, x: ne.e.a[0] + ne.e.dx * tt, z: ne.e.a[1] + ne.e.dz * tt, nx: ne.e.nx, nz: ne.e.nz };
   }
@@ -1756,7 +1786,7 @@ function entryInfo() {
   let t = front.len / 2;
   // 門開在櫃台區的一側，櫃台本身擺在另一側
   if (rec) t = (rec.x - front.a[0]) * front.dx + (rec.z - front.a[1]) * front.dz - (rec.type === 'reception' ? Math.min(rec.w, rec.d) / 4 : 0);
-  const wDoor = Math.min(3, front.len - 1);
+  const wDoor = Math.min(state.building.entryW || 3, front.len - 1);
   t = clamp(t, wDoor / 2 + 0.4, front.len - wDoor / 2 - 0.4);
   return { e: front, t, w: wDoor, x: front.a[0] + front.dx * t, z: front.a[1] + front.dz * t, nx: front.nx, nz: front.nz };
 }
@@ -1778,7 +1808,7 @@ function wallBox(g, material, x1, z1, x2, z2, h, t, y = 0) {
   g.add(m); return m;
 }
 function buildBuilding() {
-  disposeGroup(buildingGroup);
+  disposeGroup(buildingGroup); mainDoors.length = 0;
   walls = []; colliders = [];
   const { H } = state.building, P = outlinePoly(), sc = scheme(), col = state.colors || {};
   const wallMat = tinted(state.building.wall === 'metal' ? metalWallMat : plasterMat, col.wall);
@@ -1808,11 +1838,17 @@ function buildBuilding() {
       const cx = ent.x + ox, cz = ent.z + oz, hd = 2.6;
       wallBox(grp, tinted(plasterMat, col.wall), cx - e.dx * ent.w / 2, cz - e.dz * ent.w / 2, cx + e.dx * ent.w / 2, cz + e.dz * ent.w / 2, eave - hd, t, hd);
       wallBox(grp, frameMat, cx - e.dx * ent.w / 2, cz - e.dz * ent.w / 2, cx + e.dx * ent.w / 2, cz + e.dz * ent.w / 2, 0.08, t + 0.02, hd - 0.08);
+      // 兩扇玻璃滑門：關著，導覽時按 E 往兩邊滑開
+      const md = { main: true, t: 0, open: false, ux: e.dx, uz: e.dz, slide: ent.w / 2 - 0.08, panes: [], seg: [ent.x - e.dx * ent.w / 2, ent.z - e.dz * ent.w / 2, ent.x + e.dx * ent.w / 2, ent.z + e.dz * ent.w / 2] };
       for (const s of [-1, 1]) {
-        const p0 = ent.w / 2 * s, p1 = ent.w / 2 * s - s * ent.w * 0.32;
-        const g1 = wallBox(grp, glassMat, cx + e.dx * p0, cz + e.dz * p0, cx + e.dx * p1, cz + e.dz * p1, hd - 0.1, 0.03); g1.userData.noInk = true;
-        wallBox(grp, frameMat, cx + e.dx * p1, cz + e.dz * p1, cx + e.dx * (p1 + s * 0.05), cz + e.dz * (p1 + s * 0.05), hd - 0.1, 0.05);
+        const p0 = (ent.w / 2) * s, p1 = 0;
+        const pg = new THREE.Group(); grp.add(pg);
+        const g1 = wallBox(pg, glassMat, cx + e.dx * p0, cz + e.dz * p0, cx + e.dx * p1, cz + e.dz * p1, hd - 0.1, 0.03); g1.userData.noInk = true; g1.renderOrder = 2;
+        wallBox(pg, frameMat, cx + e.dx * (p1 - s * 0.03), cz + e.dz * (p1 - s * 0.03), cx + e.dx * (p1 + s * 0.02), cz + e.dz * (p1 + s * 0.02), hd - 0.1, 0.05);
+        md.panes.push({ m: pg, s, x: 0, y: 0, z: 0 });
+        pg.traverse((o) => { if (o.isMesh) o.userData.door = md; });
       }
+      mainDoors.push(md);
     }
     // the low skirt stays when the wall hides, so the outline stays readable
     const sk = wallBox(buildingGroup, steelMat, e.a[0] + ox, e.a[1] + oz, e.b[0] + ox, e.b[1] + oz, 0.12, t + 0.02);
@@ -1950,7 +1986,7 @@ function buildPartitions() {
   }
 }
 function buildZones() {
-  disposeGroup(zonesGroup);
+  disposeGroup(zonesGroup); zoneDoors.length = 0; zoneRoofs.length = 0;
   const H = 2.7;
   zonesInOrder().forEach((z, zi) => {
     const Z = ZONES[z.type], g = new THREE.Group(); g.userData.zoneId = z.id; zonesGroup.add(g);
@@ -1983,9 +2019,9 @@ function buildZones() {
           else { const len = Math.hypot(bx - ax, bz - az), t = netTexture('white').clone(); t.needsUpdate = true; t.repeat.set(len / 1.5, 2.6 / 1.5); const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.6), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false })); m.position.set((ax + bx) / 2, 1.3, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(m); }
           colliders.push([ax, az, bx, bz]);
         }
-        if (s.door && zw === 'solid') { const [ax, az] = P(s.door[0]), [bx, bz] = P(s.door[1]); wallBox(g, prefabMat, ax, az, bx, bz, 0.35, 0.06, 2.05); const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (!kit('prefab_door', g, mx, 0, mz, { rotY: Math.atan2(-s.nx, -s.nz), sx: Math.hypot(bx - ax, bz - az) / 0.9 })) wallBox(g, prefabTrim, ax, az, ax + ux * 0.04, az + uz * 0.04, 2.05, 0.08, 0); }
+        if (s.door && zw === 'solid') { const [ax, az] = P(s.door[0]), [bx, bz] = P(s.door[1]); wallBox(g, prefabMat, ax, az, bx, bz, 0.35, 0.06, 2.05); wallBox(g, prefabTrim, ax, az, ax + ux * 0.04, az + uz * 0.04, 2.05, 0.08, 0); addHingedDoor(g, [ax, az], [bx, bz], [s.nx, s.nz], 'solid'); }
       }
-      if (zw === 'solid') { const roofM = new THREE.Mesh(new THREE.BoxGeometry(z.w, 0.06, z.d), prefabMat); roofM.position.set(z.x, 2.43, z.z); g.add(roofM); }
+      if (zw === 'solid') { const roofM = new THREE.Mesh(new THREE.BoxGeometry(z.w, 0.06, z.d), prefabMat); roofM.position.set(z.x, 2.43, z.z); roofM.rotation.y = ((z.rot || 0) * Math.PI) / 180; roofM.visible = false; g.add(roofM); zoneRoofs.push(roofM); }
     }
     if (zw === 'glass' || zw === 'frost') {
       const gm = zw === 'frost' ? frostMat : glassMat;
@@ -2008,6 +2044,7 @@ function buildZones() {
           const [ax, az] = P(s.door[0]), [bx, bz] = P(s.door[1]);
           wallBox(g, frameMat, ax, az, bx, bz, 0.08, 0.07, 2.2);
           const pane = wallBox(g, gm, ax, az, bx, bz, H - 2.3, 0.025, 2.28); pane.userData.noInk = true;
+          addHingedDoor(g, [ax, az], [bx, bz], [s.nx, s.nz], zw);
         }
       }
     }
@@ -2042,6 +2079,14 @@ function zoneFixtures(z) {
   const R = (dist) => dist, L = (dist) => left.len - dist;
   if (z.type === 'wc') {
     // 廁所：背牆一排隔間（男廁一半換小便斗），洗手台靠側牆、在隔間前走道和門口之間
+    // 小間的廁所：一間就是一個馬桶＋洗手台，不做隔間（進門就是）
+    if (along * across < 10 || along < 1.9 || across < 2.2) {
+      at(back, Math.min(along / 2, Math.max(0.45, along - 0.6)), 0.36, 'toilet');
+      if (across >= 1.9) at(left, L(Math.max(1.1, across - 0.75)), 0.28, 'sinkrow', { w: 0.6 });
+      else at(right, R(0.4), 0.28, 'sinkrow', { w: 0.6 });
+      for (const f of out) { const def = CAT[f.type]; if (!def.resize) { delete f.w; delete f.d; } else if (def.resize === 'w') delete f.d; }
+      return out;
+    }
     const male = /男/.test(z.name || ''), sw = 0.95;
     const sd = across >= 3.4 ? 1.5 : Math.max(1.2, across - 1.6);
     const slots = Math.max(1, Math.floor((along - 0.05) / sw));
@@ -2285,6 +2330,7 @@ function initBuildingInputs() {
   $('b-H').addEventListener('change', dimChange('H', 4, 15));
   fs.addEventListener('change', () => { pushHistory(); state.floor = fs.value; buildBuilding(); buildZones(); renderItems(); commit(); });
   ns.addEventListener('change', () => { pushHistory(); state.net = ns.value; renderItems(); commit(); });
+  $('b-entryW').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); state.building.entryW = clamp(Math.round(v * 10) / 10, 0.9, 12); planChanged(); toast(`主入口寬度改成 ${state.building.entryW} m`); });
   const cb = $('b-colors');
   cb.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.cr) setColor(b.dataset.cr, null); else if (b.dataset.ck) setColor(b.dataset.ck, b.dataset.cv); });
   cb.addEventListener('change', (e) => { const i = e.target.closest('input[type=color]'); if (i) setColor(i.dataset.ck, i.value); });
@@ -2316,7 +2362,7 @@ function setColor(k, v) {
 function syncBuildingInputs() {
   const { L, W, H } = state.building;
   $('b-L').value = L; $('b-W').value = W; $('b-H').value = H;
-  $('b-floor').value = state.floor; $('b-net').value = state.net;
+  $('b-floor').value = state.floor; $('b-net').value = state.net; if (document.activeElement !== $('b-entryW')) $('b-entryW').value = state.building.entryW || 3;
   if (!$('b-colors').contains(document.activeElement)) renderColorInputs();
   if (document.activeElement !== $('design-name')) $('design-name').value = state.name;
   $('r-ping').textContent = fmt1((L * W) / PING);
@@ -2902,8 +2948,15 @@ function endDrag() {
 }
 renderer.domElement.addEventListener('pointerup', endDrag);
 renderer.domElement.addEventListener('dblclick', (e) => {
-  if (typeof window.openEval !== 'function' || window.__insp || window.__walk) return;
+  if (typeof window.openEval !== 'function' || window.__insp) return;
   setPointer(e);
+  if (window.__walk) {
+    // 導覽中：雙擊物件看資訊報表（單擊才是互動）
+    clearTimeout(walk.clickT);
+    const tg = pickTargets(raycaster, 10);
+    if (tg && tg.kind === 'item') { walk.keys.clear(); window.openEval(tg.it.type, labelOf(tg.it)); }
+    return;
+  }
   const id = pickItem();
   const it = id && state.items.find((x) => x.id === id);
   if (it) window.openEval(it.type, labelOf(it));
@@ -4663,7 +4716,7 @@ $('w-exit').addEventListener('click', () => setMode(walkReturn === 'walk' ? '3d'
 $('w-plan').addEventListener('click', () => setMode('plan'));
 
 // ---------------------------------------------------------------- free walk: WASD / arrows + drag to look, joystick on phones, click the floor to walk there
-const walk = { on: false, x: 0, z: 0, yaw: 0, pitch: -0.04, keys: new Set(), target: null, joy: { x: 0, y: 0 }, zoneKey: '', lastZ: 0, saved: null, look: null, off: new Set(), sit: null, hold: null, focus: null, lastF: 0, score: [0, 0], sets: [0, 0], drinks: 0, dark: false };
+const walk = { on: false, x: 0, z: 0, yaw: 0, pitch: -0.04, keys: new Set(), target: null, joy: { x: 0, y: 0 }, zoneKey: '', lastZ: 0, saved: null, look: null, off: new Set(), sit: null, hold: null, focus: null, lastF: 0, score: [0, 0], sets: [0, 0], drinks: 0, dark: false, open: new Set(), bags: new Map(), spike: null, paused: false, clickT: 0 };
 const EYE = 1.62, RADIUS = 0.32;
 const targetMark = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 32), new THREE.MeshBasicMaterial({ color: 0xc4552a, transparent: true, opacity: 0.9, depthWrite: false }));
 targetMark.rotation.x = -Math.PI / 2; targetMark.visible = false; scene.add(targetMark);
@@ -4681,18 +4734,24 @@ function startWalk() {
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
   walk.keys.clear(); walk.joy = { x: 0, y: 0 };
   $('walk-ui').hidden = false;
-  if (!walk.actWired) { walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract()); }
+  if (!walk.actWired) {
+    walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract());
+    $('vclose').addEventListener('click', closeModals); $('pclose').addEventListener('click', closeModals);
+  }
   $('joy').hidden = !matchMedia('(pointer: coarse)').matches;
   const help = $('walk-help'); help.classList.remove('fade'); clearTimeout(walk.helpT); walk.helpT = setTimeout(() => help.classList.add('fade'), 7000);
   $('zcard').classList.add('out');
-  updateWalk(0); updateZoneCard(true);
+  updateWalk(0); updateZoneCard(true); drawScore();
   toast('從主入口進場。走進任何一區，左下角會出現那一區的說明');
 }
 function stopWalk() {
   walk.on = false; window.__walk = false; targetMark.visible = false;
-  walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false);
-  if (walk.hold) { scene.remove(walk.hold); walk.hold = null; }
-  for (const b of balls) ballsGroup.remove(b.m); balls.length = 0;
+  walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals();
+  if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
+  walk.spike = null; skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
+  ballsGroup.clear(); balls.length = 0; cans.length = 0; walk.bags.clear(); tweens.length = 0; walk.filling = false;
+  for (const d of [...zoneDoors, ...mainDoors]) { d.open = false; } updateDoors(5);
+  if (walk.open.size) { walk.open.clear(); renderItems(); }
   $('wk-act').hidden = true;
   $('walk-ui').hidden = true;
   const s = walk.saved;
@@ -4703,8 +4762,9 @@ function stopWalk() {
   zonesGroup.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; });
 }
 function collide(x, z) {
+  const segs = blockers();
   for (let it = 0; it < 3; it++) {
-    for (const [x1, z1, x2, z2] of colliders) {
+    for (const [x1, z1, x2, z2] of segs) {
       const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1;
       const t = clamp(((x - x1) * dx + (z - z1) * dz) / l2, 0, 1), px = x1 + dx * t, pz = z1 + dz * t;
       const ex = x - px, ez = z - pz, d = Math.hypot(ex, ez);
@@ -4716,6 +4776,7 @@ function collide(x, z) {
 }
 function updateWalk(dt) {
   const k = walk.keys, run = k.has('shift') ? 2.2 : 1;
+  if (walk.spike) { updateSpike(dt); applyPose(dt); if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); } return; }
   if (walk.sit) {
     // 坐著：一開始走路（或點地板）就站起來
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((q) => k.has(q)) || Math.hypot(walk.joy.x, walk.joy.y) > 0.2 || walk.target) standUp();
@@ -4723,7 +4784,7 @@ function updateWalk(dt) {
       camera.position.set(walk.sit.x, walk.sit.eye, walk.sit.z);
       camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
       if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
-      holdBall(); return;
+      updateSkill(dt); applyPose(dt); placeHeld(); return;
     }
   }
   let f = 0, s = 0;
@@ -4756,101 +4817,117 @@ function updateWalk(dt) {
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
-  holdBall();
+  updateSkill(dt); applyPose(dt); placeHeld();
 }
-// ---------------------------------------------------------------- 導覽互動：看著物件（畫面中間的準星）按 E，手機點下方的按鈕，或直接點物件
+// ---------------------------------------------------------------- 導覽互動：看著物件（畫面中間的準星）按 E，手機點下方的按鈕，或直接點物件；雙擊物件看資訊報表
 const SIT_EYE = { sofa: 1.12, bench: 1.12, foldchair: 1.18, campchair: 1.05, referee: 2.55 };
-function actionFor(t) {
+function actionFor(t, it) {
   if (SIT_EYE[t]) return t === 'referee' ? '爬上裁判椅' : '坐下';
   if (t === 'bleacher') return '坐上觀眾席';
   if (t === 'ballcart' || t === 'ballbasket') return '拿一顆球';
   if (['fan', 'floorfan', 'wallfan', 'exhaust'].includes(t)) return '開／關電扇';
   if (['aircon', 'standac', 'packac'].includes(t)) return '開／關冷氣';
-  if (t === 'vending') return '買一瓶飲料';
-  if (['water', 'watertall', 'purifier'].includes(t)) return '裝一杯水';
-  if (t === 'fridge') return '拿一瓶冰水';
-  if (t === 'scoreboard' || t === 'flipscore') return '加一分';
-  if (['locker', 'cubby', 'lowcubby'].includes(t)) return '放包包';
+  if (t === 'vending') return '買飲料（隨機）';
+  if (['water', 'watertall', 'purifier'].includes(t)) return '拿水壺裝水';
+  if (t === 'fridge') return it && walk.open.has(it.id) ? '關冰箱' : '打開冰箱';
+  if (t === 'scoreboard') return '加一分（點左半邊／右半邊）';
+  if (t === 'flipscore') return '翻分數（點左邊／右邊）';
+  if (['locker', 'cubby', 'lowcubby'].includes(t)) return '放／拿包包';
   if (t === 'shoerack') return '放鞋子';
   if (t === 'panel') return '開／關全館的燈';
   if (t === 'tv') return '開／關電視';
+  if (t === 'desk') return '看電腦裡的影片';
+  if (t === 'camera') return '拍下球場裡的自己';
   if (t === 'whiteboard') return '看戰術板';
   if (t === 'sinkrow' || t === 'steelsink') return '洗手';
-  if (t === 'stall') return '查看廁所隔間';
+  if (t === 'toilet') return '沖水';
+  if (t === 'showerstall') return '開熱水';
   return '查看';
 }
-const centerRay = new THREE.Raycaster(); centerRay.far = 3.6;
-// 射線打到的東西 → 可以互動的目標（一般元件、區域的自動擺設、地上的球）
+const centerRay = new THREE.Raycaster(); centerRay.far = 20;
+// 射線打到的東西 → 可以互動的目標（一般元件、區域的自動擺設、門、地上的球）
 function targetFromHits(hits, maxD) {
   for (const h of hits) {
-    if (h.distance > maxD || h.object.visible === false || h.object.userData.noPick) continue;
-    if (h.object.userData.ball) return { kind: 'ball', b: h.object.userData.ball, label: '撿起球' };
+    if (h.object.visible === false || h.object.userData.noPick) continue;
+    if (h.object.userData.ball) { if (h.distance <= maxD + 0.5) return { kind: 'ball', b: h.object.userData.ball, label: '撿起球' }; continue; }
+    if (h.object.userData.door) { if (h.distance > maxD) return null; const d = h.object.userData.door; return { kind: 'door', d, label: d.open ? '關門' : '開門' }; }
     const id = h.object.userData.itemId;
-    if (id) { const it = state.items.find((x) => x.id === id); if (!it || CAT[it.type].court) continue; return { kind: 'item', it, point: h.point, label: actionFor(it.type) }; }
+    if (id) {
+      const it = state.items.find((x) => x.id === id); if (!it || CAT[it.type].court) continue;
+      // 攝影機掛很高：遠一點也能對著它按
+      if (h.distance > (it.type === 'camera' ? 20 : maxD)) return null;
+      return { kind: 'item', it, point: h.point, label: actionFor(it.type, it) };
+    }
     const zf = h.object.userData.zoneFix;
-    if (zf) { const z = state.zones.find((q) => q.id === zf.zid), f = z && zoneFixtures(z)[zf.i]; if (f) return { kind: 'item', it: { id: `zf:${zf.zid}:${zf.i}`, ...f }, point: h.point, label: actionFor(f.type) }; }
-    // 實心的隔間牆擋住後面的東西；玻璃、霧面玻璃看得穿
+    if (zf) { if (h.distance > maxD) return null; const z = state.zones.find((q) => q.id === zf.zid), f = z && zoneFixtures(z)[zf.i]; if (f) { const it = { id: `zf:${zf.zid}:${zf.i}`, ...f }; return { kind: 'item', it, point: h.point, label: actionFor(f.type, it) }; } }
+    // 實心的牆擋住後面的東西；玻璃、霧面玻璃看得穿
     const m = h.object.material; if (!(m && m.transparent)) break;
   }
   return null;
 }
-function pickTargets(ray, maxD) { return targetFromHits(ray.intersectObjects([itemsGroup, zonesGroup, ballsGroup], true), maxD); }
+function pickTargets(ray, maxD) { return targetFromHits(ray.intersectObjects([itemsGroup, zonesGroup, ballsGroup, buildingGroup], true), maxD); }
 function updateFocus() {
   centerRay.setFromCamera(new THREE.Vector2(0, 0), camera);
-  walk.focus = pickTargets(centerRay, 3.4);
-  // 拿著球：E 就是丟球（坐著也能丟）；坐著：E 站起來
-  const t = walk.hold ? '丟球' : walk.sit ? '站起來' : walk.focus ? `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : labelOf(walk.focus.it)}` : '';
+  walk.focus = walk.spike ? null : pickTargets(centerRay, 3.4);
+  const near = !walk.spike && nearNet();
+  let t = '';
+  if (skill.mode) t = skill.mode === 'set' ? '球回到手上時按 E 繼續舉球（Q 換墊球）' : '球掉到手臂時按 Q 繼續墊球（E 換舉球）';
+  else if (walk.hold) t = near ? 'E 舉球・Q 墊球・R 網前攻擊・點一下丟球' : 'E 舉球・Q 墊球・點一下丟球';
+  else if (walk.sit) t = '站起來';
+  else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
+  else if (near) t = 'R 網前攻擊（跳起來扣球）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
 function doInteract(tg) {
+  if (walk.spike) return;
   tg = tg || walk.focus;
-  if (walk.hold) return throwBall();
+  if (walk.hold) return skillPress('set');
   if (walk.sit) return standUp();
   if (!tg) return;
   if (tg.kind === 'ball') return pickBall(tg.b);
+  if (tg.kind === 'door') return toggleDoor(tg.d);
   useItem(tg.it, tg.point);
   updateFocus();
 }
 function toWorldOf(it, lx, lz) { const r = (it.rot * Math.PI) / 180; return [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)]; }
+function toLocalOf(it, x, z) { const r = (it.rot * Math.PI) / 180, dx = x - it.x, dz = z - it.z; return [dx * Math.cos(r) - dz * Math.sin(r), dx * Math.sin(r) + dz * Math.cos(r)]; }
+const DRINKS = [['運動飲料', '#2F6FB6'], ['礦泉水', '#9FD3F2'], ['綠茶', '#3E8E41'], ['奶茶', '#C9A06A'], ['檸檬汽水', '#E8D44D'], ['黑咖啡', '#3B2A20'], ['可樂', '#B8322B'], ['蘋果西打', '#D98E32']];
 function useItem(it, point) {
-  const t = it.type, def = CAT[t], { w, d } = sizeOf(it), on = !walk.off.has(it.id);
+  const t = it.type, { w, d } = sizeOf(it), on = !walk.off.has(it.id);
   const r = (it.rot * Math.PI) / 180;
+  const side = point ? (toLocalOf(it, point.x, point.z)[0] < 0 ? 0 : 1) : 0;
   if (SIT_EYE[t] || t === 'bleacher') {
     let lz = t === 'sofa' ? 0.08 : 0, eye = SIT_EYE[t];
     if (t === 'bleacher') { const tiers = Math.max(1, Math.round(d / 0.8)); lz = d / 2 - d / tiers / 2 - 0.1; eye = 0.42 * tiers + 0.8; }
     // 坐在點到的那一格（沙發、長椅、看台沿著長邊）
-    let lx = 0; if (point && w > 1.2) { const dx = point.x - it.x, dz = point.z - it.z; lx = clamp(dx * Math.cos(r) - dz * Math.sin(r), -w / 2 + 0.35, w / 2 - 0.35); }
+    let lx = 0; if (point && w > 1.2) lx = clamp(toLocalOf(it, point.x, point.z)[0], -w / 2 + 0.35, w / 2 - 0.35);
     const [sx, sz] = toWorldOf(it, lx, lz);
     walk.sit = { x: sx, z: sz, eye, it }; walk.target = null; targetMark.visible = false;
     walk.yaw = r; walk.pitch = t === 'referee' ? -0.35 : -0.05;
-    toast(t === 'referee' ? '爬上裁判椅了：從這裡看得到整面網。按 E 或開始走路就會下來' : `坐下了。按 E 或開始走路就會站起來`);
+    toast(t === 'referee' ? '爬上裁判椅了：從這裡看得到整面網。按 E 或開始走路就會下來' : '坐下了。按 E 或開始走路就會站起來');
     return;
   }
-  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：點一下畫面或按 E 丟出去，掉在地上可以再撿'); return; }
+  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：E 舉球、Q 墊球、在網子前按 R 攻擊，點一下畫面就丟出去'); return; }
   if (['fan', 'floorfan', 'wallfan', 'exhaust', 'aircon', 'standac', 'packac', 'tv'].includes(t)) {
     if (on) walk.off.add(it.id); else walk.off.delete(it.id);
     const ac = ['aircon', 'standac', 'packac'].includes(t);
     toast(t === 'tv' ? (on ? '電視關掉了' : '電視打開了：正在轉播比賽（示意）') : ac ? (on ? '冷氣關掉了' : '冷氣開了：設定 26°C') : (on ? '電扇關掉了' : '電扇打開了'));
     return;
   }
-  if (t === 'vending') { walk.drinks++; toast(`叮咚！掉出一瓶運動飲料（NT$25）。這趟已經買了 ${walk.drinks} 瓶`); return; }
-  if (['water', 'watertall', 'purifier'].includes(t)) { toast(t === 'watertall' ? '裝了一杯冰水（冰／溫／熱三個出水口）' : '裝了一杯水'); return; }
-  if (t === 'fridge') { toast('拿了一瓶冰礦泉水'); return; }
-  if (t === 'scoreboard' || t === 'flipscore') {
-    // 點左半邊加主隊、右半邊加客隊；一局 25 分、要贏 2 分
-    let side = 0; if (point) { const dx = point.x - it.x, dz = point.z - it.z; side = dx * Math.cos(r) - dz * Math.sin(r) < 0 ? 0 : 1; }
-    walk.score[side]++;
-    const [a, b] = walk.score;
-    if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) { walk.sets[a > b ? 0 : 1]++; toast(`這局 ${a}:${b} 結束！局數 主隊 ${walk.sets[0]} : ${walk.sets[1]} 客隊`); walk.score = [0, 0]; }
-    else toast(`${side ? '客隊' : '主隊'}得分　主隊 ${a} : ${b} 客隊（點計分板左半邊加主隊、右半邊加客隊）`);
-    return;
-  }
-  if (['locker', 'cubby', 'lowcubby'].includes(t)) { toast(`包包放進 ${1 + Math.floor(Math.random() * Math.max(1, Math.round(w / 0.4)))} 號格了（示意）`); return; }
+  if (t === 'vending') { dropDrink(it); return; }
+  if (['water', 'watertall', 'purifier'].includes(t)) { fillBottle(it); return; }
+  if (t === 'fridge') { toggleFridge(it); return; }
+  if (t === 'scoreboard' || t === 'flipscore') { addPoint(side, t === 'flipscore'); return; }
+  if (['locker', 'cubby', 'lowcubby'].includes(t)) { toggleBag(it, point); return; }
   if (t === 'shoerack') { toast('鞋子放好了：球場只能穿室內球鞋'); return; }
   if (t === 'panel') { setDark(!walk.dark); toast(walk.dark ? '全館的燈關掉了（再按一次打開）' : '燈全部打開了'); return; }
+  if (t === 'desk') { playVideo('電腦裡的影片'); return; }
+  if (t === 'camera') { takePhoto(it); return; }
   if (t === 'whiteboard') { toast('戰術板上畫著 5-1 輪轉的站位（示意）'); return; }
-  if (t === 'sinkrow' || t === 'steelsink') { toast('洗好手了'); return; }
+  if (t === 'sinkrow' || t === 'steelsink') { toast('洗好手了，記得擦乾再拿球'); return; }
+  if (t === 'toilet') { toast('嘩啦——沖好了'); return; }
+  if (t === 'showerstall') { toast('熱水來了（示意）：洗完記得把地板刮乾'); return; }
   showItemCard(it);
 }
 // 「查看」：左下角卡片顯示名稱、尺寸、參考價
@@ -4860,7 +4937,7 @@ function showItemCard(it) {
   $('zc-t').textContent = labelOf(it);
   const cats = TYPE_CATS[it.type] || [];
   const price = cats.length && CATALOG[cats[0]] ? chosen(cats[0], getPicks()) : null;
-  $('zc-d').textContent = price && price.price ? `參考：${price.brand ? price.brand + '・' : ''}${price.name}` : '在 3D 編輯模式可以拖、轉、改大小。';
+  $('zc-d').textContent = price && price.price ? `參考：${price.brand ? price.brand + '・' : ''}${price.name}` : '雙擊物件可以看完整的評估與報價。';
   const dl = [['尺寸', `${fmt1(w)}×${fmt1(d)}${def.h ? '×' + fmt1(def.h) : ''} m`], ['角度', `${f2(it.rot)}°`]];
   if (price && price.price) dl.push(['參考價', `NT$${Math.round(price.price).toLocaleString()}／${CATALOG[cats[0]].unit}`]);
   $('zc-dl').innerHTML = dl.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
@@ -4868,8 +4945,8 @@ function showItemCard(it) {
 }
 function standUp() {
   const s = walk.sit; if (!s) return; walk.sit = null;
-  const r = (s.it.rot * Math.PI) / 180, fx = -Math.sin(r), fz = -Math.cos(r);
-  [walk.x, walk.z] = collide(s.x + fx * (s.it.type === 'bleacher' ? Math.max(1.2, sizeOf(s.it).d) : 0.75), s.z + fz * (s.it.type === 'bleacher' ? Math.max(1.2, sizeOf(s.it).d) : 0.75));
+  const r = (s.it.rot * Math.PI) / 180, fx = -Math.sin(r), fz = -Math.cos(r), k = s.it.type === 'bleacher' ? Math.max(1.2, sizeOf(s.it).d) : 0.75;
+  [walk.x, walk.z] = collide(s.x + fx * k, s.z + fz * k);
   walk.pitch = -0.04;
 }
 function setDark(dark) {
@@ -4877,48 +4954,333 @@ function setDark(dark) {
   renderer.toneMappingExposure = dark ? 0.3 : 1.05;
   ledMat.emissiveIntensity = dark ? 0.04 : 2.2;
 }
-// ---- 排球：拿在手上、丟出去（重力、地板彈跳、撞牆反彈）、滾停後可以再撿
+// ---- 小動畫：每幀推進，做完就移除
+const tweens = [];
+function tween(dur, step, done) { tweens.push({ t: 0, dur, step, done }); }
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i]; tw.t += dt; const p = Math.min(1, tw.t / tw.dur);
+    tw.step(p);
+    if (p >= 1) { tweens.splice(i, 1); tw.done && tw.done(); }
+  }
+}
+const ease = (p) => p * p * (3 - 2 * p);
+// ---- 門：區域的門（鉸鍊門）、主入口（玻璃滑門）；關著的門擋路
+function toggleDoor(d) {
+  d.open = !d.open;
+  toast(d.main ? (d.open ? '主入口的自動門打開了' : '主入口的門關上了') : (d.open ? '門開了' : '門關上了'));
+}
+function updateDoors(dt) {
+  for (const d of [...zoneDoors, ...mainDoors]) {
+    const target = d.open ? 1 : 0; if (d.t === target) continue;
+    d.t = clamp(d.t + Math.sign(target - d.t) * dt * 1.8, 0, 1);
+    const p = ease(d.t);
+    if (d.main) for (const pn of d.panes) pn.m.position.set(pn.x + d.ux * pn.s * p * d.slide, pn.y, pn.z + d.uz * pn.s * p * d.slide);
+    else d.pivot.rotation.y = d.base + d.s * (Math.PI / 2) * 0.95 * p;
+  }
+}
+function blockers() {
+  const out = colliders.slice();
+  for (const d of zoneDoors) if (d.t < 0.6) out.push(d.seg);
+  for (const d of mainDoors) if (d.t < 0.6) out.push(d.seg);
+  return out;
+}
+// ---- 販賣機：隨機掉一瓶飲料到取物口
+const cans = [];
+function dropDrink(it) {
+  const [name, col] = DRINKS[Math.floor(Math.random() * DRINKS.length)];
+  const { d } = sizeOf(it), [x, z] = toWorldOf(it, (Math.random() - 0.5) * 0.3, -d / 2 - 0.1);
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 16), mat(col)); body.position.y = 0.06; g.add(body);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.02, 16), mat('#C9CDD0', { metalness: 0.8, roughness: 0.3 })); top.position.y = 0.13; g.add(top);
+  g.position.set(x, 0.55, z); g.rotation.z = Math.PI / 2; g.rotation.y = Math.random() * 3; ballsGroup.add(g);
+  cans.push(g); while (cans.length > 12) ballsGroup.remove(cans.shift());
+  tween(0.45, (p) => { g.position.y = 0.55 - 0.52 * p * p; }, () => { g.position.y = 0.03; });
+  walk.drinks++;
+  toast(`叮咚！掉出一瓶「${name}」（NT$25）。這趟已經買了 ${walk.drinks} 瓶`);
+}
+// ---- 飲水機：拿出水壺放到出水口，水慢慢裝滿
+function fillBottle(it) {
+  if (walk.filling) return;
+  const { d } = sizeOf(it), tall = it.type === 'watertall', [x, z] = toWorldOf(it, tall ? -0.12 : 0, -d / 2 + (tall ? 0.02 : -0.06));
+  const g = new THREE.Group(); g.position.set(x, tall ? 0.87 : 0.72, z);
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.22, 20), new THREE.MeshStandardMaterial({ color: '#BFE3F2', transparent: true, opacity: 0.35, roughness: 0.1 })); shell.position.y = 0.11; g.add(shell);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 16), mat('#22304A')); cap.position.y = 0.24; g.add(cap);
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.2, 20), new THREE.MeshStandardMaterial({ color: '#4FA3D9', transparent: true, opacity: 0.75, roughness: 0.05 }));
+  water.position.y = 0.006; water.scale.y = 0.01; g.add(water);
+  const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 8), new THREE.MeshStandardMaterial({ color: '#7FC4EA', transparent: true, opacity: 0.6 })); stream.position.y = 0.34; g.add(stream);
+  ballsGroup.add(g); walk.filling = true;
+  toast('拿出水壺放到出水口，裝水中…');
+  tween(2.2, (p) => { water.scale.y = Math.max(0.01, p); water.position.y = 0.006 + 0.1 * p; stream.visible = p < 0.98; }, () => {
+    toast('裝滿一壺水了（600 ml），記得多補水'); walk.filling = false;
+    tween(0.9, () => {}, () => ballsGroup.remove(g));
+  });
+}
+// ---- 冰箱：門打開，裡面是空的
+function toggleFridge(it) {
+  const g = itemObjs.get(it.id) || null;
+  let pivot = null; (g || zonesGroup).traverse((o) => { if (o.userData.fridgeOf === it.id) pivot = o; });
+  const open = !walk.open.has(it.id);
+  if (open) walk.open.add(it.id); else walk.open.delete(it.id);
+  if (pivot) { const a0 = pivot.rotation.y, a1 = open ? 1.95 : 0; tween(0.6, (p) => { pivot.rotation.y = a0 + (a1 - a0) * ease(p); }); }
+  toast(open ? '打開冰箱……裡面什麼都沒有' : '冰箱關上了');
+}
+// ---- 置物櫃、木格櫃：放包包（點哪一欄就放那一欄，再按一次拿回來）
+function toggleBag(it, point) {
+  const { w, d } = sizeOf(it), def = CAT[it.type];
+  if (it.type === 'locker') {
+    const n = 1 + Math.floor(clamp(point ? toLocalOf(it, point.x, point.z)[0] + w / 2 : 0, 0, w - 0.01) / 0.45);
+    const k = `${it.id}:${n}`;
+    if (walk.bags.has(k)) { walk.bags.delete(k); toast(`從 ${n} 號櫃拿回包包了`); } else { walk.bags.set(k, null); toast(`包包放進 ${n} 號櫃，門鎖上了`); }
+    return;
+  }
+  const cols = Math.max(1, Math.round(w / 0.4)), cw = w / cols;
+  const col = clamp(Math.floor(((point ? toLocalOf(it, point.x, point.z)[0] : 0) + w / 2) / cw), 0, cols - 1);
+  const k = `${it.id}:${col}`;
+  if (walk.bags.has(k)) { const m = walk.bags.get(k); if (m) ballsGroup.remove(m); walk.bags.delete(k); toast(`拿回第 ${col + 1} 格的包包`); return; }
+  const low = it.type === 'lowcubby', y0 = low ? 0.08 : 0.03, cols2 = ['#B8322B', '#22304A', '#3E8E41', '#E07B39', '#6B4FA0', '#1F2124'];
+  const bag = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(Math.min(0.3, cw - 0.06), 0.17, Math.min(0.26, d - 0.06)), mat(cols2[Math.floor(Math.random() * cols2.length)], { roughness: 0.8 })); body.position.y = 0.085; bag.add(body);
+  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 6, 16, Math.PI), mat('#1F2124')); strap.position.y = 0.17; bag.add(strap);
+  const [x, z] = toWorldOf(it, -w / 2 + cw * (col + 0.5), -0.02);
+  bag.position.set(x, y0, z); bag.rotation.y = (it.rot * Math.PI) / 180; ballsGroup.add(bag);
+  walk.bags.set(k, bag);
+  toast(`包包放進第 ${col + 1} 格了（再按一次拿回來）`);
+}
+// ---- 計分：電子計分板加分、翻分板翻頁；一局 25 分、要贏 2 分
+const scoreCv = document.createElement('canvas'); scoreCv.width = 512; scoreCv.height = 256;
+const scoreTex = new THREE.CanvasTexture(scoreCv); scoreTex.colorSpace = THREE.SRGBColorSpace;
+function drawScore() {
+  const c = scoreCv.getContext('2d'), [a, b] = walk.score;
+  c.fillStyle = '#F4F4F2'; c.fillRect(0, 0, 512, 256);
+  c.fillStyle = '#B8322B'; c.fillRect(0, 0, 252, 46); c.fillStyle = '#2F5FA8'; c.fillRect(260, 0, 252, 46);
+  c.fillStyle = '#fff'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(`主隊  ${walk.sets[0]}`, 126, 24); c.fillText(`${walk.sets[1]}  客隊`, 386, 24);
+  c.fillStyle = '#1B2638'; c.font = 'bold 170px sans-serif'; c.fillText(String(a), 126, 160); c.fillText(String(b), 386, 160);
+  c.fillRect(254, 60, 4, 190);
+  scoreTex.needsUpdate = true;
+}
+function addPoint(side, flip) {
+  walk.score[side]++;
+  const [a, b] = walk.score;
+  if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) { walk.sets[a > b ? 0 : 1]++; toast(`這局 ${a}:${b} 結束！局數 主隊 ${walk.sets[0]} : ${walk.sets[1]} 客隊`); walk.score = [0, 0]; }
+  else toast(`${flip ? '翻了一頁：' : ''}${side ? '客隊' : '主隊'}得分　主隊 ${a} : ${b} 客隊`);
+  drawScore();
+}
+drawScore();
+// ---- 電腦：播影片
+const VIDEO_SRC = 'video/rally-demo.mp4';   // 之後換成要播的影片
+function playVideo(title) {
+  const v = $('vplayer'); if (!v.src) v.src = VIDEO_SRC;
+  $('vtitle').textContent = title; $('vmodal').hidden = false; walk.keys.clear(); walk.paused = true;
+  v.currentTime = 0; v.play().catch(() => {});
+}
+function closeModals() { const v = $('vplayer'); v.pause(); $('vmodal').hidden = true; $('pmodal').hidden = true; walk.paused = false; }
+// ---- 智慧球場攝影機：從那支攝影機的位置拍你（畫面裡放一個你的人形）
+const avatar = (() => {
+  const g = new THREE.Group(), skin = mat('#D9A57E'), jersey = mat('#F2B705', { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  for (const s of [-1, 1]) { add(new THREE.CylinderGeometry(0.065, 0.055, 0.82, 12), skin, s * 0.1, 0.43, 0); add(new THREE.BoxGeometry(0.11, 0.08, 0.26), mat('#F4F4F2'), s * 0.1, 0.04, -0.04); }
+  add(new THREE.CylinderGeometry(0.17, 0.15, 0.24, 16), dark, 0, 0.92, 0);
+  add(new THREE.CylinderGeometry(0.18, 0.16, 0.52, 16), jersey, 0, 1.3, 0);
+  for (const s of [-1, 1]) { const arm = add(new THREE.CylinderGeometry(0.045, 0.04, 0.62, 10), skin, s * 0.24, 1.28, 0); arm.rotation.z = s * 0.22; }
+  add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 1.72, 0);
+  add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 1.75, 0);
+  g.visible = false; scene.add(g); return g;
+})();
+function takePhoto(camIt) {
+  const H = state.building.H, cy = Math.min(H - 1.2, 5.5);
+  const cv = renderer.domElement, dist = Math.hypot(camIt.x - walk.x, camIt.z - walk.z);
+  const pc = new THREE.PerspectiveCamera(clamp((2 * Math.atan(3.2 / Math.max(1, dist)) * 180) / Math.PI, 14, 55), cv.width / cv.height, 0.1, 300);
+  // 鏡頭從攝影機機身往前 0.4 m（不然會拍到機身本身）
+  const tx = walk.x - camIt.x, tz = walk.z - camIt.z, tl = Math.hypot(tx, tz) || 1;
+  pc.position.set(camIt.x + (tx / tl) * 0.4, cy - 0.1, camIt.z + (tz / tl) * 0.4); pc.lookAt(walk.x, 1.0, walk.z);
+  const camG = itemObjs.get(camIt.id), camVis = camG ? camG.visible : true; if (camG) camG.visible = false;
+  avatar.position.set(walk.x, walk.sit ? walk.sit.eye - 1.6 : 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
+  const hv = hands.visible; hands.visible = false;
+  renderer.render(scene, pc);
+  const url = cv.toDataURL('image/jpeg', 0.9);
+  avatar.visible = false; hands.visible = hv; if (camG) camG.visible = camVis; drawFrame(true);
+  $('pimg').src = url; $('pdl').href = url; $('pmodal').hidden = false; walk.keys.clear(); walk.paused = true;
+  toast(dist > 20 ? '拍到了，不過你離這支攝影機有點遠' : '喀嚓！智慧球場攝影機拍到你了');
+}
+// ---- 排球：第一人稱雙手。E 舉球、Q 墊球（時機對才接得住）、網前 R 攻擊；點一下丟出去
 const ballsGroup = new THREE.Group(); scene.add(ballsGroup);
 const balls = [];
 const BALL_R = 0.105;
-const ballMat = (() => {
+function ballMaterial(hot) {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d');
   const cols = ['#F2C230', '#2F5D8C', '#F4F4F0', '#F2C230', '#2F5D8C', '#F4F4F0'];
   cols.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, (i * 128) / cols.length, 256, 128 / cols.length + 1); });
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 });
-})();
-function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat); m.castShadow = true; return m; }
-function grabBall() { if (walk.hold) return; walk.hold = newBallMesh(); scene.add(walk.hold); holdBall(); }
-function holdBall() {
-  if (!walk.hold) return;
-  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-  walk.hold.position.copy(camera.position).addScaledVector(fwd, 0.55).addScaledVector(right, 0.18).add(new THREE.Vector3(0, -0.28, 0));
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, emissive: hot ? '#F2B705' : '#000000', emissiveIntensity: hot ? 0.55 : 0 });
 }
-function throwBall() {
-  const m = walk.hold; if (!m) return; walk.hold = null; scene.remove(m);
-  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  const v = fwd.multiplyScalar(9.5).add(new THREE.Vector3(0, 2.2, 0));
+const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
+function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat); m.castShadow = true; return m; }
+// 雙手（跟著鏡頭）：前臂、手掌、袖口
+if (!camera.parent) scene.add(camera);
+const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
+const skinM = new THREE.MeshStandardMaterial({ color: '#D9A57E', roughness: 0.6 }), sleeveM = new THREE.MeshStandardMaterial({ color: '#F2B705', roughness: 0.7 });
+function mkArm() {
+  const a = new THREE.Group();
+  const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.037, 0.34, 12), skinM); fore.rotation.x = Math.PI / 2; fore.position.z = -0.17; a.add(fore);
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.028, 0.1), skinM); palm.position.z = -0.38; a.add(palm);
+  const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.022, 0.06), skinM); thumb.position.set(0.045, 0.006, -0.36); thumb.rotation.y = -0.5; a.add(thumb);
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12), sleeveM); sleeve.rotation.x = Math.PI / 2; sleeve.position.z = 0.02; a.add(sleeve);
+  a.traverse((o) => { o.userData.noPick = true; });
+  hands.add(a); return a;
+}
+const armL = mkArm(), armR = mkArm();
+armR.children[2].position.x = -0.045; armR.children[2].rotation.y = 0.5;
+// 姿勢：[位置 x,y,z, 旋轉 x,y,z]（鏡頭座標；手臂朝 -z 伸出）
+const POSE = {
+  hold: { L: [-0.22, -0.36, -0.2, 0.38, -0.27, 0.3], R: [0.22, -0.36, -0.2, 0.38, 0.27, -0.3], ball: [0, -0.2, -0.58] },
+  set: { L: [-0.16, -0.2, -0.25, 0.54, -0.23, 0.4], R: [0.16, -0.2, -0.25, 0.54, 0.23, -0.4], ball: [0, 0.06, -0.62] },
+  bump: { L: [-0.14, -0.42, -0.2, 0.1, -0.34, 0.1], R: [0.14, -0.42, -0.2, 0.1, 0.34, -0.1], ball: [0, -0.32, -0.66] },
+  cock: { L: [-0.16, -0.05, -0.2, 1.2, -0.2, 0.2], R: [0.22, 0.05, 0.05, 1.9, 0.2, -0.3], ball: [0, 0.4, -0.9] },
+  swing: { L: [-0.18, -0.3, -0.1, 0.1, -0.3, 0.3], R: [0.12, -0.1, -0.25, -0.3, 0.1, -0.2], ball: [0, 0.2, -1.2] },
+};
+let pose = 'hold';
+function applyPose(dt, snap) {
+  const P = POSE[pose], k = snap ? 1 : 1 - Math.exp(-dt * 16);
+  for (const [arm, v] of [[armL, P.L], [armR, P.R]]) {
+    arm.position.x += (v[0] - arm.position.x) * k; arm.position.y += (v[1] - arm.position.y) * k; arm.position.z += (v[2] - arm.position.z) * k;
+    arm.rotation.x += (v[3] - arm.rotation.x) * k; arm.rotation.y += (v[4] - arm.rotation.y) * k; arm.rotation.z += (v[5] - arm.rotation.z) * k;
+  }
+}
+const skill = { mode: null, h: 0, v: 0, n: 0, best: 0 };
+const SKV = { set: 4.0, bump: 4.8 };
+function grabBall() { if (walk.hold) return; walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(0); }
+function placeHeld() {
+  const m = walk.hold; if (!m) return;
+  if (skill.mode) { const c = POSE[skill.mode].ball, sc = skill.mode === 'set' ? 0.55 : 0.5; m.position.set(c[0], c[1] + skill.h * sc, c[2]); }
+  else { const c = POSE.hold.ball; m.position.set(c[0], c[1], c[2]); }
+}
+function releaseBall(v) {
+  // 手上的球變成場上的球（世界座標＋初速）
+  const m = walk.hold; if (!m) return; walk.hold = null;
+  const p = new THREE.Vector3(); m.getWorldPosition(p); camera.remove(m); m.position.copy(p); m.material = ballMat; delete m.userData.noPick;
   m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
+  skill.mode = null; hands.visible = false;
+}
+function throwBall() {
+  if (!walk.hold || skill.mode) return;
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  releaseBall(fwd.multiplyScalar(9.5).add(new THREE.Vector3(0, 2.2, 0)));
 }
 function pickBall(b) {
   if (walk.hold) return;
   const i = balls.indexOf(b); if (i >= 0) balls.splice(i, 1);
-  ballsGroup.remove(b.m); delete b.m.userData.ball; walk.hold = b.m; scene.add(b.m); holdBall();
+  ballsGroup.remove(b.m); delete b.m.userData.ball; b.m.userData.noPick = true; walk.hold = b.m; camera.add(b.m);
+  pose = 'hold'; hands.visible = true; placeHeld();
+  toast('撿起球了：E 舉球、Q 墊球、網前 R 攻擊，點一下丟出去');
+}
+function skillPress(kind) {
+  if (!walk.hold || walk.spike) return;
+  if (!skill.mode) {
+    skill.mode = kind; skill.h = 0; skill.v = SKV[kind]; skill.n = 0; pose = kind;
+    toast(kind === 'set' ? '舉球！球掉回手上的時候再按 E（球會亮起來）' : '墊球！球掉到手臂的時候再按 Q（球會亮起來）');
+    return;
+  }
+  const inWin = skill.v < 0 && skill.h < 0.3 && skill.h > -0.22;
+  if (!inWin) return skillMiss(skill.v > 0 || skill.h >= 0.3 ? '太早按了' : '太晚了');
+  skill.mode = kind; pose = kind; skill.v = SKV[kind]; skill.h = Math.max(0, skill.h); skill.n++;
+  skill.best = Math.max(skill.best, skill.n);
+  $('wk-combo').textContent = `${kind === 'set' ? '舉球' : '墊球'} 連續 ${skill.n} 下${skill.best > 1 ? `（最佳 ${skill.best}）` : ''}`; $('wk-combo').hidden = false;
+}
+function skillMiss(why) {
+  const n = skill.n;
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); fwd.y = 0;
+  releaseBall(fwd.multiplyScalar(0.6).add(new THREE.Vector3(0, -0.5, 0)));
+  $('wk-combo').hidden = true;
+  toast(`${why}，球掉了！這次連續 ${n} 下${skill.best ? `，最佳 ${skill.best} 下` : ''}。走過去看著球按 E 撿起來`);
+}
+function updateSkill(dt) {
+  if (!skill.mode || !walk.hold) return;
+  skill.v -= 9.8 * dt; skill.h += skill.v * dt;
+  const inWin = skill.v < 0 && skill.h < 0.3 && skill.h > -0.22;
+  walk.hold.material = inWin ? ballHot : ballMat;
+  walk.hold.rotation.x += dt * 6;
+  if (skill.h < -0.4) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前按 E）' : '沒接到（墊球要在球掉到手臂時按 Q）');
+}
+// ---- 網前攻擊：助跑、起跳、揮臂把舊舉過來的球扣過網、落地
+function nearNet() {
+  for (const c of state.items) {
+    if (CAT[c.type].court !== 'vb' || c.mode === 'lines') continue;
+    const [lx, lz] = toLocalOf(c, walk.x, walk.z);
+    if (Math.abs(lx) < 4 && Math.abs(lz) < 4.6) return { c, lx, lz };
+  }
+  return null;
+}
+function startSpike() {
+  if (walk.spike || walk.sit) return;
+  const nn = nearNet();
+  if (!nn) { toast('走到排球網前面（4 m 內）再按 R 攻擊'); return; }
+  if (walk.hold) { camera.remove(walk.hold); walk.hold = null; skill.mode = null; $('wk-combo').hidden = true; }
+  const sg = Math.sign(nn.lx) || 1, r = (nn.c.rot * Math.PI) / 180;
+  const dir = [-sg * Math.cos(r), sg * Math.sin(r)];   // 朝網子的方向（世界座標）
+  walk.yaw = Math.atan2(-dir[0], -dir[1]); walk.pitch = 0.05; walk.target = null; targetMark.visible = false;
+  const run = Math.max(0, Math.min(2.2, Math.abs(nn.lx) - 0.9));
+  walk.spike = { t: 0, nn, sg, dir, x0: walk.x, z0: walk.z, run, hit: false, ball: null };
+  hands.visible = true; pose = 'cock';
+}
+function updateSpike(dt) {
+  const s = walk.spike; s.t += dt; const t = s.t;
+  // 助跑 0–0.45s、蹲 0.45–0.65、跳 0.65–1.0、擊球 1.0、落地 1.0–1.45、站穩 1.7
+  const runP = ease(clamp(t / 0.45, 0, 1));
+  walk.x = s.x0 + s.dir[0] * s.run * runP; walk.z = s.z0 + s.dir[1] * s.run * runP;
+  let eye = EYE;
+  if (t < 0.45) eye = EYE + Math.sin(t * 20) * 0.02;
+  else if (t < 0.65) eye = EYE - 0.32 * ease((t - 0.45) / 0.2);
+  else if (t < 1.0) eye = EYE - 0.32 + 1.05 * Math.sin(((t - 0.65) / 0.35) * Math.PI / 2);
+  else if (t < 1.45) eye = EYE + 0.73 - 0.73 * ((t - 1.0) / 0.45) ** 2 - 0.12 * Math.max(0, (t - 1.35) / 0.1);
+  else eye = EYE - 0.12 * (1 - ease((t - 1.45) / 0.25));
+  walk.pitch = t < 0.45 ? 0.05 : t < 1.0 ? 0.05 + 0.4 * ease((t - 0.45) / 0.55) : 0.45 - 0.75 * ease(Math.min(1, (t - 1.0) / 0.4));
+  // 舉過來的球：從網邊 3 m 的舉球員位置拋到擊球點
+  const hitP = new THREE.Vector3(walk.x + s.dir[0] * 0.45, EYE + 0.73 + 0.55, walk.z + s.dir[1] * 0.45);
+  if (t >= 0.35 && !s.ball && !s.hit) {
+    s.ball = newBallMesh(); ballsGroup.add(s.ball);
+    const r = (s.nn.c.rot * Math.PI) / 180, side = s.nn.lz > 0 ? -1 : 1;
+    const [sx, sz] = toWorldOf(s.nn.c, s.sg * 0.8, s.nn.lz + side * 3);
+    s.from = new THREE.Vector3(sx, 2.3, sz);
+  }
+  if (s.ball && !s.hit) {
+    const p = clamp((t - 0.35) / 0.65, 0, 1), arc = Math.sin(p * Math.PI) * 1.4;
+    s.ball.position.lerpVectors(s.from, hitP, p); s.ball.position.y += arc; s.ball.rotation.x += dt * 8;
+  }
+  pose = t < 0.98 ? 'cock' : 'swing';
+  if (t >= 1.0 && !s.hit) {
+    s.hit = true;
+    const [lx] = toLocalOf(s.nn.c, walk.x, walk.z);
+    const [tx, tz] = toWorldOf(s.nn.c, -s.sg * (4 + Math.random() * 3), clamp(s.nn.lz + (Math.random() - 0.5) * 4, -4, 4));
+    const T = 0.5, p0 = s.ball.position.clone();
+    const v = new THREE.Vector3((tx - p0.x) / T, (BALL_R - p0.y) / T + 0.5 * 9.8 * T, (tz - p0.z) / T);
+    s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: { c: s.nn.c, sg: s.sg } }; balls.push(s.ball.userData.ball);
+    while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
+    toast('扣——！');
+  }
+  camera.position.set(walk.x, eye, walk.z);
+  camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
+  if (t > 1.7) { walk.spike = null; hands.visible = !!walk.hold; pose = 'hold'; walk.pitch = -0.04; }
 }
 function updateBalls(dt) {
+  updateTweens(dt); updateDoors(dt);
   if (!balls.length || !dt) return;
-  const H = state.building.H, steps = 3, h = dt / steps;
+  const H = state.building.H, steps = 3, h = dt / steps, segs = blockers();
   for (const b of balls) {
     if (b.rest > 2) continue;
     for (let k = 0; k < steps; k++) {
       b.v.y -= 9.8 * h;
       b.m.position.addScaledVector(b.v, h);
       const p = b.m.position;
-      if (p.y < BALL_R) { p.y = BALL_R; if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; } }
+      if (p.y < BALL_R) {
+        p.y = BALL_R;
+        if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(inside ? '漂亮！扣球得分 🏐' : '可惜，出界了'); b.spike = null; }
+        if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
+      }
       if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
-      for (const [x1, z1, x2, z2] of colliders) {
+      for (const [x1, z1, x2, z2] of segs) {
         const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
         const ex = p.x - (x1 + dx * t), ez = p.z - (z1 + dz * t), dd = Math.hypot(ex, ez);
         if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
@@ -4929,6 +5291,22 @@ function updateBalls(dt) {
     if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
   }
+}
+// ---- 門的清單：buildZones／buildBuilding 重建時清空
+const zoneDoors = [], mainDoors = [], zoneRoofs = [];
+const doorMat = new THREE.MeshStandardMaterial({ color: '#E9E6DF', roughness: 0.6 });
+// 鉸鍊門：a→b 是門洞，n 是往外的法線（門往外開）
+function addHingedDoor(g, a, b, n, kind) {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len;
+  const pivot = new THREE.Group(), base = Math.atan2(-uz, ux); pivot.position.set(a[0], 0, a[1]); pivot.rotation.y = base; g.add(pivot);
+  const leafMat = kind === 'glass' ? glassMat : kind === 'frost' ? frostMat : doorMat;
+  const leaf = box(pivot, len - 0.04, 2.02, 0.04, leafMat, len / 2, 0.02, 0); if (kind !== 'solid') { leaf.userData.noInk = true; leaf.renderOrder = 2; }
+  if (kind !== 'solid') { box(pivot, len - 0.04, 0.05, 0.05, frameMat, len / 2, 0.02, 0); box(pivot, len - 0.04, 0.05, 0.05, frameMat, len / 2, 1.99, 0); box(pivot, 0.05, 2.02, 0.05, frameMat, len - 0.05, 0.02, 0); }
+  for (const zs of [-1, 1]) box(pivot, 0.025, 0.16, 0.03, chrome, len - 0.12, 0.95, zs * 0.04);
+  const sgn = uz * n[0] - ux * n[1] > 0 ? 1 : -1;
+  const d = { pivot, base, s: sgn, t: 0, open: false, seg: [a[0], a[1], b[0], b[1]] };
+  pivot.traverse((o) => { if (o.isMesh) o.userData.door = d; });
+  zoneDoors.push(d); return d;
 }
 // 走到哪一區：先看畫的區域，再看球場
 function zoneAt(x, z) {
@@ -4969,8 +5347,11 @@ addEventListener('keydown', (e) => {
   if (!walk.on) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
-  if (k === 'escape') { e.preventDefault(); setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
+  if (k === 'escape') { e.preventDefault(); if (walk.paused) { closeModals(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
+  if (walk.paused) return;
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
+  if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold) skillPress('bump'); else toast('先拿一顆球（看著球車按 E）才能墊球'); return; }
+  if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('keyup', (e) => { walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
@@ -4994,9 +5375,11 @@ function endLook(e) {
   if (l.moved || performance.now() - l.t > 500) return;
   setPointer(e);
   // 拿著球：點一下就丟；點到伸手可及的物件：直接互動
-  if (walk.hold) { throwBall(); updateFocus(); return; }
+  if (walk.spike || walk.paused) return;
+  if (walk.hold) { if (!skill.mode) throwBall(); updateFocus(); return; }
   const tg = pickTargets(raycaster, 4);
-  if (tg) { doInteract(tg); return; }
+  // 單擊互動（稍等一下，雙擊就改成看資訊報表）
+  if (tg) { clearTimeout(walk.clickT); walk.clickT = setTimeout(() => doInteract(tg), 260); return; }
   if (walk.sit) { standUp(); return; }
   const p = floorHit(); if (!p) return;
   if (Math.hypot(p.x - walk.x, p.z - walk.z) > 40) return;
@@ -5048,6 +5431,7 @@ function drawFrame(force) {
   const { H } = state.building;
   walls.forEach((wl, i) => { wl.visible = walk.on || (typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true); });
   if (roof) roof.visible = walk.on || cp.y < H + 0.5;
+  for (const r of zoneRoofs) r.visible = walk.on;
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
   if (walk.on) updateBalls(dt);
   renderScene();
@@ -5101,7 +5485,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
