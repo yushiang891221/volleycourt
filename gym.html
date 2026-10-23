@@ -760,7 +760,7 @@ function sanitizeZone(z) {
   if (ZONE_FLOORS.includes(z.floor)) o.floor = z.floor;
   if (['open', 'glass', 'frost', 'solid', 'net'].includes(z.walls)) o.walls = z.walls;
   if (z.bare === true) o.bare = true;
-  const r = ((num(z.rot, 0) % 360) + 360) % 360; if (r) o.rot = Math.round(r * 10) / 10;
+  const r = ((num(z.rot, 0) % 360) + 360) % 360; if (r) o.rot = Math.round(r * 100) / 100;
   if (['n', 'e', 's', 'w'].includes(z.door)) o.door = z.door;
   if (typeof z.desc === 'string' && z.desc.trim()) o.desc = z.desc.slice(0, 160);
   return o;
@@ -2246,8 +2246,8 @@ function renderSelection() {
   const lockBtn = mkBtn('sel-lock', it.locked ? '解除鎖定' : '鎖定', toggleLockSel, it.locked ? 'primary' : '');
   lockBtn.setAttribute('aria-pressed', it.locked ? 'true' : 'false');
   mkBtn('sel-rot90', '旋轉 90°', () => rotateSel(90)).disabled = !!it.locked;
-  mkBtn('sel-rot15', '旋轉 15°', () => rotateSel(15)).disabled = !!it.locked;
-  { const f = numField('sel-rotdeg', '角度（°）', it.rot, 15, (v) => { if (it.locked) return lockedMsg(); pushHistory(); it.rot = ((v % 360) + 360) % 360; moveObj(it); updateOutline(); commit(); renderSelection(); }); f.style.maxWidth = '140px'; wrap.appendChild(f); }
+  mkBtn('sel-alignw', '對齊外牆', () => alignSelToWall()).disabled = !!it.locked;
+  { const f = numField('sel-rotdeg', '角度（°）', it.rot, 0.1, (v) => { if (it.locked) return lockedMsg(); pushHistory(); it.rot = ((v % 360) + 360) % 360; moveObj(it); updateOutline(); commit(); renderSelection(); }); f.style.maxWidth = '140px'; wrap.appendChild(f); }
   mkBtn('sel-dup', '複製', duplicateSel);
   mkBtn('sel-del', '刪除', deleteSel, 'danger').disabled = !!it.locked;
   wrap.appendChild(row);
@@ -2273,10 +2273,16 @@ function setLockAll(lock) {
   renderItems(); commit(); renderSelection();
   toast(lock ? `已鎖定 ${targets.length} 面球場` : `已解除 ${targets.length} 個物件的鎖定`);
 }
+function alignSelToWall() {
+  const it = state.items.find((x) => x.id === selectedId); if (!it) return;
+  if (it.locked) return lockedMsg();
+  pushHistory(); it.rot = alignToWall(it); moveObj(it); updateOutline(); commit(); renderSelection(); renderPlan();
+  toast(`已對齊最近的外牆（${f2(it.rot)}°）`);
+}
 function rotateSel(deg) {
   const it = state.items.find((x) => x.id === selectedId); if (!it) return;
   if (it.locked) return lockedMsg();
-  pushHistory(); it.rot = (it.rot + deg) % 360; moveObj(it); updateOutline(); commit(); renderSelection();
+  pushHistory(); it.rot = Math.round(norm360(it.rot + deg) * 100) / 100; moveObj(it); updateOutline(); commit(); renderSelection();
 }
 function duplicateSel() {
   const it = state.items.find((x) => x.id === selectedId); if (!it) return;
@@ -3509,7 +3515,7 @@ function courtSvg(it, sel) {
     s += `<rect class="cl" fill="none" x="${M(-2.45)}" y="${M(oz)}" width="${M(4.9)}" height="${M(5.8)}"/><circle class="cl" fill="none" cx="0" cy="${M(oz + 5.8)}" r="${M(1.8)}"/>`;
   }
   const K = annoK(), fsz = clamp(Math.min(fw, fd) * 0.07, 0.4, 0.9 * K);
-  const rotTxt = (it.rot % 180) === 90 ? ` transform="rotate(${it.rot === 90 ? 90 : -90})"` : '';
+  const nr = norm360(it.rot), rotTxt = nr === 90 || nr === 270 ? ` transform="rotate(${nr === 90 ? 90 : -90})"` : nr > 90 && nr < 270 ? ' transform="rotate(180)"' : '';
   s += `<g${rotTxt}><text class="ctx" x="0" y="${M(-fd / 2 + 1.0 * fsz + 0.2)}" text-anchor="middle" style="font-size:${M(fsz)}px">${esc(labelOf(it))}${lines ? '（畫線）' : ''}</text>`;
   s += `<text class="csub mono" x="0" y="${M(-fd / 2 + 1.7 * fsz + 0.25)}" text-anchor="middle" style="font-size:${M(fsz * 0.55)}px">${k === 'vb' ? '18 × 9 m' : `${cw} × ${cd} m`}${it.locked ? ' · 已鎖定' : ''}</text></g>`;
   if (sel) s += `<rect class="selbox" x="${M(-fw / 2)}" y="${M(-fd / 2)}" width="${M(fw)}" height="${M(fd)}"/>`;
@@ -3584,7 +3590,62 @@ function zoneLabelSvg(z, sel) {
   }
   return s + '</g>';
 }
-// 旋轉把手：選取框上緣中間往外一根短線＋圓點，拖它就能轉任何角度（預設每 15° 一格，按住 Shift 自由轉）
+// 旋轉吸附：外牆每一邊、畫的牆、其他區域與球場的角度都是「對齊參考」。
+// 物件的 x 軸在平面上的方向是 -rot，所以要跟一條角度 θ 的線平行，rot = -θ + k·90。
+const norm360 = (d) => ((d % 360) + 360) % 360;
+const angDiff = (a, b) => { const d = norm360(a - b); return d > 180 ? 360 - d : d; };
+function rotRefs(self) {
+  const refs = [];
+  const P = outlinePoly();
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 1) continue;
+    refs.push({ th: (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI, a, b, src: '外牆', L });
+  }
+  for (const w of state.walls || []) { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L > 0.5) refs.push({ th: (Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0]) * 180) / Math.PI, a: w.a, b: w.b, src: '牆', L }); }
+  for (const o of [...state.zones, ...state.items.filter((i) => CAT[i.type].court)]) if (o !== self && (o.rot || 0)) refs.push({ th: -(o.rot || 0), src: o.type in ZONES ? '區域' : '球場', o });
+  refs.push({ th: 0, src: '圖紙' });
+  return refs;
+}
+// 回傳吸附後的角度與參考線（沒有在 tol 度以內就照原角度）
+function snapRot(deg, self, tol = 2.5) {
+  let best = null;
+  for (const r of rotRefs(self)) for (let k = 0; k < 4; k++) {
+    const cand = norm360(-r.th + k * 90), d = angDiff(deg, cand);
+    if (d <= tol && (!best || d < best.d - 1e-6 || (Math.abs(d - best.d) < 1e-6 && (r.L || 0) > (best.r.L || 0)))) best = { d, deg: cand, r };
+  }
+  return best ? { deg: Math.round(best.deg * 100) / 100, ref: best.r } : { deg: Math.round(norm360(deg) * 10) / 10, ref: null };
+}
+// 「對齊外牆」：轉到最接近的外牆角度（不限距離）
+function alignToWall(o) {
+  const P = outlinePoly(); let best = null;
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1) continue;
+    const th = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+    for (let k = 0; k < 4; k++) { const cand = norm360(-th + k * 90), d = angDiff(o.rot || 0, cand); if (!best || d < best.d - 0.01 || (Math.abs(d - best.d) < 0.01 && L > best.L)) best = { d, deg: cand, L }; }
+  }
+  return best ? Math.round(best.deg * 100) / 100 : (o.rot || 0);
+}
+// 旋轉把手：選取框上緣中間往外一根短線＋圓點，拖它就能 360° 連續轉；靠近外牆、牆或其他區域的角度會自動吸住（按住 Shift 不吸附）
+function rotGuideSvg() {
+  if (!planDrag || (planDrag.kind !== 'zrot' && planDrag.kind !== 'irot') || !planDrag.snap) return '';
+  const { ref, o } = planDrag.snap, K = 1 / pv.s;
+  let s = '';
+  const deg = o.rot || 0, ux = Math.cos((-deg * Math.PI) / 180), uz = Math.sin((-deg * Math.PI) / 180), R = 40;
+  if (ref) {
+    // 對齊線：穿過物件中心、跟參考邊平行，參考邊本身加粗
+    const t = (ref.th * Math.PI) / 180, dx = Math.cos(t), dz = Math.sin(t);
+    s += `<line x1="${X(o.x - dx * R)}" y1="${Y(o.z - dz * R)}" x2="${X(o.x + dx * R)}" y2="${Y(o.z + dz * R)}" stroke="#E0A100" stroke-width="${M(1.2 * K)}" stroke-dasharray="${M(8 * K)} ${M(5 * K)}" pointer-events="none"/>`;
+    s += `<line x1="${X(o.x + dz * R)}" y1="${Y(o.z - dx * R)}" x2="${X(o.x - dz * R)}" y2="${Y(o.z + dx * R)}" stroke="#E0A100" stroke-width="${M(0.8 * K)}" stroke-dasharray="${M(3 * K)} ${M(5 * K)}" opacity=".6" pointer-events="none"/>`;
+    if (ref.a) s += `<line x1="${X(ref.a[0])}" y1="${Y(ref.a[1])}" x2="${X(ref.b[0])}" y2="${Y(ref.b[1])}" stroke="#E0A100" stroke-width="${M(5 * K)}" stroke-linecap="round" opacity=".75" pointer-events="none"/>`;
+  } else {
+    s += `<line x1="${X(o.x - ux * 3)}" y1="${Y(o.z - uz * 3)}" x2="${X(o.x + ux * 3)}" y2="${Y(o.z + uz * 3)}" stroke="#C4552A" stroke-width="${M(1 * K)}" stroke-dasharray="${M(4 * K)} ${M(4 * K)}" pointer-events="none"/>`;
+  }
+  const txt = `${f2(deg)}°${ref ? `　已對齊${ref.src}` : ''}`;
+  const fs = 13 * K, tw = ([...txt].reduce((n, ch) => n + (ch.charCodeAt(0) > 255 ? 1 : 0.6), 0) + 1.2) * fs;
+  s += `<g pointer-events="none"><rect x="${X(o.x) - M(tw / 2)}" y="${Y(o.z) - M(fs * 2.6)}" width="${M(tw)}" height="${M(fs * 1.6)}" rx="${M(4 * K)}" fill="${ref ? '#F2B705' : '#1B2638'}"/><text x="${X(o.x)}" y="${Y(o.z) - M(fs * 1.4)}" text-anchor="middle" style="font-size:${M(fs)}px;font-weight:700" fill="${ref ? '#1B2638' : '#fff'}">${txt}</text></g>`;
+  return s;
+}
 function rotKnob(id, attr, toW, hd) {
   const off = hd + 28 / pv.s, [tx, tz] = toW(0, -hd), [kx, kz] = toW(0, -off), r = 6 / pv.s;
   return `<line x1="${X(tx)}" y1="${Y(tz)}" x2="${X(kx)}" y2="${Y(kz)}" stroke="#C4552A" stroke-width="${M(1.5 / pv.s)}"/><circle class="handle" data-h="rot" data-${attr}="${id}" cx="${X(kx)}" cy="${Y(kz)}" r="${M(r)}" style="pointer-events:all;cursor:grab;stroke-width:${M(1.5 / pv.s)}px"/>`;
@@ -3664,6 +3725,7 @@ function renderPlan() {
   for (const z of zonesInOrder()) if (z.type !== 'floor') a(zoneSvg(z, z.id === selZoneId));
   for (const it of state.items) if (planItem(it) && !CAT[it.type].court) a(itemSvg(it, it.id === selectedId));
   for (const z of zonesInOrder()) if (z.type !== 'floor' || z.id === selZoneId) a(zoneLabelSvg(z, z.id === selZoneId));
+  a(rotGuideSvg());
   for (const w of state.walls || []) a(wallSvg(w, w.id === selWallId));
   if (planDrag && planDrag.kind === 'wdraw' && planDrag.b) a(wallSvg({ id: 'tmp', a: planDrag.a, b: planDrag.b, kind: wallKind }, true));
   for (const it of state.items) if (it.type === 'light') { const { w, d } = sizeOf(it); a(`<rect class="lamp" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})" x="${M(-w / 2)}" y="${M(-d / 2)}" width="${M(w)}" height="${M(d)}"/>`); }
@@ -3881,9 +3943,10 @@ svgEl.addEventListener('pointermove', (e) => {
   if (planDrag.kind === 'zrot' || planDrag.kind === 'irot') {
     const o = planDrag.kind === 'zrot' ? state.zones.find((x) => x.id === planDrag.id) : state.items.find((x) => x.id === planDrag.id); if (!o) return;
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
-    let deg = (Math.atan2(-(w[0] - o.x), -(w[1] - o.z)) * 180) / Math.PI;
-    deg = e.shiftKey ? Math.round(deg) : Math.round(deg / 15) * 15;
-    o.rot = ((deg % 360) + 360) % 360;
+    const raw = (Math.atan2(-(w[0] - o.x), -(w[1] - o.z)) * 180) / Math.PI;
+    const sn = e.shiftKey ? { deg: Math.round(norm360(raw) * 10) / 10, ref: null } : snapRot(raw, o, 3);
+    o.rot = sn.deg;
+    planDrag.snap = { ref: sn.ref, o };
     if (planDrag.kind === 'irot') moveObj(o);
     renderPlan(); return;
   }
@@ -4024,10 +4087,10 @@ function renderZoneSel() {
       <div class="grid4">${[['x', 'X'], ['z', 'Z'], ['w', '寬'], ['d', '深']].map(([k, l]) => `<label class="field" for="zs-${k}"><span>${l}（m）</span><input id="zs-${k}" data-k="${k}" type="number" step="0.5" value="${f2(z[k])}" inputmode="decimal"></label>`).join('')}</div>
       <div class="grid2"><label class="field" for="zs-floor"><span>地坪</span><select id="zs-floor">${ZONE_FLOORS.map((k) => `<option value="${k}"${k === zoneFloor(z) ? ' selected' : ''}>${FLOOR_LABELS[k]}</option>`).join('')}</select></label>
       <label class="field" for="zs-walls"><span>隔間</span><select id="zs-walls">${Object.entries({ open: '開放（不隔間）', glass: '透明玻璃', frost: '霧面玻璃', solid: '實心牆（組合屋）', net: '圍網' }).map(([k, l]) => `<option value="${k}"${k === zoneWalls(z) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
-      <div class="grid2"><label class="field" for="zs-rot"><span>角度（°）</span><input id="zs-rot" type="number" step="15" value="${f2(z.rot || 0)}" inputmode="decimal"></label>
+      <div class="grid2"><label class="field" for="zs-rot"><span>角度（°）</span><input id="zs-rot" type="number" step="0.1" value="${f2(z.rot || 0)}" inputmode="decimal"></label>
       <div class="field"><span>入口在哪一邊</span><div class="seg" role="group" aria-label="入口">${[['', '自動'], ['n', '上'], ['e', '右'], ['s', '下'], ['w', '左']].map(([k, l]) => `<button type="button" data-door="${k}" aria-pressed="${(z.door || '') === k}">${l}</button>`).join('')}</div></div></div>
-      <p class="hint">${esc(z.desc || ZONES[z.type].desc)}　快捷鍵：F 換入口邊、R 轉 90°、Shift+R 轉 15°；也可以拖選取框上方的圓點自由旋轉。</p>
-      <div class="btn-row"><button type="button" id="zs-dup">複製</button><button type="button" class="danger" id="zs-del">刪除區域</button></div></div>`;
+      <p class="hint">${esc(z.desc || ZONES[z.type].desc)}　快捷鍵：F 換入口邊、R 轉 90°、Shift+R 對齊外牆；拖選取框上方的圓點可以 360° 轉，靠近外牆角度會自動吸住（按住 Shift 不吸）。</p>
+      <div class="btn-row"><button type="button" id="zs-alignw">對齊外牆</button><button type="button" id="zs-dup">複製</button><button type="button" class="danger" id="zs-del">刪除區域</button></div></div>`;
     $('zs-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) z.name = v.slice(0, 20); else delete z.name; planChanged(); renderZoneSel(); });
     $('zs-type').addEventListener('change', (e) => { pushHistory(); z.type = e.target.value; planChanged(); renderZoneSel(); });
     for (const inp of box.querySelectorAll('input[data-k]')) inp.addEventListener('change', () => { const v = Number(inp.value); if (!Number.isFinite(v)) return; pushHistory(); z[inp.dataset.k] = inp.dataset.k === 'w' || inp.dataset.k === 'd' ? clamp(v, 0.5, 160) : v; planChanged(); renderZoneSel(); });
@@ -4035,6 +4098,7 @@ function renderZoneSel() {
     $('zs-del').addEventListener('click', deleteZone);
     $('zs-floor').addEventListener('change', (e) => { pushHistory(); z.floor = e.target.value; planChanged(); renderZoneSel(); });
     $('zs-walls').addEventListener('change', (e) => { pushHistory(); z.walls = e.target.value; planChanged(); renderZoneSel(); });
+    $('zs-alignw').addEventListener('click', () => { pushHistory(); z.rot = alignToWall(z); planChanged(); renderZoneSel(); toast(`已對齊最近的外牆（${f2(z.rot)}°）`); });
     $('zs-rot').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); z.rot = ((v % 360) + 360) % 360; planChanged(); renderZoneSel(); });
     for (const b of box.querySelectorAll('[data-door]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.door) z.door = b.dataset.door; else delete z.door; planChanged(); renderZoneSel(); });
   } else {
@@ -4043,13 +4107,14 @@ function renderZoneSel() {
       <div class="sel-name">${esc(labelOf(it))}<span class="unit">　${def.court ? `${def.w}×${def.d} m（含緩衝區）` : ''}旋轉 ${it.rot}°</span></div>
       <label class="field" for="is-name"><span>名稱</span><input id="is-name" type="text" maxlength="20" value="${esc(it.label || '')}" placeholder="${esc(def.label)}"></label>
       ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>` : ''}
-      <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="15" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
-      <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
+      <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="0.1" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
+      <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-alignw"${it.locked ? ' disabled' : ''}>對齊外牆</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
       ${it.locked ? '<p class="lock-note">已鎖定：不能拖曳、旋轉或刪除。按「解除鎖定」後才能在平面圖上拖。</p>' : ''}</div>`;
     $('is-name').addEventListener('change', (e) => { pushHistory(); const v = e.target.value.trim(); if (v) it.label = v.slice(0, 20); else delete it.label; rerenderOne(it); commit(); renderZoneSel(); });
     for (const b of box.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { pushHistory(); if (b.dataset.mode === 'lines') it.mode = 'lines'; else delete it.mode; renderItems(); commit(); renderZoneSel(); });
     $('is-lock').addEventListener('click', () => { toggleLockSel(); renderZoneSel(); planToolState(); renderPlan(); });
     $('is-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
+    $('is-alignw').addEventListener('click', () => { alignSelToWall(); renderZoneSel(); });
     $('is-rotdeg').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); it.rot = ((v % 360) + 360) % 360; rerenderOne(it); updateOutline(); commit(); renderZoneSel(); });
     $('is-dup').addEventListener('click', () => { duplicateSel(); renderPlan(); renderZoneSel(); });
     $('is-del').addEventListener('click', () => { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); });
@@ -4155,7 +4220,7 @@ addEventListener('keydown', (e) => {
   if (selWallId && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteWall(); return; }
   const z = state.zones.find((x) => x.id === selZoneId); if (!z) return;
   if (e.key === 'f' || e.key === 'F') { e.preventDefault(); flipDoor(z); return; }
-  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); pushHistory(); z.rot = (((z.rot || 0) + (e.shiftKey ? 15 : 90)) % 360); planChanged(); renderZoneSel(); return; }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); pushHistory(); z.rot = e.shiftKey ? alignToWall(z) : Math.round(norm360((z.rot || 0) + 90) * 100) / 100; planChanged(); renderZoneSel(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteZone(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateZone(); }
   else if (e.key.startsWith('Arrow')) {
