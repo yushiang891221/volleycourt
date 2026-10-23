@@ -73,8 +73,7 @@
       "z": 13.75,
       "w": 3,
       "d": 2.5,
-      "walls": "solid",
-      "bare": true
+      "walls": "solid"
      },
      {
       "type": "reception",
@@ -102,8 +101,7 @@
       "z": 13.75,
       "w": 3,
       "d": 2.5,
-      "walls": "solid",
-      "bare": true
+      "walls": "solid"
      }
     ],
     "items": [
@@ -449,7 +447,6 @@
       "w": 4,
       "d": 3.4,
       "walls": "solid",
-      "bare": true,
       "desc": "官方說有廁所，位置相片看不到，這裡是示意。"
      }
     ],
@@ -887,7 +884,6 @@
       "w": 2.2,
       "d": 2.2,
       "walls": "solid",
-      "bare": true,
       "desc": "場邊一間組合屋，外面包了一層圍網，是廁所也是更衣室。"
      }
     ],
