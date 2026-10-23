@@ -263,6 +263,51 @@ details.more[open] > summary { margin-bottom: 10px; }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
 .wk-cross.on { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: transparent; box-shadow: 0 0 0 2px #F2B705, 0 0 0 3.5px rgba(27,38,56,.5); }
 .wk-act { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(27,38,56,.88); color: #fff; border: 1px solid #F2B705; font-size: 14px; font-weight: 700; }
+.camview { position: absolute; top: 56px; right: max(12px, env(safe-area-inset-right, 0px)); width: min(340px, 46%); background: #1B2638; border: 1px solid #F2B705; border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
+.camview.big { width: min(720px, 70%); }
+.camview[hidden] { display: none !important; }
+.camview canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 6px; background: #000; display: block; }
+.cv-row { display: flex; gap: 4px; align-items: center; color: #fff; font-size: 12px; }
+.cv-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-row button { font-size: 12px; padding: 2px 8px; min-height: 0; }
+.mp { position: absolute; top: 12px; left: max(12px, env(safe-area-inset-left, 0px)); width: min(300px, calc(100% - 24px)); background: rgba(27,38,56,.94); color: #fff; border: 1px solid #F2B705; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; z-index: 11; font-size: 13px; }
+.mp[hidden] { display: none !important; }
+.mp .field span { color: #C9D1DC; }
+.mp input { color: #1B2638; }
+.mp-h { display: flex; align-items: center; justify-content: space-between; }
+.mp-h button { min-height: 0; padding: 2px 8px; }
+.mp-join { display: flex; gap: 6px; } .mp-join input { flex: 1; min-width: 0; text-transform: uppercase; }
+.mp-st { margin: 0; color: #C9D1DC; } .mp-st[data-kind=ok] { color: #7BE0A5; } .mp-st[data-kind=warn] { color: #FFB4A8; }
+.mp-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.mp-list li { display: flex; align-items: center; gap: 6px; } .mp-list i { width: 10px; height: 10px; border-radius: 50%; }
+.mp .hint { color: #AEB8C6; margin: 0; font-size: 12px; line-height: 1.5; }
+.mp-tag { background: rgba(27,38,56,.85); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pcwin { position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(8,12,18,.55); padding: 14px; }
+.pcwin[hidden] { display: none !important; }
+.pc-mon { width: min(1100px, 100%); aspect-ratio: 16 / 10; max-height: 100%; background: #0B0D10; border-radius: 14px; padding: 12px 12px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 2px #22262C; }
+.pc-screen { position: relative; width: 100%; height: 100%; border-radius: 4px; overflow: hidden; background: radial-gradient(circle at 70% 30%, #2F5FA8 0, #1B2638 55%, #0E1420 100%); color: #fff; font-size: 13px; }
+.pc-screen::before { content: '新竹排球館'; position: absolute; right: 28px; bottom: 56px; font-size: clamp(20px, 4vw, 44px); font-weight: 900; letter-spacing: .1em; color: rgba(242,183,5,.18); }
+.pc-desk { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.pc-icon { width: 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: 1px solid transparent; color: #fff; padding: 6px 4px; border-radius: 8px; min-height: 0; }
+.pc-icon:hover, .pc-icon:focus-visible { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); }
+.pc-icon span { font-size: 34px; line-height: 1; } .pc-icon b { font-size: 12px; font-weight: 600; text-shadow: 0 1px 2px #000; }
+.pc-app { position: absolute; left: 120px; right: 16px; top: 14px; bottom: 50px; background: #F4F6F8; color: #1B2638; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.pc-app[hidden], .pc-app.min { display: none !important; }
+.pc-tb { display: flex; align-items: center; gap: 4px; padding: 6px 8px; background: #E3E7EC; font-weight: 700; }
+.pc-tb span { flex: 1; } .pc-tb button { min-height: 0; padding: 2px 10px; }
+.pc-body { flex: 1; position: relative; overflow: auto; background: #000; }
+.pc-body iframe, .pc-body video { position: absolute; inset: 0 0 24px; width: 100%; height: calc(100% - 24px); border: 0; background: #000; }
+.pc-credit a { color: #F2B705; }
+.pc-credit { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; height: 24px; line-height: 24px; padding: 0 8px; font-size: 11px; color: #C9D1DC; background: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pc-empty { color: #fff; padding: 20px; }
+.cctv { display: grid; gap: 4px; padding: 4px; background: #000; min-height: 100%; align-content: start; }
+.cctv figure { margin: 0; position: relative; } .cctv canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; display: block; background: #111; }
+.cctv figcaption { position: absolute; left: 6px; top: 4px; font: 12px monospace; color: #7BE0A5; text-shadow: 0 1px 2px #000; }
+.pc-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: rgba(14,20,32,.88); backdrop-filter: blur(6px); }
+.pc-start { font-weight: 800; color: #F2B705; } .pc-tasks { flex: 1; display: flex; gap: 6px; }
+.pc-task { min-height: 0; padding: 4px 10px; font-size: 12px; background: rgba(255,255,255,.12); color: #fff; border: 0; border-bottom: 2px solid #F2B705; }
+.pc-clock { white-space: pre; text-align: right; font-size: 11px; line-height: 1.3; color: #DDE3EA; }
+.pc-bar #pc-off { min-height: 0; padding: 4px 10px; font-size: 12px; }
 .wk-lock { position: absolute; left: 50%; top: calc(50% + 26px); transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: rgba(27,38,56,.82); color: #fff; font-size: 13px; pointer-events: none !important; white-space: nowrap; }
 .wk-lock[hidden] { display: none !important; }
 .wk-combo { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: #F2B705; color: #1B2638; font-weight: 800; font-size: 15px; pointer-events: none !important; }
@@ -545,11 +590,26 @@ details.more[open] > summary { margin-bottom: 10px; }
     </div>
     <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>拿著球：<kbd>E</kbd> 舉球、<kbd>Q</kbd> 墊球（時機對才接得住）、<kbd>V</kbd> 發球、網前 <kbd>R</kbd> 攻擊<br><kbd>Esc</kbd> 離開導覽</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
+      <div class="pcwin" id="pcwin" hidden><div class="pc-mon"><div class="pc-screen">
+        <div class="pc-desk" id="pc-desk"></div>
+        <div class="pc-app" id="pc-app" hidden><div class="pc-tb"><span id="pc-title"></span><button type="button" id="pc-min" aria-label="最小化">–</button><button type="button" id="pc-close" aria-label="關閉視窗">✕</button></div><div class="pc-body" id="pc-body"></div></div>
+        <div class="pc-bar"><span class="pc-start">🏐 新竹排球館</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
+      </div></div></div>
+      <div class="mp" id="mp" hidden>
+        <div class="mp-h"><b>多人連線（最多 4 人）</b><button type="button" id="mp-x" aria-label="收起">✕</button></div>
+        <label class="field" for="mp-name"><span>你的名字</span><input id="mp-name" type="text" maxlength="12" placeholder="例如：翔哥"></label>
+        <div id="mp-out"><div class="btn-row"><button type="button" class="primary" id="mp-new">開新房間</button></div>
+          <div class="mp-join"><input id="mp-code" type="text" maxlength="8" placeholder="房間代碼" aria-label="房間代碼"><button type="button" id="mp-go">加入</button></div></div>
+        <div id="mp-in" hidden><div>房間 <b id="mp-room"></b></div><div class="btn-row"><button type="button" id="mp-copy">複製邀請連結</button><button type="button" class="danger" id="mp-leave">離開房間</button></div></div>
+        <p class="mp-st" id="mp-status"></p><ul class="mp-list" id="mp-list"></ul>
+        <p class="hint">球從別人那邊飛過來時，看著球、等它到手邊按 <b>E</b> 舉球或 <b>Q</b> 墊球，手從下往上斜斜碰到，球就往你面向的方向傳出去；往上看再按，是手打平自己往上打。</p>
+      </div>
+      <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
       <div class="wk-lock" id="wk-lock" hidden>點一下畫面：之後移動滑鼠就能轉頭看（Esc 放開滑鼠）</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
@@ -4907,17 +4967,33 @@ function startWalk() {
   if (!walk.actWired) {
     walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract());
     $('vclose').addEventListener('click', closeModals); $('pclose').addEventListener('click', closeModals);
+    $('cv-x').addEventListener('click', closeCamView); $('cv-snap').addEventListener('click', snapCamView);
+    $('pc-desk').addEventListener('click', (e) => { const b = e.target.closest('[data-app]'); if (b) pcOpen(b.dataset.app); });
+    $('pc-tasks').addEventListener('click', () => $('pc-app').classList.toggle('min'));
+    $('pc-min').addEventListener('click', () => $('pc-app').classList.add('min'));
+    $('pc-close').addEventListener('click', pcClose); $('pc-off').addEventListener('click', closePC);
+    try { $('mp-name').value = localStorage.getItem('vb.mp.name') || ''; } catch (e) { /* ignore */ }
+    $('w-mp').addEventListener('click', () => { $('mp').hidden = !$('mp').hidden; unlockMouse(); });
+    $('mp-x').addEventListener('click', () => { $('mp').hidden = true; });
+    $('mp-new').addEventListener('click', () => netJoin(roomCode()));
+    $('mp-go').addEventListener('click', () => netJoin($('mp-code').value));
+    $('mp-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') netJoin($('mp-code').value); });
+    $('mp-leave').addEventListener('click', () => netLeave());
+    $('mp-copy').addEventListener('click', async () => { const u = inviteLink(NET.room); try { await navigator.clipboard.writeText(u); toast('邀請連結複製好了，傳給朋友'); } catch (e) { prompt('複製這個邀請連結：', u); } });
+    $('cv-big').addEventListener('click', () => { const b = $('camview').classList.toggle('big'); $('cv-big').textContent = b ? '縮小' : '放大'; });
   }
   $('joy').hidden = !matchMedia('(pointer: coarse)').matches;
   const help = $('walk-help'); help.classList.remove('fade'); clearTimeout(walk.helpT); walk.helpT = setTimeout(() => help.classList.add('fade'), 7000);
   $('zcard').classList.add('out');
   updateWalk(0); updateZoneCard(true); drawScore();
   for (const it of state.items) if (['aircon', 'standac', 'packac'].includes(it.type)) addWind(it);
+  // 邀請連結帶著房間代碼：進導覽就自動加入
+  { const rq = new URLSearchParams(location.search).get('room'); if (rq && !NET.on) { $('mp').hidden = false; $('mp-code').value = rq; netJoin(rq); } }
   toast('從主入口進場。走進任何一區，左下角會出現那一區的說明');
 }
 function stopWalk() {
   walk.on = false; window.__walk = false; targetMark.visible = false; unlockMouse(); updateLockHint();
-  walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals();
+  walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals(); closeCamView(); closePC(); netLeave(true); $('mp').hidden = true;
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
   walk.spike = null; walk.serve = null; reachState = null; skill.mode = null; hands.visible = false; $('wk-combo').hidden = true;
   for (const id of [...winds.keys()]) removeWind(id);
@@ -5010,8 +5086,8 @@ function actionFor(t, it) {
   if (t === 'shoerack') return '放鞋子';
   if (t === 'panel') return '開／關全館的燈';
   if (t === 'tv') return '開／關電視';
-  if (t === 'desk') return '看比賽影片（南電盃）';
-  if (t === 'camera') return '拍下球場裡的自己';
+  if (t === 'desk') return '坐到電腦前';
+  if (t === 'camera') return '看智慧球場即時畫面（可拍照）';
   if (t === 'whiteboard') return '看戰術板';
   if (t === 'sinkrow' || t === 'steelsink') return '洗手';
   if (t === 'bins') return '丟垃圾（點哪一格丟哪一類）';
@@ -5049,7 +5125,7 @@ function updateFocus() {
   if (skill.mode) t = skill.mode === 'set' ? '球回到手上時按 E 繼續舉球（Q 換墊球）' : '球掉到手臂時按 Q 繼續墊球（E 換舉球）';
   else if (walk.serve) t = '';
   else if (walk.hold) t = near ? 'E 舉球・Q 墊球・V 發球・R 網前攻擊・點一下丟球' : 'E 舉球・Q 墊球・V 發球・點一下丟球';
-  else if (walk.sit) t = '站起來';
+  else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
   else if (near) t = 'R 網前攻擊（跳起來扣球）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
@@ -5058,8 +5134,9 @@ function updateFocus() {
 function doInteract(tg) {
   if (walk.spike || walk.serve || reachState) return;
   tg = tg || walk.focus;
+  if (!walk.hold && !tg) { const nb = incomingBall('set'); if (nb) return hitWorldBall(nb, 'set'); }
   if (walk.hold) return skillPress('set');
-  if (walk.sit) return standUp();
+  if (walk.sit) return walk.sit.desk ? openPC() : standUp();
   if (!tg) return;
   if (tg.kind === 'ball') return pickBall(tg.b);
   if (tg.kind === 'door') { const dp = tg.point || null; if (dp) return reach(dp, () => toggleDoor(tg.d)); return toggleDoor(tg.d); }
@@ -5111,8 +5188,15 @@ function useItem(it, point, noReach) {
   if (['locker', 'cubby', 'lowcubby'].includes(t)) { toggleBag(it, point); return; }
   if (t === 'shoerack') { toast('鞋子放好了：球場只能穿室內球鞋'); return; }
   if (t === 'panel') { setDark(!walk.dark); toast(walk.dark ? '全館的燈關掉了（再按一次打開）' : '燈全部打開了'); return; }
-  if (t === 'desk') { playVideo(VIDEO_TITLE); return; }
-  if (t === 'camera') { takePhoto(it); return; }
+  if (t === 'desk') {
+    // 坐到辦公椅上、面向螢幕；再按 E 才打開電腦
+    const [sx, sz] = toWorldOf(it, -0.2, -0.62);
+    walk.sit = { x: sx, z: sz, eye: 1.2, it, desk: true }; walk.target = null; targetMark.visible = false;
+    walk.yaw = r + Math.PI; walk.pitch = -0.12;
+    toast('坐到電腦前了：按 E 打開電腦，走路就站起來');
+    return;
+  }
+  if (t === 'camera') { openCamView(it); return; }
   if (t === 'whiteboard') { toast('戰術板上畫著 5-1 輪轉的站位（示意）'); return; }
   if (t === 'sinkrow' || t === 'steelsink') { washHands(it, point); return; }
   if (t === 'bins') { throwTrash(it, point); return; }
@@ -5258,6 +5342,64 @@ function addPoint(side, flip) {
   drawScore();
 }
 drawScore();
+// ---- 電腦：像真的桌面——桌布、桌面圖示、視窗（標題列、最小化、關閉）、工作列與時鐘
+const PIKA_URL = 'https://gorisanson.github.io/pikachu-volleyball/zh/';
+const PC_APPS = {
+  pika: { name: '皮卡丘打排球', icon: '⚡', open: () => `<iframe src="${PIKA_URL}" title="皮卡丘打排球" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe><p class="pc-credit">遊戲：gorisanson/pikachu-volleyball（原作者網站，點一下遊戲畫面再用鍵盤玩）・<a href="${PIKA_URL}" target="_blank" rel="noopener">在新分頁開原作網站 ↗</a></p>` },
+  cctv: { name: '監視器', icon: '📹', open: () => cctvHtml() },
+  video: { name: '球館影片', icon: '🎬', open: () => `<video src="${VIDEO_SRC}" controls autoplay playsinline></video><p class="pc-credit">${esc(VIDEO_TITLE)}</p>` },
+};
+const pc = { app: null, cams: [], camI: 0, last: 0, clockT: 0 };
+function openPC() {
+  $('pcwin').hidden = false; walk.paused = true; walk.keys.clear(); unlockMouse(); updateLockHint(); $('zcard').classList.add('out'); walk.zoneKey = '';
+  $('pc-desk').innerHTML = Object.entries(PC_APPS).map(([k, a]) => `<button type="button" class="pc-icon" data-app="${k}"><span>${a.icon}</span><b>${a.name}</b></button>`).join('');
+  pcClose(); pcClock();
+}
+function closePC() { pcClose(); $('pcwin').hidden = true; walk.paused = false; updateLockHint(); }
+function pcOpen(k) {
+  const a = PC_APPS[k]; pc.app = k;
+  $('pc-title').textContent = `${a.icon} ${a.name}`; $('pc-body').innerHTML = a.open(); $('pc-app').hidden = false; $('pc-app').classList.remove('min');
+  $('pc-tasks').innerHTML = `<button type="button" class="pc-task on" data-app="${k}">${a.icon} ${a.name}</button>`;
+  if (k === 'cctv') setupCctv();
+}
+function pcClose() { pc.app = null; pc.cams = []; $('pc-body').innerHTML = ''; $('pc-app').hidden = true; $('pc-tasks').innerHTML = ''; }
+function pcClock() { const el = $('pc-clock'); if (el) el.textContent = new Date().toLocaleString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) + '\n' + new Date().toLocaleDateString('zh-TW'); }
+// 監視器：館內有幾支攝影機（智慧球場攝影機、安全監視器）就切幾格，每格輪流更新
+function cctvList() { return state.items.filter((i) => i.type === 'camera' || i.type === 'cctv'); }
+function cctvHtml() {
+  const list = cctvList();
+  if (!list.length) return '<p class="pc-empty">館內還沒有攝影機。到「加入 3D 元件」的素材庫放「網路攝影機（智慧球場）」或「監視器」，這裡就會出現畫面。</p>';
+  const cols = list.length <= 1 ? 1 : list.length <= 4 ? 2 : list.length <= 9 ? 3 : 4;
+  return `<div class="cctv" style="grid-template-columns:repeat(${cols},1fr)">${list.map((it, i) => `<figure><canvas data-cam="${i}" width="480" height="270"></canvas><figcaption>CH${String(i + 1).padStart(2, '0')}・${esc(labelOf(it))}</figcaption></figure>`).join('')}</div>`;
+}
+function setupCctv() {
+  const H = state.building.H;
+  pc.cams = cctvList().map((it, i) => {
+    const def = CAT[it.type], y = it.type === 'cctv' ? (def.mountY || 3.2) : Math.min(H - 1.2, 5.5);
+    const courts = state.items.filter((c) => CAT[c.type].court);
+    const aim = it.type === 'camera' ? (courts.sort((a, b) => Math.hypot(a.x - it.x, a.z - it.z) - Math.hypot(b.x - it.x, b.z - it.z))[0] || { x: 0, z: 0 }) : null;
+    const cam = new THREE.PerspectiveCamera(it.type === 'camera' ? 78 : 70, 16 / 9, 0.1, 300);
+    if (aim) { const dx = aim.x - it.x, dz = aim.z - it.z, dl = Math.hypot(dx, dz) || 1; cam.position.set(it.x + (dx / dl) * 0.4, y - 0.1, it.z + (dz / dl) * 0.4); cam.lookAt(aim.x, 0.6, aim.z); }
+    else { const r = (it.rot * Math.PI) / 180, fx = Math.sin(r), fz = Math.cos(r); cam.position.set(it.x + fx * 0.3, y - 0.1, it.z + fz * 0.3); cam.lookAt(it.x + fx * 8, 0.8, it.z + fz * 8); }
+    return { it, cam, canvas: $('pc-body').querySelector(`canvas[data-cam="${i}"]`) };
+  });
+  pc.camI = 0;
+}
+function renderCctv(now) {
+  if (pc.app !== 'cctv' || !pc.cams.length || now - pc.last < 70) return;
+  pc.last = now;
+  const c = pc.cams[pc.camI++ % pc.cams.length]; if (!c.canvas) return;
+  const g = itemObjs.get(c.it.id), vis = g ? g.visible : true; if (g) g.visible = false;
+  avatar.position.set(walk.x, 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
+  const hv = hands.visible; hands.visible = false;
+  const src = renderer.domElement; c.cam.aspect = src.width / src.height; c.cam.updateProjectionMatrix();
+  renderer.render(scene, c.cam);
+  const ctx = c.canvas.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
+  ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, c.canvas.width, c.canvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, c.canvas.height - 22, c.canvas.width, 22); ctx.fillStyle = '#fff'; ctx.font = '13px monospace';
+  ctx.fillText(new Date().toLocaleString('zh-TW', { hour12: false }), 8, c.canvas.height - 7);
+  avatar.visible = false; hands.visible = hv; if (g) g.visible = vis;
+}
 // ---- 電腦：播影片
 const VIDEO_SRC = 'video/nandian-2022-fcu-vs-nsysu.mp4', VIDEO_TITLE = '2022 南電盃｜逢甲通訊 A vs 中山機電';
 function playVideo(title) {
@@ -5278,21 +5420,39 @@ const avatar = (() => {
   add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 1.75, 0);
   g.visible = false; scene.add(g); return g;
 })();
-function takePhoto(camIt) {
+// 智慧球場攝影機：右上角的即時小視窗（廣角、拍整面球場，畫面裡有你），邊走邊看；可以拍下這一張
+const camView = { it: null, cam: null, last: 0, big: false };
+function openCamView(camIt) {
   const H = state.building.H, cy = Math.min(H - 1.2, 5.5);
-  const cv = renderer.domElement, dist = Math.hypot(camIt.x - walk.x, camIt.z - walk.z);
-  const pc = new THREE.PerspectiveCamera(clamp((2 * Math.atan(3.2 / Math.max(1, dist)) * 180) / Math.PI, 14, 55), cv.width / cv.height, 0.1, 300);
-  // 鏡頭從攝影機機身往前 0.4 m（不然會拍到機身本身）
-  const tx = walk.x - camIt.x, tz = walk.z - camIt.z, tl = Math.hypot(tx, tz) || 1;
-  pc.position.set(camIt.x + (tx / tl) * 0.4, cy - 0.1, camIt.z + (tz / tl) * 0.4); pc.lookAt(walk.x, 1.0, walk.z);
-  const camG = itemObjs.get(camIt.id), camVis = camG ? camG.visible : true; if (camG) camG.visible = false;
+  // 對準離這支攝影機最近的排球場中心（沒有球場就對館中心）
+  const courts = state.items.filter((c) => CAT[c.type].court);
+  const aim = courts.sort((a, b) => Math.hypot(a.x - camIt.x, a.z - camIt.z) - Math.hypot(b.x - camIt.x, b.z - camIt.z))[0] || { x: 0, z: 0 };
+  const dx = aim.x - camIt.x, dz = aim.z - camIt.z, dl = Math.hypot(dx, dz) || 1;
+  const pc = new THREE.PerspectiveCamera(78, 16 / 9, 0.1, 300);   // 廣角：水平約 110°
+  pc.position.set(camIt.x + (dx / dl) * 0.4, cy - 0.1, camIt.z + (dz / dl) * 0.4); pc.lookAt(aim.x, 0.6, aim.z);
+  camView.it = camIt; camView.cam = pc; camView.last = 0;
+  $('camview').hidden = false; $('cv-name').textContent = labelOf(camIt);
+  toast('智慧球場攝影機的即時畫面在右上角，可以邊走邊看；按「拍照」存下這一張');
+}
+function closeCamView() { camView.it = null; $('camview').hidden = true; }
+function renderCamView(now) {
+  if (!camView.it || now - camView.last < 160) return;
+  camView.last = now;
+  const camG = itemObjs.get(camView.it.id), vis = camG ? camG.visible : true; if (camG) camG.visible = false;
   avatar.position.set(walk.x, walk.sit ? walk.sit.eye - 1.6 : 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
   const hv = hands.visible; hands.visible = false;
-  renderer.render(scene, pc);
-  const url = cv.toDataURL('image/jpeg', 0.9);
-  avatar.visible = false; hands.visible = hv; if (camG) camG.visible = camVis; drawFrame(true);
-  $('pimg').src = url; $('pdl').href = url; $('pmodal').hidden = false; walk.keys.clear(); walk.paused = true; unlockMouse(); updateLockHint();
-  toast(dist > 20 ? '拍到了，不過你離這支攝影機有點遠' : '喀嚓！智慧球場攝影機拍到你了');
+  const src = renderer.domElement; camView.cam.aspect = src.width / src.height; camView.cam.updateProjectionMatrix();
+  renderer.render(scene, camView.cam);
+  // 從整張畫面裁出 16:9 放進小視窗
+  const cv = $('cv-canvas'), ctx = cv.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
+  ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, cv.width, cv.height);
+  ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, 112, 22); ctx.fillStyle = '#ff4d4f'; ctx.beginPath(); ctx.arc(11, 11, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.fillText('LIVE ' + new Date().toLocaleTimeString('zh-TW', { hour12: false }), 20, 15);
+  avatar.visible = false; hands.visible = hv; if (camG) camG.visible = vis;
+}
+function snapCamView() {
+  const a = document.createElement('a'); a.href = $('cv-canvas').toDataURL('image/jpeg', 0.92); a.download = '智慧球場.jpg'; document.body.appendChild(a); a.click(); a.remove();
+  toast('喀嚓！照片存下來了');
 }
 // ---- 排球：第一人稱雙手。E 舉球、Q 墊球（時機對才接得住）、網前 R 攻擊；點一下丟出去
 const ballsGroup = new THREE.Group(); scene.add(ballsGroup);
@@ -5424,6 +5584,7 @@ function releaseBall(v) {
   m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
   skill.mode = null; skill.dip = 0; hands.visible = false;
+  if (NET.on) netBallHit(m.userData.ball);
 }
 function throwBall() {
   if (!walk.hold || skill.mode) return;
@@ -5433,6 +5594,7 @@ function throwBall() {
 function pickBall(b) {
   if (walk.hold) return;
   const i = balls.indexOf(b); if (i >= 0) balls.splice(i, 1);
+  if (b.room) netGrab();
   ballsGroup.remove(b.m); delete b.m.userData.ball; b.m.userData.noPick = true; walk.hold = b.m; camera.add(b.m);
   pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld();
   toast('撿起球了：E 舉球、Q 墊球、網前 R 攻擊，點一下丟出去');
@@ -5440,7 +5602,10 @@ function pickBall(b) {
 // 判定：球往下掉、離觸球點在 -0.38～0.6 m 之間按就算接到（球會亮）；剛觸球後 0.22 秒內的連按不算
 const inWindow = () => skill.v < 0 && skill.h < 0.6 && skill.h > -0.38;
 function skillPress(kind) {
-  if (!walk.hold || walk.spike) return;
+  if (walk.spike) return;
+  // 有球飛到手邊：直接碰出去（不用先拿著球）
+  if (!skill.mode) { const nb = incomingBall(kind); if (nb) return hitWorldBall(nb, kind); }
+  if (!walk.hold) return;
   if (!skill.mode) {
     skill.mode = kind; skill.h = 0; skill.v = SKV[kind]; skill.n = 0; skill.since = 0; skill.kick = 0.16; pose = kind === 'set' ? 'setPush' : 'bumpHit';
     toast(kind === 'set' ? '舉球：手在額頭前，球掉回手上（球亮起來）時按 E' : '墊球：雙手交握、手臂伸直，球掉到前臂（球亮起來）時按 Q');
@@ -5461,6 +5626,9 @@ function skillMiss(why) {
   toast(`${why}，球掉了！這次連續 ${n} 下${skill.best ? `，最佳 ${skill.best} 下` : ''}。走過去看著球按 E 撿起來`);
 }
 function updateSkill(dt) {
+  // 碰完來球：手亮一下就收起來
+  if (walk.flash > 0) { walk.flash -= dt; skill.dip = skill.mode ? skill.dip : 0.05 * Math.max(0, walk.flash) / 0.45; if (walk.flash <= 0 && !walk.hold && !reachState && !walk.serve) { hands.visible = false; pose = 'hold'; } }
+  else if (!skill.mode) skill.dip = 0;
   if (!skill.mode || !walk.hold) return;
   skill.since += dt;
   skill.v -= 9.8 * dt; skill.h += skill.v * dt;
@@ -5526,6 +5694,7 @@ function updateSpike(dt) {
     const T = 0.5, p0 = s.ball.position.clone();
     const v = new THREE.Vector3((tx - p0.x) / T, (BALL_R - p0.y) / T + 0.5 * 9.8 * T, (tz - p0.z) / T);
     s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: { c: s.nn.c, sg: s.sg } }; balls.push(s.ball.userData.ball);
+    if (NET.on) netBallHit(s.ball.userData.ball);
     while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
     toast('扣——！');
   }
@@ -5657,6 +5826,7 @@ function updateServe(dt) {
     const D = Math.hypot(target.x - p0.x, target.z - p0.z), T = 0.55 + D * 0.06;
     const v = new THREE.Vector3((target.x - p0.x) / T, (target.y - p0.y) / T + 0.5 * 9.8 * T, (target.z - p0.z) / T);
     s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: court ? { c: court, sg } : null, serve: true }; balls.push(s.ball.userData.ball);
+    if (NET.on) netBallHit(s.ball.userData.ball);
     while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
     toast('發球！');
   }
@@ -5688,6 +5858,196 @@ function updateBalls(dt) {
     const sp = Math.hypot(b.v.x, b.v.z);
     if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
+  }
+}
+// ---- 來球：看著球過來，球進到手邊時按 E（舉球）或 Q（墊球）→ 手從下往上斜斜碰到球，球往你面向的方向傳出去；
+//      抬頭往上看（自己往上打）就是手打平往上擊，球直直往上
+function contactPoint(kind) {
+  const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
+  return new THREE.Vector3(walk.x + fx * 0.45, kind === 'set' ? EYE + 0.22 : 0.95, walk.z + fz * 0.45);
+}
+function incomingBall(kind) {
+  const cp = contactPoint(kind); let best = null;
+  for (const b of balls) {
+    if (b.rest > 0.3 || b.m.position.y < 0.35) continue;
+    const d = b.m.position.distanceTo(cp);
+    if (d < (kind === 'set' ? 1.05 : 1.15) && (!best || d < best.d)) best = { b, d };
+  }
+  return best && best.b;
+}
+function hitWorldBall(b, kind) {
+  const p = b.m.position, up = walk.pitch > 0.55;
+  const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
+  // 傳球距離與滯空時間：舉球高而短、墊球遠一點；往上看就原地往上
+  const D = up ? 0.25 : kind === 'set' ? 5.5 : 7.5, T = up ? 1.15 : kind === 'set' ? 1.35 : 1.2;
+  const tx = walk.x + fx * D, tz = walk.z + fz * D, ty = 1.2;
+  b.v.set((tx - p.x) / T, (ty - p.y) / T + 0.5 * 9.8 * T, (tz - p.z) / T);
+  b.rest = 0; b.spike = null; b.serve = false;
+  pose = kind === 'set' ? 'setPush' : 'bumpHit'; hands.visible = true; applyPose(0, true); walk.flash = 0.45;
+  skill.dip = 0.05;
+  if (NET.on) netBallHit(b);
+  toast(up ? (kind === 'set' ? '手打平往上舉' : '往上墊高') : kind === 'set' ? '舉球傳出去！' : '墊球傳出去！', 1200);
+}
+// ---------------------------------------------------------------- 多人連線：一間房最多 4 人，互相看得到、共用一顆球
+// 連線方式：正式站用 Ably（api/rt-token 發通行證）；網址加 &localnet 時改用同一個瀏覽器的分頁互傳（不用帳號，開發測試用）
+const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, seq: 0, ownBall: false };
+const NET_MAX = 4;
+const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C'];
+function loadScript(src) { return new Promise((ok, bad) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = ok; s2.onerror = bad; document.head.appendChild(s2); }); }
+async function ablyTransport(room) {
+  const pre = await fetch('api/rt-token?clientId=' + encodeURIComponent(NET.me), { cache: 'no-store' }).catch(() => null);
+  if (!pre || pre.status === 501 || !(pre.headers.get('content-type') || '').includes('json')) throw new Error('noserver');
+  if (!window.Ably) await loadScript('https://cdn.jsdelivr.net/npm/ably@2.20.0/build/ably.min.js');
+  const client = new window.Ably.Realtime({ authUrl: 'api/rt-token?clientId=' + encodeURIComponent(NET.me), clientId: NET.me, echoMessages: false });
+  const ch = client.channels.get('vb-room-' + room);
+  return {
+    publish: (t, d) => { ch.publish(t, d).catch(() => {}); },
+    subscribe: (fn) => ch.subscribe((m) => fn(m.name, m.data, m.clientId)),
+    enter: (info) => ch.presence.enter(info),
+    members: async () => (await ch.presence.get()).map((m) => ({ id: m.clientId, ...(m.data || {}) })),
+    onPresence: (fn) => ch.presence.subscribe((m) => fn(m.action, m.clientId, m.data || {})),
+    close: () => { try { ch.presence.leave(); client.close(); } catch (e) { /* ignore */ } },
+  };
+}
+function localTransport(room) {
+  const bc = new BroadcastChannel('vb-room-' + room), members = new Map(); let onMsg = null, onPres = null, mine = null;
+  bc.onmessage = (e) => {
+    const { t, d, from } = e.data || {};
+    if (t === '__enter' || t === '__here') { const isNew = !members.has(from); members.set(from, d); if (isNew && onPres) onPres('enter', from, d); if (t === '__enter' && mine) bc.postMessage({ t: '__here', d: mine, from: NET.me }); return; }
+    if (t === '__leave') { members.delete(from); onPres && onPres('leave', from, d); return; }
+    onMsg && onMsg(t, d, from);
+  };
+  return {
+    publish: (t, d) => bc.postMessage({ t, d, from: NET.me }),
+    subscribe: (fn) => { onMsg = fn; },
+    enter: async (info) => { mine = info; members.set(NET.me, info); bc.postMessage({ t: '__enter', d: info, from: NET.me }); },
+    members: async () => { await new Promise((r) => setTimeout(r, 250)); return [...members].map(([id, d]) => ({ id, ...d })); },
+    onPresence: (fn) => { onPres = fn; },
+    close: () => { bc.postMessage({ t: '__leave', d: {}, from: NET.me }); bc.close(); },
+  };
+}
+function netStatus(msg, kind) { const el = $('mp-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
+function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
+function inviteLink(room) { const u = new URL(location.href); u.searchParams.delete('debug'); u.searchParams.set('room', room); return u.toString(); }
+async function netJoin(room) {
+  room = String(room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  if (!room) { netStatus('請輸入房間代碼', 'warn'); return; }
+  if (NET.on) netLeave(true);
+  NET.me = NET.me || 'p' + Math.random().toString(36).slice(2, 9);
+  const typed = $('mp-name').value.trim();
+  NET.name = (typed || '球友' + NET.me.slice(-3)).slice(0, 12);
+  if (typed) { try { localStorage.setItem('vb.mp.name', typed.slice(0, 12)); } catch (e) { /* ignore */ } }
+  netStatus('連線中…', 'busy');
+  let tx;
+  try { tx = new URLSearchParams(location.search).has('localnet') ? localTransport(room) : await ablyTransport(room); }
+  catch (e) { netStatus(e.message === 'noserver' ? '多人連線還沒開啟：網站管理者要先照「部署說明」設定 ABLY_API_KEY' : '連不上即時連線服務，請稍後再試', 'warn'); return; }
+  NET.tx = tx; NET.room = room; NET.on = true; NET.peers.clear();
+  tx.subscribe(netOnMessage);
+  tx.onPresence((action, id, d) => { if (id === NET.me) return; if (action === 'leave' || action === 'absent') netDropPeer(id); else netPeer(id, d); renderMpList(); });
+  const others = (await tx.members()).filter((m) => m.id !== NET.me);
+  if (others.length >= NET_MAX) { tx.close(); NET.on = false; NET.tx = null; netStatus(`房間 ${room} 已經滿了（最多 ${NET_MAX} 人）`, 'warn'); return; }
+  const used = new Set(others.map((m) => m.c)), color = NET_COLORS.find((c) => !used.has(c)) || NET_COLORS[0];
+  NET.color = color;
+  await tx.enter({ n: NET.name, c: color });
+  for (const m of others) netPeer(m.id, m);
+  netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）`, 'ok');
+  $('mp-room').textContent = room; $('mp-in').hidden = false; $('mp-out').hidden = true;
+  renderMpList();
+  toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
+}
+function netLeave(quiet) {
+  if (!NET.on) return;
+  try { NET.tx.close(); } catch (e) { /* ignore */ }
+  for (const id of [...NET.peers.keys()]) netDropPeer(id);
+  NET.on = false; NET.tx = null; NET.ownBall = false;
+  $('mp-in').hidden = true; $('mp-out').hidden = false; renderMpList();
+  if (!quiet) netStatus('已離開房間', '');
+}
+function renderMpList() {
+  const ul = $('mp-list'); if (!ul) return;
+  ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i>${esc(p2.n)}</li>`)].join('') : '';
+  if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人`, 'ok');
+}
+// 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
+function makeAvatar(color) {
+  const g = new THREE.Group(), skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
+  const add = (geo, m, x, y, z, parent = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  for (const sx of [-1, 1]) { add(new THREE.CylinderGeometry(0.065, 0.055, 0.82, 12), skin, sx * 0.1, 0.43, 0); add(new THREE.BoxGeometry(0.11, 0.08, 0.26), mat('#F4F4F2'), sx * 0.1, 0.04, -0.04); }
+  add(new THREE.CylinderGeometry(0.17, 0.15, 0.24, 16), dark, 0, 0.92, 0);
+  add(new THREE.CylinderGeometry(0.18, 0.16, 0.52, 16), jersey, 0, 1.3, 0);
+  const arms = [-1, 1].map((sx) => { const sh = new THREE.Group(); sh.position.set(sx * 0.22, 1.52, 0); g.add(sh); add(new THREE.CylinderGeometry(0.045, 0.04, 0.62, 10), skin, 0, -0.31, 0, sh); return sh; });
+  add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 1.72, 0);
+  add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 1.75, 0);
+  return { g, arms };
+}
+function netPeer(id, d) {
+  let p2 = NET.peers.get(id);
+  if (!p2) {
+    const av = makeAvatar(d.c || '#3E63DD');
+    const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = d.n || '球友';
+    const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag);
+    scene.add(av.g);
+    p2 = { id, n: d.n || '球友', c: d.c || '#3E63DD', av, tag, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0, pose: 0, ball: null, seen: false };
+    NET.peers.set(id, p2);
+    if (NET.on) toast(`${p2.n} 進來了`);
+  } else { p2.n = d.n || p2.n; p2.tag.element.textContent = p2.n; }
+  return p2;
+}
+function netDropPeer(id) {
+  const p2 = NET.peers.get(id); if (!p2) return;
+  scene.remove(p2.av.g); p2.tag.element.remove(); if (p2.ball) scene.remove(p2.ball);
+  NET.peers.delete(id); toast(`${p2.n} 離開了`);
+}
+// 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
+function myPoseCode() { if (walk.spike || walk.serve) return 4; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
+function netOnMessage(t, d, from) {
+  if (from === NET.me) return;
+  if (t === 'st') {
+    const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
+    p2.tx = d.x; p2.tz = d.z; p2.tyaw = d.yaw; p2.ty = d.y || 0; p2.pose = d.p;
+    if (!p2.seen) { p2.x = d.x; p2.z = d.z; p2.yaw = d.yaw; p2.seen = true; }
+    if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ball.position.set(d.b[0], d.b[1], d.b[2]); p2.ball.visible = true; }
+    else if (p2.ball) p2.ball.visible = false;
+  } else if (t === 'ball') {
+    // 共用的那顆球：序號比較新的才接受；收到後由對方負責（自己不再廣播）
+    if (d.s <= NET.seq) return;
+    NET.seq = d.s; NET.ownBall = false;
+    let b = balls.find((q) => q.room);
+    if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); }
+    b.m.position.set(d.p[0], d.p[1], d.p[2]); b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = null;
+    for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
+  } else if (t === 'grab') {
+    if (d.s <= NET.seq) return; NET.seq = d.s; NET.ownBall = false;
+    for (const q of balls.filter((q2) => q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
+  }
+}
+// 我碰到／丟出球：這顆變成房間共用的球，由我廣播它的位置與速度
+function netBallHit(b) {
+  if (!NET.on) return;
+  for (const q of balls) if (q !== b && q.room) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
+  b.room = true; NET.seq++; NET.ownBall = true; NET.lastBall = 0;
+  NET.tx.publish('ball', { s: NET.seq, p: b.m.position.toArray().map((v) => +v.toFixed(3)), v: b.v.toArray().map((v) => +v.toFixed(3)) });
+}
+function netGrab() { if (!NET.on) return; NET.seq++; NET.ownBall = false; NET.tx.publish('grab', { s: NET.seq }); }
+function netTick(dt, now) {
+  if (!NET.on) return;
+  // 我的狀態：每秒 8 次
+  if (now - NET.lastSt > 125) {
+    NET.lastSt = now;
+    let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
+    NET.tx.publish('st', { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(camera.position.y - EYE).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp });
+  }
+  // 我負責的球：飛行中每秒 10 次校正
+  const rb = NET.ownBall && balls.find((q) => q.room);
+  if (rb && rb.rest < 0.5 && now - NET.lastBall > 100) { NET.lastBall = now; NET.tx.publish('ball', { s: ++NET.seq, p: rb.m.position.toArray().map((v) => +v.toFixed(3)), v: rb.v.toArray().map((v) => +v.toFixed(3)) }); }
+  // 對方的人形：平滑移動到收到的位置
+  const k = 1 - Math.exp(-dt * 10);
+  for (const p2 of NET.peers.values()) {
+    p2.x += (p2.tx - p2.x) * k; p2.z += (p2.tz - p2.z) * k;
+    let dy = p2.tyaw - p2.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); p2.yaw += dy * k;
+    p2.av.g.position.set(p2.x, p2.ty > 0 ? p2.ty : 0, p2.z); p2.av.g.rotation.y = p2.yaw + Math.PI;
+    const up = p2.pose === 2 || p2.pose === 4 ? -2.6 : p2.pose === 3 ? -1.2 : p2.pose === 1 ? -0.9 : 0;
+    for (const a of p2.av.arms) a.rotation.x += (up - a.rotation.x) * k;
   }
 }
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
@@ -5745,10 +6105,10 @@ addEventListener('keydown', (e) => {
   if (!walk.on) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
-  if (k === 'escape') { e.preventDefault(); if (walk.paused) { closeModals(); return; } if (locked() || performance.now() - (walk.unlockT || 0) < 400) { unlockMouse(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
+  if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (locked() || performance.now() - (walk.unlockT || 0) < 400) { unlockMouse(); return; } setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
   if (walk.paused) return;
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
-  if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold) skillPress('bump'); else toast('先拿一顆球（看著球車按 E）才能墊球'); return; }
+  if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold || incomingBall('bump')) skillPress('bump'); else toast('先拿一顆球（看著球車按 E），或等球飛到手邊再按 Q'); return; }
   if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(); return; }
   if (k === 'v' && !e.repeat) { e.preventDefault(); startServe(); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
@@ -5853,6 +6213,7 @@ function drawFrame(force) {
   if (roof) roof.visible = walk.on || cp.y < H + 0.5;
   for (const r of zoneRoofs) r.visible = walk.on;
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
+  if (walk.on) { renderCamView(now); renderCctv(now); netTick(dt, now); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   renderScene();
   labelRenderer.render(scene, camera);
@@ -5906,7 +6267,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
