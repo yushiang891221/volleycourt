@@ -5494,7 +5494,7 @@ const BALL_TEX = (() => {
   return { map, bump };
 })();
 function ballMaterial(hot) {
-  return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, bumpMap: BALL_TEX.bump, bumpScale: 0.6, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#F2B705' : '#000000', emissiveIntensity: hot ? 0.35 : 0 });
+  return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, bumpMap: BALL_TEX.bump, bumpScale: 0.6, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
 function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 40, 28), ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
@@ -5532,7 +5532,7 @@ const POSE = {
   // 拿著球：兩手托在球的兩側
   hold: pair({ e: [-0.22, -0.42, -0.18], w: [-0.12, -0.25, -0.5], f: [0.05, 0.6, -0.8], n: [1, 0.1, 0], c: 0.3 }, [0, -0.17, -0.56]),
   // 舉球預備：手在額頭前上方，手肘向外，掌心朝上前方對著球，十指張開微彎，兩手拇指與食指圍成三角形的窗
-  set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.17, -0.42], 0.38),
+  set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.2, -0.55], 0.38),
   // 舉球出手：手臂往球的方向伸直、手腕送出、手指朝上
   setPush: pair({ e: [-0.19, 0.0, -0.3], w: [-0.08, 0.2, -0.47], f: [-0.08, 0.96, -0.25], n: [0.3, 0.55, -0.78], c: 0.12 }, [0, 0.3, -0.52], 0.38),
   // 低手墊球預備：兩臂伸直在身體前下方併攏，雙手交握（拇指平行朝下前），前臂內側形成平台
@@ -5727,8 +5727,8 @@ function updateReach(dt) {
   if (r.opt.wash && r.t > 0.3 && r.t < 1.5) { const k = Math.sin(r.t * 22) * 0.025; armL.cur && armL.cur.w.add(new THREE.Vector3(k, 0, 0)); armR.cur && armR.cur.w.add(new THREE.Vector3(-k, 0, 0)); }
   if (!r.fired && r.t > 0.32) { r.fired = true; if (r.opt.prop && r.opt.prop.parent === armR.hand && !r.opt.keepProp) armR.hand.remove(r.opt.prop); r.fn(); }
   const back = r.opt.wash ? 1.6 : 0.6;
-  if (r.t > back) pose = 'rest';
-  if (r.t > back + 0.35) { reachState = null; if (r.opt.prop && r.opt.prop.parent) r.opt.prop.parent.remove(r.opt.prop); if (!walk.hold) { hands.visible = false; pose = 'hold'; } }
+  if (r.t > back) pose = walk.hold ? 'hold' : 'rest';
+  if (r.t > back + 0.35) { reachState = null; if (r.opt.prop && r.opt.prop.parent) r.opt.prop.parent.remove(r.opt.prop); pose = skill.mode || 'hold'; if (!walk.hold) hands.visible = false; }
 }
 // 手上的小東西
 function trashProp(slot) {
