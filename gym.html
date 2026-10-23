@@ -464,6 +464,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <div class="seg" role="group" aria-label="工具">
         <button type="button" id="p-select" aria-pressed="true">選取／移動</button>
         <button type="button" id="p-draw" aria-pressed="false">畫區域</button>
+        <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
       </div>
       <button type="button" id="p-rot" disabled>旋轉 90°</button>
       <button type="button" id="p-del" class="danger" disabled>刪除</button>
@@ -733,7 +734,7 @@ function sanitize(raw) {
   const out = {
     id: typeof s.id === 'string' ? s.id : null,
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
-    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
+    building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
     net: NETS[s.net] ? s.net : 'men',
     zones: (Array.isArray(s.zones) ? s.zones.slice(0, 60) : []).map(sanitizeZone).filter(Boolean),
@@ -745,7 +746,7 @@ function sanitize(raw) {
     const o = { id: typeof it.id === 'string' ? it.id : uid(), type: it.type, x: num(it.x, 0), z: num(it.z, 0), rot: ((num(it.rot, 0) % 360) + 360) % 360 };
     if (def.resize || def.diam) { o.w = clamp(num(it.w, def.w), 0.3, 60); o.d = def.resize === 'w' ? def.d : clamp(num(it.d, def.d), 0.1, 60); if (def.diam) o.d = o.w; }
     if (def.court && it.mode === 'lines') o.mode = 'lines';
-    if (['white', 'dark', 'poster', 'black'].includes(it.tone)) o.tone = it.tone;
+    if (['white', 'dark', 'poster', 'black', 'red', 'blue'].includes(it.tone)) o.tone = it.tone;
     if (typeof it.label === 'string' && it.label.trim()) o.label = it.label.slice(0, 20);
     if (it.locked === true) o.locked = true;
     out.items.push(o);
@@ -1555,6 +1556,12 @@ function hallBounds() {
 // 主入口：在最南側（+z，服務帶那一邊）的外牆上，對著接待櫃台；沒有櫃台就在牆的中間
 function entryInfo() {
   const P = outlinePoly(), E = edgesOf(P);
+  if (state.building.entry) {
+    // 指定了入口：門開在離那一點最近的外牆上
+    const ne = nearestEdge(state.building.entry[0], state.building.entry[1], P), wD = Math.min(3, ne.e.len - 1);
+    const tt = clamp(ne.t, wD / 2 + 0.3, ne.e.len - wD / 2 - 0.3);
+    return { e: ne.e, t: tt, w: wD, x: ne.e.a[0] + ne.e.dx * tt, z: ne.e.a[1] + ne.e.dz * tt, nx: ne.e.nx, nz: ne.e.nz };
+  }
   let front = E.slice().sort((a, b) => (b.nz - a.nz) || (b.len - a.len))[0];
   const rec = state.zones.find((z) => z.type === 'reception') || state.zones.find((z) => z.type === 'rest');
   // 櫃台貼著哪面外牆，大門就開在那面
@@ -2823,9 +2830,10 @@ function buildWallItem(g, it, w, d, def) {
   } else if (t === 'banner') {
     // 牆面布幕：white 白布、dark 深灰布、poster 一排海報（不放任何品牌圖案）
     const hb = def.h, tone = it.tone || 'white';
-    const fab = mat(tone === 'dark' ? '#3B414B' : '#ECEBE7', { roughness: 0.95, side: THREE.DoubleSide });
+    const TONES = { dark: '#3B414B', red: '#B8322B', blue: '#2F5FA8' };
+    const fab = mat(TONES[tone] || '#ECEBE7', { roughness: 0.95, side: THREE.DoubleSide });
     const n = Math.max(1, Math.round(w / 1.6));
-    for (let k = 0; k < n; k++) if (!kit('banner_panel', g, -w / 2 + (w / n) * (k + 0.5), y, 0.03, { sx: (w / n - 0.04) / 1.58, sy: hb / 3.6, tint: tone === 'dark' ? { fabric_w: '#3B414B' } : null })) { const p = box(g, w / n - 0.04, hb, 0.02, fab, -w / 2 + (w / n) * (k + 0.5), y, 0.02); p.userData.softInk = true; }
+    for (let k = 0; k < n; k++) if (!kit('banner_panel', g, -w / 2 + (w / n) * (k + 0.5), y, 0.03, { sx: (w / n - 0.04) / 1.58, sy: hb / 3.6, tint: TONES[tone] ? { fabric_w: TONES[tone] } : null })) { const p = box(g, w / n - 0.04, hb, 0.02, fab, -w / 2 + (w / n) * (k + 0.5), y, 0.02); p.userData.softInk = true; }
     if (tone === 'poster') { const cols = ['#2F5FA8', '#C0392B', '#3C8A63', '#E8B019', '#22304A']; for (let k = 0; k < Math.max(1, Math.floor(w / 1.4)); k++) box(g, 1.0, 1.6, 0.01, cols[k % cols.length], -w / 2 + 0.7 + k * 1.4, y + hb - 2.2, 0.04, { roughness: 0.6 }).userData.softInk = true; }
     box(g, w, 0.04, 0.04, darkSteel, 0, y + hb, 0.02);
   } else if (t === 'crashpad') {
@@ -3575,11 +3583,12 @@ function planToolState() {
   const it = state.items.find((x) => x.id === selectedId);
   $('p-rot').disabled = !it || !!it.locked;
   $('p-del').disabled = !(selZoneId || (it && !it.locked));
-  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw');
-  svgEl.classList.toggle('drawing', planTool === 'draw');
+  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw'); setPressed($('p-entry'), planTool === 'entry');
+  svgEl.classList.toggle('drawing', planTool === 'draw' || planTool === 'entry');
   const badge = $('draw-badge');
-  badge.hidden = planTool !== 'draw';
+  badge.hidden = planTool !== 'draw' && planTool !== 'entry';
   if (planTool === 'draw') badge.innerHTML = `在圖上拖出「${esc(ZONES[drawType].label)}」的範圍<button type="button" id="draw-cancel">取消</button>`;
+  if (planTool === 'entry') badge.innerHTML = `點外牆上要開主入口的位置${state.building.entry ? '<button type="button" id="entry-auto">自動</button>' : ''}<button type="button" id="draw-cancel">取消</button>`;
   for (const b of document.querySelectorAll('#zone-palette button')) setPressed(b, planTool === 'draw' && b.dataset.zt === drawType);
 }
 function setPlanTool(t, type) { planTool = t; if (type) drawType = type; planToolState(); }
@@ -3591,6 +3600,10 @@ svgEl.addEventListener('pointerdown', (e) => {
   const w = toWorld(e), hit = hitAt(e);
   const base = { sx: e.clientX, sy: e.clientY, w0: w, moved: false };
   if (e.button === 1 || e.button === 2) { planDrag = { ...base, kind: 'pan', ox: pv.ox, oz: pv.oz }; return; }
+  if (planTool === 'entry') {
+    pushHistory(); state.building.entry = [f2(w[0]), f2(w[1])]; setPlanTool('select'); planChanged();
+    toast('主入口改到這面牆上了；要改回自動判斷，再按一次「設定入口」然後點「自動」'); return;
+  }
   if (planTool === 'draw' && (!hit || hit.kind !== 'handle')) { planDrag = { ...base, kind: 'draw', r: null }; return; }
   if (hit && hit.kind === 'handle') {
     const z = state.zones.find((x) => x.id === hit.id); if (!z) return;
@@ -3802,7 +3815,8 @@ $('btn-add-court').addEventListener('click', () => {
 });
 $('p-select').addEventListener('click', () => setPlanTool('select'));
 $('p-draw').addEventListener('click', () => setPlanTool('draw'));
-$('draw-badge').addEventListener('click', (e) => { if (e.target.id === 'draw-cancel') setPlanTool('select'); });
+$('draw-badge').addEventListener('click', (e) => { if (e.target.id === 'draw-cancel') setPlanTool('select'); if (e.target.id === 'entry-auto') { pushHistory(); delete state.building.entry; setPlanTool('select'); planChanged(); toast('主入口改回自動：開在櫃台貼著的那面牆'); } });
+$('p-entry').addEventListener('click', () => setPlanTool(planTool === 'entry' ? 'select' : 'entry'));
 $('p-rot').addEventListener('click', () => { rotateSel(90); renderPlan(); renderZoneSel(); });
 $('p-del').addEventListener('click', () => { if (selZoneId) deleteZone(); else { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); } });
 $('p-snap').addEventListener('click', () => { snapOn = !snapOn; setPressed($('p-snap'), snapOn); setPressed($('t-snap'), snapOn); });
