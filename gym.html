@@ -147,6 +147,16 @@ details.pal-group { border-top: 1px solid var(--rule); }
 .zs-fix { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px dashed var(--rule); border-radius: 10px; font-size: 12px; }
 .zs-fix span { color: var(--soft); line-height: 1.5; }
 .zs-fix button { align-self: flex-start; margin-top: 2px; }
+.boxsel { fill: rgba(242,183,5,.12); stroke: #C4552A; stroke-width: 1.5px; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
+.multi-sel { display: flex; flex-direction: column; gap: 8px; }
+.multi-sel .btn-row { flex-wrap: wrap; }
+.colors .crow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; flex-wrap: wrap; }
+.colors .crow small { color: var(--soft); margin-left: 4px; }
+.colors .sw { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.colors .sw button[data-cv] { width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 6px; border: 1px solid rgba(0,0,0,.25); }
+.colors .sw button[aria-pressed=true] { outline: 2px solid #F2B705; outline-offset: 1px; }
+.colors .sw input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--rule); border-radius: 6px; background: none; }
+.colors .sw .reset { font-size: 11px; padding: 2px 6px; min-height: 0; }
 input.pal-search { margin: 4px 0 6px; padding: 8px 10px; }
 .pal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .pal button { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; min-width: 0; }
@@ -242,6 +252,11 @@ details.more[open] > summary { margin-bottom: 10px; }
 .walk-top button.primary { background: var(--accent); color: var(--accent-ink); }
 .walk-help { position: absolute; top: 58px; right: max(12px, env(safe-area-inset-right, 0px)); margin: 0; font-size: 12px; line-height: 1.7; color: var(--ink); background: rgba(248,244,236,.9); border: 1px solid var(--rule); padding: 8px 11px; max-width: 260px; transition: opacity .6s; pointer-events: none; }
 .walk-help.fade { opacity: 0; }
+.wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
+.wk-cross.on { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: transparent; box-shadow: 0 0 0 2px #F2B705, 0 0 0 3.5px rgba(27,38,56,.5); }
+.wk-act { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(27,38,56,.88); color: #fff; border: 1px solid #F2B705; font-size: 14px; font-weight: 700; }
+.wk-act kbd { font-family: var(--font-mono); font-size: 12px; background: #F2B705; color: #1B2638; border-radius: 4px; padding: 1px 6px; }
+@media (pointer: coarse) { .wk-act kbd { display: none; } .wk-cross { display: none; } }
 .walk-help kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--ink-2); border-bottom-width: 2px; padding: 0 4px; background: var(--sheet); }
 .zcard { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 16px; width: min(360px, calc(100% - 32px)); background: rgba(244,239,230,.94); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--hl); padding: 14px 16px 14px; pointer-events: none; transition: opacity .45s ease, transform .45s ease; }
 .zcard.out { opacity: 0; transform: translateY(10px); }
@@ -430,7 +445,7 @@ details.more[open] > summary { margin-bottom: 10px; }
       <ul class="warn-list" id="warn-list"></ul>
     </section>
     <section class="sec">
-      <details class="more"><summary>廠房尺寸與地板</summary>
+      <details class="more" id="sec-build"><summary>廠房尺寸、地板與牆面顏色</summary>
       <div class="grid3">
         <label class="field" for="b-L"><span>長（m）</span><input id="b-L" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
         <label class="field" for="b-W"><span>寬（m）</span><input id="b-W" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
@@ -442,6 +457,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <label class="field" for="b-floor"><span>球場配色</span><select id="b-floor"></select></label>
         <label class="field" for="b-net"><span>排球網高</span><select id="b-net"></select></label>
       </div>
+      <div class="colors" id="b-colors"></div>
       </details>
     </section>
     <section class="sec">
@@ -484,6 +500,7 @@ details.more[open] > summary { margin-bottom: 10px; }
         <button type="button" id="p-wall" aria-pressed="false">畫牆</button>
         <button type="button" id="p-align" hidden>建物轉正</button>
         <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
+        <button type="button" id="p-box" aria-pressed="false" title="拖一個框選多個物件（電腦上也可以按住 Shift 拖）">框選</button>
       </div>
       <button type="button" id="p-rot" disabled>旋轉 90°</button>
       <button type="button" id="p-del" class="danger" disabled>刪除</button>
@@ -508,7 +525,9 @@ details.more[open] > summary { margin-bottom: 10px; }
     <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜鎖定的物件不會動｜拖曳空白處轉視角｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>按住滑鼠拖曳轉頭<br>點地板直接走過去<br><kbd>Esc</kbd> 離開導覽</p>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>按住滑鼠拖曳轉頭<br>點地板直接走過去<br>看著物件按 <kbd>E</kbd>（或直接點它）互動：坐下、拿球丟球、開電扇、按計分板…<br><kbd>Esc</kbd> 離開導覽</p>
+      <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
+      <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
       <div class="joy" id="joy" hidden><i></i></div>
     </div>
@@ -758,7 +777,11 @@ const TEMPLATES = [
 
 // ---------------------------------------------------------------- state
 let state = null;           // { id, name, building, floor, net, zones: [{id,type,x,z,w,d,name?}], items: [{id,type,x,z,rot,w?,d?,mode?,label?}] }
-let selectedId = null;      // 選取的物件（球場、3D 元件）
+let selectedId = null;      // 選取的物件（球場、3D 元件）；多選時是最後點的那個
+const selSet = new Set();   // 多選：全部選到的物件（含 selectedId）
+const isSel = (id) => !!selectedId && (id === selectedId || selSet.has(id));
+function selItems() { if (!selectedId) return []; const ids = new Set([...selSet, selectedId]); return state.items.filter((i) => ids.has(i.id)); }
+let clip = null, clipN = 0;   // Ctrl+C 複製的物件
 let selZoneId = null;       // 選取的區域
 window.gymCounts = () => { const c = {}; if (state) for (const i of state.items) c[i.type] = (c[i.type] || 0) + 1; return { counts: c, name: state ? state.name : '', building: state ? state.building : null }; };
 let history = [];
@@ -789,12 +812,26 @@ function zoneWalls(z) { return z.walls || (ZONES[z.type].enclosed ? (ZONES[z.typ
 function zoneFloor(z) { return z.floor || ZONES[z.type].floor; }
 // 自由畫的牆：a、b 兩端（公尺），kind = solid 實心牆、glass 玻璃、half 半牆、net 圍網；h 高度
 const WALL_KINDS = { solid: '實心牆', glass: '玻璃隔間', half: '半牆（1.1 m）', net: '圍網' };
+// 自訂顏色：館內地板、球場內場、球場外圍、牆面、防撞墊（沒設就用配色組合的顏色）
+const COLOR_KEYS = ['hall', 'court', 'free', 'wall', 'pad'];
+function scheme() {
+  const sc = SCHEMES[state.floor] || SCHEMES.pu, c = state.colors || {};
+  return { ...sc, ...(c.court ? { court: c.court } : {}), ...(c.free ? { free: c.free } : {}), ...(c.pad ? { pad: c.pad } : {}) };
+}
+const tintCache = new Map();
+function tinted(base, hex) {
+  if (!hex) return base;
+  const k = base.uuid + hex;
+  // 自訂色：拿掉貼圖顏色、壓低金屬反光，不然深色牆會反射成一片亮白
+  if (!tintCache.has(k)) { const m = base.clone(); m.map = null; m.color.set(hex); m.metalness = Math.min(m.metalness || 0, 0.08); m.envMapIntensity = m.userData.env = Math.min(base.userData.env ?? 0.3, 0.2); tintCache.set(k, m); }
+  return tintCache.get(k);
+}
 function sanitizeWall(w) {
   if (!w || !Array.isArray(w.a) || !Array.isArray(w.b)) return null;
   const a = [num(w.a[0], 0), num(w.a[1], 0)], b = [num(w.b[0], 0), num(w.b[1], 0)];
   if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.2) return null;
   const kind = WALL_KINDS[w.kind] ? w.kind : 'solid';
-  return { id: typeof w.id === 'string' ? w.id : uid(), a, b, kind, h: clamp(num(w.h, kind === 'half' ? 1.1 : 3), 0.5, 15) };
+  return { id: typeof w.id === 'string' ? w.id : uid(), a, b, kind, h: clamp(num(w.h, kind === 'half' ? 1.1 : 3), 0.5, 15), ...(/^#[0-9a-f]{6}$/i.test(String(w.color || '')) ? { color: w.color } : {}) };
 }
 function sanitize(raw) {
   const s = raw && typeof raw === 'object' ? raw : {};
@@ -804,6 +841,7 @@ function sanitize(raw) {
     name: typeof s.name === 'string' && s.name.trim() ? s.name.slice(0, 40) : '未命名方案',
     building: { L: clamp(num(b.L, 30), 10, 160), W: clamp(num(b.W, 30), 10, 160), H: clamp(num(b.H, 8), 4, 15), ...(b.wall === 'metal' ? { wall: 'metal' } : {}), ...(Number.isFinite(b.north) && b.north ? { north: num(b.north, 0) } : {}), ...(Array.isArray(b.entry) && b.entry.length === 2 && b.entry.every(Number.isFinite) ? { entry: [num(b.entry[0], 0), num(b.entry[1], 0)] } : {}), ...(typeof polyOf === 'function' ? polyOf(b) : {}) },
     floor: SCHEMES[s.floor] ? s.floor : 'pu',
+    colors: Object.fromEntries(Object.entries(s.colors && typeof s.colors === 'object' ? s.colors : {}).filter(([k, v]) => COLOR_KEYS.includes(k) && /^#[0-9a-f]{6}$/i.test(String(v)))),
     net: NETS[s.net] ? s.net : 'men',
     zones: (Array.isArray(s.zones) ? s.zones.slice(0, 80) : []).map(sanitizeZone).filter(Boolean),
     walls: (Array.isArray(s.walls) ? s.walls.slice(0, 200) : []).map(sanitizeWall).filter(Boolean),
@@ -824,7 +862,7 @@ function sanitize(raw) {
   return out;
 }
 function designData(s = state) {
-  return { name: s.name, building: { ...s.building }, floor: s.floor, net: s.net, zones: s.zones.map((z) => ({ ...z })), walls: (s.walls || []).map((w) => ({ ...w })), items: s.items.map(({ id, ...rest }) => rest) };
+  return { name: s.name, building: { ...s.building }, floor: s.floor, colors: { ...(s.colors || {}) }, net: s.net, zones: s.zones.map((z) => ({ ...z })), walls: (s.walls || []).map((w) => ({ ...w })), items: s.items.map(({ id, ...rest }) => rest) };
 }
 function fromTemplate(make) { const t = make(); return sanitize({ ...t, id: null }); }
 function sizeOf(it) { const d = CAT[it.type]; return { w: it.w ?? d.w, d: it.d ?? d.d }; }
@@ -1165,9 +1203,9 @@ function tag(g, text, y, cls = '', x = 0, z = 0) {
 const PX = 40; // pixels per metre
 const texCache = new Map();
 function courtTexture(kind, fw, fd, mode, schemeKey) {
-  const key = [kind, fw, fd, mode, schemeKey].join('|');
+  const key = [kind, fw, fd, mode, schemeKey, JSON.stringify(state.colors || {})].join('|');
   if (texCache.has(key)) return texCache.get(key);
-  const sc = SCHEMES[schemeKey];
+  const sc = schemeKey === state.floor ? scheme() : SCHEMES[schemeKey];
   const cv = document.createElement('canvas');
   cv.width = Math.round(fw * PX); cv.height = Math.round(fd * PX);
   const c = cv.getContext('2d');
@@ -1278,7 +1316,7 @@ function buildItem(it, courtIndex) {
     if (def.court === 'vb') {
       const nh = NETS[state.net].h;
       // 網柱：鋼管外包深藍防護套，底座配重
-      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: SCHEMES[state.floor].pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
+      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: scheme().pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
       net(g, 10.6, nh, 1.0);
       for (const z of [4.5, -4.5]) {
         const a = cyl(g, 0.006, 0.006, 1.8, '#E23A3A', 0, nh - 1.0, z);
@@ -1363,7 +1401,7 @@ function buildItem(it, courtIndex) {
         blade.position.x = 0.3 + (r - 0.3) / 2;
         const arm = new THREE.Group(); arm.rotation.y = (i / 6) * Math.PI * 2; arm.add(blade); rotor.add(arm);
       }
-      g.add(rotor); spinners.push(rotor);
+      g.add(rotor); spinners.push(rotor); rotor.userData.spinOf = it.id;
       const pad = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r, 48), new THREE.MeshBasicMaterial({ color: '#3A4654', transparent: true, opacity: 0.45, depthWrite: false }));
       pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; g.add(pad);
       tag(g, `吊扇 Ø${fmt1(w)} m（葉片離地 ${fmt1(yb)} m）`, yb + 0.6);
@@ -1742,12 +1780,14 @@ function wallBox(g, material, x1, z1, x2, z2, h, t, y = 0) {
 function buildBuilding() {
   disposeGroup(buildingGroup);
   walls = []; colliders = [];
-  const { H } = state.building, P = outlinePoly(), sc = SCHEMES[state.floor];
+  const { H } = state.building, P = outlinePoly(), sc = scheme(), col = state.colors || {};
+  const wallMat = tinted(state.building.wall === 'metal' ? metalWallMat : plasterMat, col.wall);
   const B = hallBounds();
   fitShadow(Math.max(B.x1 - B.x0, B.z1 - B.z0));
   // 地坪：木地板（UV＝公尺）
   const shape = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
-  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), sc.wood ? FLOOR_MATS.wood : sc.hall ? (FLOOR_MATS[sc.hall] || FLOOR_MATS.hall) : state.floor === 'pu' ? FLOOR_MATS.hall : new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.85 }));
+  const floorBase = sc.wood ? FLOOR_MATS.wood : sc.hall ? (FLOOR_MATS[sc.hall] || FLOOR_MATS.hall) : state.floor === 'pu' ? FLOOR_MATS.hall : new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.85 });
+  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), tinted(floorBase, col.hall));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.userData.noInk = true;
   buildingGroup.add(floor);
   // 外牆：白色粉刷牆，底下一圈深色踢腳；入口那一面留 3 m 的玻璃自動門
@@ -1759,14 +1799,14 @@ function buildBuilding() {
     for (const [s0, s1] of segs) {
       const ax = e.a[0] + e.dx * s0 + ox, az = e.a[1] + e.dz * s0 + oz, bx = e.a[0] + e.dx * s1 + ox, bz = e.a[1] + e.dz * s1 + oz;
       const ex = s0 === 0 ? t / 2 : 0, ey = s1 === e.len ? t / 2 : 0;   // 轉角接起來
-      wallBox(grp, state.building.wall === 'metal' ? metalWallMat : plasterMat, ax - e.dx * ex, az - e.dz * ex, bx + e.dx * ey, bz + e.dz * ey, eave, t);
+      wallBox(grp, wallMat, ax - e.dx * ex, az - e.dz * ex, bx + e.dx * ey, bz + e.dz * ey, eave, t);
       wallBox(grp, steelMat, ax - e.nx * 0.13, az - e.nz * 0.13, bx - e.nx * 0.13, bz - e.nz * 0.13, 0.12, 0.02).userData.noInk = true;
       colliders.push([e.a[0] + e.dx * s0, e.a[1] + e.dz * s0, e.a[0] + e.dx * s1, e.a[1] + e.dz * s1]);
     }
     if (sameEdge(e, ent.e)) {
       // 門楣＋兩扇玻璃滑門（半開）
       const cx = ent.x + ox, cz = ent.z + oz, hd = 2.6;
-      wallBox(grp, plasterMat, cx - e.dx * ent.w / 2, cz - e.dz * ent.w / 2, cx + e.dx * ent.w / 2, cz + e.dz * ent.w / 2, eave - hd, t, hd);
+      wallBox(grp, tinted(plasterMat, col.wall), cx - e.dx * ent.w / 2, cz - e.dz * ent.w / 2, cx + e.dx * ent.w / 2, cz + e.dz * ent.w / 2, eave - hd, t, hd);
       wallBox(grp, frameMat, cx - e.dx * ent.w / 2, cz - e.dz * ent.w / 2, cx + e.dx * ent.w / 2, cz + e.dz * ent.w / 2, 0.08, t + 0.02, hd - 0.08);
       for (const s of [-1, 1]) {
         const p0 = ent.w / 2 * s, p1 = ent.w / 2 * s - s * ent.w * 0.32;
@@ -1893,7 +1933,7 @@ function buildPartitions() {
     const g = new THREE.Group(); g.userData.wallId = w.id; zonesGroup.add(g);
     const [ax, az] = w.a, [bx, bz] = w.b, len = Math.hypot(bx - ax, bz - az), H = Math.min(w.h, state.building.H + 0.9);
     if (w.kind === 'solid' || w.kind === 'half') {
-      wallBox(g, plasterMat, ax, az, bx, bz, H, 0.15);
+      wallBox(g, tinted(plasterMat, w.color), ax, az, bx, bz, H, 0.15);
       wallBox(g, steelMat, ax, az, bx, bz, 0.1, 0.17).userData.noInk = true;
     } else if (w.kind === 'glass') {
       const pane = wallBox(g, glassMat, ax, az, bx, bz, H - 0.1, 0.025, 0.05); pane.userData.noInk = true; pane.renderOrder = 2;
@@ -2081,6 +2121,7 @@ function zoneEdit(z, fn) { const from = { ...z }, carry = zoneCarry(z); fn(); ap
 // ---------------------------------------------------------------- items render
 // ---------------------------------------------------------------- items render
 const selOutline = new THREE.LineLoop(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xf2b705 }));
+const multiOutlines = new THREE.Group(); scene.add(multiOutlines);
 selOutline.renderOrder = 10; selOutline.material.depthTest = false;
 scene.add(selOutline);
 function renderItems() {
@@ -2111,8 +2152,20 @@ function applyLabelVisibility() {
   for (const g of itemObjs.values()) g.traverse((o) => { if (o.userData.isTag) o.visible = showLabels; });
 }
 function moveObj(it) { if (CAT[it.type].wall && typeof snapWallItem === 'function') { const r0 = it.rot; snapWallItem(it); if (r0 !== it.rot) { rerenderOne(it); return; } } if (it.type === 'camera' && typeof snapCamera === 'function') { snapCamera(it); const g0 = itemObjs.get(it.id); if (g0 && Math.abs(g0.rotation.y - (it.rot * Math.PI) / 180) > 1e-3) { rerenderOne(it); return; } } const g = itemObjs.get(it.id); if (g) { g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; } }
+function outlineY(it) {
+  const def = CAT[it.type];
+  return def.wall ? (def.mountY || 0) + 0.05 : it.type === 'smoke' ? state.building.H - 0.1 : it.type === 'camera' ? Math.min(state.building.H - 1.2, 5.5) - 0.2 : def.ceiling ? (it.type === 'fan' ? state.building.H - 1.2 : state.building.H - 0.5) : 0.05;
+}
 function updateOutline() {
   for (const [id, g] of itemObjs) g.traverse((o) => { if (o.userData.camCone) o.visible = id === selectedId; });
+  for (const o of multiOutlines.children) o.geometry.dispose();
+  multiOutlines.clear();
+  for (const m of selItems()) {
+    if (m.id === selectedId) continue;
+    const sz = sizeOf(m), y2 = outlineY(m);
+    const l = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(corners(m.x, m.z, sz.w + 0.1, sz.d + 0.1, m.rot).map(([x, z]) => new THREE.Vector3(x, y2, z))), selOutline.material);
+    l.renderOrder = 10; multiOutlines.add(l);
+  }
   const it = state.items.find((x) => x.id === selectedId);
   if (!it) { selOutline.visible = false; return; }
   const { w, d } = sizeOf(it);
@@ -2232,12 +2285,39 @@ function initBuildingInputs() {
   $('b-H').addEventListener('change', dimChange('H', 4, 15));
   fs.addEventListener('change', () => { pushHistory(); state.floor = fs.value; buildBuilding(); buildZones(); renderItems(); commit(); });
   ns.addEventListener('change', () => { pushHistory(); state.net = ns.value; renderItems(); commit(); });
+  const cb = $('b-colors');
+  cb.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.cr) setColor(b.dataset.cr, null); else if (b.dataset.ck) setColor(b.dataset.ck, b.dataset.cv); });
+  cb.addEventListener('change', (e) => { const i = e.target.closest('input[type=color]'); if (i) setColor(i.dataset.ck, i.value); });
   $('design-name').addEventListener('input', (e) => { state.name = e.target.value.slice(0, 40) || '未命名方案'; saveDraftSoon(); renderSaved(); });
+}
+// 顏色：每一項一個色票＋「預設」；改了 3D 立刻更新
+const COLOR_LABELS = { hall: '館內地板', court: '球場內場', free: '球場外圍（緩衝區）', wall: '牆面', pad: '防撞墊' };
+const COLOR_SWATCH = {
+  hall: ['#E6E3DD', '#B9BCC0', '#8E9399', '#C9A06A', '#3E7B5B', '#2D5DA1'],
+  court: ['#E07B39', '#C4553A', '#3E7B5B', '#2D5DA1', '#E3C08C', '#F2C230'],
+  free: ['#2D5DA1', '#2E8C8C', '#3E7B5B', '#8E9399', '#C4553A', '#E3C08C'],
+  wall: ['#EFEBE4', '#DADDDF', '#F4F4F2', '#2F3B4C', '#B8322B', '#2F5FA8'],
+  pad: ['#24345A', '#B8322B', '#2F5FA8', '#2E8B57', '#F2B705', '#1F2124'],
+};
+function colorDefault(k) {
+  const sc = SCHEMES[state.floor] || SCHEMES.pu;
+  return { hall: sc.wood ? '#C9A06A' : sc.base || '#E6E3DD', court: sc.court, free: sc.free, wall: state.building.wall === 'metal' ? '#DADDDF' : '#EFEBE4', pad: sc.pad }[k] || '#888888';
+}
+function renderColorInputs() {
+  const box = $('b-colors'); if (!box) return;
+  const c = state.colors || {};
+  box.innerHTML = `<p class="hint" style="margin:10px 0 6px">顏色（點色塊直接換，或點最右邊自己挑）</p>` + COLOR_KEYS.map((k) => `<div class="crow"><span>${COLOR_LABELS[k]}${c[k] ? '' : '<small>（配色預設）</small>'}</span><div class="sw">${COLOR_SWATCH[k].map((h) => `<button type="button" data-ck="${k}" data-cv="${h}" style="background:${h}" aria-label="${COLOR_LABELS[k]} ${h}" aria-pressed="${(c[k] || colorDefault(k)).toLowerCase() === h.toLowerCase()}"></button>`).join('')}<input type="color" data-ck="${k}" value="${c[k] || colorDefault(k)}" aria-label="自己挑${COLOR_LABELS[k]}顏色">${c[k] ? `<button type="button" class="reset" data-cr="${k}">預設</button>` : ''}</div></div>`).join('');
+}
+function setColor(k, v) {
+  pushHistory(); state.colors = { ...(state.colors || {}) };
+  if (v) state.colors[k] = v; else delete state.colors[k];
+  texCache.clear(); buildBuilding(); buildZones(); renderItems(); commit(); renderColorInputs();
 }
 function syncBuildingInputs() {
   const { L, W, H } = state.building;
   $('b-L').value = L; $('b-W').value = W; $('b-H').value = H;
   $('b-floor').value = state.floor; $('b-net').value = state.net;
+  if (!$('b-colors').contains(document.activeElement)) renderColorInputs();
   if (document.activeElement !== $('design-name')) $('design-name').value = state.name;
   $('r-ping').textContent = fmt1((L * W) / PING);
   $('r-m2').textContent = `${fmt1(L * W)} ㎡`;
@@ -2297,11 +2377,26 @@ function addItem(type) {
   toast(def.court === 'vb' ? `已加入${def.label}，球場邊也自動架好攝影機` : `已加入${def.label}，直接在畫面裡拖曳移動`);
 }
 function select(id) {
-  selectedId = id;
+  selectedId = id; selSet.clear(); if (id) selSet.add(id);
   if (id) { selZoneId = null; selWallId = null; }
   updateOutline();
   renderSelection();
   if (typeof renderZoneSel === 'function' && typeof mode !== 'undefined') { renderZoneSel(); planToolState(); if (mode === 'plan') renderPlan(); }
+}
+// 多選：加選／取消（Shift 或 Ctrl 點），或一次設定一組
+function toggleSel(id) {
+  if (!selectedId) return select(id);
+  const ids = new Set([...selSet, selectedId]);
+  if (ids.has(id)) ids.delete(id); else ids.add(id);
+  setSelection([...ids], ids.has(id) ? id : null);
+}
+function setSelection(ids, primary) {
+  ids = ids.filter((id) => state.items.some((i) => i.id === id));
+  if (ids.length <= 1) return select(ids[0] || null);
+  selectedId = primary && ids.includes(primary) ? primary : ids[ids.length - 1]; selSet.clear(); for (const id of ids) selSet.add(id);
+  selZoneId = null; selWallId = null;
+  updateOutline(); renderSelection();
+  if (typeof renderZoneSel === 'function') { renderZoneSel(); planToolState(); if (mode === 'plan') renderPlan(); }
 }
 function numField(id, label, value, step, onChange) {
   const l = document.createElement('label'); l.className = 'field'; l.htmlFor = id;
@@ -2310,10 +2405,26 @@ function numField(id, label, value, step, onChange) {
   inp.addEventListener('change', () => { const v = Number(inp.value); if (Number.isFinite(v)) onChange(v); });
   l.append(s, inp); return l;
 }
+function multiPanelHtml(n, idp) {
+  const all = selItems(), locked = all.filter((i) => i.locked).length;
+  return `<div class="multi-sel"><div class="sel-name">已選 ${n} 個物件</div>
+    <p class="hint">Shift＋點物件可以加選或取消；平面圖按住 Shift 拖曳空白處可以框選（手機用「框選」）。拖其中一個會整組一起移動。</p>
+    <div class="btn-row"><button type="button" class="primary" id="${idp}-mdup">複製這 ${n} 個（Ctrl+D）</button><button type="button" id="${idp}-mrot">整組轉 90°</button><button type="button" id="${idp}-mlock">${locked === all.length ? '全部解鎖' : '全部鎖定'}</button><button type="button" class="danger" id="${idp}-mdel">刪除（Delete）</button><button type="button" id="${idp}-mnone">取消選取（Esc）</button></div>
+    <p class="hint">Ctrl+C 複製、Ctrl+V 貼上（每貼一次往右下錯開 1 m）、Ctrl+A 全選元件、方向鍵整組移動。</p></div>`;
+}
+function wireMultiPanel(idp, after) {
+  $(idp + '-mdup').addEventListener('click', () => { duplicateSel(); after && after(); });
+  $(idp + '-mrot').addEventListener('click', () => { rotateSel(90); after && after(); });
+  $(idp + '-mlock').addEventListener('click', () => { toggleLockSel(); after && after(); });
+  $(idp + '-mdel').addEventListener('click', () => { deleteSel(); after && after(); });
+  $(idp + '-mnone').addEventListener('click', () => { select(null); after && after(); });
+}
 function renderSelection() {
   const body = $('sel-body'), empty = $('sel-empty');
   const it = state.items.find((x) => x.id === selectedId);
   if (!it) { body.hidden = true; empty.hidden = false; body.textContent = ''; return; }
+  const many = selItems();
+  if (many.length > 1) { empty.hidden = true; body.hidden = false; body.innerHTML = multiPanelHtml(many.length, 'sel'); wireMultiPanel('sel'); return; }
   empty.hidden = true; body.hidden = false; body.textContent = '';
   const def = CAT[it.type];
   const { w, d } = sizeOf(it);
@@ -2386,6 +2497,12 @@ function renderSelection() {
 }
 function lockedMsg() { toast('這個物件已鎖定，先按「解除鎖定」（或按 L）'); }
 function toggleLockSel() {
+  const many = selItems();
+  if (many.length > 1) {
+    const lock = many.some((i) => !i.locked); pushHistory();
+    for (const i of many) { if (lock) i.locked = true; else delete i.locked; rerenderOne(i); }
+    updateOutline(); commit(); renderSelection(); toast(lock ? `已鎖定 ${many.length} 個物件` : `已解除 ${many.length} 個物件的鎖定`); return;
+  }
   const it = state.items.find((x) => x.id === selectedId); if (!it) return;
   pushHistory(); if (it.locked) delete it.locked; else it.locked = true;
   rerenderOne(it); updateOutline(); commit(); renderSelection();
@@ -2406,11 +2523,36 @@ function alignSelToWall() {
   toast(`已對齊最近的外牆（${f2(it.rot)}°）`);
 }
 function rotateSel(deg) {
+  const many = selItems().filter((i) => !i.locked);
+  if (selItems().length > 1) {
+    // 整組繞中心轉（跟物件自己的角度同一個方向）
+    if (!many.length) return lockedMsg();
+    pushHistory();
+    const cx = many.reduce((a, i) => a + i.x, 0) / many.length, cz = many.reduce((a, i) => a + i.z, 0) / many.length;
+    const r = (deg * Math.PI) / 180, c = Math.cos(r), sn = Math.sin(r);
+    for (const i of many) { const lx = i.x - cx, lz = i.z - cz; i.x = f2(cx + lx * c + lz * sn); i.z = f2(cz - lx * sn + lz * c); i.rot = Math.round(norm360(i.rot + deg) * 100) / 100; rerenderOne(i); }
+    updateOutline(); commit(); renderSelection(); return;
+  }
   const it = state.items.find((x) => x.id === selectedId); if (!it) return;
   if (it.locked) return lockedMsg();
   pushHistory(); it.rot = Math.round(norm360(it.rot + deg) * 100) / 100; moveObj(it); updateOutline(); commit(); renderSelection();
 }
+// 整組複製：保持彼此的相對位置，往右錯開整組寬度
+function cloneGroup(src, dx, dz) {
+  const zmap = new Map();
+  const copies = src.map((i) => { const c = { ...i, id: uid(), x: f2(i.x + dx), z: f2(i.z + dz) }; delete c.locked; delete c.zone; return c; });
+  for (const c of copies) { state.items.push(c); }
+  renderItems(); setSelection(copies.map((c) => c.id)); commit();
+  return copies;
+}
+function groupBox(list) { const xs = [], zs = []; for (const i of list) for (const [x, z] of footprint(i)) { xs.push(x); zs.push(z); } return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) }; }
 function duplicateSel() {
+  const many = selItems();
+  if (many.length > 1) {
+    pushHistory(); const b = groupBox(many);
+    cloneGroup(many, Math.min(12, b.x1 - b.x0) + 0.5, 0);
+    toast(`已複製 ${many.length} 個物件，整組選起來了，直接拖就能放到別的位置`); return;
+  }
   const it = state.items.find((x) => x.id === selectedId); if (!it) return;
   pushHistory();
   const { w, d } = sizeOf(it);
@@ -2420,7 +2562,18 @@ function duplicateSel() {
   if (CAT[it.type].court) { copy.x = it.x; copy.z = it.z + d; }
   state.items.push(copy); rerenderOne(copy); select(copy.id); commit();
 }
+function copySel() { const many = selItems(); if (!many.length) return; clip = many.map((i) => ({ ...i })); clipN = 0; toast(`已複製 ${many.length} 個物件，按 Ctrl+V 貼上`); }
+function pasteClip() { if (!clip || !clip.length) return; pushHistory(); clipN++; cloneGroup(clip, clipN, clipN); toast(`已貼上 ${clip.length} 個物件`); }
+function selectAllItems() { const ids = state.items.filter((i) => !CAT[i.type].court).map((i) => i.id); if (ids.length) { setSelection(ids); toast(`已選取全部 ${ids.length} 個元件（球場不含）`); } }
 function deleteSel() {
+  const many = selItems();
+  if (many.length > 1) {
+    const del = many.filter((i) => !i.locked); if (!del.length) return lockedMsg();
+    pushHistory(); const ids = new Set(del.map((i) => i.id));
+    state.items = state.items.filter((i) => !ids.has(i.id));
+    renderItems(); select(null); commit();
+    toast(`已刪除 ${del.length} 個物件${many.length > del.length ? `（${many.length - del.length} 個鎖定的沒刪）` : ''}，按「復原」可以拿回來`); return;
+  }
   const i = state.items.findIndex((x) => x.id === selectedId); if (i < 0) return;
   if (state.items[i].locked) return lockedMsg();
   pushHistory();
@@ -2695,16 +2848,20 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
     const zh = raycaster.intersectObjects(zonesGroup.children, true).find((h) => h.object.userData.zoneFix);
     if (zh) { const f = zh.object.userData.zoneFix, ids = zoneToItems(f.zid); if (ids[f.i]) select(ids[f.i]); drag = null; return; }
   }
+  if (id && (e.shiftKey || e.ctrlKey || e.metaKey)) { toggleSel(id); drag = null; return; }
   drag = { id, sx: e.clientX, sy: e.clientY, moved: false, pid: e.pointerId };
   const hitIt = id && state.items.find((x) => x.id === id);
-  if (hitIt && hitIt.locked) { drag.locked = true; return; }
+  if (hitIt && hitIt.locked && !(isSel(id) && selItems().length > 1)) { drag.locked = true; return; }
   // only an object that is already selected can be dragged; the first press just selects (or turns the view)
-  if (id && id !== selectedId) { drag.selectOnly = true; return; }
+  if (id && !isSel(id)) { drag.selectOnly = true; return; }
   if (id) {
     const it = state.items.find((x) => x.id === id);
     const p = floorHit();
-    if (it && p) { drag.off = [it.x - p.x, it.z - p.z]; drag.start = [it.x, it.z]; controls.enabled = false; renderer.domElement.setPointerCapture(e.pointerId); }
-    select(id);
+    if (it && p) {
+      drag.off = [it.x - p.x, it.z - p.z]; drag.start = [it.x, it.z]; controls.enabled = false; renderer.domElement.setPointerCapture(e.pointerId);
+      if (selItems().length > 1) drag.group = selItems().filter((i) => !i.locked).map((i) => ({ it: i, x: i.x, z: i.z }));
+    }
+    if (selItems().length < 2) select(id);
   }
 }, true);
 renderer.domElement.addEventListener('pointermove', (e) => {
@@ -2714,12 +2871,25 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   setPointer(e);
   const p = floorHit(); if (!p) return;
   const it = state.items.find((x) => x.id === drag.id); if (!it) return;
+  if (drag.group) {
+    const dx = snap(p.x + drag.off[0]) - drag.start[0], dz = snap(p.z + drag.off[1]) - drag.start[1];
+    for (const g of drag.group) { g.it.x = f2(g.x + dx); g.it.z = f2(g.z + dz); moveObj(g.it); }
+    updateOutline(); return;
+  }
   it.x = snap(p.x + drag.off[0]); it.z = snap(p.z + drag.off[1]);
   moveObj(it); updateOutline();
 });
 function endDrag() {
   if (!drag) return;
   const d = drag; drag = null; controls.enabled = true;
+  if (d.group && d.moved) {
+    const now = d.group.map((g) => [g.it.x, g.it.z]);
+    if (d.group.some((g, k) => now[k][0] !== g.x || now[k][1] !== g.z)) {
+      d.group.forEach((g) => { g.it.x = g.x; g.it.z = g.z; }); pushHistory(); d.group.forEach((g, k) => { g.it.x = now[k][0]; g.it.z = now[k][1]; });
+      commit(); renderSelection();
+    }
+    return;
+  }
   if (d.id && d.moved && d.start) {
     const it = state.items.find((x) => x.id === d.id);
     if (it && (it.x !== d.start[0] || it.z !== d.start[1])) {
@@ -2745,21 +2915,26 @@ window.addEventListener('keydown', (e) => {
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   if (walk.on) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteClip(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && mode !== 'walk') { e.preventDefault(); selectAllItems(); return; }
   if (mode === 'plan' && selZoneId) return;
   if (!selectedId) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { e.preventDefault(); copySel(); return; }
   const selIt = state.items.find((x) => x.id === selectedId);
   if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLockSel(); return; }
-  if (selIt && selIt.locked && (e.key === 'r' || e.key === 'R' || e.key === 'Delete' || e.key === 'Backspace' || e.key.startsWith('Arrow'))) { e.preventDefault(); lockedMsg(); return; }
+  if (selItems().length < 2 && selIt && selIt.locked && (e.key === 'r' || e.key === 'R' || e.key === 'Delete' || e.key === 'Backspace' || e.key.startsWith('Arrow'))) { e.preventDefault(); lockedMsg(); return; }
   if (e.key === 'r' || e.key === 'R') { e.preventDefault(); rotateSel(e.shiftKey ? 15 : 90); }
   else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSel(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSel(); }
   else if (e.key === 'Escape') select(null);
   else if (e.key.startsWith('Arrow')) {
-    e.preventDefault(); const it = state.items.find((x) => x.id === selectedId); if (!it) return;
+    e.preventDefault(); const list = selItems().filter((i) => !i.locked); if (!list.length) return;
     const step = e.shiftKey ? 0.1 : 0.5; pushHistory();
-    if (e.key === 'ArrowLeft') it.x -= step; if (e.key === 'ArrowRight') it.x += step; if (e.key === 'ArrowUp') it.z -= step; if (e.key === 'ArrowDown') it.z += step;
-    it.x = Math.round(it.x * 100) / 100; it.z = Math.round(it.z * 100) / 100;
-    moveObj(it); updateOutline(); commit(); renderSelection(); renderZoneSel();
+    for (const it of list) {
+      if (e.key === 'ArrowLeft') it.x -= step; if (e.key === 'ArrowRight') it.x += step; if (e.key === 'ArrowUp') it.z -= step; if (e.key === 'ArrowDown') it.z += step;
+      it.x = Math.round(it.x * 100) / 100; it.z = Math.round(it.z * 100) / 100; moveObj(it);
+    }
+    updateOutline(); commit(); renderSelection(); renderZoneSel(); if (mode === 'plan') renderPlan();
   }
 });
 // ---------------------------------------------------------------- generate a hall from a candidate site
@@ -3186,7 +3361,7 @@ function buildWallItem(g, it, w, d, def) {
     box(g, w, 0.04, 0.04, darkSteel, 0, y + hb, 0.02);
   } else if (t === 'crashpad') {
     const n = Math.max(1, Math.round(w / 1.2)), pw = w / n;
-    for (let i = 0; i < n; i++) if (!kit('crash_pad', g, -w / 2 + pw * (i + 0.5), 0, 0, { rotY: Math.PI, sx: pw / 1.2 })) box(g, pw - 0.025, 1.95, d, padMat, -w / 2 + pw * (i + 0.5), 0.08, 0);
+    for (let i = 0; i < n; i++) if (!kit('crash_pad', g, -w / 2 + pw * (i + 0.5), 0, 0, { rotY: Math.PI, sx: pw / 1.2, tint: { navy_pad: scheme().pad } })) box(g, pw - 0.025, 1.95, d, leatherMat(scheme().pad), -w / 2 + pw * (i + 0.5), 0.08, 0);
   } else if (t === 'firstaid') {
     box(g, 0.4, 0.3, 0.14, '#F4F4F2', 0, y, 0);
     box(g, 0.14, 0.04, 0.01, '#D7262B', 0, y + 0.13, 0.075); box(g, 0.04, 0.14, 0.01, '#D7262B', 0, y + 0.08, 0.075);
@@ -3695,7 +3870,7 @@ function courtSvg(it, sel) {
   s += `<text class="csub mono" x="0" y="${M(-fd / 2 + 1.7 * fsz + 0.25)}" text-anchor="middle" style="font-size:${M(fsz * 0.55)}px">${k === 'vb' ? '18 × 9 m' : `${cw} × ${cd} m`}${it.locked ? ' · 已鎖定' : ''}</text></g>`;
   if (sel) s += `<rect class="selbox" x="${M(-fw / 2)}" y="${M(-fd / 2)}" width="${M(fw)}" height="${M(fd)}"/>`;
   const r = (it.rot * Math.PI) / 180, toW = (lx, lz) => [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)];
-  return s + '</g>' + (sel && !it.locked ? rotKnob(it.id, 'hi', toW, fd / 2) : '');
+  return s + '</g>' + (sel && !it.locked && it.id === selectedId && selItems().length < 2 ? rotKnob(it.id, 'hi', toW, fd / 2) : '');
 }
 // 區域的自動擺設：虛線框，點一下就拆成可調整的元件
 function ghostSvg(f, zid, i) {
@@ -3710,7 +3885,7 @@ function itemSvg(it, sel) {
   if (it.type === 'netwall') body = `<line class="fnet" x1="${M(-w / 2)}" y1="0" x2="${M(w / 2)}" y2="0"/>`;
   if (sel) body += `<rect class="selbox" x="${M(-w / 2 - 0.1)}" y="${M(-d / 2 - 0.1)}" width="${M(w + 0.2)}" height="${M(d + 0.2)}"/>`;
   const r = (it.rot * Math.PI) / 180, toW = (lx, lz) => [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)];
-  const knob = sel && !it.locked ? rotKnob(it.id, 'hi', toW, d / 2 + 0.1) : '';
+  const knob = sel && !it.locked && it.id === selectedId && selItems().length < 2 ? rotKnob(it.id, 'hi', toW, d / 2 + 0.1) : '';
   return `<g class="court" data-i="${it.id}" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})">${body}</g>${knob}`;
 }
 function zoneSvg(z, sel) {
@@ -3901,14 +4076,15 @@ function renderPlan() {
   // 區域、球場、家具
   // 整片地板在最底層，球場畫在它上面，其他區域再蓋上來
   for (const z of zonesInOrder()) if (z.type === 'floor') a(zoneSvg(z, z.id === selZoneId));
-  for (const it of state.items) if (CAT[it.type].court) a(courtSvg(it, it.id === selectedId));
+  for (const it of state.items) if (CAT[it.type].court) a(courtSvg(it, isSel(it.id)));
   for (const z of zonesInOrder()) if (z.type !== 'floor') a(zoneSvg(z, z.id === selZoneId));
   for (const z of zonesInOrder()) if (!z.bare) zoneFixtures(z).forEach((f, i) => a(ghostSvg(f, z.id, i)));
-  for (const it of state.items) if (planItem(it) && !CAT[it.type].court) a(itemSvg(it, it.id === selectedId));
+  for (const it of state.items) if (planItem(it) && !CAT[it.type].court) a(itemSvg(it, isSel(it.id)));
   for (const z of zonesInOrder()) if (z.type !== 'floor' || z.id === selZoneId) a(zoneLabelSvg(z, z.id === selZoneId));
   a(rotGuideSvg());
   for (const w of state.walls || []) a(wallSvg(w, w.id === selWallId));
   if (planDrag && planDrag.kind === 'wdraw' && planDrag.b) a(wallSvg({ id: 'tmp', a: planDrag.a, b: planDrag.b, kind: wallKind }, true));
+  if (planDrag && planDrag.kind === 'box' && planDrag.r) { const r = planDrag.r; a(`<rect class="boxsel" x="${X(r.x0)}" y="${Y(r.z0)}" width="${M(r.x1 - r.x0)}" height="${M(r.z1 - r.z0)}"/>`); }
   for (const it of state.items) if (it.type === 'light') { const { w, d } = sizeOf(it); a(`<rect class="lamp" transform="translate(${X(it.x)} ${Y(it.z)}) rotate(${-it.rot})" x="${M(-w / 2)}" y="${M(-d / 2)}" width="${M(w)}" height="${M(d)}"/>`); }
   // 外牆（入口留門洞，畫兩片滑門）
   const ex = ent.e;
@@ -4039,10 +4215,10 @@ function selectPlanItem(id) { selZoneId = null; selWallId = null; select(id); re
 function planToolState() {
   { const P = state.building.poly; $('p-align').hidden = !(P && Math.abs(alignPoly(P).deg) >= 0.5); }
   const it = state.items.find((x) => x.id === selectedId);
-  $('p-rot').disabled = !it || !!it.locked;
-  $('p-del').disabled = !(selZoneId || selWallId || (it && !it.locked));
-  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw'); setPressed($('p-entry'), planTool === 'entry'); setPressed($('p-wall'), planTool === 'wall');
-  svgEl.classList.toggle('drawing', planTool === 'draw' || planTool === 'entry' || planTool === 'wall');
+  $('p-rot').disabled = !it || (!!it.locked && selItems().length < 2);
+  $('p-del').disabled = !(selZoneId || selWallId || (it && (!it.locked || selItems().length > 1)));
+  setPressed($('p-select'), planTool === 'select'); setPressed($('p-draw'), planTool === 'draw'); setPressed($('p-entry'), planTool === 'entry'); setPressed($('p-box'), planTool === 'box'); setPressed($('p-wall'), planTool === 'wall');
+  svgEl.classList.toggle('drawing', planTool === 'draw' || planTool === 'entry' || planTool === 'wall' || planTool === 'box');
   const badge = $('draw-badge');
   badge.hidden = !['draw', 'entry', 'wall'].includes(planTool);
   if (planTool === 'wall') badge.innerHTML = `從起點拖到終點畫一道${WALL_KINDS[wallKind]}（自動對齊水平／垂直，按住 Alt 可斜畫）${Object.entries(WALL_KINDS).map(([k, l]) => `<button type="button" data-wk="${k}"${k === wallKind ? ' style="background:var(--accent);color:var(--accent-ink)"' : ''}>${l.replace(/（.*）/, '')}</button>`).join('')}<button type="button" id="draw-cancel">完成</button>`;
@@ -4074,6 +4250,9 @@ svgEl.addEventListener('pointerdown', (e) => {
     if (selWallId !== hit.id) selectWall(hit.id);
     planDrag = { ...base, kind: 'wmove', id: wl.id, orig: { a: wl.a.slice(), b: wl.b.slice() } }; return;
   }
+  // 框選：「框選」工具在哪裡拖都是框；按住 Shift 從空白、區域或球場上拖也是框（Shift 點一般物件＝加選）
+  const onCourt = hit && hit.kind === 'item' && state.items.some((i) => i.id === hit.id && CAT[i.type].court);
+  if ((planTool === 'box' && (!hit || ['zone', 'zfix', 'item'].includes(hit.kind))) || (e.shiftKey && (!hit || hit.kind === 'zone' || hit.kind === 'zfix' || onCourt))) { planDrag = { ...base, kind: 'box', add: e.shiftKey, r: null }; return; }
   if (hit && hit.kind === 'zfix') {
     const [zid, i] = hit.id.split(':'), ids = zoneToItems(zid), it = state.items.find((x) => x.id === ids[Number(i)]);
     if (it) { selectPlanItem(it.id); planDrag = { ...base, kind: 'imove', id: it.id, orig: { x: it.x, z: it.z } }; }
@@ -4090,9 +4269,12 @@ svgEl.addEventListener('pointerdown', (e) => {
     planDrag = { ...base, kind: 'zmove', id: z.id, orig: { ...z }, carry: zoneCarry(z) };
   } else if (hit && hit.kind === 'item') {
     const it = state.items.find((x) => x.id === hit.id);
+    if (e.shiftKey || e.ctrlKey || e.metaKey) { selZoneId = null; selWallId = null; toggleSel(hit.id); planDrag = { ...base, kind: 'none' }; return; }
+    if (isSel(hit.id) && selItems().length > 1) { planDrag = { ...base, kind: 'gmove', id: hit.id, orig: { x: it.x, z: it.z }, group: selItems().filter((i) => !i.locked).map((i) => ({ it: i, x: i.x, z: i.z })) }; return; }
     if (selectedId !== hit.id) selectPlanItem(hit.id);
     planDrag = { ...base, kind: it && it.locked ? 'locked' : 'imove', id: hit.id, orig: it ? { x: it.x, z: it.z } : null };
-  } else planDrag = { ...base, kind: 'pan', ox: pv.ox, oz: pv.oz, empty: true };
+  } else if (e.shiftKey || planTool === 'box') planDrag = { ...base, kind: 'box', add: e.shiftKey, r: null };
+  else planDrag = { ...base, kind: 'pan', ox: pv.ox, oz: pv.oz, empty: true };
   if (planDrag && planDrag.kind === 'pan' && selWallId) { selWallId = null; renderPlan(); renderZoneSel(); planToolState(); }
 });
 svgEl.addEventListener('pointermove', (e) => {
@@ -4143,6 +4325,17 @@ svgEl.addEventListener('pointermove', (e) => {
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
     z.x = snapEdge(planDrag.orig.x + dx, z.w); z.z = snapEdge(planDrag.orig.z + dz, z.d);
     applyCarry(planDrag.carry, planDrag.orig, z);
+    renderPlan(); return;
+  }
+  if (planDrag.kind === 'none') return;
+  if (planDrag.kind === 'gmove') {
+    if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
+    const ddx = snapP(planDrag.orig.x + dx) - planDrag.orig.x, ddz = snapP(planDrag.orig.z + dz) - planDrag.orig.z;
+    for (const g of planDrag.group) { g.it.x = f2(g.x + ddx); g.it.z = f2(g.z + ddz); }
+    renderPlan(); return;
+  }
+  if (planDrag.kind === 'box') {
+    const a = planDrag.w0; planDrag.r = { x0: Math.min(a[0], w[0]), x1: Math.max(a[0], w[0]), z0: Math.min(a[1], w[1]), z1: Math.max(a[1], w[1]) };
     renderPlan(); return;
   }
   if (planDrag.kind === 'imove') {
@@ -4202,7 +4395,20 @@ function endPlanDrag(e) {
   if (['wend', 'wmove', 'zrot', 'irot'].includes(d.kind) && d.pushed) { if (d.kind === 'irot') { const it = state.items.find((x) => x.id === d.id); if (it) rerenderOne(it); } planChanged(); renderZoneSel(); return; }
   if (d.kind === 'pan' && d.empty && !d.moved) { if (selZoneId || selectedId) { selZoneId = null; select(null); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); } return; }
   if (d.kind === 'locked' && d.moved) { lockedMsg(); return; }
-  if ((d.kind === 'zmove' || d.kind === 'imove' || d.kind === 'resize') && d.pushed) planChanged();
+  if ((d.kind === 'zmove' || d.kind === 'imove' || d.kind === 'resize' || d.kind === 'gmove') && d.pushed) planChanged();
+  if (d.kind === 'box') {
+    const r = d.r;
+    if (r && (r.x1 - r.x0 > 0.2 || r.z1 - r.z0 > 0.2)) {
+      // 框到的：中心在框裡（球場要整個在框裡）
+      const inR = ([x, z]) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+      const got = state.items.filter((i) => planItem(i) && (CAT[i.type].court ? footprint(i).every(inR) : inR([i.x, i.z]))).map((i) => i.id);
+      const ids = d.add ? [...new Set([...selItems().map((i) => i.id), ...got])] : got;
+      selZoneId = null; selWallId = null;
+      setSelection(ids); renderZoneSel(); renderZoneTable(); planToolState();
+      toast(ids.length ? `框選了 ${ids.length} 個物件：拖其中一個整組移動，Ctrl+D 複製` : '框裡沒有物件');
+    }
+    renderPlan();
+  }
 }
 svgEl.addEventListener('pointerup', endPlanDrag);
 svgEl.addEventListener('pointercancel', endPlanDrag);
@@ -4254,17 +4460,24 @@ function renderZoneSel() {
   const wl = !z && !it && (state.walls || []).find((x) => x.id === selWallId);
   if (!z && !it && !wl) { box.hidden = true; box.textContent = ''; return; }
   box.hidden = false;
+  if (it && selItems().length > 1) {
+    box.innerHTML = `<div style="margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">${multiPanelHtml(selItems().length, 'ps')}</div>`;
+    wireMultiPanel('ps', () => { renderPlan(); renderZoneSel(); planToolState(); });
+    return;
+  }
   if (wl) {
     const L = Math.hypot(wl.b[0] - wl.a[0], wl.b[1] - wl.a[1]);
     box.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--hl);border-radius:12px;background:var(--sheet)">
       <div class="sel-name">${WALL_KINDS[wl.kind]}<span class="unit">　長 ${fmt1(L)} m</span></div>
       <div class="grid2"><label class="field" for="ws-kind"><span>種類</span><select id="ws-kind">${Object.entries(WALL_KINDS).map(([k, l]) => `<option value="${k}"${k === wl.kind ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="field" for="ws-h"><span>高度（m）</span><input id="ws-h" type="number" step="0.1" min="0.5" max="15" value="${f2(wl.h)}"></label></div>
+      ${wl.kind === 'solid' || wl.kind === 'half' ? `<label class="field" for="ws-color"><span>牆面顏色</span><input id="ws-color" type="color" value="${wl.color || '#EFEBE4'}"></label>` : ''}
       <p class="hint">拖中間移動整道牆，拖兩端的方塊改長度與方向（按住 Alt 可以斜拉）。</p>
       <div class="btn-row"><button type="button" class="danger" id="ws-del">刪除這道牆</button></div></div>`;
     $('ws-kind').addEventListener('change', (e) => { pushHistory(); wl.kind = e.target.value; if (wl.kind === 'half') wl.h = 1.1; planChanged(); renderZoneSel(); });
     $('ws-h').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); wl.h = clamp(v, 0.5, 15); planChanged(); renderZoneSel(); });
     $('ws-del').addEventListener('click', deleteWall);
+    if ($('ws-color')) $('ws-color').addEventListener('change', (e) => { pushHistory(); wl.color = e.target.value; planChanged(); renderZoneSel(); });
     return;
   }
   if (z) {
@@ -4381,6 +4594,7 @@ $('p-select').addEventListener('click', () => setPlanTool('select'));
 $('p-draw').addEventListener('click', () => setPlanTool('draw'));
 $('draw-badge').addEventListener('click', (e) => { if (e.target.dataset && e.target.dataset.wk) { wallKind = e.target.dataset.wk; planToolState(); return; } if (e.target.id === 'draw-cancel') setPlanTool('select'); if (e.target.id === 'entry-auto') { pushHistory(); delete state.building.entry; setPlanTool('select'); planChanged(); toast('主入口改回自動：開在櫃台貼著的那面牆'); } });
 $('p-entry').addEventListener('click', () => setPlanTool(planTool === 'entry' ? 'select' : 'entry'));
+$('p-box').addEventListener('click', () => { setPlanTool(planTool === 'box' ? 'select' : 'box'); if (planTool === 'box') toast('在圖上拖一個框，框到的物件會一起選起來'); });
 $('p-wall').addEventListener('click', () => setPlanTool(planTool === 'wall' ? 'select' : 'wall'));
 $('p-align').addEventListener('click', () => {
   const P = state.building.poly; if (!P) return;
@@ -4449,7 +4663,7 @@ $('w-exit').addEventListener('click', () => setMode(walkReturn === 'walk' ? '3d'
 $('w-plan').addEventListener('click', () => setMode('plan'));
 
 // ---------------------------------------------------------------- free walk: WASD / arrows + drag to look, joystick on phones, click the floor to walk there
-const walk = { on: false, x: 0, z: 0, yaw: 0, pitch: -0.04, keys: new Set(), target: null, joy: { x: 0, y: 0 }, zoneKey: '', lastZ: 0, saved: null, look: null };
+const walk = { on: false, x: 0, z: 0, yaw: 0, pitch: -0.04, keys: new Set(), target: null, joy: { x: 0, y: 0 }, zoneKey: '', lastZ: 0, saved: null, look: null, off: new Set(), sit: null, hold: null, focus: null, lastF: 0, score: [0, 0], sets: [0, 0], drinks: 0, dark: false };
 const EYE = 1.62, RADIUS = 0.32;
 const targetMark = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 32), new THREE.MeshBasicMaterial({ color: 0xc4552a, transparent: true, opacity: 0.9, depthWrite: false }));
 targetMark.rotation.x = -Math.PI / 2; targetMark.visible = false; scene.add(targetMark);
@@ -4467,6 +4681,7 @@ function startWalk() {
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
   walk.keys.clear(); walk.joy = { x: 0, y: 0 };
   $('walk-ui').hidden = false;
+  if (!walk.actWired) { walk.actWired = true; $('wk-act').addEventListener('click', () => doInteract()); }
   $('joy').hidden = !matchMedia('(pointer: coarse)').matches;
   const help = $('walk-help'); help.classList.remove('fade'); clearTimeout(walk.helpT); walk.helpT = setTimeout(() => help.classList.add('fade'), 7000);
   $('zcard').classList.add('out');
@@ -4475,6 +4690,10 @@ function startWalk() {
 }
 function stopWalk() {
   walk.on = false; window.__walk = false; targetMark.visible = false;
+  walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false);
+  if (walk.hold) { scene.remove(walk.hold); walk.hold = null; }
+  for (const b of balls) ballsGroup.remove(b.m); balls.length = 0;
+  $('wk-act').hidden = true;
   $('walk-ui').hidden = true;
   const s = walk.saved;
   if (s) { camera.position.copy(s.pos); controls.target.copy(s.target); camera.fov = s.fov; camera.near = s.near; camera.updateProjectionMatrix(); VIS.structure = s.structure; showLabels = s.labels; }
@@ -4497,6 +4716,16 @@ function collide(x, z) {
 }
 function updateWalk(dt) {
   const k = walk.keys, run = k.has('shift') ? 2.2 : 1;
+  if (walk.sit) {
+    // 坐著：一開始走路（或點地板）就站起來
+    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some((q) => k.has(q)) || Math.hypot(walk.joy.x, walk.joy.y) > 0.2 || walk.target) standUp();
+    else {
+      camera.position.set(walk.sit.x, walk.sit.eye, walk.sit.z);
+      camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
+      if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
+      holdBall(); return;
+    }
+  }
   let f = 0, s = 0;
   if (k.has('w') || k.has('arrowup')) f += 1;
   if (k.has('s') || k.has('arrowdown')) f -= 1;
@@ -4526,6 +4755,180 @@ function updateWalk(dt) {
   camera.position.set(walk.x, EYE + bob, walk.z);
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
+  if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
+  holdBall();
+}
+// ---------------------------------------------------------------- 導覽互動：看著物件（畫面中間的準星）按 E，手機點下方的按鈕，或直接點物件
+const SIT_EYE = { sofa: 1.12, bench: 1.12, foldchair: 1.18, campchair: 1.05, referee: 2.55 };
+function actionFor(t) {
+  if (SIT_EYE[t]) return t === 'referee' ? '爬上裁判椅' : '坐下';
+  if (t === 'bleacher') return '坐上觀眾席';
+  if (t === 'ballcart' || t === 'ballbasket') return '拿一顆球';
+  if (['fan', 'floorfan', 'wallfan', 'exhaust'].includes(t)) return '開／關電扇';
+  if (['aircon', 'standac', 'packac'].includes(t)) return '開／關冷氣';
+  if (t === 'vending') return '買一瓶飲料';
+  if (['water', 'watertall', 'purifier'].includes(t)) return '裝一杯水';
+  if (t === 'fridge') return '拿一瓶冰水';
+  if (t === 'scoreboard' || t === 'flipscore') return '加一分';
+  if (['locker', 'cubby', 'lowcubby'].includes(t)) return '放包包';
+  if (t === 'shoerack') return '放鞋子';
+  if (t === 'panel') return '開／關全館的燈';
+  if (t === 'tv') return '開／關電視';
+  if (t === 'whiteboard') return '看戰術板';
+  if (t === 'sinkrow' || t === 'steelsink') return '洗手';
+  if (t === 'stall') return '查看廁所隔間';
+  return '查看';
+}
+const centerRay = new THREE.Raycaster(); centerRay.far = 3.6;
+// 射線打到的東西 → 可以互動的目標（一般元件、區域的自動擺設、地上的球）
+function targetFromHits(hits, maxD) {
+  for (const h of hits) {
+    if (h.distance > maxD || h.object.visible === false || h.object.userData.noPick) continue;
+    if (h.object.userData.ball) return { kind: 'ball', b: h.object.userData.ball, label: '撿起球' };
+    const id = h.object.userData.itemId;
+    if (id) { const it = state.items.find((x) => x.id === id); if (!it || CAT[it.type].court) continue; return { kind: 'item', it, point: h.point, label: actionFor(it.type) }; }
+    const zf = h.object.userData.zoneFix;
+    if (zf) { const z = state.zones.find((q) => q.id === zf.zid), f = z && zoneFixtures(z)[zf.i]; if (f) return { kind: 'item', it: { id: `zf:${zf.zid}:${zf.i}`, ...f }, point: h.point, label: actionFor(f.type) }; }
+    // 實心的隔間牆擋住後面的東西；玻璃、霧面玻璃看得穿
+    const m = h.object.material; if (!(m && m.transparent)) break;
+  }
+  return null;
+}
+function pickTargets(ray, maxD) { return targetFromHits(ray.intersectObjects([itemsGroup, zonesGroup, ballsGroup], true), maxD); }
+function updateFocus() {
+  centerRay.setFromCamera(new THREE.Vector2(0, 0), camera);
+  walk.focus = pickTargets(centerRay, 3.4);
+  // 拿著球：E 就是丟球（坐著也能丟）；坐著：E 站起來
+  const t = walk.hold ? '丟球' : walk.sit ? '站起來' : walk.focus ? `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : labelOf(walk.focus.it)}` : '';
+  const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
+  $('wk-cross').classList.toggle('on', !!walk.focus);
+}
+function doInteract(tg) {
+  tg = tg || walk.focus;
+  if (walk.hold) return throwBall();
+  if (walk.sit) return standUp();
+  if (!tg) return;
+  if (tg.kind === 'ball') return pickBall(tg.b);
+  useItem(tg.it, tg.point);
+  updateFocus();
+}
+function toWorldOf(it, lx, lz) { const r = (it.rot * Math.PI) / 180; return [it.x + lx * Math.cos(r) + lz * Math.sin(r), it.z - lx * Math.sin(r) + lz * Math.cos(r)]; }
+function useItem(it, point) {
+  const t = it.type, def = CAT[t], { w, d } = sizeOf(it), on = !walk.off.has(it.id);
+  const r = (it.rot * Math.PI) / 180;
+  if (SIT_EYE[t] || t === 'bleacher') {
+    let lz = t === 'sofa' ? 0.08 : 0, eye = SIT_EYE[t];
+    if (t === 'bleacher') { const tiers = Math.max(1, Math.round(d / 0.8)); lz = d / 2 - d / tiers / 2 - 0.1; eye = 0.42 * tiers + 0.8; }
+    // 坐在點到的那一格（沙發、長椅、看台沿著長邊）
+    let lx = 0; if (point && w > 1.2) { const dx = point.x - it.x, dz = point.z - it.z; lx = clamp(dx * Math.cos(r) - dz * Math.sin(r), -w / 2 + 0.35, w / 2 - 0.35); }
+    const [sx, sz] = toWorldOf(it, lx, lz);
+    walk.sit = { x: sx, z: sz, eye, it }; walk.target = null; targetMark.visible = false;
+    walk.yaw = r; walk.pitch = t === 'referee' ? -0.35 : -0.05;
+    toast(t === 'referee' ? '爬上裁判椅了：從這裡看得到整面網。按 E 或開始走路就會下來' : `坐下了。按 E 或開始走路就會站起來`);
+    return;
+  }
+  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：點一下畫面或按 E 丟出去，掉在地上可以再撿'); return; }
+  if (['fan', 'floorfan', 'wallfan', 'exhaust', 'aircon', 'standac', 'packac', 'tv'].includes(t)) {
+    if (on) walk.off.add(it.id); else walk.off.delete(it.id);
+    const ac = ['aircon', 'standac', 'packac'].includes(t);
+    toast(t === 'tv' ? (on ? '電視關掉了' : '電視打開了：正在轉播比賽（示意）') : ac ? (on ? '冷氣關掉了' : '冷氣開了：設定 26°C') : (on ? '電扇關掉了' : '電扇打開了'));
+    return;
+  }
+  if (t === 'vending') { walk.drinks++; toast(`叮咚！掉出一瓶運動飲料（NT$25）。這趟已經買了 ${walk.drinks} 瓶`); return; }
+  if (['water', 'watertall', 'purifier'].includes(t)) { toast(t === 'watertall' ? '裝了一杯冰水（冰／溫／熱三個出水口）' : '裝了一杯水'); return; }
+  if (t === 'fridge') { toast('拿了一瓶冰礦泉水'); return; }
+  if (t === 'scoreboard' || t === 'flipscore') {
+    // 點左半邊加主隊、右半邊加客隊；一局 25 分、要贏 2 分
+    let side = 0; if (point) { const dx = point.x - it.x, dz = point.z - it.z; side = dx * Math.cos(r) - dz * Math.sin(r) < 0 ? 0 : 1; }
+    walk.score[side]++;
+    const [a, b] = walk.score;
+    if ((a >= 25 || b >= 25) && Math.abs(a - b) >= 2) { walk.sets[a > b ? 0 : 1]++; toast(`這局 ${a}:${b} 結束！局數 主隊 ${walk.sets[0]} : ${walk.sets[1]} 客隊`); walk.score = [0, 0]; }
+    else toast(`${side ? '客隊' : '主隊'}得分　主隊 ${a} : ${b} 客隊（點計分板左半邊加主隊、右半邊加客隊）`);
+    return;
+  }
+  if (['locker', 'cubby', 'lowcubby'].includes(t)) { toast(`包包放進 ${1 + Math.floor(Math.random() * Math.max(1, Math.round(w / 0.4)))} 號格了（示意）`); return; }
+  if (t === 'shoerack') { toast('鞋子放好了：球場只能穿室內球鞋'); return; }
+  if (t === 'panel') { setDark(!walk.dark); toast(walk.dark ? '全館的燈關掉了（再按一次打開）' : '燈全部打開了'); return; }
+  if (t === 'whiteboard') { toast('戰術板上畫著 5-1 輪轉的站位（示意）'); return; }
+  if (t === 'sinkrow' || t === 'steelsink') { toast('洗好手了'); return; }
+  showItemCard(it);
+}
+// 「查看」：左下角卡片顯示名稱、尺寸、參考價
+function showItemCard(it) {
+  const def = CAT[it.type], { w, d } = sizeOf(it), card = $('zcard');
+  $('zc-k').textContent = `ITEM · ${def.group || ''}`; $('zc-n').textContent = it.locked ? '已鎖定' : '';
+  $('zc-t').textContent = labelOf(it);
+  const cats = TYPE_CATS[it.type] || [];
+  const price = cats.length && CATALOG[cats[0]] ? chosen(cats[0], getPicks()) : null;
+  $('zc-d').textContent = price && price.price ? `參考：${price.brand ? price.brand + '・' : ''}${price.name}` : '在 3D 編輯模式可以拖、轉、改大小。';
+  const dl = [['尺寸', `${fmt1(w)}×${fmt1(d)}${def.h ? '×' + fmt1(def.h) : ''} m`], ['角度', `${f2(it.rot)}°`]];
+  if (price && price.price) dl.push(['參考價', `NT$${Math.round(price.price).toLocaleString()}／${CATALOG[cats[0]].unit}`]);
+  $('zc-dl').innerHTML = dl.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
+  card.classList.remove('out'); walk.zoneKey = 'item:' + it.id;
+}
+function standUp() {
+  const s = walk.sit; if (!s) return; walk.sit = null;
+  const r = (s.it.rot * Math.PI) / 180, fx = -Math.sin(r), fz = -Math.cos(r);
+  [walk.x, walk.z] = collide(s.x + fx * (s.it.type === 'bleacher' ? Math.max(1.2, sizeOf(s.it).d) : 0.75), s.z + fz * (s.it.type === 'bleacher' ? Math.max(1.2, sizeOf(s.it).d) : 0.75));
+  walk.pitch = -0.04;
+}
+function setDark(dark) {
+  walk.dark = dark;
+  renderer.toneMappingExposure = dark ? 0.3 : 1.05;
+  ledMat.emissiveIntensity = dark ? 0.04 : 2.2;
+}
+// ---- 排球：拿在手上、丟出去（重力、地板彈跳、撞牆反彈）、滾停後可以再撿
+const ballsGroup = new THREE.Group(); scene.add(ballsGroup);
+const balls = [];
+const BALL_R = 0.105;
+const ballMat = (() => {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d');
+  const cols = ['#F2C230', '#2F5D8C', '#F4F4F0', '#F2C230', '#2F5D8C', '#F4F4F0'];
+  cols.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, (i * 128) / cols.length, 256, 128 / cols.length + 1); });
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 });
+})();
+function newBallMesh() { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat); m.castShadow = true; return m; }
+function grabBall() { if (walk.hold) return; walk.hold = newBallMesh(); scene.add(walk.hold); holdBall(); }
+function holdBall() {
+  if (!walk.hold) return;
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+  walk.hold.position.copy(camera.position).addScaledVector(fwd, 0.55).addScaledVector(right, 0.18).add(new THREE.Vector3(0, -0.28, 0));
+}
+function throwBall() {
+  const m = walk.hold; if (!m) return; walk.hold = null; scene.remove(m);
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const v = fwd.multiplyScalar(9.5).add(new THREE.Vector3(0, 2.2, 0));
+  m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
+  while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
+}
+function pickBall(b) {
+  if (walk.hold) return;
+  const i = balls.indexOf(b); if (i >= 0) balls.splice(i, 1);
+  ballsGroup.remove(b.m); delete b.m.userData.ball; walk.hold = b.m; scene.add(b.m); holdBall();
+}
+function updateBalls(dt) {
+  if (!balls.length || !dt) return;
+  const H = state.building.H, steps = 3, h = dt / steps;
+  for (const b of balls) {
+    if (b.rest > 2) continue;
+    for (let k = 0; k < steps; k++) {
+      b.v.y -= 9.8 * h;
+      b.m.position.addScaledVector(b.v, h);
+      const p = b.m.position;
+      if (p.y < BALL_R) { p.y = BALL_R; if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; } }
+      if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
+      for (const [x1, z1, x2, z2] of colliders) {
+        const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
+        const ex = p.x - (x1 + dx * t), ez = p.z - (z1 + dz * t), dd = Math.hypot(ex, ez);
+        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
+      }
+      if (p.y <= BALL_R + 1e-3) { const f = Math.max(0, 1 - 1.2 * h); b.v.x *= f; b.v.z *= f; }
+    }
+    const sp = Math.hypot(b.v.x, b.v.z);
+    if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
+    b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
+  }
 }
 // 走到哪一區：先看畫的區域，再看球場
 function zoneAt(x, z) {
@@ -4567,6 +4970,7 @@ addEventListener('keydown', (e) => {
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
   if (k === 'escape') { e.preventDefault(); setMode(walkReturn === 'walk' ? '3d' : walkReturn); return; }
+  if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('keyup', (e) => { walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
@@ -4589,6 +4993,11 @@ function endLook(e) {
   walk.look = null;
   if (l.moved || performance.now() - l.t > 500) return;
   setPointer(e);
+  // 拿著球：點一下就丟；點到伸手可及的物件：直接互動
+  if (walk.hold) { throwBall(); updateFocus(); return; }
+  const tg = pickTargets(raycaster, 4);
+  if (tg) { doInteract(tg); return; }
+  if (walk.sit) { standUp(); return; }
   const p = floorHit(); if (!p) return;
   if (Math.hypot(p.x - walk.x, p.z - walk.z) > 40) return;
   walk.target = [p.x, p.z]; targetMark.position.set(p.x, 0.04, p.z); targetMark.visible = true;
@@ -4639,7 +5048,8 @@ function drawFrame(force) {
   const { H } = state.building;
   walls.forEach((wl, i) => { wl.visible = walk.on || (typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true); });
   if (roof) roof.visible = walk.on || cp.y < H + 0.5;
-  if (!reduceMotion) for (const s of spinners) s.rotation.y += 0.01;
+  if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
+  if (walk.on) updateBalls(dt);
   renderScene();
   labelRenderer.render(scene, camera);
 }
