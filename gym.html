@@ -4880,6 +4880,16 @@ function hitAt(e) {
   return null;
 }
 let selWallId = null, wallKind = 'solid';
+function wallMagnets(selfId) {
+  const xs = [], zs = []; for (const q of outlinePoly()) { xs.push(q[0]); zs.push(q[1]); }
+  for (const z of state.zones) { const r = norm360(z.rot || 0); if (Math.abs(r % 90) > 0.01 && Math.abs(r % 90) < 89.99) continue; const sw = Math.round(r / 90) % 2 === 1, hw = (sw ? z.d : z.w) / 2, hd = (sw ? z.w : z.d) / 2; xs.push(z.x - hw, z.x + hw); zs.push(z.z - hd, z.z + hd); }
+  for (const w of state.walls || []) if (w.id !== selfId) for (const q of [w.a, w.b]) { xs.push(q[0]); zs.push(q[1]); }
+  return { xs, zs };
+}
+// v 附近 tol 內有吸附線就貼上去（回傳那條線的值），沒有回 null
+function magSnap(v, arr, tol) { let best = null; for (const c of arr) { const d = Math.abs(c - v); if (d <= tol && (best == null || d < Math.abs(best - v))) best = c; } return best; }
+// 拖牆時的位置：先貼齊附近的線，沒有就照格點；按住 Shift＝1 cm 微調、不吸
+function wallPt(v, arr, e) { if (e.shiftKey) return Math.round(v * 100) / 100; const m = magSnap(v, arr, 8 / pv.s); return m != null ? Math.round(m * 1000) / 1000 : snapP(v); }
 // ---- 圖層（平面圖右側）：列出所有球場，上面的疊在上層；點一下選取、眼睛暫時藏起來、▲▼ 換上下層、鎖頭鎖定
 function courtsTopFirst() { return state.items.filter((i) => CAT[i.type].court).reverse(); }
 function planCycle(w) {
@@ -4950,15 +4960,15 @@ svgEl.addEventListener('pointerdown', (e) => {
     toast('主入口改到這面牆上了；要改回自動判斷，再按一次「設定入口」然後點「自動」'); return;
   }
   if (planTool === 'draw' && (!hit || hit.kind !== 'handle')) { planDrag = { ...base, kind: 'draw', r: null }; return; }
-  if (planTool === 'wall' && (!hit || hit.kind !== 'whandle')) { planDrag = { ...base, kind: 'wdraw', a: [snapP(w[0]), snapP(w[1])], b: null }; return; }
+  if (planTool === 'wall' && (!hit || hit.kind !== 'whandle')) { const mg = wallMagnets(null); planDrag = { ...base, kind: 'wdraw', a: [wallPt(w[0], mg.xs, e), wallPt(w[1], mg.zs, e)], b: null, mg }; return; }
   if (hit && hit.kind === 'whandle') {
     const wl = state.walls.find((x) => x.id === hit.id); if (!wl) return;
-    planDrag = { ...base, kind: 'wend', end: hit.h === 'wa' ? 'a' : 'b', id: wl.id }; return;
+    planDrag = { ...base, kind: 'wend', end: hit.h === 'wa' ? 'a' : 'b', id: wl.id, mg: wallMagnets(wl.id) }; return;
   }
   if (hit && hit.kind === 'wall') {
     const wl = state.walls.find((x) => x.id === hit.id); if (!wl) return;
     if (selWallId !== hit.id) selectWall(hit.id);
-    planDrag = { ...base, kind: 'wmove', id: wl.id, orig: { a: wl.a.slice(), b: wl.b.slice() } }; return;
+    planDrag = { ...base, kind: 'wmove', id: wl.id, orig: { a: wl.a.slice(), b: wl.b.slice() }, mg: wallMagnets(wl.id) }; return;
   }
   // 框選：「框選」工具在哪裡拖都是框；按住 Shift 從空白、區域或球場上拖也是框（Shift 點一般物件＝加選）
   const onCourt = hit && hit.kind === 'item' && state.items.some((i) => i.id === hit.id && CAT[i.type].court);
@@ -5011,7 +5021,7 @@ svgEl.addEventListener('pointermove', (e) => {
   if (planDrag.kind === 'locked') return;
   if (planDrag.kind === 'wdraw' || planDrag.kind === 'wend') {
     const fixed = planDrag.kind === 'wdraw' ? planDrag.a : (() => { const wl = state.walls.find((x) => x.id === planDrag.id); return wl[planDrag.end === 'a' ? 'b' : 'a']; })();
-    let px = snapP(w[0]), pz = snapP(w[1]);
+    let px = wallPt(w[0], planDrag.mg.xs, e), pz = wallPt(w[1], planDrag.mg.zs, e);
     if (!e.altKey) { if (Math.abs(px - fixed[0]) >= Math.abs(pz - fixed[1])) pz = fixed[1]; else px = fixed[0]; }
     if (planDrag.kind === 'wdraw') planDrag.b = [px, pz];
     else { const wl = state.walls.find((x) => x.id === planDrag.id); if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; } wl[planDrag.end] = [px, pz]; }
@@ -5020,7 +5030,9 @@ svgEl.addEventListener('pointermove', (e) => {
   if (planDrag.kind === 'wmove') {
     const wl = state.walls.find((x) => x.id === planDrag.id); if (!wl) return;
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
-    const ddx = snapP(dx), ddz = snapP(dz);
+    // 整道牆移動：兩端任一端靠近吸附線就整道貼過去；Shift＝1 cm 微調
+    const o = planDrag.orig, tol = 8 / pv.s, fit = (d, i, arr) => { if (e.shiftKey) return Math.round(d * 100) / 100; let best = null; for (const q of [o.a, o.b]) { const m = magSnap(q[i] + d, arr, tol); if (m != null && (best == null || Math.abs(m - q[i] - d) < Math.abs(best - d))) best = m - q[i]; } return best != null ? Math.round(best * 1000) / 1000 : snapP(d); };
+    const ddx = fit(dx, 0, planDrag.mg.xs), ddz = fit(dz, 1, planDrag.mg.zs);
     wl.a = [planDrag.orig.a[0] + ddx, planDrag.orig.a[1] + ddz]; wl.b = [planDrag.orig.b[0] + ddx, planDrag.orig.b[1] + ddz];
     renderPlan(); return;
   }
@@ -5187,11 +5199,15 @@ function renderZoneSel() {
       <div class="grid2"><label class="field" for="ws-kind"><span>種類</span><select id="ws-kind">${Object.entries(WALL_KINDS).map(([k, l]) => `<option value="${k}"${k === wl.kind ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="field" for="ws-h"><span>高度（m）</span><input id="ws-h" type="number" step="0.1" min="0.5" max="15" value="${f2(wl.h)}"></label></div>
       ${wl.kind === 'solid' || wl.kind === 'half' ? `<label class="field" for="ws-color"><span>牆面顏色</span><input id="ws-color" type="color" value="${wl.color || '#EFEBE4'}"></label>` : ''}
-      <p class="hint">拖中間移動整道牆，拖兩端的方塊改長度與方向（按住 Alt 可以斜拉）。</p>
+      <div class="grid4">${[['ax', '起點 X'], ['az', '起點 Z'], ['bx', '終點 X'], ['bz', '終點 Z']].map(([k, l]) => `<label class="field" for="ws-${k}"><span>${l}</span><input id="ws-${k}" data-wk="${k}" type="number" step="0.01" value="${f2(wl[k[0]][k[1] === 'x' ? 0 : 1])}" inputmode="decimal"></label>`).join('')}</div>
+      <label class="field" for="ws-len"><span>長度（m，從起點往終點方向）</span><input id="ws-len" type="number" step="0.01" min="0.1" value="${f2(L)}" inputmode="decimal"></label>
+      <p class="hint">拖中間移動整道牆，拖兩端的方塊改長度與方向（按住 Alt 可以斜拉）。拖的時候會自動貼齊附近的區域邊、外牆和其他牆的端點；按住 Shift 拖＝1 cm 微調不吸。選取後方向鍵移 10 cm、Shift＋方向鍵移 1 cm。</p>
       <div class="btn-row"><button type="button" class="danger" id="ws-del">刪除這道牆</button></div></div>`;
     $('ws-kind').addEventListener('change', (e) => { pushHistory(); wl.kind = e.target.value; if (wl.kind === 'half') wl.h = 1.1; planChanged(); renderZoneSel(); });
     $('ws-h').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); wl.h = clamp(v, 0.5, 15); planChanged(); renderZoneSel(); });
     $('ws-del').addEventListener('click', deleteWall);
+    for (const inp of box.querySelectorAll('input[data-wk]')) inp.addEventListener('change', () => { const v = Number(inp.value); if (!Number.isFinite(v)) return; pushHistory(); const k = inp.dataset.wk; wl[k[0]] = k[1] === 'x' ? [f2(v), wl[k[0]][1]] : [wl[k[0]][0], f2(v)]; planChanged(); renderZoneSel(); });
+    $('ws-len').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v) || v < 0.1 || L < 1e-6) return; pushHistory(); const ux = (wl.b[0] - wl.a[0]) / L, uz = (wl.b[1] - wl.a[1]) / L; wl.b = [f2(wl.a[0] + ux * v), f2(wl.a[1] + uz * v)]; planChanged(); renderZoneSel(); });
     if ($('ws-color')) $('ws-color').addEventListener('change', (e) => { pushHistory(); wl.color = e.target.value; planChanged(); renderZoneSel(); });
     return;
   }
@@ -5372,6 +5388,12 @@ addEventListener('keydown', (e) => {
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   if (e.key === 'Escape') { if (planTool === 'draw') setPlanTool('select'); else if (selZoneId) selectZone(null); return; }
   if (selWallId && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteWall(); return; }
+  if (selWallId && e.key.startsWith('Arrow')) {
+    const wl = (state.walls || []).find((x) => x.id === selWallId); if (!wl) return;
+    e.preventDefault(); const st = e.shiftKey ? 0.01 : 0.1, dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dz = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
+    if (!e.repeat) pushHistory();
+    wl.a = [f2(wl.a[0] + dx), f2(wl.a[1] + dz)]; wl.b = [f2(wl.b[0] + dx), f2(wl.b[1] + dz)]; planChanged(); renderZoneSel(); return;
+  }
   const z = state.zones.find((x) => x.id === selZoneId); if (!z) return;
   if (e.key === 'f' || e.key === 'F') { e.preventDefault(); flipDoor(z); return; }
   if (e.key === 'r' || e.key === 'R') { e.preventDefault(); pushHistory(); zoneEdit(z, () => { z.rot = e.shiftKey ? alignToWall(z) : Math.round(norm360((z.rot || 0) + 90) * 100) / 100; }); planChanged(); renderZoneSel(); return; }
