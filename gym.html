@@ -737,10 +737,10 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D（Esc 離開）">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>跑</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>V</kbd>攻擊（拿球＝發球）</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>前舉／快攻／後舉</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>放開滑鼠</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 前舉／快攻／後舉、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中 <kbd>V</kbd> 攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短、<kbd>Shift</kbd>＋<kbd>V</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球 <kbd>V</kbd> 發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只會放開滑鼠）</p>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>跑</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>V</kbd>攻擊（拿球＝發球）</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>前舉／快攻／後舉</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 前舉／快攻／後舉、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中 <kbd>V</kbd> 攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短、<kbd>Shift</kbd>＋<kbd>V</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球 <kbd>V</kbd> 發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -766,7 +766,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
         <p class="hint"><b>怎麼對碰：</b>一個人到球車拿球（E），面向隊友按 <b>F</b> 拋給他；球飛到手邊時按 <b>E</b> 舉球或 <b>Q</b> 墊球，大致面向誰就傳給誰（往上看再按是自己往上打）。隊友把球舉到網前時，按 <b>R</b> 跳起來扣。</p>
       </div>
       <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
-      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：之後移動滑鼠就能轉頭看（Esc 放開滑鼠）</div>
+      <div class="wk-lock" id="wk-lock" hidden>點一下畫面或按 Esc：移動滑鼠就能轉頭看（再按 Esc 換回游標）</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="wk-use" id="wk-use" hidden></div>
@@ -5411,14 +5411,14 @@ function phoneFull(on, force) {
   de.classList.toggle('phone-walk', on); if ($('w-full')) { $('w-full').textContent = on ? '離開全螢幕' : '全螢幕'; setPressed($('w-full'), on); } $('stage').scrollLeft = 0; $('stage').scrollTop = 0;
   $('walk-ui').querySelector('.walk-top').classList.remove('open'); $('w-fs-menu').setAttribute('aria-expanded', 'false');
   try {
-    if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
-    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => {}); }).catch(() => {});
+    if (!on) { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
   } catch (e) { /* 不支援（例如 iPhone Safari）就只用版面全螢幕 */ }
   window.wakeRender && window.wakeRender(600);
 }
 $('w-fs-x').addEventListener('click', () => $('w-exit').click());
 $('w-full').addEventListener('click', () => phoneFull(!document.documentElement.classList.contains('phone-walk'), true));
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && walk.on && !isPhone() && document.documentElement.classList.contains('phone-walk')) phoneFull(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); });
 $('w-fs-menu').addEventListener('click', () => { const t = $('walk-ui').querySelector('.walk-top'), o = t.classList.toggle('open'); $('w-fs-menu').setAttribute('aria-expanded', String(o)); });
 function startWalk() {
   walk.on = true; window.__walk = true;
@@ -7059,8 +7059,8 @@ addEventListener('keydown', (e) => {
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn && VM.phase !== 'over') { e.preventDefault(); $('rk-menu').hidden = true; return; }
   if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (locked()) { unlockMouse(); return; }
-    // Esc 只放開滑鼠、關掉跳出來的視窗，不會離開導覽（以免連按兩下就整個跳出去）；要離開請按右上角的按鈕
-    if (performance.now() - (walk.unlockT || 0) > 400 && performance.now() - (walk.escT || 0) > 6000) { walk.escT = performance.now(); toast('Esc 只會放開滑鼠；要離開導覽請按右上角的「離開導覽」'); } return; }
+    // Esc 只是切換「滑鼠游標（可以點東西）」和「移動滑鼠＝轉頭」：放開之後再按一下就回到轉頭；不會離開導覽、不會退出全螢幕
+    if (performance.now() - (walk.unlockT || 0) > 400 && !coarse() && !window.__rkOn) lockMouse(); return; }
   if (walk.paused) return;
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
