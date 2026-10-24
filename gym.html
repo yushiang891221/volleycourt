@@ -607,7 +607,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
         <button type="button" id="p-draw" aria-pressed="false">畫區域</button>
         <button type="button" id="p-wall" aria-pressed="false">畫牆</button>
         <button type="button" id="p-align" hidden>建物轉正</button>
-        <button type="button" id="p-ortho" hidden title="自己點的外框有誤差時，把每一邊拉直、牆角變直角">校正成矩形</button>
+        <button type="button" id="p-ortho" hidden title="自己點的外框有誤差時，把每一邊拉直、牆角變直角，並轉回跟圖紙格線平行">校正成矩形</button>
         <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
         <button type="button" id="p-box" aria-pressed="false" title="拖一個框選多個物件（電腦上也可以按住 Shift 拖）">框選</button>
       </div>
@@ -1011,6 +1011,7 @@ function sanitize(raw) {
       if (ex.length) o.extra = [...new Set(ex)];
       if (['vb', 'bd', 'pb', 'bk', 'none'].includes(it.use) && it.use !== def.court) o.use = it.use;
       if (COURT_SURF[it.surf] && it.surf) o.surf = it.surf;
+      if (def.court === 'vb' && it.post && VB_POST[it.post]) o.post = it.post;
     }
     if (def.court && it.cc && typeof it.cc === 'object') { const cc = {}; for (const k of ['court', 'free']) if (/^#[0-9a-f]{6}$/i.test(String(it.cc[k] || ''))) cc[k] = it.cc[k]; if (Object.keys(cc).length) o.cc = cc; }
     if (typeof it.zone === 'string' && it.zone) o.zone = it.zone.slice(0, 40);
@@ -1390,6 +1391,7 @@ const texCache = new Map();
 const PLAY = { vb: [18, 9], bd: [13.4, 6.1], pb: [13.41, 6.1], bk: [15, 11] };
 const SPORT = { vb: '排球', bd: '羽球', pb: '匹克球', bk: '籃球' };
 const EXTRA_COL = { vb: '#FFFFFF', bd: '#F2C230', pb: '#5BC0EB', bk: '#FF7A2F' };
+const VB_POST = { '': '標準網柱（配重底座）', sleeve: '地板插管式＋藍色防護套' };
 const COURT_SURF = { '': '跟全館一樣', pvc: 'PVC 運動地墊', pu: 'PU 地坪', wood: '木質地板', tiles: '拼裝式地墊' };
 // 在 fw×fd 的地板上排幾面 kind 球場（同方向或轉 90°，取放得多的那種）；回傳中心（本地座標）與是否轉向
 function extraLayout(kind, fw, fd) {
@@ -1543,6 +1545,32 @@ function netSet(g, kind, x, z, r) {
   }
   return o;
 }
+// 地板插管式網柱：鋼柱直接插進地板的預埋套管（地上只看到一片小蓋板），外面整支包著藍色帆布防護套，
+// 中間一條橘色魔鬼氈固定帶；套子比柱子寬、斷面是圓角長方形，上方露出灰色鋁柱和網子的掛鉤
+let SLEEVE_GEO = null;
+function sleevePost(g, x, z, nh, side) {
+  const o = new THREE.Group(); o.position.set(x, 0, z); if (side < 0) o.rotation.y = Math.PI; g.add(o);
+  const alu = { metalness: 0.75, roughness: 0.38 };
+  cyl(o, 0.05, 0.05, nh + 0.32, '#A9AEB4', 0, 0, 0, alu, 20);                       // 鋁柱
+  cyl(o, 0.058, 0.058, 0.03, '#7C8187', 0, nh + 0.32, 0, alu, 20);                    // 頂蓋
+  cyl(o, 0.11, 0.11, 0.006, '#8E9399', 0, 0, 0, alu, 24);                            // 地板蓋板
+  for (const y of [nh - 0.04, nh - 0.96]) box(o, 0.05, 0.05, 0.09, '#5E646B', 0, y, -0.07); // 掛網的勾座
+  if (!SLEEVE_GEO) {
+    const w = 0.30, d = 0.2, r = 0.075, sh = new THREE.Shape();
+    sh.moveTo(-w / 2 + r, -d / 2); sh.lineTo(w / 2 - r, -d / 2); sh.quadraticCurveTo(w / 2, -d / 2, w / 2, -d / 2 + r);
+    sh.lineTo(w / 2, d / 2 - r); sh.quadraticCurveTo(w / 2, d / 2, w / 2 - r, d / 2); sh.lineTo(-w / 2 + r, d / 2);
+    sh.quadraticCurveTo(-w / 2, d / 2, -w / 2, d / 2 - r); sh.lineTo(-w / 2, -d / 2 + r); sh.quadraticCurveTo(-w / 2, -d / 2, -w / 2 + r, -d / 2);
+    const ex = (h) => { const q = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 3, curveSegments: 10 }); q.rotateX(-Math.PI / 2); return q; };
+    SLEEVE_GEO = { pad: ex(1.98), strap: ex(0.05) };
+  }
+  const padM = new THREE.MeshPhysicalMaterial({ color: '#1F6FC9', roughness: 0.62, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#7DB6FF') });
+  const pad = new THREE.Mesh(SLEEVE_GEO.pad, padM); pad.position.set(0, 0.02, 0.02); pad.castShadow = true; pad.receiveShadow = true; o.add(pad);
+  const strap = new THREE.Mesh(SLEEVE_GEO.strap, new THREE.MeshStandardMaterial({ color: '#E8892B', roughness: 0.75 }));
+  strap.scale.set(1.04, 1, 1.06); strap.position.set(0, 1.55, 0.02); o.add(strap);
+  box(o, 0.008, 1.9, 0.012, '#164F93', 0, 0.06, 0.137);                              // 背面拉鍊接縫
+  box(o, 0.03, 0.34, 0.004, '#FFFFFF', 0.06, 1.12, -0.118, { roughness: 0.6 });       // 正面白色標籤
+  return o;
+}
 function net(g, span, top, depth, tape = '#FFFFFF') {
   const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(span / 2, depth / 0.5);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(span, depth), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
@@ -1580,7 +1608,8 @@ function buildItem(it, courtIndex) {
     else if (def.court === 'vb') {
       const nh = NETS[state.net].h;
       // 網柱：鋼管外包深藍防護套，底座配重
-      for (const z of [5.5, -5.5]) if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: scheme().pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
+      for (const z of [5.5, -5.5]) if (it.post === 'sleeve') sleevePost(g, 0, z, nh, z > 0 ? 1 : -1);
+      else if (!kit('net_post', g, 0, 0, z, { rotY: z > 0 ? 0 : Math.PI, tint: { navy_pad: scheme().pad } })) { cyl(g, 0.045, 0.045, nh + 0.25, chrome, 0, 0, z); cyl(g, 0.13, 0.13, 1.9, padMat, 0, 0.05, z, null, 20); cyl(g, 0.3, 0.3, 0.05, darkSteel, 0, 0, z, null, 24); }
       net(g, 10.6, nh, 1.0);
       for (const z of [4.5, -4.5]) {
         const a = cyl(g, 0.006, 0.006, 1.8, '#E23A3A', 0, nh - 1.0, z);
@@ -2691,7 +2720,8 @@ function compositeHtml(it, idp) {
   return `<div class="comp"><p class="hint" style="margin:6px 0 4px"><b>複合球場</b>：同一塊地板也畫這些線（顏色不同）</p>
     <div class="comp-row">${others.map((k) => `<label class="chk"><input type="checkbox" data-ex="${k}"${ex.includes(k) ? ' checked' : ''}><i style="background:${EXTRA_COL[k]}"></i>${SPORT[k]}</label>`).join('')}</div>
     <div class="grid2"><label class="field" for="${idp}-use"><span>現在架哪一種網</span><select id="${idp}-use">${[def.court, ...ex].map((k) => `<option value="${k}"${use === k ? ' selected' : ''}>${SPORT[k]}${k === def.court ? '（主要）' : ''}</option>`).join('')}<option value="none"${use === 'none' ? ' selected' : ''}>都收起來（空場地）</option></select></label>
-    <label class="field" for="${idp}-surf"><span>這面的地板</span><select id="${idp}-surf">${Object.entries(COURT_SURF).map(([k, l]) => `<option value="${k}"${(it.surf || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div></div>`;
+    <label class="field" for="${idp}-surf"><span>這面的地板</span><select id="${idp}-surf">${Object.entries(COURT_SURF).map(([k, l]) => `<option value="${k}"${(it.surf || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    ${def.court === 'vb' ? `<label class="field" for="${idp}-post"><span>排球網柱款式</span><select id="${idp}-post">${Object.entries(VB_POST).map(([k, l]) => `<option value="${k}"${(it.post || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}</div>`;
 }
 function wireComposite(root, it, idp, rerender) {
   root.addEventListener('change', (e) => {
@@ -2700,6 +2730,7 @@ function wireComposite(root, it, idp, rerender) {
     if (t.dataset.ex) { const ex = new Set(it.extra || []); if (t.checked) ex.add(t.dataset.ex); else { ex.delete(t.dataset.ex); if (it.use === t.dataset.ex) delete it.use; } if (ex.size) it.extra = [...ex]; else delete it.extra; }
     else if (t.id === idp + '-use') { if (t.value === CAT[it.type].court) delete it.use; else it.use = t.value; }
     else if (t.id === idp + '-surf') { if (t.value) it.surf = t.value; else delete it.surf; }
+    else if (t.id === idp + '-post') { if (t.value) it.post = t.value; else delete it.post; }
     rerenderOne(it); commit(); rerender && rerender();
     if (t.dataset.ex && t.checked) toast(`加畫了${SPORT[t.dataset.ex]}線（${t.dataset.ex === 'bd' || t.dataset.ex === 'pb' ? extraLayout(t.dataset.ex, CAT[it.type].w, CAT[it.type].d).length + ' 面' : '1 面'}），要打${SPORT[t.dataset.ex]}時在「現在架哪一種網」切換`);
   });
@@ -4034,7 +4065,9 @@ function orthoPoly(P, maxDev = (25 * Math.PI) / 180) {
   }
   return out;
 }
-const needsOrtho = (P) => !!P && P.length >= 4 && polyOrthoInfo(P).worst > (0.4 * Math.PI) / 180;
+// 小角度的歪斜（3° 以內）：把外框繞自己的中心轉回跟圖紙格線平行
+function smallTilt(P) { let a = polyOrthoInfo(P).main; while (a > Math.PI / 4) a -= Math.PI / 2; while (a < -Math.PI / 4) a += Math.PI / 2; return Math.abs(a) <= (3 * Math.PI) / 180 ? a : 0; }
+const needsOrtho = (P) => { if (!P || P.length < 4) return false; const T = 0.05 * Math.PI / 180; return polyOrthoInfo(P).worst > T || Math.abs(smallTilt(P)) > T; };
 function alignPoly(P) {
   let best = null;
   for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!best || L > best.L) best = { L, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) }; }
@@ -5106,11 +5139,22 @@ $('p-ortho').addEventListener('click', () => {
   const P = state.building.poly; if (!P) return;
   const Q = orthoPoly(P);
   if (!Q) { toast('外框的邊歪太多（超過 25°），沒辦法自動判斷，請在「描真實建物外框」裡重新點'); return; }
-  pushHistory(); state.building.poly = Q;
+  pushHistory();
+  // 只歪一點點時，順便把外框轉回跟圖紙格線平行（球場、區域、物件原本就是正的，所以不動；掛牆的東西重新貼到牆上）
+  const a = smallTilt(Q);
+  if (a) {
+    const xs0 = Q.map((q) => q[0]), zs0 = Q.map((q) => q[1]), cx = (Math.min(...xs0) + Math.max(...xs0)) / 2, cz = (Math.min(...zs0) + Math.max(...zs0)) / 2, c = Math.cos(-a), sn = Math.sin(-a);
+    for (const q of Q) { const dx = q[0] - cx, dz = q[1] - cz; q[0] = cx + dx * c - dz * sn; q[1] = cz + dx * sn + dz * c; }
+    // 轉完每一邊不是水平就是垂直：同一邊的兩個角取平均，消掉四捨五入的誤差
+    for (let i = 0; i < Q.length; i++) { const p1 = Q[i], p2 = Q[(i + 1) % Q.length], k = Math.abs(p2[0] - p1[0]) > Math.abs(p2[1] - p1[1]) ? 1 : 0, m = (p1[k] + p2[k]) / 2; p1[k] = m; p2[k] = m; }
+    for (const q of Q) { q[0] = Math.round(q[0] * 100) / 100; q[1] = Math.round(q[1] * 100) / 100; }
+  }
+  state.building.poly = Q;
   const xs = Q.map((q) => q[0]), zs = Q.map((q) => q[1]);
   state.building.L = Math.round((Math.max(...xs) - Math.min(...xs)) * 2) / 2; state.building.W = Math.round((Math.max(...zs) - Math.min(...zs)) * 2) / 2;
+  if (a) for (const it of state.items) if (CAT[it.type] && CAT[it.type].wall) snapWallItem(it);
   planChanged(); pv.fitted = false; renderPlan(); planToolState();
-  toast(`外框校正好了：${Q.length} 個牆角都是直角${Math.abs(alignPoly(Q).deg) >= 0.5 ? '；要讓建物跟圖紙對齊，再按「建物轉正」' : ''}`);
+  toast(`外框校正好了：${Q.length} 個牆角都是直角${a ? `，也轉了 ${fmt1((-a * 180) / Math.PI)}° 跟圖紙格線對齊` : ''}${Math.abs(alignPoly(Q).deg) >= 0.5 ? '；要讓建物跟圖紙對齊，再按「建物轉正」' : ''}`);
 });
 $('p-align').addEventListener('click', () => {
   const P = state.building.poly; if (!P) return;
