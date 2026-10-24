@@ -321,6 +321,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .pc-tb span { flex: 1; } .pc-tb button { min-height: 0; padding: 2px 10px; }
 .pc-body { flex: 1; position: relative; overflow: auto; background: #000; }
 .pc-body iframe, .pc-body video { position: absolute; inset: 0 0 24px; width: 100%; height: calc(100% - 24px); border: 0; background: #000; }
+.pc-body iframe.full { inset: 0; height: 100%; background: #fff; }
 .pc-credit a { color: #F2B705; }
 .pc-credit { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; height: 24px; line-height: 24px; padding: 0 8px; font-size: 11px; color: #C9D1DC; background: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pc-empty { color: #fff; padding: 20px; }
@@ -5690,7 +5691,8 @@ const PIKA_URL = 'https://gorisanson.github.io/pikachu-volleyball/zh/';
 const PC_APPS = {
   pika: { name: '皮卡丘打排球', icon: '⚡', open: () => `<iframe src="${PIKA_URL}" title="皮卡丘打排球" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe><p class="pc-credit">遊戲：gorisanson/pikachu-volleyball（原作者網站，點一下遊戲畫面再用鍵盤玩）・<a href="${PIKA_URL}" target="_blank" rel="noopener">在新分頁開原作網站 ↗</a></p>` },
   cctv: { name: '監視器', icon: '📹', open: () => cctvHtml() },
-  video: { name: '球館影片', icon: '🎬', open: () => `<video src="${VIDEO_SRC}" controls autoplay playsinline></video><p class="pc-credit">${esc(VIDEO_TITLE)}</p>` },
+  // 影音網站（vbtv.html）：版面像一般影音平台，能播的是球館頻道的影片，其他點開會說還沒上架
+  video: { name: '球館TV', icon: '📺', open: () => '<iframe class="full" src="vbtv.html" title="球館TV 影音網站" allow="autoplay; fullscreen" allowfullscreen></iframe>' },
 };
 const pc = { app: null, cams: [], camI: 0, last: 0, clockT: 0 };
 function openPC() {

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>球館TV｜新竹排球館企劃</title>
+<meta name="description" content="球館裡電腦上的影音網站：排球比賽、智慧球場 Demo。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root {
+  --bg: #FFFFFF; --ink: #0F0F0F; --soft: #606060; --line: #E5E5E5; --chip: #F2F2F2; --chip-on: #0F0F0F; --chip-on-ink: #FFFFFF;
+  --hover: #F2F2F2; --accent: #F2B705; --red: #E5484D; --thumb: #E9E9E9; --overlay: rgba(0,0,0,.8);
+  --font: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0F0F0F; --ink: #F1F1F1; --soft: #AAAAAA; --line: #303030; --chip: #272727; --chip-on: #F1F1F1; --chip-on-ink: #0F0F0F; --hover: #272727; --thumb: #222; }
+}
+:root[data-theme="dark"] { --bg: #0F0F0F; --ink: #F1F1F1; --soft: #AAAAAA; --line: #303030; --chip: #272727; --chip-on: #F1F1F1; --chip-on-ink: #0F0F0F; --hover: #272727; --thumb: #222; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; }
+body { overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+svg.i { width: 24px; height: 24px; fill: currentColor; flex: none; }
+
+/* 上方列 */
+.top { position: sticky; top: 0; z-index: 20; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--bg); }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+.icon-btn:hover { background: var(--hover); }
+.logo { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 19px; letter-spacing: -.02em; white-space: nowrap; }
+.logo .ball { width: 30px; height: 30px; }
+.logo sup { font-size: 10px; color: var(--soft); font-weight: 500; margin-left: 2px; }
+.search { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.search form { display: flex; width: min(600px, 100%); }
+.search input { flex: 1; min-width: 0; height: 40px; border: 1px solid var(--line); border-right: 0; border-radius: 40px 0 0 40px; padding: 0 16px; font: inherit; font-size: 15px; background: var(--bg); color: var(--ink); outline: none; }
+.search input:focus { border-color: #1C62B9; }
+.search button { width: 64px; height: 40px; border: 1px solid var(--line); border-radius: 0 40px 40px 0; background: var(--chip); display: grid; place-items: center; }
+.me { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #F2B705, #E39B00); color: #1B2638; display: grid; place-items: center; font-weight: 900; font-size: 14px; }
+
+/* 版面 */
+.wrap { display: flex; }
+.side { width: 232px; flex: none; padding: 8px 12px 24px; position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; }
+.side a { display: flex; align-items: center; gap: 22px; height: 40px; padding: 0 12px; border-radius: 10px; font-size: 14px; }
+.side a:hover { background: var(--hover); }
+.side a.on { background: var(--chip); font-weight: 700; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+.side h4 { margin: 6px 12px 4px; font-size: 16px; }
+.side .sub-av { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #fff; }
+body.mini .side { width: 76px; padding: 4px; }
+body.mini .side a { flex-direction: column; height: auto; gap: 4px; padding: 14px 0; font-size: 10px; justify-content: center; }
+body.mini .side .full { display: none; }
+main { flex: 1; min-width: 0; padding: 0 24px 40px; }
+
+/* 分類 */
+.chips { position: sticky; top: 56px; z-index: 10; background: var(--bg); display: flex; gap: 12px; padding: 12px 0; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; height: 32px; padding: 0 12px; border-radius: 8px; background: var(--chip); font-weight: 500; white-space: nowrap; }
+.chip.on { background: var(--chip-on); color: var(--chip-on-ink); }
+
+/* 影片格 */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 40px 16px; padding-top: 12px; }
+.card { display: block; cursor: pointer; }
+.thumb { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--thumb); }
+.thumb video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.thumb .dur { position: absolute; right: 8px; bottom: 8px; background: var(--overlay); color: #fff; font-size: 12px; font-weight: 500; padding: 1px 4px; border-radius: 4px; }
+.thumb .live { position: absolute; right: 8px; bottom: 8px; background: #CC0000; color: #fff; font-size: 12px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+.thumb .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--red); }
+.fake { width: 100%; height: 100%; display: grid; place-items: center; text-align: center; color: #fff; padding: 10px; position: relative; }
+.fake b { font-size: clamp(26px, 5vw, 44px); font-weight: 900; line-height: 1.05; text-shadow: 0 3px 0 rgba(0,0,0,.35), 0 0 18px rgba(0,0,0,.35); -webkit-text-stroke: 1px rgba(0,0,0,.25); }
+.fake small { display: block; font-size: 15px; font-weight: 700; margin-top: 6px; background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 4px; }
+.fake .emo { position: absolute; right: 10px; top: 6px; font-size: 40px; }
+.meta { display: flex; gap: 12px; margin-top: 12px; }
+.av { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 900; color: #fff; font-size: 15px; }
+.meta h3 { margin: 0 0 4px; font-size: 16px; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta p { margin: 0; color: var(--soft); font-size: 13.5px; line-height: 1.5; }
+.empty { padding: 60px 0; color: var(--soft); text-align: center; font-size: 15px; }
+
+/* 觀看頁 */
+.watch { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; padding-top: 24px; max-width: 1760px; }
+.player { position: relative; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; }
+.player video { width: 100%; height: 100%; display: block; background: #000; }
+.player .na { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #fff; padding: 20px; }
+.player .na b { display: block; font-size: 20px; margin: 10px 0 6px; }
+.player .na span { color: #AAA; font-size: 14px; }
+.w-title { font-size: 20px; font-weight: 700; margin: 12px 0 8px; line-height: 1.4; }
+.w-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.w-ch { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+.w-ch b { display: block; font-size: 16px; }
+.w-ch small { color: var(--soft); font-size: 12px; }
+.pill { height: 36px; padding: 0 16px; border-radius: 18px; background: var(--chip); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.pill:hover { filter: brightness(.95); }
+.pill.sub { background: var(--ink); color: var(--bg); }
+.pill.sub.on { background: var(--chip); color: var(--ink); }
+.likes { display: inline-flex; border-radius: 18px; background: var(--chip); overflow: hidden; }
+.likes button { height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.likes button + button { border-left: 1px solid var(--line); }
+.likes button[aria-pressed="true"] svg { color: #1C62B9; }
+.likes svg.i, .pill svg.i { width: 20px; height: 20px; }
+.desc { background: var(--chip); border-radius: 12px; padding: 12px; margin-top: 12px; line-height: 1.7; white-space: pre-line; cursor: pointer; }
+.desc b { display: block; }
+.desc.clip { max-height: 104px; overflow: hidden; position: relative; }
+.desc.clip::after { content: '…更多'; position: absolute; right: 12px; bottom: 10px; background: var(--chip); font-weight: 700; padding-left: 8px; }
+.cm h3 { font-size: 20px; margin: 24px 0 16px; }
+.cm form { display: flex; gap: 12px; margin-bottom: 24px; }
+.cm input { flex: 1; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; padding: 6px 0; outline: none; }
+.cm input:focus { border-bottom-color: var(--ink); }
+.cm .one { display: flex; gap: 12px; margin-bottom: 20px; }
+.cm .one b { font-size: 13px; } .cm .one b small { color: var(--soft); font-weight: 400; margin-left: 6px; }
+.cm .one p { margin: 3px 0 0; line-height: 1.6; }
+.next h4 { margin: 0 0 12px; font-size: 16px; }
+.mini-card { display: flex; gap: 8px; margin-bottom: 10px; cursor: pointer; }
+.mini-card .thumb { width: 168px; flex: none; border-radius: 8px; }
+.mini-card .thumb .fake b { font-size: 18px; } .mini-card .thumb .fake small { font-size: 10px; } .mini-card .thumb .fake .emo { font-size: 22px; }
+.mini-card h3 { margin: 0 0 4px; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mini-card p { margin: 0; color: var(--soft); font-size: 12px; line-height: 1.5; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #F1F1F1; color: #0F0F0F; padding: 10px 16px; border-radius: 8px; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 50; }
+.toast[hidden] { display: none; }
+
+@media (max-width: 1100px) { .watch { grid-template-columns: 1fr; } .side { display: none; } body.mini .side { display: block; } }
+@media (max-width: 640px) {
+  .top { gap: 6px; padding: 0 8px; } .logo span.t { display: none; } main { padding: 0 12px 30px; }
+  .grid { grid-template-columns: 1fr; gap: 24px; }
+  .search button { width: 48px; }
+  .watch { padding-top: 0; } .player { border-radius: 0; margin: 0 -12px; }
+  .mini-card .thumb { width: 140px; }
+  body.mini .side { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="icon-btn" id="menu" aria-label="選單"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
+  <a class="logo" href="#/" aria-label="球館TV 首頁">
+    <svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="lc"><circle cx="16" cy="16" r="13"/></clipPath></defs><circle cx="16" cy="16" r="13" fill="#FFC400"/><g clip-path="url(#lc)" fill="none" stroke="#1A3BB0" stroke-width="4.6" stroke-linecap="round"><path d="M2 12C10 11 18 16 21 30"/><path d="M28 5C22 11 21 20 26 31"/><path d="M9 2C13 9 21 12 31 10"/></g><circle cx="16" cy="16" r="13" fill="none" stroke="#1B2638" stroke-width="2"/></svg>
+    <span class="t">球館TV</span><sup>TW</sup>
+  </a>
+  <div class="search"><form id="sf" role="search"><input id="q" type="search" placeholder="搜尋" aria-label="搜尋影片"><button aria-label="搜尋"><svg class="i" viewBox="0 0 24 24"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg></button></form></div>
+  <span class="me" title="你">你</span>
+</header>
+<div class="wrap">
+  <nav class="side" id="side" aria-label="選單">
+    <a href="#/" data-nav="home"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg><span>首頁</span></a>
+    <a href="#/c/排球" data-nav="排球"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1 2.6.9 5.2-.2 7.6A9.9 9.9 0 0 1 4.3 9 8 8 0 0 1 12 4zm2 .3a8 8 0 0 1 5.6 9.2 10 10 0 0 0-6.8-1.1A11 11 0 0 0 14 4.3zM4 11.1a12 12 0 0 0 7 3 9.9 9.9 0 0 1-1.6 6.5A8 8 0 0 1 4 11.1zm8.8 3.2a8 8 0 0 1 6.4.9 8 8 0 0 1-7.8 4.8 12 12 0 0 0 1.4-5.7z"/></svg><span>排球</span></a>
+    <a href="#/history" data-nav="history"><svg class="i" viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 1-8.5 12h2.1A7 7 0 1 0 6 9.5L8.5 12H2V5.5l2.5 2.5A9 9 0 0 1 13 3zm-1 4h2v5l4 2.4-1 1.7-5-3z"/></svg><span>觀看記錄</span></a>
+    <a href="#/later" data-nav="later"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-1 3h2v5.4l3.6 2.1-1 1.7-4.6-2.7z"/></svg><span>稍後觀看</span></a>
+    <div class="full">
+      <hr><h4>訂閱內容</h4><div id="subs"></div>
+      <hr><h4>探索</h4>
+      <a href="#/c/比賽" data-nav="比賽"><span>🏆</span><span>比賽</span></a>
+      <a href="#/c/教學" data-nav="教學"><span>📘</span><span>教學</span></a>
+      <a href="#/c/球館" data-nav="球館"><span>🏟️</span><span>球館</span></a>
+      <a href="#/c/直播中" data-nav="直播中"><span>🔴</span><span>直播</span></a>
+    </div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+<script>
+// 球館裡那台電腦上的影音網站：版面像一般影音平台，但只有「可播放」的幾部真的能看，其他點開會說影片還沒上架
+const CH = {
+  hq: { name: '新竹排球館企劃', color: '#E39B00', subs: '2,180' },
+  daily: { name: '球館日常', color: '#2F6F86', subs: '8,430' },
+  lab: { name: '排球教室 Lab', color: '#3E63DD', subs: '5.6 萬' },
+  floor: { name: '地板控 Floor Nerd', color: '#7A5AF8', subs: '1.2 萬' },
+  pb: { name: '匹克球新手村', color: '#2E8B57', subs: '9,910' },
+};
+const V = [
+  { id: 'nandian', src: 'video/nandian-2022-fcu-vs-nsysu.mp4', t0: 4, ch: 'hq', views: '1,284', ago: '2 年前', tags: ['排球', '比賽'],
+    title: '2022 南電盃｜逢甲通訊 A vs 中山機電',
+    desc: '2022 南電盃系際排球賽，逢甲通訊 A 對上中山機電。\n這段影片也是智慧球場攝影機「比賽辨識」的測試素材：系統會自動找出每一個回合、記下得分方。\n\n#排球 #南電盃 #系際盃' },
+  { id: 'rally', src: 'video/rally-demo.mp4', t0: 6, ch: 'hq', views: '962', ago: '1 週前', tags: ['排球', '球館', '教學'],
+    title: '智慧球場攝影機：自動切出每一個回合（Demo）',
+    desc: '把一台網路攝影機架在球場邊，比賽打完就自動切出每個回合、標出得分方，還能下載判讀表。\n完整說明在企劃網站的「3 智慧球場」頁。' },
+  { id: 'open', ch: 'daily', views: '3.2 萬', ago: '3 天前', dur: '8:12', tags: ['球館'], title: '新竹排球館開幕倒數！場地第一次曝光',
+    thumb: ['linear-gradient(135deg,#F2B705,#E5484D)', '開幕倒數', '場地第一次曝光', '🏐'] },
+  { id: 'set', ch: 'lab', views: '12 萬', ago: '1 個月前', dur: '6:47', tags: ['教學', '排球'], title: '舉球手型一次看懂｜手在額頭前的三角窗',
+    thumb: ['linear-gradient(135deg,#1A3BB0,#5BC0EB)', '舉球手型', '三角窗在哪？', '🙌'] },
+  { id: 'bump', ch: 'lab', views: '8.7 萬', ago: '2 個月前', dur: '9:03', tags: ['教學', '排球'], title: '墊球不再噴飛！手臂平台 3 個重點',
+    thumb: ['linear-gradient(135deg,#0F766E,#34D399)', '墊球不噴飛', '手臂平台 3 重點', '💪'] },
+  { id: 'live', ch: 'daily', views: '214 人正在觀看', ago: '', live: true, tags: ['直播中', '比賽', '排球'], title: '【直播】週末友誼賽 第 3 場｜新竹排球館',
+    thumb: ['linear-gradient(135deg,#7F1D1D,#E5484D)', 'LIVE', '週末友誼賽', '🔴'] },
+  { id: 'heat', ch: 'daily', views: '4.5 萬', ago: '5 個月前', dur: '12:30', tags: ['球館'], title: '鐵皮屋球館夏天到底多熱？冷氣這樣配才夠',
+    thumb: ['linear-gradient(135deg,#B45309,#F59E0B)', '實測 38°C', '鐵皮屋有多熱', '🥵'] },
+  { id: 'serve', ch: 'lab', views: '6.1 萬', ago: '3 週前', dur: '7:58', tags: ['教學', '排球'], title: '跳發 vs 跳飄，新手該先練哪一個？',
+    thumb: ['linear-gradient(135deg,#312E81,#8B5CF6)', '跳發？跳飄？', '新手先練哪個', '🚀'] },
+  { id: 'floor', ch: 'floor', views: '2.3 萬', ago: '4 個月前', dur: '10:15', tags: ['球館'], title: 'PVC 運動地墊 vs 木地板：膝蓋、抓地、預算一次比',
+    thumb: ['linear-gradient(135deg,#78350F,#D6A35C)', '地板大對決', 'PVC vs 木地板', '🪵'] },
+  { id: 'rot', ch: 'lab', views: '15 萬', ago: '1 年前', dur: '1:02', tags: ['教學', '排球'], title: '一分鐘看懂排球輪轉',
+    thumb: ['linear-gradient(135deg,#111827,#4B5563)', '輪轉 1 分鐘', '再也不站錯', '🔄'] },
+  { id: 'kitchen', ch: 'pb', views: '3.9 萬', ago: '2 週前', dur: '5:20', tags: ['匹克球', '教學'], title: '匹克球入門：「廚房」到底是什麼？',
+    thumb: ['linear-gradient(135deg,#166534,#84CC16)', '廚房規則', '匹克球入門', '🥒'] },
+  { id: 'bdm', ch: 'daily', views: '1.8 萬', ago: '6 天前', dur: '15:44', tags: ['球館'], title: '排球場晚上變羽球場！複合球場怎麼換網',
+    thumb: ['linear-gradient(135deg,#1F2937,#F2C230)', '一場三用', '排球→羽球→匹克球', '🏸'] },
+];
+const COMMENTS = {
+  nandian: [['阿凱', '2 年前', '第二局那顆後排攻擊太猛了'], ['小魚', '1 年前', '系際盃就是熱血'], ['球館企劃', '3 週前', '這部也是比賽辨識的測試影片，有興趣可以看「3 智慧球場」頁']],
+  rally: [['Momo', '5 天前', '自動切回合也太方便，比賽完直接剪好'], ['教練 Lin', '1 週前', '可以標出是誰得分嗎？']],
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+const store = {
+  get(k, d) { try { const v = JSON.parse(localStorage.getItem('vbtv.' + k)); return v == null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('vbtv.' + k, JSON.stringify(v)); } catch (e) { /* 私密視窗等存不了就算了 */ } },
+};
+let toastT = 0;
+function toast(m) { const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+const fmtT = (s) => { s = Math.floor(s || 0); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
+const durs = store.get('durs', {});
+function avatar(ch, size = 36) { const c = CH[ch]; return `<span class="av" style="background:${c.color};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px">${esc(c.name[0])}</span>`; }
+function thumbHtml(v) {
+  const prog = store.get('pos', {})[v.id], d = durs[v.id];
+  const bar = prog && d ? `<span class="bar" style="width:${Math.min(100, (prog / d) * 100)}%"></span>` : '';
+  const badge = v.live ? '<span class="live">直播中</span>' : `<span class="dur" data-dur="${v.id}">${v.src ? (d ? fmtT(d) : '') : v.dur}</span>`;
+  if (v.src) return `<div class="thumb"><video muted playsinline preload="metadata" src="${v.src}#t=${v.t0}" data-v="${v.id}"></video>${badge}${bar}</div>`;
+  const [bg, big, sub, emo] = v.thumb;
+  return `<div class="thumb"><div class="fake" style="background:${bg}"><span class="emo">${emo}</span><div><b>${esc(big)}</b><small>${esc(sub)}</small></div></div>${badge}</div>`;
+}
+const metaLine = (v) => v.live ? esc(v.views) : `觀看次數：${esc(v.views)}・${esc(v.ago)}`;
+function cardHtml(v) {
+  return `<a class="card" href="#/watch/${v.id}">${thumbHtml(v)}<div class="meta">${avatar(v.ch)}<div><h3>${esc(v.title)}</h3><p>${esc(CH[v.ch].name)}</p><p>${metaLine(v)}</p></div></div></a>`;
+}
+// 縮圖用影片本身：滑過去就靜音預覽
+function wireThumbs(root) {
+  for (const vid of root.querySelectorAll('video[data-v]')) {
+    const id = vid.dataset.v, v = V.find((x) => x.id === id);
+    vid.addEventListener('loadedmetadata', () => { if (!durs[id]) { durs[id] = vid.duration; store.set('durs', durs); } for (const b of document.querySelectorAll(`[data-dur="${id}"]`)) b.textContent = fmtT(vid.duration); });
+    const card = vid.closest('.card, .mini-card');
+    if (matchMedia('(hover: hover)').matches && card) {
+      card.addEventListener('mouseenter', () => { vid.currentTime = v.t0; vid.play().catch(() => {}); });
+      card.addEventListener('mouseleave', () => { vid.pause(); vid.currentTime = v.t0; });
+    }
+  }
+}
+const CHIPS = ['全部', '排球', '比賽', '教學', '球館', '匹克球', '直播中', '可以播放'];
+function listView(filter, title) {
+  let list = V;
+  if (filter && filter !== '全部') list = filter === '可以播放' ? V.filter((v) => v.src) : V.filter((v) => v.tags.includes(filter));
+  return `<div class="chips" role="tablist">${CHIPS.map((c) => `<a class="chip${(filter || '全部') === c ? ' on' : ''}" href="${c === '全部' ? '#/' : '#/c/' + encodeURIComponent(c)}" role="tab" aria-selected="${(filter || '全部') === c}">${c}</a>`).join('')}</div>
+    ${title ? `<h2 style="margin:8px 0 0;font-size:20px">${esc(title)}</h2>` : ''}
+    ${list.length ? `<div class="grid">${list.map(cardHtml).join('')}</div>` : '<p class="empty">這裡還沒有影片</p>'}`;
+}
+function searchView(q) {
+  const k = q.trim().toLowerCase(), list = V.filter((v) => (v.title + CH[v.ch].name + v.tags.join(' ')).toLowerCase().includes(k));
+  return `<h2 style="margin:20px 0 0;font-size:18px">「${esc(q)}」的搜尋結果</h2>${list.length ? `<div class="grid">${list.map(cardHtml).join('')}</div>` : '<p class="empty">找不到相關影片，換個關鍵字試試（例如：排球、匹克球、地板）</p>'}`;
+}
+function idsView(ids, title, emptyMsg) {
+  const list = ids.map((id) => V.find((v) => v.id === id)).filter(Boolean);
+  return `<h2 style="margin:20px 0 0;font-size:20px">${title}</h2>${list.length ? `<div class="grid">${list.map(cardHtml).join('')}</div>` : `<p class="empty">${emptyMsg}</p>`}`;
+}
+const I = {
+  like: '<svg class="i" viewBox="0 0 24 24"><path d="M2 21h4V9H2zm20-11a2 2 0 0 0-2-2h-6.3l1-4.6V3a1.5 1.5 0 0 0-.5-1L13 1 7.6 6.4A2 2 0 0 0 7 7.8V19a2 2 0 0 0 2 2h9a2 2 0 0 0 1.8-1.2l3-7.1A2 2 0 0 0 23 12z"/></svg>',
+  dislike: '<svg class="i" viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M2 21h4V9H2zm20-11a2 2 0 0 0-2-2h-6.3l1-4.6V3a1.5 1.5 0 0 0-.5-1L13 1 7.6 6.4A2 2 0 0 0 7 7.8V19a2 2 0 0 0 2 2h9a2 2 0 0 0 1.8-1.2l3-7.1A2 2 0 0 0 23 12z"/></svg>',
+  share: '<svg class="i" viewBox="0 0 24 24"><path d="M14 5l7 7-7 7v-4c-5 0-8.5 1.6-11 5 1-5 4-10 11-11z"/></svg>',
+  later: '<svg class="i" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-1 3h2v5.4l3.6 2.1-1 1.7-4.6-2.7z"/></svg>',
+};
+function watchView(id) {
+  const v = V.find((x) => x.id === id); if (!v) return '<p class="empty">找不到這部影片</p>';
+  const subs = store.get('subs', []), likes = store.get('likes', {}), mine = store.get('cm.' + id, []);
+  const cms = [...mine, ...(COMMENTS[id] || [])];
+  const player = v.src
+    ? `<video id="pv" src="${v.src}" controls autoplay playsinline preload="auto"></video>`
+    : `<div class="na"><div><svg viewBox="0 0 24 24" width="56" height="56" fill="#AAA"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1 5v7h2V7zm0 9v2h2v-2z"/></svg><b>${v.live ? '直播目前離線' : '影片無法播放'}</b><span>${v.live ? '這場直播還沒開始，晚點再回來看看' : '這部影片還沒上架。目前能看的是「新竹排球館企劃」頻道的影片'}</span></div></div>`;
+  const others = V.filter((x) => x.id !== id).sort((a, b) => (b.src ? 1 : 0) - (a.src ? 1 : 0));
+  return `<div class="watch"><div>
+    <div class="player">${player}</div>
+    <h1 class="w-title">${esc(v.title)}</h1>
+    <div class="w-row">
+      <div class="w-ch">${avatar(v.ch, 40)}<div><b>${esc(CH[v.ch].name)}</b><small>${esc(CH[v.ch].subs)} 位訂閱者</small></div>
+        <button class="pill sub${subs.includes(v.ch) ? ' on' : ''}" id="subb" data-ch="${v.ch}">${subs.includes(v.ch) ? '已訂閱' : '訂閱'}</button></div>
+      <div class="likes"><button id="lk" aria-pressed="${likes[id] === 1}" aria-label="喜歡">${I.like}<span>${likes[id] === 1 ? '已按讚' : '喜歡'}</span></button><button id="dk" aria-pressed="${likes[id] === -1}" aria-label="不喜歡">${I.dislike}</button></div>
+      <button class="pill" id="share">${I.share}分享</button>
+      <button class="pill" id="later">${I.later}稍後觀看</button>
+    </div>
+    <div class="desc clip" id="desc"><b>${v.live ? esc(v.views) : `觀看次數：${esc(v.views)}　${esc(v.ago)}`}</b>${esc(v.desc || '這部影片的說明還沒寫。')}</div>
+    <section class="cm"><h3>${cms.length} 則留言</h3>
+      <form id="cf">${`<span class="av me" style="background:linear-gradient(135deg,#F2B705,#E39B00);color:#1B2638">你</span>`}<input id="ci" maxlength="200" placeholder="新增留言…" aria-label="留言"></form>
+      <div id="cl">${cms.map(([n, t, x]) => `<div class="one"><span class="av" style="background:#64748B;width:32px;height:32px;font-size:13px">${esc(n[0])}</span><div><b>@${esc(n)}<small>${esc(t)}</small></b><p>${esc(x)}</p></div></div>`).join('')}</div>
+    </section></div>
+    <aside class="next"><h4>接著播放</h4>${others.map((x) => `<a class="mini-card card" href="#/watch/${x.id}">${thumbHtml(x)}<div><h3>${esc(x.title)}</h3><p>${esc(CH[x.ch].name)}</p><p>${metaLine(x)}</p></div></a>`).join('')}</aside>
+  </div>`;
+}
+function wireWatch(id) {
+  const v = V.find((x) => x.id === id); if (!v) return;
+  const pv = $('pv');
+  if (pv) {
+    const pos = store.get('pos', {});
+    pv.addEventListener('loadedmetadata', () => { durs[id] = pv.duration; store.set('durs', durs); if (pos[id] > 5 && pos[id] < pv.duration - 5) { pv.currentTime = pos[id]; toast(`從上次看到的 ${fmtT(pos[id])} 繼續播放`); } });
+    let last = 0; pv.addEventListener('timeupdate', () => { if (Math.abs(pv.currentTime - last) > 3) { last = pv.currentTime; const p = store.get('pos', {}); p[id] = pv.currentTime; store.set('pos', p); } });
+    pv.addEventListener('ended', () => { const p = store.get('pos', {}); delete p[id]; store.set('pos', p); });
+    const h = store.get('hist', []).filter((x) => x !== id); h.unshift(id); store.set('hist', h.slice(0, 30));
+  }
+  $('subb').addEventListener('click', (e) => { const s = store.get('subs', []), ch = e.currentTarget.dataset.ch, on = !s.includes(ch); store.set('subs', on ? [...s, ch] : s.filter((x) => x !== ch)); e.currentTarget.classList.toggle('on', on); e.currentTarget.textContent = on ? '已訂閱' : '訂閱'; renderSubs(); toast(on ? `已訂閱「${CH[ch].name}」` : '已取消訂閱'); });
+  const setLike = (val) => { const L = store.get('likes', {}); L[id] = L[id] === val ? 0 : val; store.set('likes', L); $('lk').setAttribute('aria-pressed', String(L[id] === 1)); $('dk').setAttribute('aria-pressed', String(L[id] === -1)); $('lk').querySelector('span').textContent = L[id] === 1 ? '已按讚' : '喜歡'; };
+  $('lk').addEventListener('click', () => setLike(1)); $('dk').addEventListener('click', () => setLike(-1));
+  $('share').addEventListener('click', async () => { const u = location.href.split('#')[0] + '#/watch/' + id; try { await navigator.clipboard.writeText(u); toast('連結已複製'); } catch (e) { toast(u); } });
+  $('later').addEventListener('click', () => { const l = store.get('later', []); if (!l.includes(id)) { l.unshift(id); store.set('later', l); } toast('已加到「稍後觀看」'); });
+  $('desc').addEventListener('click', (e) => e.currentTarget.classList.remove('clip'));
+  $('cf').addEventListener('submit', (e) => { e.preventDefault(); const t = $('ci').value.trim(); if (!t) return; const m = store.get('cm.' + id, []); m.unshift(['你', '剛剛', t]); store.set('cm.' + id, m.slice(0, 50)); route(); toast('留言已發布（只存在這台裝置）'); });
+}
+function renderSubs() {
+  const s = store.get('subs', []);
+  $('subs').innerHTML = s.length ? s.map((ch) => `<a href="#/s/${ch}"><span class="sub-av" style="background:${CH[ch].color}">${esc(CH[ch].name[0])}</span><span>${esc(CH[ch].name)}</span></a>`).join('') : '<p style="margin:4px 12px;color:var(--soft);font-size:13px;line-height:1.6">看影片時按「訂閱」，頻道會出現在這裡</p>';
+}
+function route() {
+  const h = decodeURIComponent(location.hash.replace(/^#\/?/, '')), [kind, arg] = [h.split('/')[0], h.split('/').slice(1).join('/')];
+  const main = $('main'); let html, nav = 'home';
+  for (const v of document.querySelectorAll('video')) v.pause();
+  if (kind === 'watch') html = watchView(arg);
+  else if (kind === 'c') { html = listView(arg); nav = arg; }
+  else if (kind === 'search') { html = searchView(arg); $('q').value = arg; }
+  else if (kind === 'history') { html = idsView(store.get('hist', []), '觀看記錄', '還沒有看過影片'); nav = 'history'; }
+  else if (kind === 'later') { html = idsView(store.get('later', []), '稍後觀看', '看影片時按「稍後觀看」，就會出現在這裡'); nav = 'later'; }
+  else if (kind === 's') { html = idsView(V.filter((v) => v.ch === arg).map((v) => v.id), CH[arg] ? CH[arg].name : '頻道', '這個頻道還沒有影片'); }
+  else html = listView('全部');
+  main.innerHTML = html;
+  for (const a of document.querySelectorAll('.side a')) a.classList.toggle('on', a.dataset.nav === nav && kind !== 'watch');
+  wireThumbs(main);
+  if (kind === 'watch') wireWatch(arg);
+  scrollTo(0, 0);
+}
+$('sf').addEventListener('submit', (e) => { e.preventDefault(); const q = $('q').value.trim(); if (q) location.hash = '#/search/' + encodeURIComponent(q); });
+$('menu').addEventListener('click', () => document.body.classList.toggle('mini'));
+addEventListener('hashchange', route);
+renderSubs(); route();
+</script>
+</body>
+</html>
