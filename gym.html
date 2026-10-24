@@ -376,6 +376,12 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .wk-use { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(27,38,56,.82); color: #fff; max-width: calc(100% - 24px); z-index: 11; }
 /* 導覽中滑鼠沒鎖定時（可以點按鈕、點物件），游標換成一顆排球；中間的白點是實際點到的位置 */
 .app[data-mode="walk"] #canvas-host, .app[data-mode="walk"] #canvas-host * { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CclipPath id='c'%3E%3Ccircle cx='16' cy='16' r='13'/%3E%3C/clipPath%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='13' fill='%23FFC400'/%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%231A3BB0' stroke-width='4.6' stroke-linecap='round'%3E%3Cpath d='M2 12C10 11 18 16 21 30'/%3E%3Cpath d='M28 5C22 11 21 20 26 31'/%3E%3Cpath d='M9 2C13 9 21 12 31 10'/%3E%3C/g%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%23B88A00' stroke-width='.8' opacity='.7'%3E%3Cpath d='M2 15.5C9 15 15 19 17.5 30'/%3E%3Cpath d='M24.5 4C19 10 18 19 22.5 31'/%3E%3Cpath d='M6 5C10 11 18 14.5 30 13.5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%231B2638' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23fff' stroke='%231B2638' stroke-width='.8'/%3E%3Cellipse cx='11' cy='9.5' rx='3.2' ry='1.8' fill='%23fff' opacity='.55' transform='rotate%28-30 11 9.5%29'/%3E%3C/svg%3E") 16 16, crosshair; }
+/* 底部按鍵提示列 */
+.wk-keys { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; padding: 3px 10px; border-radius: 8px; background: rgba(15,23,36,.45); color: rgba(255,255,255,.88); font-size: 11px; line-height: 1.6; pointer-events: none !important; }
+.wk-keys span { white-space: nowrap; } .wk-keys kbd { font-family: var(--font-mono); font-size: 10px; padding: 0 4px; margin-right: 3px; border-radius: 3px; background: rgba(255,255,255,.18); color: #fff; border: 0; }
+@media (pointer: coarse) { .wk-keys { display: none; } }
+.walk-ui.rk .wk-keys, .walk-ui:has(.rp:not([hidden])) .wk-keys, .walk-ui:has(.pcwin:not([hidden])) .wk-keys { display: none; }
+@media (pointer: fine) { .walk-ui .zcard { bottom: 52px; } .walk-ui .wk-act { bottom: 118px; } }
 /* 2 對 2 沙排：左上角計分板 */
 .vm-hud { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); top: 58px; z-index: 11; pointer-events: none !important; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .vm-hud[hidden], .vm-msg[hidden] { display: none !important; }
@@ -704,6 +710,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D（Esc 離開）">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>跑</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>V</kbd>攻擊（拿球＝發球）</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>前舉／快攻／後舉</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>放開滑鼠</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 前舉／快攻／後舉、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中 <kbd>V</kbd> 攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短、<kbd>Shift</kbd>＋<kbd>V</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球 <kbd>V</kbd> 發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只會放開滑鼠）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
@@ -6734,6 +6741,10 @@ function recTick(now) {
   for (const p2 of NET.peers.values()) if (p2.ball && p2.ball.visible) bl.push([recId(p2.ball), +p2.ball.position.x.toFixed(3), +p2.ball.position.y.toFixed(3), +p2.ball.position.z.toFixed(3), 1]);
   const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你']];
   for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n]);
+  const npcRow = (id, g, y, poseC, col, name) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name]);
+  if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name);
+  if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練');
+  if (RK.on) for (const P of Object.values(RK.P)) if (P.ai && P.av) npcRow('rkai', P.av.g, P.jy, P.swing ? 4 : 0, '#E5484D', P.name);
   REC.frames.push({ t, b: bl, p: ppl });
 }
 // ---- 分析：每顆球的時間序列 → 落地點、擊球點與球速、最高點、過網次數
@@ -7847,6 +7858,17 @@ function vbCamAssist(dt) {
   const P0 = VM.on && VM.host ? VM.poss[0] : null, setting = walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1);
   if (setting) { let best = null; for (const b of balls) { if (b.rest > 0.3 || b.mine) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < 8 && (!best || d < best.d)) best = { b, d }; } if (best) p = best.b.m.position; }
   if (!p && VB.target && !walk.recv) p = VB.target.b.m.position;
+  if (!p && !walk.hold && !skill.mode && !walk.sit) {
+    let best = null; const cand = VM.on && VM.ball && balls.includes(VM.ball) ? [VM.ball] : balls;
+    for (const b of cand) { if (b.rest > 0.2 || b.v.lengthSq() < 0.25) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < 18 && (!best || d < best.d)) best = { b, d }; }
+    if (best) {
+      const q = best.b.m.position, ddx = q.x - walk.x, ddz = q.z - walk.z, kk = Math.min(1, dt * 2.5);
+      let dy = Math.atan2(-ddx, -ddz) - walk.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      walk.yaw += Math.sign(dy) * Math.max(0, Math.abs(dy) - 0.35) * kk;
+      const dp = clamp(Math.atan2(q.y - camera.position.y, Math.max(0.6, Math.hypot(ddx, ddz))), -0.8, 0.9) - walk.pitch;
+      walk.pitch += Math.sign(dp) * Math.max(0, Math.abs(dp) - 0.28) * kk;
+    }
+  }
   else if (VB.setSpot && performance.now() < VB.setSpot.until && balls.includes(VB.setSpot.b) && Math.hypot(VB.setSpot.x - walk.x, VB.setSpot.z - walk.z) < 6) { p = VB.setSpot.b.m.position; yawOk = false; }
   if (!p) return;
   const dx = p.x - walk.x, dz = p.z - walk.z, dh = Math.hypot(dx, dz), k = 1 - Math.exp(-dt * (setting ? 4.5 : 2.2));
@@ -7988,7 +8010,7 @@ function vmStart(c, sg, mateId) {
 function vmMkAi(id, team, name, color) {
   const av = makeAvatar(color), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
   const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
-  const side = vmSide(team), a = { id, team, name, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
+  const side = vmSide(team), a = { id, team, name, color, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
   VM.ai.set(id, a); VM.names[id] = name; return a;
 }
 function vmStop(silent) {
@@ -8003,8 +8025,9 @@ function vmStop(silent) {
 function vmServer() { const t = VM.srvTeam; return VM.team[t][VM.srvIdx[t] % 2]; }
 function vmSetupServe() {
   VM.phase = 'serve'; VM.ball = null; VM.touch = { team: -1, n: 0, last: null }; VM.poss = [null, null]; VM.srvSeq++;
+  vmClearBalls();
   const srv = vmServer(), s = vmSide(VM.srvTeam);
-  VM.serveAt = VM.t + 1.6 + Math.random() * 0.8;
+  VM.serveAt = VM.t + 2.6 + Math.random() * 0.8;
   // AI 先站位：發球的人在底線後，其他人在自己半場
   for (const a of VM.ai.values()) {
     const sd = vmSide(a.team);
@@ -8012,12 +8035,13 @@ function vmSetupServe() {
     else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
     else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = k === 0 ? 2.1 : -2.1; }
   }
-  vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按 V' : ''}`, 'srv', 2600);
+  vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按 V' : ''}`, 'srv', 3200);
   if (srv === vmMe()) vmPrepServe();
   else if (!VM.ai.has(srv) && NET.on) NET.tx.publish('vm', { e: 'serve', id: srv, seq: VM.srvSeq, s });
   vmBroadcast(true);
 }
 // 自己要發球：站到底線後、手上給一顆球
+function vmClearBalls() { for (const b of balls) ballsGroup.remove(b.m); balls.length = 0; VB.setSpot = null; VB.target = null; }
 function vmPrepServe(s = VM.sg) {
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
   const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; walk.air = null;
@@ -8055,8 +8079,8 @@ function vmPoint(win, why) {
   VM.phase = 'dead'; VM.sc[win]++;
   if (win !== VM.srvTeam) { VM.srvTeam = win; VM.srvIdx[win]++; }
   const a = VM.sc[0], b = VM.sc[1], hi = Math.max(a, b), over = (hi >= VM.to && Math.abs(a - b) >= 2) || hi >= VM.to + 2;
-  vmSay(`${why}・${win === 0 ? '你們得分' : 'AI 隊得分'}　${a}：${b}`, win === 0 ? 'gold' : 'warn', 2000);
-  VM.next = { at: VM.t + 2.0, fn: over ? () => vmOver() : vmSetupServe };
+  vmSay(`${why}・${win === 0 ? '你們得分' : 'AI 隊得分'}　${a}：${b}`, win === 0 ? 'gold' : 'warn', 3000);
+  VM.next = { at: VM.t + 3.2, fn: over ? () => vmOver() : vmSetupServe };
   vmBroadcast(true, `${why}・${win === 0 ? '你們得分' : 'AI 隊得分'}　${a}：${b}`);
 }
 function vmOver() {
@@ -8222,9 +8246,10 @@ function vmOnNet(d, from) {
   }
   if (!VM.on || VM.host || from !== VM.hostId) return;
   if (d.e === 'st') {
+    if (d.ph === 'serve' && VM.phase !== 'serve') vmClearBalls();
     VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv;
     for (const [id, x, z, y, pose] of d.ai) { const a = VM.ai.get(id); if (a) { a.wx = x; a.wz = z; a.y = y; a.pose = pose; a.swingT = pose ? 0.2 : 0; } }
-    if (d.msg) vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 2000);
+    if (d.msg) vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000);
     if (d.ph === 'over') vmOver();
   } else if (d.e === 'serve' && d.id === NET.me) vmPrepServe(d.s);
   else if (d.e === 'end') { vmStop(true); toast('比賽結束了'); }
