@@ -1246,7 +1246,7 @@ const buildingGroup = new THREE.Group();
 const zonesGroup = new THREE.Group();
 const itemsGroup = new THREE.Group();
 scene.add(buildingGroup, zonesGroup, itemsGroup);
-let walls = [];
+let walls = [], cols = [];
 let roof = null;
 let ceilingGroup = null;     // 屋架與天花，只在室內看得到
 let colliders = [];          // 導覽用的牆線段 [x1,z1,x2,z2]
@@ -2212,9 +2212,24 @@ function wallBox(g, material, x1, z1, x2, z2, h, t, y = 0) {
   m.rotation.y = Math.atan2(-(z2 - z1), x2 - x1);
   g.add(m); return m;
 }
+// 第三人稱（球拍對戰、排球比賽）：擋在鏡頭和自己之間、在畫面裡的鋼構柱先藏起來（只藏柱子的零件，柱子本身的顯示開關不動）
+const _occV = new THREE.Vector3();
+function hideOccluders(tgt) {
+  if (!tgt) { if (cols.hidden) { for (const c of cols) for (const m of c.children) m.visible = true; cols.hidden = false; } return; }
+  camera.updateMatrixWorld(); const inv = camera.matrixWorldInverse, dT = -_occV.set(tgt.x, 1, tgt.z).applyMatrix4(inv).z;
+  for (const c of cols) {
+    let occ = false;
+    for (const y of [0.3, 1.5, camera.position.y]) {
+      _occV.set(c.position.x, y, c.position.z).applyMatrix4(inv); const d = -_occV.z;
+      if (d > 0 && d < dT - 0.5) { _occV.set(c.position.x, y, c.position.z).project(camera); if (Math.abs(_occV.x) < 1.4 && Math.abs(_occV.y) < 1.4) { occ = true; break; } }
+    }
+    for (const m of c.children) m.visible = !occ;
+  }
+  cols.hidden = true;
+}
 function buildBuilding() {
   disposeGroup(buildingGroup); mainDoors.length = 0;
-  walls = []; colliders = [];
+  walls = []; cols = []; colliders = [];
   const { H } = state.building, P = outlinePoly(), sc = scheme(), col = state.colors || {};
   const metal = isMetal(), wallMat = tinted(metal ? sheetWallMat : plasterMat, col.wall);
   const B = hallBounds();
@@ -2277,7 +2292,7 @@ function buildBuilding() {
     const c = new THREE.Group(); c.position.set(px, 0, pz);
     box(c, 0.3, eave, 0.08, steelMat, 0, 0, -0.11); box(c, 0.3, eave, 0.08, steelMat, 0, 0, 0.11); box(c, 0.06, eave, 0.22, steelMat, 0, 0, 0);
     if (!metal) c.userData.structure = true;   // 鐵皮屋的柱子本來就外露
-    buildingGroup.add(c);
+    buildingGroup.add(c); cols.push(c);
   }
   // 屋頂：倒 V（雙斜）屋頂，屋脊沿著長邊；每 6 m 一榀鋼構（柱＋沿斜面上去的 H 型鋼樑），樑上有檁條，最上面是浪板
   ceilingGroup = new THREE.Group(); ceilingGroup.userData.overhead = true; buildingGroup.add(ceilingGroup);
@@ -8674,6 +8689,7 @@ function drawFrame(force) {
   if (walk.on) { recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   const tp = walk.on && tpBegin(dt);
+  hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   renderScene();
   labelRenderer.render(scene, camera);
   if (walk.on) vbDomFx();
