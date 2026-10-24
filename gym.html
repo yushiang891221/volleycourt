@@ -782,7 +782,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="wk-use" id="wk-use" hidden></div>
       <div class="vb-cue" id="vb-cue" hidden></div>
       <div class="vb-ring" id="vb-ring" hidden></div>
-      <div class="vm-hud" id="vm-hud" hidden><div class="vm-sb"><b>🏖️ 2 對 2</b><span id="vm-a">你們</span><em id="vm-sc">0：0</em><span id="vm-b">AI 隊</span><small>先到 7 分</small><button type="button" id="vm-x">離開</button></div><div class="vm-msg" id="vm-msg" hidden></div></div>
+      <div class="vm-hud" id="vm-hud" hidden><div class="vm-sb"><b>🏖️ 2 對 2</b><span id="vm-a">你們</span><em id="vm-sc">0：0</em><span id="vm-b">AI 隊</span><small id="vm-tc">先到 7 分</small><button type="button" id="vm-x">離開</button></div><div class="vm-msg" id="vm-msg" hidden></div></div>
       <div class="rk-hud" id="rk-hud" hidden><div class="rk-top"><span id="rk-a"></span><b id="rk-sc">0：0</b><span id="rk-b"></span><button type="button" id="rk-x">離開對戰</button></div><div class="rk-msg" id="rk-msg" hidden></div><p class="rk-tip" id="rk-tip"></p></div>
       <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button></div>
       <div class="rk-menu" id="rk-menu" hidden></div>
@@ -6883,6 +6883,7 @@ function openReplay() {
   RP.g = new THREE.Group(); scene.add(RP.g); RP.actors.clear(); RP.ballsM.clear(); RP.trails.clear(); RP.marks = [];
   // 現場的東西先藏起來，換成回放的人形與球
   ballsGroup.visible = false; hands.visible = false; for (const p2 of NET.peers.values()) { p2.av.g.visible = false; if (p2.ball) p2.ball.visible = false; }
+  rpLive(false);
   walk.paused = true; walk.keys.clear(); unlockMouse(); closeCamView(true);
   // 落地點、擊球點、最高點標記（時間到了才出現）
   for (const b of A.bounces) { const ring = new THREE.Mesh(new THREE.RingGeometry(0.14, 0.24, 32), new THREE.MeshBasicMaterial({ color: '#FF4D4F', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(b.x, 0.03, b.z); ring.visible = false; RP.g.add(ring); RP.marks.push({ t: b.t, o: ring, life: 4 }); }
@@ -6895,11 +6896,23 @@ function openReplay() {
   $('rp-stats').innerHTML = `擊球 <b>${A.hits.length}</b> 次・最快 <b>${KMH(A.fast)}</b> km/h・最高 <b>${A.top.toFixed(1)}</b> m・過網 <b>${A.crossings}</b> 次・落地 <b>${A.bounces.length}</b> 次`;
   rpView(RP.view); rpSetPlay(true);
 }
+// 回放時把現場的人（陪練、AI 球員、球拍對戰的人和球、別人的 AI 對手）藏起來，只看回放裡的；關掉回放再放回來
+function rpLive(show) {
+  const objs = [];
+  if (VB.npc) objs.push(VB.npc.av.g);
+  for (const a of VM.ai.values()) objs.push(a.av.g);
+  if (RK.on) { for (const P of Object.values(RK.P)) if (P.av) objs.push(P.av.g); objs.push(RK.ballM, RK.shadow, RK.trail, RK.landM, RK.stanceM); }
+  for (const e of RKV.values()) objs.push(e.m, e.sh);
+  for (const p2 of NET.peers.values()) if (p2.aiAv) objs.push(p2.aiAv.g);
+  for (const o of objs) if (o) o.visible = show && (o !== RK.landM && o !== RK.stanceM);
+  if (TP.av && !show) { TP.av.g.visible = false; TP.ball.visible = false; }
+}
 function closeReplay() {
   if (!RP.on) return;
   if (RP.recorder && RP.recorder.state !== 'inactive') RP.recorder.stop();
   RP.on = false; scene.remove(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); RP.hud = null; }
   ballsGroup.visible = true; for (const p2 of NET.peers.values()) p2.av.g.visible = true; hands.visible = !!walk.hold;
+  rpLive(true);
   walk.paused = false; $('rp').hidden = true; camera.fov = 70; camera.updateProjectionMatrix();
   if (ceilingGroup) ceilingGroup.visible = true; if (typeof applyOverhead === 'function') applyOverhead();
 }
@@ -8253,12 +8266,16 @@ function vmOnTouch(b, id, kind) {
   if (!VM.on || !VM.host) return;
   const team = vmTeamOf(id); if (team < 0) return;
   VM.ball = b; b.spike = null; b.floorHit = null;
-  if (VM.phase === 'serve') { VM.phase = 'rally'; VM.touch = { team, n: 3, last: id }; VM.poss = [null, null]; return; }   // 發球那一下：對方要接，自己這隊不能再碰
+  if (VM.phase === 'serve') { VM.phase = 'rally'; VM.touch = { team, n: 3, last: id, serve: true }; VM.poss = [null, null]; return; }   // 發球那一下：對方要接，自己這隊不能再碰
   if (VM.phase !== 'rally') return;
+  // 正式規則：同一人不能連續碰兩次（連擊）、一隊最多碰三次；攔網不算一次，攔網的人也可以再碰下一球
+  const block = kind === 'block';
   if (team === VM.touch.team) {
-    VM.touch.n++; VM.touch.last = id;
-    if (VM.touch.n > 3) { vmPoint(1 - team, '超過三次觸球'); return; }
-  } else VM.touch = { team, n: 1, last: id };
+    if (block) { VM.touch.last = id; VM.touch.blk = true; VM.poss[team] = null; return; }
+    if (VM.touch.last === id && !VM.touch.blk) { vmPoint(1 - team, `連擊（${vmName(id)} 連續碰兩次）`); return; }
+    VM.touch.n++; VM.touch.last = id; VM.touch.blk = false;
+    if (VM.touch.n > 3) { vmPoint(1 - team, '四次擊球（一隊最多碰三次）'); return; }
+  } else { VM.touch = { team, n: block ? 0 : 1, last: id, blk: block }; if (block) VM.poss[team] = null; }
   const P = VM.poss[team]; if (P) P.stage = VM.touch.n;
 }
 function vmPoint(win, why) {
@@ -8416,7 +8433,7 @@ function vmBroadcast(force, msg) {
   if (!NET.on || !VM.host) return;
   VM.sendT = performance.now();
   const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : 0]; });
-  NET.tx.publish('vm', { e: 'st', sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, msg: msg || undefined });
+  NET.tx.publish('vm', { e: 'st', sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, msg: msg || undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined });
 }
 function vmOnNet(d, from) {
   if (d.e === 'start') {
@@ -8433,7 +8450,7 @@ function vmOnNet(d, from) {
   if (!VM.on || VM.host || from !== VM.hostId) return;
   if (d.e === 'st') {
     if (d.ph === 'serve' && VM.phase !== 'serve') vmClearBalls();
-    VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv;
+    VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv; VM.tc = d.tc || null;
     for (const [id, x, z, y, pose] of d.ai) { const a = VM.ai.get(id); if (a) { a.wx = x; a.wz = z; a.y = y; a.pose = pose; a.swingT = pose ? 0.2 : 0; } }
     if (d.msg) vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000);
     if (d.ph === 'over') vmOver();
@@ -8447,6 +8464,8 @@ function vmHud() {
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
   const t = `${VM.sc[0]}：${VM.sc[1]}`; if ($('vm-sc').textContent !== t) $('vm-sc').textContent = t;
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
+  const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
+  const tct = tc && tc[1] > 0 ? `${tc[0] === 0 ? '你們' : 'AI 隊'}觸球 ${tc[1]}/3` : '先到 7 分'; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
   const mine = VM.team[0].includes(vmMe());
   const names = `${mine ? '你們' : VM.team[0].map(vmName).join('＋')}`; if ($('vm-a').textContent !== names) $('vm-a').textContent = names;
 }
@@ -8552,7 +8571,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
