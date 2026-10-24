@@ -143,6 +143,11 @@ button.danger { color: var(--warn); }
 details[open] > .pal-title::after { content: '－'; }
 details.pal-group { border-top: 1px solid var(--rule); }
 .zfix .ff { stroke-dasharray: 3 2; opacity: .7; cursor: pointer; }
+.nudge { display: flex; align-items: center; gap: 6px; }
+.nudge > span { font-size: 12px; color: var(--soft, #9AA4B2); margin-right: 2px; }
+.nudge button { min-width: 36px; min-height: 32px; padding: 0 8px; }
+.nudge { flex-wrap: wrap; }
+.nudge select { margin-left: auto; width: auto; min-width: 74px; min-height: 32px; padding-right: 22px; }
 .zfix:hover .ff { opacity: 1; stroke: #C4552A; }
 .zs-fix { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px dashed var(--rule); border-radius: 10px; font-size: 12px; }
 .zs-fix span { color: var(--soft); line-height: 1.5; }
@@ -3241,7 +3246,9 @@ function saveDraftSoon() { draftDirty = true; clearTimeout(draftTimer); draftTim
 function markClean() { draftDirty = false; clearTimeout(draftTimer); }
 addEventListener('pagehide', saveNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
-function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); if (typeof coQueue === 'function') coQueue(); }
+function commit() { window.wakeRender && window.wakeRender(); window.updateCost && window.updateCost(); if (typeof applyStructure === 'function') applyStructure(); syncBuildingInputs(); renderChecks(); renderSaved(); renderZoneTable(); if (mode === 'plan') renderPlan(); saveDraftSoon(); if (typeof coQueue === 'function') coQueue(); syncPosFields(); }
+// 物件面板上的座標欄位：拖曳、方向鍵移動後跟著更新（正在輸入的那格不動）
+function syncPosFields() { const ix = $('is-x'), iz = $('is-z'); if (!ix || !selectedId) return; const it = state.items.find((i) => i.id === selectedId); if (!it) return; if (document.activeElement !== ix) ix.value = f2(it.x); if (document.activeElement !== iz) iz.value = f2(it.z); }
 function fullRefresh() { buildBuilding(); buildZones(); renderItems(); renderSelection(); commit(); if (typeof applyOverhead === 'function' && typeof view !== 'undefined') applyOverhead(); }
 // ---------------------------------------------------------------- camera
 let view = 'bird';
@@ -3321,6 +3328,8 @@ const pointer = new THREE.Vector2();
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let drag = null;
 function snap(v) { return snapOn ? Math.round(v * 2) / 2 : Math.round(v * 100) / 100; }
+function snapStep(it) { const def = CAT[it.type]; if (!def || def.court) return 0.5; const m = Math.max(it.w || def.w || 0, it.d || def.d || 0); return m <= 1.2 ? 0.05 : m <= 3 ? 0.1 : 0.5; }
+function snapAt(v, it) { if (!snapOn) return Math.round(v * 100) / 100; const st = snapStep(it); return Math.round(Math.round(v / st) * st * 100) / 100; }
 function setPointer(e) { const r = renderer.domElement.getBoundingClientRect(); pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); raycaster.setFromCamera(pointer, camera); }
 function floorHit() { const p = new THREE.Vector3(); return raycaster.ray.intersectPlane(floorPlane, p) ? p : null; }
 function pickItem() {
@@ -3367,7 +3376,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
     for (const g of drag.group) { g.it.x = f2(g.x + dx); g.it.z = f2(g.z + dz); moveObj(g.it); }
     updateOutline(); return;
   }
-  it.x = snap(p.x + drag.off[0]); it.z = snap(p.z + drag.off[1]);
+  it.x = snapAt(p.x + drag.off[0], it); it.z = snapAt(p.z + drag.off[1], it);
   moveObj(it); updateOutline();
 });
 function endDrag() {
@@ -3429,8 +3438,9 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') select(null);
   else if (e.key.startsWith('Arrow')) {
     e.preventDefault(); const list = selItems().filter((i) => !i.locked); if (!list.length) return;
-    const step = e.shiftKey ? 0.1 : 0.5; pushHistory();
+    pushHistory();
     for (const it of list) {
+      const step = e.shiftKey ? (snapStep(it) < 0.5 ? 0.01 : 0.1) : snapStep(it) < 0.5 ? 0.05 : 0.5;
       if (e.key === 'ArrowLeft') it.x -= step; if (e.key === 'ArrowRight') it.x += step; if (e.key === 'ArrowUp') it.z -= step; if (e.key === 'ArrowDown') it.z += step;
       it.x = Math.round(it.x * 100) / 100; it.z = Math.round(it.z * 100) / 100; moveObj(it);
     }
@@ -4876,7 +4886,7 @@ svgEl.addEventListener('pointermove', (e) => {
   if (planDrag.kind === 'imove') {
     const it = state.items.find((x) => x.id === planDrag.id); if (!it) return;
     if (!planDrag.pushed) { pushHistory(); planDrag.pushed = true; }
-    it.x = snapP(planDrag.orig.x + dx); it.z = snapP(planDrag.orig.z + dz);
+    it.x = snapAt(planDrag.orig.x + dx, it); it.z = snapAt(planDrag.orig.z + dz, it);
     renderPlan(); return;
   }
   if (planDrag.kind === 'resize') {
@@ -5049,6 +5059,8 @@ function renderZoneSel() {
       <div class="sel-name">${esc(labelOf(it))}<span class="unit">　${def.court ? `${def.w}×${def.d} m（含緩衝區）` : ''}旋轉 ${it.rot}°</span></div>
       <label class="field" for="is-name"><span>名稱</span><input id="is-name" type="text" maxlength="20" value="${esc(it.label || '')}" placeholder="${esc(def.label)}"></label>
       ${def.court ? `<div class="seg" role="group" aria-label="畫法"><button type="button" data-mode="solid" aria-pressed="${it.mode !== 'lines'}">整片上色</button><button type="button" data-mode="lines" aria-pressed="${it.mode === 'lines'}">只畫線</button></div>${it.mode !== 'lines' ? `<div id="is-comp">${compositeHtml(it, 'ix')}</div><div class="colors" id="is-colors">${courtColorHtml(it)}</div>` : ''}` : ''}
+      <div class="grid2"><label class="field" for="is-x"><span>位置 X（m）</span><input id="is-x" type="number" step="0.05" value="${f2(it.x)}"${it.locked ? ' disabled' : ''}></label><label class="field" for="is-z"><span>位置 Y（m）</span><input id="is-z" type="number" step="0.05" value="${f2(it.z)}"${it.locked ? ' disabled' : ''}></label></div>
+      <div class="nudge" role="group" aria-label="微調位置"><span>微調</span><button type="button" data-nd="-1,0" aria-label="往左"${it.locked ? ' disabled' : ''}>◀</button><button type="button" data-nd="0,-1" aria-label="往上"${it.locked ? ' disabled' : ''}>▲</button><button type="button" data-nd="0,1" aria-label="往下"${it.locked ? ' disabled' : ''}>▼</button><button type="button" data-nd="1,0" aria-label="往右"${it.locked ? ' disabled' : ''}>▶</button><select id="is-nstep" aria-label="每次移動多少"><option value="0.01">1 cm</option><option value="0.05" selected>5 cm</option><option value="0.1">10 cm</option><option value="0.5">50 cm</option></select></div>
       <label class="field" for="is-rotdeg"><span>角度（°）・拖平面圖上的圓點也能轉</span><input id="is-rotdeg" type="number" step="0.1" value="${f2(it.rot)}"${it.locked ? ' disabled' : ''}></label>
       <div class="btn-row"><button type="button" id="is-lock" class="${it.locked ? 'primary' : ''}">${it.locked ? '解除鎖定' : '鎖定'}</button><button type="button" id="is-rot"${it.locked ? ' disabled' : ''}>旋轉 90°</button><button type="button" id="is-alignw"${it.locked ? ' disabled' : ''}>對齊外牆</button><button type="button" id="is-dup">複製</button><button type="button" class="danger" id="is-del"${it.locked ? ' disabled' : ''}>刪除</button></div>
       ${it.locked ? '<p class="lock-note">已鎖定：不能拖曳、旋轉或刪除。按「解除鎖定」後才能在平面圖上拖。</p>' : ''}</div>`;
@@ -5061,6 +5073,11 @@ function renderZoneSel() {
     $('is-alignw').addEventListener('click', () => { alignSelToWall(); renderZoneSel(); });
     $('is-rotdeg').addEventListener('change', (e) => { const v = Number(e.target.value); if (!Number.isFinite(v)) return; pushHistory(); it.rot = ((v % 360) + 360) % 360; rerenderOne(it); updateOutline(); commit(); renderZoneSel(); });
     $('is-dup').addEventListener('click', () => { duplicateSel(); renderPlan(); renderZoneSel(); });
+    const place = (x, z) => { it.x = Math.round(x * 100) / 100; it.z = Math.round(z * 100) / 100; moveObj(it); updateOutline(); commit(); $('is-x').value = f2(it.x); $('is-z').value = f2(it.z); };
+    for (const k of ['is-x', 'is-z']) $(k).addEventListener('change', () => { const x = Number($('is-x').value), z = Number($('is-z').value); if (!Number.isFinite(x) || !Number.isFinite(z)) return; pushHistory(); place(x, z); });
+    try { const ns = localStorage.getItem('vb.nudge'); if (ns) $('is-nstep').value = ns; } catch (er) { /* ignore */ }
+    $('is-nstep').addEventListener('change', (e) => { try { localStorage.setItem('vb.nudge', e.target.value); } catch (er) { /* ignore */ } });
+    for (const b of box.querySelectorAll('[data-nd]')) b.addEventListener('click', () => { const [ax, az] = b.dataset.nd.split(',').map(Number), st = Number($('is-nstep').value) || 0.05; pushHistory(); place(it.x + ax * st, it.z + az * st); });
     $('is-del').addEventListener('click', () => { deleteSel(); renderPlan(); renderZoneSel(); planToolState(); });
   }
 }
