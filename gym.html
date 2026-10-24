@@ -6562,7 +6562,7 @@ function updateBalls(dt) {
       for (const [x1, z1, x2, z2] of segs) {
         const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
         const ex = p.x - (x1 + dx * t), ez = p.z - (z1 + dz * t), dd = Math.hypot(ex, ez);
-        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
+        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); sfx('wall', Math.min(1, -vn / 9), p); } if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
       }
       if (p.y <= BALL_R + 1e-3) { const f = Math.max(0, 1 - 1.2 * h); b.v.x *= f; b.v.z *= f; }
       // 球網：每面排球場中線上 9.5 m 寬、網高 2.43 m（網子下緣 1.43 m）；沒過網就被網子擋回來
@@ -7657,7 +7657,7 @@ function rkDoHit(P, r, now, sw) {
   const res = rkShoot(P, shot, q, aimZ, r);
   if (sw && P.swing) { P.swing.kind = res.kind; P.swing.over = r.y > 1.7; } else P.swing = { t: 0, over: r.y > 1.7, kind: res.kind };
   // 打到的那一刻：粒子、聲音；我打的再跳 PERFECT／GOOD／BAD
-  vbBurst(hp, q >= 0.9 ? '#F2B705' : '#FFFFFF', res.kind === 'smash' ? 20 : 11, res.kind === 'smash' ? 3 : 1.6); sfx(res.kind === 'smash' ? 'spike' : 'racket', q);
+  vbBurst(hp, q >= 0.9 ? '#F2B705' : '#FFFFFF', res.kind === 'smash' ? 20 : 11, res.kind === 'smash' ? 3 : 1.6); sfx(RK.k === 'pb' ? 'paddle' : 'shuttle', res.kind === 'smash' ? 1.3 : q, hp);
   if (grade != null) vbFx({ m: { position: hp } }, grade === 1 ? 1 : grade > 0.5 ? 0.7 : 0.3);
   if (P.side === RK.my) {
     const word = { smash: P.air ? '跳殺！' : '殺球！', drive: '抽球', soft: RK.k === 'pb' ? 'Dink' : '小球', lob: RK.k === 'pb' ? '挑高' : '高遠球', save: '救起來' }[res.kind];
@@ -8068,49 +8068,101 @@ function vbParts(dt) {
     return true;
   });
 }
-// 擊球聲：用瀏覽器合成（低頻「砰」＋短促的拍擊聲），接、舉、扣、攔、發、落地都不一樣
-const SFX = { on: true, ctx: null, floorT: 0 };
+// 擊球聲（照真實球館錄音的特徵調）：排球被打到的聲音由三層組成——
+//   1. 球皮的拍擊：幾毫秒的寬頻「啪」，打越用力越亮
+//   2. 球本身的共鳴：球殼約 250 Hz、球裡的空氣約 1.05 kHz（被打到那一聲「砰」的音高），幾十毫秒就衰減
+//   3. 碰到的東西：前臂墊球的悶擊、手掌扣球的響亮拍擊、手指舉球幾乎沒聲音、木地板的低頻「咚」、網繩的「嗡」
+// 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
+const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
 try { SFX.on = localStorage.getItem('vb.sfx') !== '0'; } catch (e) { /* ignore */ }
 function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
+// 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
+function sfxIR(ac, rt) {
+  const sr = ac.sampleRate, len = Math.floor(sr * rt), b = ac.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch); let y = 0;
+    for (let i = 0; i < len; i++) { const t = i / sr, a = 0.85 - 0.72 * Math.min(1, t / rt); y += a * ((Math.random() * 2 - 1) - y); d[i] = y * Math.pow(10, (-3 * t) / rt) * (t < 0.012 ? t / 0.012 : 1); }
+    for (const [ms, g] of [[11, 0.5], [19, 0.35], [27, 0.3], [38, 0.22], [52, 0.18]]) { const k = Math.floor((ms + ch * 3) * sr / 1000); if (k < len) d[k] += g * (ch ? -1 : 1); }
+  }
+  return b;
+}
+function sfxBus(ac) {
+  if (SFX.bus && SFX.bus.ac === ac) return SFX.bus;
+  const master = ac.createDynamicsCompressor(); master.threshold.value = -14; master.ratio.value = 4; master.attack.value = 0.002; master.release.value = 0.15;
+  const out = ac.createGain(); out.gain.value = 0.9; master.connect(out).connect(ac.destination);
+  const conv = ac.createConvolver(); conv.buffer = sfxIR(ac, 2.1); const wet = ac.createGain(); wet.gain.value = 0.42; conv.connect(wet).connect(master);
+  const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  return (SFX.bus = { ac, master, conv, noise });
+}
 function sfx(kind, q = 1, pos) {
   if (!SFX.on) return;
   try {
     if (!SFX.ctx) SFX.ctx = new (window.AudioContext || window.webkitAudioContext)();
     const ac = SFX.ctx; if (ac.state === 'suspended') ac.resume();
-    // 聲音的位置：越遠越小聲，在左邊就偏左聲道
-    let out = ac.destination, vol = 1;
-    if (pos) {
-      const d = pos.distanceTo(camera.position); vol = clamp(1.15 - d / 22, 0.12, 1);
-      if (ac.createStereoPanner) { const rt = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), rel = pos.clone().sub(camera.position); const pn = ac.createStereoPanner(); pn.pan.value = clamp(rel.dot(rt) / Math.max(1.5, d), -0.85, 0.85); pn.connect(ac.destination); out = pn; }
-    }
-    const t = ac.currentTime;
-    if (kind === 'whistle' || kind === 'whistle1') {   // 裁判哨：高音、帶顫音；得分是長哨、發球是短哨
-      const L = kind === 'whistle' ? 0.55 : 0.22, o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), g = ac.createGain();
-      o.type = 'sine'; o.frequency.value = 2750; lfo.frequency.value = 38; lg.gain.value = 140; lfo.connect(lg).connect(o.frequency);
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16 * vol, t + 0.02); g.gain.setValueAtTime(0.16 * vol, t + L - 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + L);
-      o.connect(g).connect(out); o.start(t); lfo.start(t); o.stop(t + L + 0.02); lfo.stop(t + L + 0.02); return;
-    }
-    if (kind === 'cheer') {   // 得分歡呼：一團濾過的雜音，慢慢起來再散掉
-      const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = sfxNoise(ac, 1.4, 0.6); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 0.5;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * vol * q, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
-      n.connect(f).connect(g).connect(out); n.start(t); return;
-    }
-    if (kind === 'net' || kind === 'tape' || kind === 'slide') {   // 網子：沙沙的網線聲；白帶多一聲「噹」；撲地：滑一段的摩擦聲
-      const L = kind === 'slide' ? 0.35 : 0.28, n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = sfxNoise(ac, L, kind === 'slide' ? 1.2 : 2);
-      f.type = kind === 'slide' ? 'lowpass' : 'bandpass'; f.frequency.value = kind === 'slide' ? 700 : 1500; f.Q.value = 0.7; g.gain.value = (kind === 'slide' ? 0.35 : 0.3) * vol * (0.5 + 0.5 * q);
-      n.connect(f).connect(g).connect(out); n.start(t);
-      if (kind === 'tape') { const o = ac.createOscillator(), g2 = ac.createGain(); o.type = 'triangle'; o.frequency.value = 520; g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(0.18 * vol, t + 0.005); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); o.connect(g2).connect(out); o.start(t); o.stop(t + 0.2); }
-      if (kind === 'slide') { const o = ac.createOscillator(), g2 = ac.createGain(); o.frequency.value = 70; g2.gain.setValueAtTime(0.3 * vol, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.15); o.connect(g2).connect(out); o.start(t); o.stop(t + 0.16); }
-      return;
-    }
-    const P = { bump: [150, 0.16, 0.5, 900], set: [320, 0.08, 0.32, 2600], spike: [105, 0.2, 0.9, 1700], tip: [380, 0.06, 0.25, 3200], hit: [140, 0.15, 0.6, 1500], block: [90, 0.22, 0.85, 1100], serve: [170, 0.14, 0.6, 1500], floor: [70, 0.12, 0.35, 600], racket: [600, 0.05, 0.4, 3800], land: [60, 0.09, 0.22, 400], wall: [90, 0.1, 0.25, 700] }[kind] || [200, 0.1, 0.4, 1500];
-    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(P[0] * 1.7, t); o.frequency.exponentialRampToValueAtTime(P[0] * 0.6, t + P[1]);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(P[2] * 0.45 * vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + P[1]);
-    o.connect(g).connect(out); o.start(t); o.stop(t + P[1] + 0.02);
-    if (!SFX.click) SFX.click = sfxNoise(ac, 0.05, 3);   // 擊球的拍擊聲（同一段雜音重複用，不用每次重做）
-    const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g2 = ac.createGain(); n.buffer = SFX.click; f.type = 'bandpass'; f.frequency.value = P[3]; f.Q.value = 0.8; g2.gain.value = P[2] * 0.55 * (0.6 + 0.4 * q) * vol;
-    n.connect(f).connect(g2).connect(out); n.start(t);
+    // 位置：越遠越小聲、殘響比例越高；在左邊就偏左聲道
+    let vol = 1, pan = 0;
+    if (pos) { const d = pos.distanceTo(camera.position); vol = clamp(1.2 - d / 20, 0.1, 1); const rt = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), rel = pos.clone().sub(camera.position); pan = clamp(rel.dot(rt) / Math.max(1.5, d), -0.8, 0.8); }
+    sfxPlay(ac, kind, q, vol, pan);
   } catch (e) { /* 不支援就安靜 */ }
+}
+function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
+  const bus = sfxBus(ac), t = ac.currentTime + 0.004, J = () => 1 + (Math.random() - 0.5) * 0.08, A = () => 0.85 + Math.random() * 0.3;
+  const dry = ac.createGain(); dry.gain.value = vol;
+  let node = dry; if (ac.createStereoPanner) { const pn = ac.createStereoPanner(); pn.pan.value = pan; dry.connect(pn); node = pn; }
+  node.connect(bus.master);
+  const send = ac.createGain(); send.gain.value = 0.16 + 0.55 * (1 - vol); dry.connect(send).connect(bus.conv);
+  // 一個會衰減的共鳴（dec＝衰減時間常數，秒）
+  const ring = (f, dec, g, type = 'sine', at = t, glide = 1) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f * glide, at); if (glide !== 1) o.frequency.exponentialRampToValueAtTime(f, at + dec); e.gain.setValueAtTime(0, at); e.gain.linearRampToValueAtTime(g, at + 0.0012); e.gain.setTargetAtTime(0.00001, at + 0.0012, dec); o.connect(e).connect(dry); o.start(at); o.stop(at + 0.002 + dec * 7); };
+  // 一段濾過的雜音（拍擊、摩擦、網子）
+  const burst = (dur, fc, Q, g, type = 'bandpass', at = t, shape = 'exp') => { const s = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); s.buffer = bus.noise; f.type = type; f.frequency.value = fc; f.Q.value = Q; e.gain.setValueAtTime(0, at); e.gain.linearRampToValueAtTime(g, at + Math.min(0.001, dur * 0.2)); if (shape === 'exp') e.gain.setTargetAtTime(0.00001, at + 0.001, dur / 3); else e.gain.linearRampToValueAtTime(0, at + dur); s.connect(f).connect(e).connect(dry); s.start(at, Math.random() * 0.8, dur * 4 + 0.05); };
+  const ball = (g, cav = 1) => { ring(1050 * J(), 0.018, 0.15 * g * cav); ring(262 * J(), 0.016, 0.3 * g); ring(640 * J(), 0.012, 0.16 * g); ring(1720 * J(), 0.008, 0.07 * g * cav); };   // 球殼（262、640 Hz）＋球內空氣（1.05 kHz）的共鳴
+  // 拍擊：頻譜往高頻慢慢變小（像真實錄音），bright＝越用力越亮
+  const slap = (g, bright, dur = 0.005, at = t) => { burst(dur * 1.4, 700, 0.45, 0.9 * g, 'bandpass', at); burst(dur, 1700 + 900 * bright, 0.45, 0.62 * g, 'bandpass', at); burst(dur * 1.2, 2700 + 900 * bright, 0.6, 1.1 * g * (0.3 + 0.7 * bright), 'bandpass', at); burst(dur * 0.6, 7000, 0.7, 0.07 * g * bright, 'highpass', at); };
+  const net = (g) => { for (let i = 0; i < 9; i++) burst(0.03 + Math.random() * 0.05, 1300 + Math.random() * 1400, 0.9, g * (0.5 - i * 0.045) * A(), 'bandpass', t + i * 0.028 + Math.random() * 0.012); ring(96 * J(), 0.09, 0.22 * g, 'triangle'); ring(193 * J(), 0.05, 0.08 * g, 'triangle'); };   // 網線一格一格抖動＋鋼索的嗡
+  const p = clamp(q, 0, 1.3);
+  switch (kind) {
+    case 'spike': case 'serve': case 'hit': {   // 手掌扣到球：響亮的「啪」＋球的共鳴＋一點手臂的悶
+      const k = kind === 'spike' ? 1 : kind === 'serve' ? 0.85 : 0.75;
+      slap(1.0 * k * A(), Math.min(1, p) * k); ball(0.9 * k); ring(128 * J(), 0.014, 0.45 * k);
+      break;
+    }
+    case 'block': { slap(0.8 * A(), 0.6, 0.006); slap(0.45, 0.4, 0.006, t + 0.007); ball(0.8); ring(118 * J(), 0.018, 0.45); break; }   // 兩隻手掌一前一後
+    case 'bump': { slap(0.55 * A(), 0.3, 0.008); ring(158 * J(), 0.026, 0.55); ring(96 * J(), 0.02, 0.28); ball(0.62, 0.7); break; }   // 前臂：比較悶的「噗」
+    case 'set': { slap(0.2 * A(), 0.5, 0.004); slap(0.14, 0.4, 0.004, t + 0.006); ball(0.2, 0.5); break; }   // 手指：輕、兩下很靠近的「嗒」
+    case 'tip': { slap(0.26 * A(), 0.5, 0.004); ball(0.28, 0.6); break; }
+    case 'floor': case 'wall': {   // 落地：球被壓扁再彈起（共鳴很亮）＋木地板的低頻「咚」
+      const k = kind === 'wall' ? 0.6 : 1, g = (0.35 + 0.65 * Math.min(1, p)) * k;
+      slap(0.7 * g * A(), 0.8 * g, 0.007); ball(0.95 * g, 1.3); ring(108 * J(), 0.045, 0.55 * g); ring(410 * J(), 0.024, 0.14 * g);
+      break;
+    }
+    case 'net': { net(0.55 * Math.max(0.4, p)); ball(0.2 * p, 0.5); break; }
+    case 'tape': { ring(232 * J(), 0.02, 0.38); ring(1050 * J(), 0.02, 0.2); burst(0.008, 700, 0.8, 0.35); net(0.32); ring(96 * J(), 0.16, 0.3, 'triangle'); break; }   // 擦到白帶：悶的「噗」＋鋼索嗡得比較久
+    case 'land': { burst(0.016, 300, 0.8, 0.32 * A(), 'lowpass'); ring(78 * J(), 0.03, 0.3); if (Math.random() < 0.35) sfxPlay(ac, 'squeak', 0.6, vol * 0.7, pan); break; }
+    case 'slide': { burst(0.32, 900, 0.6, 0.3, 'lowpass', t, 'lin'); burst(0.02, 320, 0.8, 0.4, 'lowpass'); ring(70, 0.04, 0.3); if (Math.random() < 0.6) sfxPlay(ac, 'squeak', 0.9, vol, pan); break; }
+    case 'squeak': {   // 球鞋在木地板上的「啾」
+      const o = ac.createOscillator(), f = ac.createBiquadFilter(), e = ac.createGain(), f0 = 1700 + Math.random() * 900, L = 0.05 + Math.random() * 0.07;
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (1.15 + Math.random() * 0.3), t + L);
+      f.type = 'bandpass'; f.frequency.value = f0 * 1.3; f.Q.value = 4; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.09 * q, t + 0.01); e.gain.linearRampToValueAtTime(0, t + L);
+      o.connect(f).connect(e).connect(dry); o.start(t); o.stop(t + L + 0.02); break;
+    }
+    case 'shuttle': { burst(0.003, 4200, 0.9, 0.5 * A()); ring(2400 * J(), 0.006, 0.12); ring(620 * J(), 0.01, 0.12 * p); break; }   // 羽球拍線：清脆的「叮」
+    case 'paddle': { ring(1150 * J(), 0.018, 0.4 * Math.min(1, p)); burst(0.004, 2600, 0.8, 0.45 * A()); ring(330 * J(), 0.012, 0.2); break; }   // 匹克球拍：空心的「啵」
+    case 'racket': { burst(0.003, 3800, 0.9, 0.4); break; }
+    case 'whistle': case 'whistle1': {   // 裁判哨（有珠的哨子）：3 kHz 左右、帶「嗶嚕」的快速顫動、加一點吹氣聲
+      const L = kind === 'whistle' ? 0.62 : 0.22, o = ac.createOscillator(), o2 = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), am = ac.createGain(), amg = ac.createGain(), f = ac.createBiquadFilter(), e = ac.createGain();
+      o.type = 'square'; o.frequency.value = 3150; o2.type = 'sine'; o2.frequency.value = 3150 * 2.01; lfo.frequency.value = 32; lg.gain.value = 70; lfo.connect(lg).connect(o.frequency); lfo.connect(amg); amg.gain.value = 0.35; amg.connect(am.gain); am.gain.value = 0.65;
+      f.type = 'bandpass'; f.frequency.value = 3150; f.Q.value = 2.5; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.13, t + 0.025); e.gain.setValueAtTime(0.13, t + L - 0.07); e.gain.linearRampToValueAtTime(0, t + L);
+      o.connect(f); o2.connect(f); f.connect(am).connect(e).connect(dry); burst(L, 3000, 1.2, 0.05, 'bandpass', t, 'lin');
+      for (const x of [o, o2, lfo]) { x.start(t); x.stop(t + L + 0.02); }
+      break;
+    }
+    case 'cheer': {   // 得分：幾個人的歡呼＋拍手（業餘球館，不是滿場觀眾）
+      for (const [fc, g] of [[520, 0.06], [1100, 0.07], [2300, 0.035]]) { const s = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); s.buffer = bus.noise; f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 0.8; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g * q, t + 0.18); e.gain.setTargetAtTime(0.00001, t + 0.4, 0.35); s.connect(f).connect(e).connect(dry); s.start(t, 0, 2); }
+      for (let i = 0; i < 14; i++) burst(0.012, 1400 + Math.random() * 900, 0.8, 0.12 * A(), 'bandpass', t + 0.1 + i * 0.07 + Math.random() * 0.04);
+      break;
+    }
+    default: ball(0.5);
+  }
 }
 // ---- 跳：起跳速度看助跑速度（原地約 0.52 m、全速助跑約 1 m；攔網約 0.78 m），空中保持衝勁，只能微調方向
 function vbJump(kind) {
@@ -9087,7 +9139,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
