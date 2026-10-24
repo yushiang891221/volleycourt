@@ -376,6 +376,39 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .wk-use { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(27,38,56,.82); color: #fff; max-width: calc(100% - 24px); z-index: 11; }
 /* 導覽中滑鼠沒鎖定時（可以點按鈕、點物件），游標換成一顆排球；中間的白點是實際點到的位置 */
 .app[data-mode="walk"] #canvas-host, .app[data-mode="walk"] #canvas-host * { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CclipPath id='c'%3E%3Ccircle cx='16' cy='16' r='13'/%3E%3C/clipPath%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='13' fill='%23FFC400'/%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%231A3BB0' stroke-width='4.6' stroke-linecap='round'%3E%3Cpath d='M2 12C10 11 18 16 21 30'/%3E%3Cpath d='M28 5C22 11 21 20 26 31'/%3E%3Cpath d='M9 2C13 9 21 12 31 10'/%3E%3C/g%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%23B88A00' stroke-width='.8' opacity='.7'%3E%3Cpath d='M2 15.5C9 15 15 19 17.5 30'/%3E%3Cpath d='M24.5 4C19 10 18 19 22.5 31'/%3E%3Cpath d='M6 5C10 11 18 14.5 30 13.5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%231B2638' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23fff' stroke='%231B2638' stroke-width='.8'/%3E%3Cellipse cx='11' cy='9.5' rx='3.2' ry='1.8' fill='%23fff' opacity='.55' transform='rotate%28-30 11 9.5%29'/%3E%3C/svg%3E") 16 16, crosshair; }
+/* 球拍對戰 */
+.app:has(.walk-ui.rk) .steps, .walk-ui.rk .walk-top, .walk-ui.rk .wk-fs, .walk-ui.rk .vpad, .walk-ui.rk .wk-cross, .walk-ui.rk .wk-act, .walk-ui.rk .wk-use, .walk-ui.rk .zcard, .walk-ui.rk .walk-help, .walk-ui.rk .wk-lock, .walk-ui.rk .camview { display: none !important; }
+.rk-hud { position: absolute; inset: 0; pointer-events: none !important; z-index: 11; }
+.rk-hud[hidden], .rk-pad[hidden], .rk-menu[hidden], .rk-msg[hidden] { display: none !important; }
+.rk-top { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px; border-radius: 14px; background: rgba(15,23,36,.84); color: #fff; pointer-events: auto; white-space: nowrap; }
+.rk-top b { font: 800 22px var(--font-mono); letter-spacing: .04em; min-width: 72px; text-align: center; }
+.rk-top span { font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+.rk-top span i { width: 8px; height: 8px; border-radius: 50%; background: #F2B705; box-shadow: 0 0 0 3px rgba(242,183,5,.3); }
+.rk-top button { min-height: 0; padding: 4px 10px; font-size: 12px; margin-left: 4px; }
+.rk-msg { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: 8px 18px; border-radius: 999px; background: rgba(15,23,36,.8); color: #fff; font-size: 18px; font-weight: 800; white-space: nowrap; }
+.rk-msg[data-k="gold"] { background: #F2B705; color: #1B2638; }
+.rk-msg[data-k="warn"] { background: rgba(229,72,77,.92); }
+.rk-tip { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); margin: 0; width: max-content; max-width: min(94%, 780px); text-align: center; font-size: 12.5px; line-height: 1.5; color: #fff; background: rgba(15,23,36,.72); padding: 6px 12px; border-radius: 10px; }
+@media (pointer: coarse) { .rk-tip { bottom: auto; top: 62px; } }
+.rk-pad { position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); bottom: max(22px, env(safe-area-inset-bottom, 0px)); width: 80px; height: 80px; z-index: 11; pointer-events: none !important; }
+.rk-pad button { position: absolute; width: 60px; height: 60px; min-height: 0; padding: 0; border-radius: 50%; pointer-events: auto; background: radial-gradient(circle at 50% 32%, rgba(64,84,118,.9), rgba(18,26,40,.9)); color: #fff; border: 2px solid rgba(242,183,5,.85); font-size: 19px; font-weight: 900; display: grid; place-items: center; align-content: center; line-height: 1; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform .08s, filter .08s; }
+.rk-pad button small { font-size: 9px; font-weight: 600; opacity: .6; margin-top: 2px; }
+.rk-pad .main { right: 0; bottom: 0; width: 84px; height: 84px; font-size: 24px; color: #1B2638; background: radial-gradient(circle at 50% 30%, #FFD84F, #E39B00); border-color: rgba(255,255,255,.85); }
+.rk-pad .soft { right: 96px; bottom: 4px; } .rk-pad .lob { right: 12px; bottom: 96px; }
+.rk-pad button.on { transform: scale(.88); filter: brightness(1.3); }
+.rk-menu { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10,14,22,.55); z-index: 13; padding: 16px; }
+.rk-box { width: min(460px, 100%); max-height: 100%; overflow: auto; background: #1B2638; color: #fff; border: 1px solid #F2B705; border-radius: 14px; padding: 16px 18px; }
+.rk-box h3 { margin: 0 0 6px; font-size: 19px; }
+.rk-sub { margin: 10px 0 6px; font-size: 12.5px; color: #B8C2D0; line-height: 1.6; }
+.rk-seg { display: flex; gap: 6px; }
+.rk-seg button { flex: 1; min-height: 0; padding: 7px 0; background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+.rk-seg button[aria-pressed="true"] { background: #F2B705; color: #1B2638; border-color: #F2B705; font-weight: 800; }
+.rk-chk { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 13px; line-height: 1.5; }
+.rk-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.rk-btns button { min-height: 0; padding: 8px 14px; }
+.rk-btns .primary { background: #F2B705; color: #1B2638; border-color: #F2B705; font-weight: 800; }
+.rk-final { font: 900 40px var(--font-mono); margin: 4px 0; color: #F2B705; }
+.wk-use .rk-go { background: #F2B705 !important; color: #1B2638 !important; border-color: #F2B705 !important; font-weight: 800; }
 .wk-use[hidden], .walk-ui:has(.pcwin:not([hidden])) .wk-use, .walk-ui:has(.rp:not([hidden])) .wk-use { display: none; }
 .walk-ui:has(.rp:not([hidden])) .zcard { display: none; }
 .app[data-mode="walk"]:has(#wk-use:not([hidden])) .toast { top: 112px; }
@@ -689,6 +722,9 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="wk-use" id="wk-use" hidden></div>
+      <div class="rk-hud" id="rk-hud" hidden><div class="rk-top"><span id="rk-a"></span><b id="rk-sc">0：0</b><span id="rk-b"></span><button type="button" id="rk-x">離開對戰</button></div><div class="rk-msg" id="rk-msg" hidden></div><p class="rk-tip" id="rk-tip"></p></div>
+      <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button></div>
+      <div class="rk-menu" id="rk-menu" hidden></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
       <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">⇡ 推到底跑步</b><i></i></div>
       <div class="vpad" id="vpad" hidden>
@@ -5309,7 +5345,7 @@ function startWalk() {
     $('pc-close').addEventListener('click', pcClose); $('pc-off').addEventListener('click', closePC);
     try { $('mp-name').value = localStorage.getItem('vb.mp.name') || ''; } catch (e) { /* ignore */ }
     $('w-mp').addEventListener('click', () => { $('mp').hidden = !$('mp').hidden; unlockMouse(); });
-    $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (b && c) setCourtUse(c, b.dataset.use); });
+    $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use],[data-rkopen]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (!b || !c) return; if (b.dataset.rkopen) rkOpenMenu(c); else setCourtUse(c, b.dataset.use); });
     $('wk-use').addEventListener('pointerdown', (e) => e.stopPropagation());
     $('mp-x').addEventListener('click', () => { $('mp').hidden = true; });
     $('mp-new').addEventListener('click', () => netJoin(roomCode()));
@@ -5329,6 +5365,7 @@ function startWalk() {
   toast('從主入口進場。走進任何一區，角落會出現那一區的說明');
 }
 function stopWalk() {
+  if (window.__rkOn) rkStop(true);
   walk.on = false; window.__walk = false; targetMark.visible = false; unlockMouse(); updateLockHint();
   walk.sit = null; walk.focus = null; walk.off.clear(); setDark(false); closeModals(); closeCamView(); closePC(); netLeave(true); $('mp').hidden = true;
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
@@ -6416,14 +6453,14 @@ function netDropPeer(id) {
   NET.peers.delete(id); toast(`${p2.n} 離開了`);
 }
 // 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
-function myPoseCode() { if (walk.spike || walk.serve || walk.swing) return 4; if (walk.jump) return 5; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
+function myPoseCode() { if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.spike || walk.serve || walk.swing) return 4; if (walk.jump) return 5; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'st') {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
     // 收到的位置放進時間軸，畫面上落後 130 ms 播放，兩筆之間內插 → 動作連續不跳
     p2.buf.push({ t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw }); if (p2.buf.length > 30) p2.buf.shift();
-    p2.pose = d.p;
+    p2.pose = d.p; p2.rk = d.rk || null;
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
@@ -6440,6 +6477,7 @@ function netOnMessage(t, d, from) {
     b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
+  } else if (t === 'rk') { rkOnNet(d, from);
   } else if (t === 'grab') {
     if (d.h < NET.hitN || (d.h === NET.hitN && d.by <= NET.hitBy)) return;
     NET.hitN = d.h; NET.hitBy = d.by; NET.ownBall = false;
@@ -6465,7 +6503,7 @@ function netTick(dt, now) {
   if (!NET.on) return;
   // 我的狀態：有在動就每秒 12 次，站著不動每 0.5 秒一次（省流量）
   let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +Math.max(0, camera.position.y - EYE).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp };
+  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp, rk: window.__rkOn ? RK.k : undefined };
   const L = NET.lastSent, moved = !L || Math.hypot(st.x - L.x, st.z - L.z) > 0.02 || Math.abs(st.yaw - L.yaw) > 0.01 || st.p !== L.p || Math.abs(st.y - L.y) > 0.02 || !!st.b !== !!L.b || !!st.b;
   if ((moved && now - NET.lastSt > 83) || now - NET.lastSt > 500) { NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：飛行中每秒 10 次位置更新（擊球序號不變）
@@ -6490,8 +6528,10 @@ function netTick(dt, now) {
     const swing = y > 0.08 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
     av.legs[0].rotation.x += (swing - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-swing - av.legs[1].rotation.x) * k;
     // 手臂：0 一般（跟著走路擺）、1 拿球、2 舉球（兩手高舉）、3 墊球（兩手併攏往前下）、4 攻擊（右手高舉）、5 跳
+    if (p2.rk && p2.racketK !== p2.rk) { if (p2.racket) av.arms[0].remove(p2.racket); p2.racket = makeRacket(p2.rk); p2.racket.position.set(0, -0.62, 0); av.arms[0].add(p2.racket); p2.racketK = p2.rk; }
+    else if (!p2.rk && p2.racket) { av.arms[0].remove(p2.racket); p2.racket = null; p2.racketK = null; }
     const P2 = p2.pose;
-    const tgt = P2 === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : P2 === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : P2 === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : P2 === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : P2 === 5 ? [[-2.2, 0.2], [-2.2, -0.2]] : [[-swing * 0.8, 0.06], [swing * 0.8, -0.06]];
+    const tgt = P2 === 6 ? [[-0.8, -0.3], [-0.45, 0.2]] : P2 === 7 ? [[-2.9, -0.1], [-2.2, 0.2]] : P2 === 8 ? [[-1.3, 0.4], [-0.7, 0.5]] : P2 === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : P2 === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : P2 === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : P2 === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : P2 === 5 ? [[-2.2, 0.2], [-2.2, -0.2]] : [[-swing * 0.8, 0.06], [swing * 0.8, -0.06]];
     av.arms.forEach((arm, i) => { arm.rotation.x += (tgt[i][0] - arm.rotation.x) * k; arm.rotation.z += (tgt[i][1] - arm.rotation.z) * k; });
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
   }
@@ -6636,7 +6676,7 @@ function recTick(now) {
   if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bl.push([recId(walk.hold), +v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3), 1]); }
   for (const s0 of [walk.spike, walk.serve]) if (s0 && s0.ball && !s0.hit) bl.push([recId(s0.ball), +s0.ball.position.x.toFixed(3), +s0.ball.position.y.toFixed(3), +s0.ball.position.z.toFixed(3), 1]);
   for (const p2 of NET.peers.values()) if (p2.ball && p2.ball.visible) bl.push([recId(p2.ball), +p2.ball.position.x.toFixed(3), +p2.ball.position.y.toFixed(3), +p2.ball.position.z.toFixed(3), 1]);
-  const ppl = [['me', walk.x, walk.z, Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你']];
+  const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你']];
   for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n]);
   REC.frames.push({ t, b: bl, p: ppl });
 }
@@ -6847,11 +6887,12 @@ function updateZoneCard(force) {
 }
 // 走進複合球場：上方出現「這面場地要打」的按鈕，按了就換網子（排球網、羽球柱、匹克球網架、收起來）
 function renderUseBar(c) {
-  const bar = $('wk-use');
-  if (!c || c.mode === 'lines' || !(c.extra && c.extra.length)) { bar.hidden = true; bar.dataset.id = ''; return; }
-  const def = CAT[c.type], use = c.use || def.court;
+  const bar = $('wk-use'), def = c && CAT[c.type], use = c && (c.use || def.court);
+  const comp = c && c.mode !== 'lines' && c.extra && c.extra.length, racket = c && c.mode !== 'lines' && (use === 'bd' || use === 'pb');
+  if (!comp && !racket) { bar.hidden = true; bar.dataset.id = ''; return; }
   bar.dataset.id = c.id;
-  bar.innerHTML = `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>`;
+  bar.innerHTML = (comp ? `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>` : `<span>${esc(labelOf(c))}</span>`)
+    + (racket ? `<button type="button" class="rk-go" data-rkopen="1">${use === 'bd' ? '🏸' : '🥒'} 開打（跟 AI／連線）</button>` : '');
   bar.hidden = false;
 }
 function setCourtUse(c, k) {
@@ -6867,10 +6908,12 @@ addEventListener('keydown', (e) => {
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = e.key.toLowerCase();
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
+  if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn) { e.preventDefault(); $('rk-menu').hidden = true; return; }
   if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (locked()) { unlockMouse(); return; }
     // Esc 只放開滑鼠、關掉跳出來的視窗，不會離開導覽（以免連按兩下就整個跳出去）；要離開請按右上角的按鈕
     if (performance.now() - (walk.unlockT || 0) > 400 && performance.now() - (walk.escT || 0) > 6000) { walk.escT = performance.now(); toast('Esc 只會放開滑鼠；要離開導覽請按右上角的「離開導覽」'); } return; }
   if (walk.paused) return;
+  if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); doInteract(); return; }
   if (k === 'q' && !e.repeat) { e.preventDefault(); if (walk.hold || incomingBall('bump')) skillPress('bump'); else toast('先拿一顆球（看著球車按 E），或等球飛到手邊再按 Q'); return; }
   if (k === 'r' && !e.repeat) { e.preventDefault(); startSpike(walk.keys.has(' ') || !!walk.jump); return; }
@@ -6895,9 +6938,9 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('pointerlockchange', () => { if (!locked()) walk.unlockT = performance.now(); updateLockHint(); });
 // 瀏覽器不讓鎖定滑鼠（有些內嵌視窗、舊瀏覽器）：改用按住拖曳轉頭，點一下照樣互動
 document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
-function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock; }
+function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; }
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (!walk.on || e.button !== 0) return;
+  if (!walk.on || e.button !== 0 || window.__rkOn) return;
   if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
   walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
   renderer.domElement.setPointerCapture(e.pointerId);
@@ -6986,6 +7029,543 @@ renderer.domElement.addEventListener('pointercancel', (e) => { if (walk.look && 
 })();
 
 
+// ---------------------------------------------------------------- 球拍對戰：羽球／匹克球單打（跟 AI 打，或跟多人連線房間裡的人打）
+// 玩法：WASD／搖桿跑位，J 軟、K 抽（高球自動變殺球）、L 挑；提早按，球進到擊球範圍時自動揮拍，越早按越飽。
+// 回球好不好看你跟球的距離（太擠、太遠都會變差）、擊球高度和準備時間；地上的站位圈告訴你該跑到哪裡。
+// 球場座標：x＝沿長邊（網在 x=0，side=+1／-1 是兩邊）、y＝高、z＝沿網
+const RK_SPEC = {
+  bd: { k: 'bd', name: '羽球', HL: 6.7, HW: 2.59, HWF: 3.05, net: 1.524, netEdge: 0.026, short: 1.98, kitchen: 0, drag: 0.19, r: 0.03, cor: 0, reach: 1.2, top: 2.9, speed: 4.4, hand: 1.0, minY: 0.45, low: 0.35 },
+  pb: { k: 'pb', name: '匹克球', HL: 6.705, HW: 3.05, HWF: 3.05, net: 0.86, netEdge: 0.054, short: 2.13, kitchen: 2.13, drag: 0.03, r: 0.037, cor: 0.64, reach: 0.95, top: 2.3, speed: 3.9, hand: 0.65, minY: 0.2, low: 0.15 },
+};
+const RK_LV = {
+  1: { name: '新手', react: 0.42, speed: 0.74, err: 0.55, q: 0.62, smash: 0.25, miss: 0.14 },
+  2: { name: '球友', react: 0.27, speed: 0.87, err: 0.3, q: 0.8, smash: 0.55, miss: 0.06 },
+  3: { name: '高手', react: 0.15, speed: 1.0, err: 0.12, q: 0.93, smash: 0.85, miss: 0.02 },
+};
+const RK = { on: false, opt: { lv: 2, to: 11, assist: null, hint: true }, ask: null, peerAsk: null, P: {}, acc: 0 };
+const rkGauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.15;
+// 哪些地方可以打：獨立的羽球場／匹克球場，或複合球場現在架的是羽球網／匹克球網（一塊地切成好幾面）
+function rkCourts() {
+  const out = [];
+  for (const it of state.items) {
+    const def = CAT[it.type]; if (!def || !def.court || it.mode === 'lines') continue;
+    const use = it.use || def.court; if (use !== 'bd' && use !== 'pb') continue;
+    const L = use === def.court ? [{ x: 0, z: 0, r: false }] : extraLayout(use, def.w, def.d);
+    L.forEach((l, i) => { const [cx, cz] = toWorldOf(it, l.x, l.z); out.push({ key: it.id + ':' + i, k: use, it, cx, cz, yaw: (it.rot * Math.PI) / 180 + (l.r ? Math.PI / 2 : 0), n: L.length > 1 ? i + 1 : 0 }); });
+  }
+  return out;
+}
+const rkL = (c, x, z) => { const dx = x - c.cx, dz = z - c.cz, co = Math.cos(c.yaw), si = Math.sin(c.yaw); return [dx * co - dz * si, dx * si + dz * co]; };
+const rkW = (c, u, w) => [c.cx + u * Math.cos(c.yaw) + w * Math.sin(c.yaw), c.cz - u * Math.sin(c.yaw) + w * Math.cos(c.yaw)];
+function rkCourtNear(x, z, it) {
+  let best = null, bd = 1e9;
+  for (const c of rkCourts()) { if (it && c.it !== it) continue; const [u, w] = rkL(c, x, z), S = RK_SPEC[c.k], d = Math.max(0, Math.abs(u) - S.HL) + Math.max(0, Math.abs(w) - S.HWF); if (d < bd) { bd = d; best = c; } }
+  return best && bd < (it ? 99 : 1.5) ? best : null;
+}
+const rkLabel = (c) => `${labelOf(c.it)}${c.n ? `第 ${c.n} 面` : ''}${SPORT[c.k]}`;
+// ---- 物理：每 1/240 秒走一步（連線兩邊算出來一樣）；空氣阻力跟速度平方成正比，羽毛球阻力很大、飛不遠
+const RK_H = 1 / 240;
+function rkStepBall(S, b, h) { const v = b.v, k = S.drag * Math.hypot(v[0], v[1], v[2]); v[0] -= k * v[0] * h; v[1] -= (9.8 + k * v[1]) * h; v[2] -= k * v[2] * h; b.p[0] += v[0] * h; b.p[1] += v[1] * h; b.p[2] += v[2] * h; }
+const rkNetTop = (S, z) => S.net + (Math.min(Math.abs(z), S.HWF) / S.HWF) * S.netEdge;
+function rkFly(S, p0, v0) {
+  const b = { p: [...p0], v: [...v0] }; let t = 0, netY = null;
+  while (t < 5) { const x0 = b.p[0], y0 = b.p[1]; rkStepBall(S, b, RK_H); t += RK_H; if (netY == null && x0 !== 0 && Math.sign(x0) !== Math.sign(b.p[0])) netY = y0 + (b.p[1] - y0) * (x0 / (x0 - b.p[0])); if (b.p[1] <= S.r) break; }
+  return { x: b.p[0], z: b.p[2], t, netY };
+}
+// 給仰角：二分法找出手速度，讓第一次落地剛好在目標
+function rkSolve(S, p0, tx, tz, deg, smax = 70) {
+  const dx = tx - p0[0], dz = tz - p0[2], D = Math.hypot(dx, dz) || 0.01, ux = dx / D, uz = dz / D, th = (deg * Math.PI) / 180;
+  const V = (s) => [ux * Math.cos(th) * s, Math.sin(th) * s, uz * Math.cos(th) * s], R = (s) => { const L = rkFly(S, p0, V(s)); return Math.hypot(L.x - p0[0], L.z - p0[2]); };
+  if (R(smax) < D) return null;
+  let lo = 0.5, hi = smax; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (R(m) < D) lo = m; else hi = m; }
+  return V(hi);
+}
+// 最低（最快）能過網的角度：平抽、放小球用
+function rkLowest(S, p0, tx, tz, from, to, clear, smax) {
+  for (let d = from; d <= to; d += 2) { const v = rkSolve(S, p0, tx, tz, d, smax); if (!v) continue; const L = rkFly(S, p0, v); if (L.netY != null && L.netY >= rkNetTop(S, L.z) + clear) return v; }
+  return null;
+}
+// 殺球：速度固定，找往下的角度讓球落在目標，還要過得了網
+function rkSmash(S, p0, tx, tz, spd) {
+  const dx = tx - p0[0], dz = tz - p0[2], D = Math.hypot(dx, dz), ux = dx / D, uz = dz / D;
+  const V = (deg) => { const th = (deg * Math.PI) / 180; return [ux * Math.cos(th) * spd, Math.sin(th) * spd, uz * Math.cos(th) * spd]; };
+  let lo = -40, hi = 8; for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2, L = rkFly(S, p0, V(m)); if (Math.hypot(L.x - p0[0], L.z - p0[2]) < D) lo = m; else hi = m; }
+  const v = V(hi), L = rkFly(S, p0, v); return L.netY != null && L.netY >= rkNetTop(S, L.z) + 0.02 ? v : null;
+}
+// 預測整條球路（匹克球含第一次落地彈起）：給站位圈、AI、落點提示用
+function rkPath(S, p0, v0) {
+  const b = { p: [...p0], v: [...v0] }, pts = []; let t = 0, nb = 0, land = null, n = 0;
+  while (t < 5) {
+    const x0 = b.p[0], y0 = b.p[1]; rkStepBall(S, b, RK_H); t += RK_H;
+    if (x0 !== 0 && Math.sign(x0) !== Math.sign(b.p[0]) && Math.abs(b.p[2]) < S.HWF + 0.15 && y0 + (b.p[1] - y0) * (x0 / (x0 - b.p[0])) < rkNetTop(S, b.p[2])) return { pts, land, net: true };
+    if (b.p[1] <= S.r) {
+      if (!land) land = [b.p[0], b.p[2], t];
+      if (!S.cor || nb >= 1) break;
+      nb++; b.p[1] = S.r; b.v[1] = -b.v[1] * S.cor; b.v[0] *= 0.86; b.v[2] *= 0.86;
+    }
+    if (++n % 4 === 0) pts.push({ t, x: b.p[0], y: b.p[1], z: b.p[2], nb });
+  }
+  return { pts, land };
+}
+// ---- 模型：球拍、羽毛球、匹克球
+function makeRacket(k) {
+  const g = new THREE.Group();
+  if (k === 'bd') {
+    cyl(g, 0.014, 0.017, 0.2, '#25282D', 0, -0.2, 0);
+    cyl(g, 0.0045, 0.0045, 0.3, '#C8CCD2', 0, -0.5, 0, { metalness: 0.6, roughness: 0.3 });
+    const head = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.006, 6, 28), mat('#1F2A44', { metalness: 0.4, roughness: 0.4 })); head.scale.set(1, 1.25, 1); head.position.y = -0.62; g.add(head);
+    const str = new THREE.Mesh(new THREE.CircleGeometry(0.098, 24), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false })); str.scale.set(1, 1.25, 1); str.position.y = -0.62; g.add(str);
+  } else {
+    cyl(g, 0.016, 0.017, 0.13, '#1F2124', 0, -0.13, 0);
+    const sh = new THREE.Shape(), w = 0.1, h = 0.13, r = 0.035;
+    sh.moveTo(-w + r, -h); sh.lineTo(w - r, -h); sh.quadraticCurveTo(w, -h, w, -h + r); sh.lineTo(w, h - r); sh.quadraticCurveTo(w, h, w - r, h); sh.lineTo(-w + r, h); sh.quadraticCurveTo(-w, h, -w, h - r); sh.lineTo(-w, -h + r); sh.quadraticCurveTo(-w, -h, -w + r, -h);
+    const face = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.014, bevelEnabled: false, curveSegments: 6 }), mat('#0E9F9A', { roughness: 0.5 })); face.position.set(0, -0.27, -0.007); g.add(face);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+function rkBallMesh(k) {
+  const g = new THREE.Group();
+  if (k === 'bd') {
+    const cork = new THREE.Mesh(new THREE.SphereGeometry(0.0135, 14, 10), mat('#F4EFE6', { roughness: 0.6 })); cork.position.z = 0.004; g.add(cork);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.013, 0.07, 18, 1, true), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.8, side: THREE.DoubleSide, transparent: true, opacity: 0.92 }));
+    skirt.rotation.x = -Math.PI / 2; skirt.position.z = -0.035; g.add(skirt);
+    g.scale.setScalar(1.8);
+  } else {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#D8EE3A'; x.fillRect(0, 0, 128, 64); x.fillStyle = '#9DB01F';
+    for (let i = 0; i < 26; i++) { x.beginPath(); x.arc((i * 37) % 128, ((i * 23) % 56) + 4, 4, 0, Math.PI * 2); x.fill(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.037, 20, 14), new THREE.MeshStandardMaterial({ map: t, roughness: 0.55 })));
+    g.scale.setScalar(1.35);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+// ---- 開始／結束
+function rkMkPlayer(side, color, name, ai) {
+  const av = makeAvatar(color); scene.add(av.g);
+  const rk = makeRacket(RK.k); rk.position.set(0, -0.62, 0); av.arms[0].add(rk);
+  let tag = null;
+  if (ai) { const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name; tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); }
+  return { side, ai, name, x: side * 4, z: 0, vx: 0, vz: 0, av, tag, queued: null, swing: null, prevCost: null, jy: 0, reactAt: 0, plan: null };
+}
+function rkStart(c, o = {}) {
+  if (RK.on) rkStop(true);
+  RK.on = true; window.__rkOn = true; RK.c = c; RK.k = c.k; RK.S = RK_SPEC[c.k]; RK.my = o.side || 1; RK.netOp = o.net || null; RK.ask = null;
+  RK.st = { sc: [0, 0], srv: o.net ? 1 : RK.my, to: c.k === 'pb' ? 11 : (o.to || RK.opt.to), over: false };
+  RK.P = {}; RK.P[RK.my] = rkMkPlayer(RK.my, NET.color || '#F2B705', '你', false);
+  if (!RK.netOp) RK.P[-RK.my] = rkMkPlayer(-RK.my, '#E5484D', 'AI・' + RK_LV[RK.opt.lv].name, true);
+  else { const p2 = NET.peers.get(RK.netOp); RK.P[-RK.my] = { side: -RK.my, remote: true, name: p2 ? p2.n : '對手', x: -RK.my * 4, z: 0, vx: 0, vz: 0 }; }
+  RK.ballM = rkBallMesh(RK.k); scene.add(RK.ballM);
+  RK.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.11, 20), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false })); RK.shadow.rotation.x = -Math.PI / 2; scene.add(RK.shadow);
+  RK.trailN = 18; RK.trailPts = []; RK.trail = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: RK.trailN }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.45 })); RK.trail.frustumCulled = false; scene.add(RK.trail);
+  const ring = (a, b, col) => { const m = new THREE.Mesh(new THREE.RingGeometry(a, b, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m; };
+  RK.landM = ring(0.1, 0.16, '#FFFFFF'); RK.stanceM = ring(0.34, 0.42, '#FFFFFF');
+  RK.cam = null; RK.hitN = 0; RK.rally = 0; RK.bounceReq = 0; RK.waitPt = null; RK.acc = 0; RK.clock = 0; RK.next = null;
+  if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
+  skill.mode = null; hands.visible = false; $('wk-combo').hidden = true; walk.keys.clear();
+  unlockMouse(); $('walk-ui').classList.add('rk'); updateLockHint();
+  $('rk-hud').hidden = false; $('rk-pad').hidden = !coarse(); $('rk-menu').hidden = true;
+  camera.fov = 60; camera.updateProjectionMatrix();
+  rkSetupServe();
+  toast(RK.netOp ? `跟 ${RK.P[-RK.my].name} 的${RK.S.name}單打開始！` : `${RK.S.name}單打：對手 AI（${RK_LV[RK.opt.lv].name}），先到 ${RK.st.to} 分`);
+}
+function rkStop(silent) {
+  if (!RK.on) return;
+  if (RK.netOp && NET.on && !silent) NET.tx.publish('rk', { e: 'bye' });
+  const me = RK.P[RK.my];
+  for (const P of Object.values(RK.P)) if (P.av) { scene.remove(P.av.g); if (P.tag) P.tag.element.remove(); }
+  for (const m of [RK.ballM, RK.shadow, RK.trail, RK.landM, RK.stanceM]) if (m) scene.remove(m);
+  RK.on = false; window.__rkOn = false; RK.netOp = null;
+  $('walk-ui').classList.remove('rk'); $('rk-hud').hidden = true; $('rk-pad').hidden = true; $('rk-menu').hidden = true;
+  if (me) { const [x, z] = rkW(RK.c, me.x, me.z); walk.x = x; walk.z = z; walk.yaw = rkYawToNet(RK.my); walk.pitch = -0.05; }
+  camera.fov = 70; camera.updateProjectionMatrix(); updateLockHint(); walk.zoneKey = ''; updateZoneCard(true);
+}
+// 面向網子（看向對面）時的 walk.yaw
+function rkYawToNet(side) { const [ax, az] = rkW(RK.c, 0, 0), [bx, bz] = rkW(RK.c, side, 0), fx = ax - bx, fz = az - bz; return Math.atan2(-fx, -fz); }
+// ---- 發球
+function rkSetupServe() {
+  const S = RK.S, st = RK.st, srv = st.srv, sc = st.sc[srv > 0 ? 0 : 1];
+  const right = sc % 2 === 0;            // 發球方分數偶數從右邊發；對 side s 的人來說「右邊」是 z 的 -s 方向
+  const sz = (right ? -srv : srv) * (RK.k === 'bd' ? 1.1 : 1.5), sx = srv * (RK.k === 'bd' ? S.short + 0.9 : S.HL + 0.25);
+  const rx = -srv * (RK.k === 'bd' ? S.short + 1.7 : S.HL + 0.25), rz = -sz;
+  for (const P of Object.values(RK.P)) { if (P.remote) continue; const isS = P.side === srv; P.x = isS ? sx : rx; P.z = isS ? sz : rz; P.vx = P.vz = 0; P.queued = null; P.swing = null; P.plan = null; }
+  st.srvZ = sz; RK.phase = 'serve'; RK.b = { held: srv, p: [sx - srv * 0.4, S.hand, sz], v: [0, 0, 0], live: false, by: srv }; RK.path = null; RK.rally = 0; RK.bounceReq = 0; RK.popup = false;
+  RK.aiServeAt = RK.clock + 1300 + Math.random() * 700;
+  rkHud();
+}
+function rkServe(P, shot) {
+  const S = RK.S, side = P.side, o = -side, st = RK.st;
+  const p0 = [P.x - side * 0.4, S.hand, P.z], tz = -Math.sign(st.srvZ) * (RK.k === 'bd' ? 1.2 : 1.5) + rkGauss() * 0.25;
+  let v = null;
+  if (RK.k === 'bd') {
+    if (shot === 'soft') v = rkLowest(S, p0, o * (S.short + 0.45), tz, 8, 60, 0.07, 20);
+    else if (shot === 'drive') v = rkLowest(S, p0, o * (S.HL - 0.8), tz, 10, 40, 0.3, 45);
+    if (!v) v = rkSolve(S, p0, o * (S.HL - 0.45), tz, 52);
+  } else v = rkLowest(S, p0, o * (S.HL - 1.5 + rkGauss() * 0.4), tz, 8, 50, 0.22, 25);
+  if (!v) return;
+  rkLaunch(side, p0, v, { serve: true, shot });
+  P.swing = { t: 0, over: false, kind: 'serve' };
+}
+function rkLaunch(side, p0, v, o = {}) {
+  RK.b = { p: [...p0], v: [...v], live: true, by: side, serve: !!o.serve, t: 0, bounces: 0, bounceSide: 0, netHit: false, srvZ: RK.st.srvZ };
+  RK.path = rkPath(RK.S, p0, v); RK.phase = 'rally'; RK.hitN++; RK.rally++; RK.trailPts = [];
+  if (RK.S.cor) { if (o.serve) RK.bounceReq = 2; else if (RK.bounceReq > 0) RK.bounceReq--; }
+  RK.popup = o.kind === 'save';
+  const op = RK.P[-side]; if (op && op.ai) { op.reactAt = RK.clock + RK_LV[RK.opt.lv].react * 1000; op.plan = null; op.queued = null; op.missed = false; }
+  const me = RK.P[RK.my]; if (side !== RK.my) { me.prevCost = null; me.missed = false; }
+  if (o.serve) rkHud();
+  if (RK.netOp && side === RK.my && NET.on) NET.tx.publish('rk', { e: 'hit', n: RK.hitN, p: p0.map((q) => +q.toFixed(3)), v: v.map((q) => +q.toFixed(3)), side, serve: !!o.serve, br: RK.bounceReq, pop: RK.popup });
+}
+// ---- 擊球判定
+function rkReach(P) {
+  const b = RK.b, S = RK.S;
+  if (!b || !b.live || b.by === P.side || b.netHit || P.missed) return null;
+  if (b.p[0] * P.side < 0.03) return null;                                    // 還沒過網
+  if (S.cor && b.bounces === 0 && (RK.bounceReq > 0 || Math.abs(P.x) < S.kitchen)) return null;   // 雙彈跳／站在廚房裡：等球落地再打
+  const dh = Math.hypot(b.p[0] - P.x, b.p[2] - P.z), y = b.p[1], R = S.reach * (P === RK.P[RK.my] && RK.opt.assist ? 1.3 : 1);
+  return { dh, y, R, ok: dh <= R && y >= 0.1 && y <= S.top };
+}
+function rkCheckHit(P, now) {
+  if (!P.queued) return;
+  const r = rkReach(P); if (!r || !r.ok) { P.prevCost = null; return; }
+  const S = RK.S, cost = Math.abs(r.dh - 0.6) + Math.max(0, S.minY + 0.25 - r.y);
+  if ((P.prevCost != null && cost > P.prevCost + 1e-4) || r.y < S.low || r.dh > r.R * 0.93) rkDoHit(P, r, now);
+  else P.prevCost = cost;
+}
+function rkDoHit(P, r, now) {
+  const S = RK.S, lv = RK_LV[RK.opt.lv];
+  let q = 1, note = '';
+  if (r.dh < 0.28) { q *= 0.6; note = '太擠了'; }
+  else if (r.dh > 0.95) { q *= 1 - 0.55 * Math.min(1, (r.dh - 0.95) / Math.max(0.05, r.R - 0.95)); note = '太遠，勉強救起'; }
+  if (r.y < S.low) { q *= 0.65; note = note || '撈太低'; }
+  // 來球越快越難接好（殺球、重抽）
+  const vin = Math.hypot(...RK.b.v); if (vin > 13) { q *= Math.max(0.45, 1 - (vin - 13) / 28); if (vin > 20) note = note || '球太快，擋回去'; }
+  const charge = clamp((now - P.queued.t0) / 450, 0.3, 1); q *= 0.8 + 0.2 * charge;
+  let shot = P.queued.shot;
+  if (P.ai) {
+    q *= lv.q + Math.random() * (1 - lv.q);
+    if (Math.random() < lv.miss * (r.dh > 0.95 || r.dh < 0.28 ? 2.5 : 1)) { P.missed = true; P.queued = null; P.swing = { t: 0, over: r.y > 1.7, kind: 'miss' }; return; }
+    shot = rkAiShot(P, r);
+  }
+  P.queued = null; P.prevCost = null;
+  // 左右：按著 A／D（或搖桿往左右推）就打那一邊；沒按就往對手的空檔打
+  let aimZ = null;
+  if (!P.ai) { const k = walk.keys, lr = (k.has('d') || k.has('arrowright') ? 1 : 0) - (k.has('a') || k.has('arrowleft') ? 1 : 0) + (Math.abs(walk.joy.x) > 0.55 ? Math.sign(walk.joy.x) : 0); if (lr) aimZ = -P.side * Math.sign(lr) * (S.HW - 0.45); }
+  const res = rkShoot(P, shot, q, aimZ, r);
+  P.swing = { t: 0, over: r.y > 1.7, kind: res.kind };
+  if (P.side === RK.my) {
+    const word = { smash: '殺球！', drive: '抽球', soft: RK.k === 'pb' ? 'Dink' : '小球', lob: RK.k === 'pb' ? '挑高' : '高遠球', save: '救起來' }[res.kind];
+    rkSay(q >= 0.92 ? `完美！${word}` : note ? `${note}（${word}）` : word, q >= 0.92 ? 'gold' : note ? 'warn' : '');
+  }
+}
+function rkShoot(P, shot, q, aimZ, r) {
+  const S = RK.S, side = P.side, o = -side, p0 = [...RK.b.p], opp = RK.P[o], bd = RK.k === 'bd';
+  let kind = shot;
+  const high = p0[1] >= (bd ? 2.15 : S.net + 0.4);
+  if (kind === 'drive' && high && Math.abs(p0[0]) < (bd ? S.HL - 0.4 : 4.8)) kind = 'smash';
+  if (q < 0.4) kind = 'save';
+  // 沒指定左右就打對手的空檔；AI 程度越高越敢壓邊線（加上誤差偶爾會出界）
+  const edge = P.ai ? 0.5 + 0.42 * RK_LV[RK.opt.lv].q * Math.random() : 0.4 + 0.25 * q;
+  let tz = aimZ != null ? aimZ : -Math.sign((opp && opp.z) || Math.random() - 0.5) * S.HW * edge;
+  let tx = 0, v = null;
+  const err = (1 - q) * 1.5;
+  const J = () => rkGauss() * err;
+  if (kind === 'smash') { tx = o * (3.4 + Math.random() * 1.8); v = rkSmash(S, p0, tx + J() * 0.5, clamp(tz + J(), -S.HW, S.HW), (bd ? 34 : 19) * (0.85 + 0.15 * q)); if (!v) kind = 'drive'; }
+  if (kind === 'drive') { tx = o * (S.HL - (bd ? 1.8 : 1.2)); v = rkLowest(S, p0, tx + J(), tz + J(), bd ? -6 : -4, 30, 0.1, bd ? 34 : 22); }
+  if (kind === 'soft') {
+    if (bd) { const net = Math.abs(p0[0]) < 2.6; tx = o * (net ? 0.95 : 1.9); v = rkLowest(S, p0, tx + J() * 0.4, tz * 0.7 + J() * 0.6, net ? 16 : 0, 80, 0.06, net ? 14 : 26); }
+    else { tx = o * (1.05 + Math.random() * 0.75); v = rkLowest(S, p0, tx + J() * 0.5, tz * 0.6 + J() * 0.6, 8, 76, 0.05, 13); }
+  }
+  if (kind === 'lob' || !v) { if (kind !== 'save') kind = 'lob'; tx = o * (S.HL - 0.7); v = rkSolve(S, p0, tx + J(), clamp(tz + J(), -S.HW, S.HW), bd ? 40 : 56); }
+  if (kind === 'save' || !v) { kind = 'save'; tx = o * (S.HL * 0.55); v = rkSolve(S, p0, tx + J() * 0.5, tz * 0.4 + J() * 0.5, bd ? 62 : 55) || [o * 4, 9, 0]; }
+  rkLaunch(side, p0, v, { kind });
+  return { kind };
+}
+// ---- AI：反應時間、跑速、站位誤差、選球照程度不同；跟你一樣要跑到位才打得好
+function rkAiShot(P, r) {
+  const S = RK.S, lv = RK_LV[RK.opt.lv], opp = RK.P[-P.side], y = RK.b.p[1], bd = RK.k === 'bd', oppNear = Math.abs(opp.x) < 3, rnd = Math.random();
+  if (bd) {
+    if (y >= 2.15 && Math.abs(P.x) < S.HL - 0.6 && rnd < lv.smash + (RK.popup ? 0.3 : 0)) return 'drive';
+    if (oppNear) return rnd < 0.75 ? 'lob' : 'drive';
+    if (Math.abs(P.x) < 2.4 && y < S.net) return rnd < 0.6 ? 'soft' : 'lob';
+    return rnd < 0.35 ? 'soft' : rnd < 0.7 ? 'lob' : 'drive';
+  }
+  if (RK.rally === 1) return rnd < 0.7 ? 'drive' : 'lob';                     // 接發球：深一點
+  if (y > S.net + 0.4 && Math.abs(P.x) < 4.8 && rnd < lv.smash + 0.2) return 'drive';
+  if (RK.rally === 2) return rnd < 0.4 + lv.q * 0.3 ? 'soft' : 'drive';      // 第三拍：放小球上網
+  if (oppNear) return rnd < 0.68 ? 'soft' : rnd < 0.82 ? 'lob' : 'drive';
+  return rnd < 0.5 ? 'soft' : 'drive';
+}
+// 站位：沿著預測的球路，找第一個「跑得到、高度又好打」的點，站在它旁邊 0.45 m（球在身體前面偏右手邊）
+function rkStance(P, spd) {
+  const b = RK.b, S = RK.S, path = RK.path; if (!b || !b.live || !path || b.by === P.side) return null;
+  let best = null, bestLate = 1e9;
+  for (const s of path.pts) {
+    if (s.t < b.t + 0.05 || s.x * P.side < 0.15) continue;
+    if (S.cor && s.nb === 0 && (RK.bounceReq > 0 || Math.abs(s.x) < S.kitchen + 0.3)) continue;
+    if (s.y < S.minY || s.y > S.top - 0.1) continue;
+    const sx = s.x + P.side * 0.45, sz = s.z + P.side * 0.3, late = Math.hypot(sx - P.x, sz - P.z) / spd - (s.t - b.t);
+    const st = { x: sx, z: sz, t: s.t, y: s.y };
+    if (late <= 0) return st;
+    if (late < bestLate) { bestLate = late; best = st; }
+  }
+  return best;
+}
+function rkBase(P) {
+  const S = RK.S, lv = RK.opt.lv;
+  if (RK.k === 'bd') return { x: P.side * 3.9, z: 0 };
+  const net = RK.rally >= 3 || (RK.rally >= 2 && P.side !== RK.st.srv);       // 接發球那方回完球就上網；發球方第三拍後上網
+  return net && lv > 1 ? { x: P.side * (S.kitchen + 0.35), z: 0 } : { x: P.side * (S.HL - 0.3), z: 0 };
+}
+function rkAiUpdate(P, dt, now) {
+  const S = RK.S, lv = RK_LV[RK.opt.lv], b = RK.b, spd = S.speed * lv.speed;
+  if (RK.phase === 'serve') { if (RK.st.srv === P.side && now > RK.aiServeAt) rkServe(P, RK.k === 'bd' ? (Math.random() < 0.7 ? 'soft' : 'lob') : 'drive'); return { x: P.x, z: P.z, spd: 0 }; }
+  if (RK.phase === 'rally' && b.live && b.by !== P.side && now >= P.reactAt && !P.missed) {
+    if (!P.plan) { P.plan = rkStance(P, spd); P.err = [rkGauss() * lv.err * 0.5, rkGauss() * lv.err]; }
+    else if (Math.random() < dt * 3) { const np = rkStance(P, spd); if (np) P.plan = np; }
+    if (P.plan) {
+      if (!P.queued && P.plan.t - b.t < 0.5) P.queued = { shot: null, t0: now - 250 - 250 * lv.q };
+      return { x: P.plan.x + P.err[0], z: P.plan.z + P.err[1], spd };
+    }
+  }
+  const bs = rkBase(P); return { x: bs.x, z: bs.z, spd: spd * 0.8 };
+}
+// ---- 落地、掛網、得分
+function rkInServeBox(side) {
+  const b = RK.b, S = RK.S, ax = Math.abs(b.p[0]), dz = -Math.sign(b.srvZ);
+  return ax >= S.short - 0.02 && ax <= S.HL + 0.02 && b.p[2] * dz >= -0.03 && Math.abs(b.p[2]) <= S.HW + 0.02 && Math.sign(b.p[0]) === side;
+}
+function rkBallStep(h) {
+  const b = RK.b, S = RK.S, x0 = b.p[0], y0 = b.p[1];
+  rkStepBall(S, b, h); b.t += h;
+  if (!b.netHit && x0 !== 0 && Math.sign(x0) !== Math.sign(b.p[0])) {
+    const y = y0 + (b.p[1] - y0) * (x0 / (x0 - b.p[0]));
+    if (Math.abs(b.p[2]) < S.HWF + 0.15 && y < rkNetTop(S, b.p[2])) { b.netHit = true; b.p[0] = x0 * 0.5; b.v[0] *= -0.1; b.v[1] = Math.min(b.v[1], 0) * 0.3; b.v[2] *= 0.3; rkSay('掛網！', 'warn'); }
+  }
+  if (b.p[1] <= S.r) rkFloor();
+}
+function rkFloor() {
+  const b = RK.b, S = RK.S, side = Math.sign(b.p[0]) || 1, hitter = b.by;
+  const inB = Math.abs(b.p[0]) <= S.HL + 0.02 && Math.abs(b.p[2]) <= S.HW + 0.02;   // 壓線算界內
+  b.p[1] = S.r;
+  if (!S.cor || b.bounces > 0) {
+    b.live = false;
+    if (S.cor) return rkPoint(-b.bounceSide, '球落地兩次，沒接到');
+    if (b.netHit || side === hitter) return rkPoint(-hitter, b.netHit ? '掛網' : '沒過網');
+    if (!inB) return rkPoint(-hitter, '出界');
+    if (b.serve && !rkInServeBox(side)) return rkPoint(-hitter, '發球沒落在對角發球區');
+    return rkPoint(hitter, '落地得分');
+  }
+  if (b.netHit || side === hitter) { b.live = false; return rkPoint(-hitter, b.netHit ? '掛網' : '沒過網'); }
+  if (!inB) { b.live = false; return rkPoint(-hitter, '出界'); }
+  if (b.serve && !rkInServeBox(side)) { b.live = false; return rkPoint(-hitter, '發球要落在對角、廚房線後面'); }
+  b.bounces = 1; b.bounceSide = side; b.v[1] = -b.v[1] * S.cor; b.v[0] *= 0.86; b.v[2] *= 0.86;
+}
+function rkPoint(win, why, force) {
+  if (RK.phase !== 'rally') return;
+  // 連線：球落在誰那邊就由誰判（被打的那一方）；自己剛打出去的球先停住，等對方判決（2.5 秒沒收到就自己判）
+  if (RK.netOp && !force && RK.b.by === RK.my) { RK.waitPt = { win, why, t: RK.clock }; RK.phase = 'wait'; return; }
+  const st = RK.st, idx = (s) => (s > 0 ? 0 : 1);
+  if (RK.k === 'bd') { st.sc[idx(win)]++; st.srv = win; }
+  else if (win === st.srv) st.sc[idx(win)]++;
+  else { st.srv = win; why += '・換發球'; }
+  if (RK.netOp && NET.on) NET.tx.publish('rk', { e: 'pt', win, why, sc: st.sc, srv: st.srv });
+  rkAfterPoint(win, why);
+}
+function rkApplyPt(d) { const st = RK.st; st.sc = d.sc; st.srv = d.srv; RK.waitPt = null; RK.b.live = false; rkAfterPoint(d.win, d.why); }
+function rkAfterPoint(win, why) {
+  RK.phase = 'dead'; RK.waitPt = null;
+  const st = RK.st, a = st.sc[RK.my > 0 ? 0 : 1], b = st.sc[RK.my > 0 ? 1 : 0], mine = win === RK.my;
+  rkSay(`${why}・${mine ? '你得分' : RK.P[-RK.my].name + ' 得分'}`, mine ? 'gold' : 'warn', 1600);
+  rkHud();
+  const to = st.to, cap = RK.k === 'bd' ? (to === 21 ? 30 : 15) : 99, hiS = Math.max(a, b);
+  if ((hiS >= to && Math.abs(a - b) >= 2) || hiS >= cap) { st.over = true; RK.next = { at: RK.clock + 1700, fn: () => rkOver(a > b) }; return; }
+  RK.next = { at: RK.clock + 1700, fn: rkSetupServe };
+}
+function rkOver(won) {
+  if (!RK.on) return;
+  RK.phase = 'over';
+  const st = RK.st, a = st.sc[RK.my > 0 ? 0 : 1], b = st.sc[RK.my > 0 ? 1 : 0], m = $('rk-menu');
+  m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你贏了！' : '這局輸了'}</h3><p class="rk-final">${a}：${b}</p><p>${won ? '' : '再來一場？'}對手：${esc(RK.P[-RK.my].name)}</p><div class="rk-btns">${RK.netOp ? '' : '<button type="button" class="primary" data-rkm="again">再一場</button>'}<button type="button" data-rkm="quit">離開對戰</button></div></div>`;
+  m.hidden = false;
+}
+// ---- 每一格
+function rkUpdate(dt) {
+  // 對戰用自己的時鐘（毫秒）：反應時間、準備時間都照遊戲時間算
+  RK.clock += dt * 1000;
+  const now = RK.clock, S = RK.S, me = RK.P[RK.my], op = RK.P[-RK.my], c = RK.c;
+  if (!state.items.some((i) => i.id === c.it.id) || (RK.netOp && !NET.peers.has(RK.netOp))) { rkStop(true); toast(RK.netOp ? '對手離線了，對戰結束' : '這面球場被改掉了，對戰結束'); return; }
+  // 我：WASD／搖桿（W＝往網子），擊球輔助開著時沒按方向就自己跑去站位圈
+  const k = walk.keys; let f = 0, r = 0;
+  if (k.has('w') || k.has('arrowup')) f += 1; if (k.has('s') || k.has('arrowdown')) f -= 1; if (k.has('d') || k.has('arrowright')) r += 1; if (k.has('a') || k.has('arrowleft')) r -= 1;
+  f += -walk.joy.y; r += walk.joy.x;
+  let tvx = -RK.my * f * S.speed, tvz = -RK.my * r * S.speed;
+  const myPlan = RK.phase === 'rally' ? rkStance(me, S.speed) : null;
+  if (RK.opt.assist && Math.hypot(f, r) < 0.1 && myPlan) { const dx = myPlan.x - me.x, dz = myPlan.z - me.z, d = Math.hypot(dx, dz); if (d > 0.08) { const s2 = Math.min(S.speed, d * 6); tvx = (dx / d) * s2; tvz = (dz / d) * s2; } }
+  const lockServe = RK.phase === 'serve' && RK.st.srv === RK.my;
+  rkMove(me, lockServe ? 0 : tvx, lockServe ? 0 : tvz, dt);
+  // 對手
+  if (op.ai) { const tg = rkAiUpdate(op, dt, now), dx = tg.x - op.x, dz = tg.z - op.z, d = Math.hypot(dx, dz); const s2 = d > 0.06 ? Math.min(tg.spd, d * 5) : 0; rkMove(op, d > 0.06 ? (dx / d) * s2 : 0, d > 0.06 ? (dz / d) * s2 : 0, dt); }
+  else if (op.remote) { const p2 = NET.peers.get(RK.netOp); if (p2) { const [u, w] = rkL(c, p2.x, p2.z); op.x = u; op.z = w; } }
+  // 球
+  const b = RK.b;
+  if (b.held != null) { const P = RK.P[b.held]; if (P && !P.remote) { b.p = [P.x - P.side * 0.4, S.hand + Math.sin(now / 300) * 0.02, P.z]; } else if (op.remote) b.p = [op.x + RK.my * 0.4, S.hand, op.z]; }
+  else if (b.live) { RK.acc += dt; while (RK.acc >= RK_H && RK.b.live) { RK.acc -= RK_H; rkBallStep(RK_H); for (const P of Object.values(RK.P)) if (!P.remote && b.live) rkCheckHit(P, now); } }
+  if (RK.next && now >= RK.next.at) { const f = RK.next.fn; RK.next = null; f(); }
+  if (RK.waitPt && now - RK.waitPt.t > 2500) { const w = RK.waitPt; RK.waitPt = null; RK.phase = 'rally'; rkPoint(w.win, w.why, true); }
+  if (me.queued && now - me.queued.t0 > 2200) me.queued = null;
+  // 畫面
+  for (const P of Object.values(RK.P)) if (P.av) rkAnim(P, dt);
+  rkVisuals(myPlan, now);
+  rkCamera(dt);
+  const [wx, wz] = rkW(c, me.x, me.z); walk.x = wx; walk.z = wz; walk.yaw = rkYawToNet(RK.my);
+}
+function rkMove(P, tvx, tvz, dt) {
+  const S = RK.S, kk = 1 - Math.exp(-dt * 11);
+  P.vx += (tvx - P.vx) * kk; P.vz += (tvz - P.vz) * kk;
+  P.x += P.vx * dt; P.z += P.vz * dt;
+  const ax = clamp(P.x * P.side, 0.25, S.HL + 2.2); P.x = ax * P.side; P.z = clamp(P.z, -S.HWF - 1.4, S.HWF + 1.4);
+}
+// 人形動作：跑步擺腿；準備（拍子拉到後面）、上手揮拍（殺球、高遠）、下手／側身揮拍
+function rkAnim(P, dt) {
+  const c = RK.c, av = P.av, [x, z] = rkW(c, P.x, P.z), k = 1 - Math.exp(-dt * 14);
+  av.g.position.set(x, 0, z);
+  const [ax, az] = rkW(c, 0, 0), [bx, bz] = rkW(c, P.side, 0); av.g.rotation.y = Math.atan2(ax - bx, az - bz);
+  const sp = Math.hypot(P.vx, P.vz); av.phase += dt * Math.min(13, sp * 5.5);
+  const swing = Math.min(0.7, sp * 0.3) * Math.sin(av.phase);
+  av.legs[0].rotation.x += (swing - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-swing - av.legs[1].rotation.x) * k;
+  let ra = [-0.75, -0.25], la = [-0.45, 0.2], jy = 0;
+  if (P.swing) {
+    P.swing.t += dt; const s = P.swing.t / 0.3;
+    if (s >= 1) P.swing = null;
+    else if (P.swing.over) { ra = [-3.0 + s * 2.2, -0.15]; la = [-2.2, 0.2]; if (P.swing.kind === 'smash') jy = Math.sin(s * Math.PI) * 0.35; }
+    else { ra = [-1.3, -1.2 + s * 1.9]; la = [-0.7, 0.5]; }
+  } else if (P.queued) { ra = [-1.6, -0.9]; la = [-1.0, 0.35]; }
+  av.arms[0].rotation.x += (ra[0] - av.arms[0].rotation.x) * (P.swing ? 0.6 : k); av.arms[0].rotation.z += (ra[1] - av.arms[0].rotation.z) * (P.swing ? 0.6 : k);
+  av.arms[1].rotation.x += (la[0] - av.arms[1].rotation.x) * k; av.arms[1].rotation.z += (la[1] - av.arms[1].rotation.z) * k;
+  P.jy = jy; av.body.position.y += (jy - av.body.position.y) * 0.5;
+}
+function rkVisuals(myPlan, now) {
+  const c = RK.c, S = RK.S, b = RK.b, [x, z] = rkW(c, b.p[0], b.p[2]);
+  RK.ballM.position.set(x, b.p[1], z);
+  if (RK.k === 'bd' && Math.hypot(b.v[0], b.v[1], b.v[2]) > 0.3) { const [vx, vz] = [b.v[0] * Math.cos(c.yaw) + b.v[2] * Math.sin(c.yaw), -b.v[0] * Math.sin(c.yaw) + b.v[2] * Math.cos(c.yaw)]; RK.ballM.lookAt(x + vx, b.p[1] + b.v[1], z + vz); }
+  else if (RK.k === 'pb' && b.live) { RK.ballM.rotation.x += 0.2; RK.ballM.rotation.y += 0.13; }
+  RK.shadow.position.set(x, 0.012, z); RK.shadow.material.opacity = clamp(0.4 - b.p[1] * 0.06, 0.08, 0.4);
+  // 尾巴
+  if (b.live) { RK.trailPts.push(new THREE.Vector3(x, b.p[1], z)); if (RK.trailPts.length > RK.trailN) RK.trailPts.shift(); }
+  const pos = RK.trail.geometry.attributes.position; for (let i = 0; i < RK.trailN; i++) { const p = RK.trailPts[Math.max(0, RK.trailPts.length - RK.trailN + i)] || RK.ballM.position; pos.setXYZ(i, p.x, p.y, p.z); } pos.needsUpdate = true; RK.trail.visible = b.live;
+  // 落點提示、站位圈（金色＝可以殺、紅色＝可以進攻）
+  const hint = RK.opt.hint && b.live;
+  RK.landM.visible = !!(hint && RK.path && RK.path.land && !b.bounces && !b.netHit);
+  if (RK.landM.visible) { const [lx, lz] = rkW(c, RK.path.land[0], RK.path.land[1]); RK.landM.position.set(lx, 0.015, lz); const out = Math.abs(RK.path.land[0]) > S.HL || Math.abs(RK.path.land[1]) > S.HW; RK.landM.material.color.set(out ? '#9AA4B2' : '#FFFFFF'); }
+  RK.stanceM.visible = !!(hint && myPlan && b.by !== RK.my);
+  if (RK.stanceM.visible) {
+    const [sx, sz] = rkW(c, myPlan.x, myPlan.z); RK.stanceM.position.set(sx, 0.016, sz);
+    const gold = myPlan.y >= (RK.k === 'bd' ? 2.15 : S.net + 0.4) && Math.abs(myPlan.x) < (RK.k === 'bd' ? S.HL - 0.4 : 4.8), red = !gold && myPlan.y > S.net + 0.2 && Math.abs(myPlan.x) < 4;
+    RK.stanceM.material.color.set(gold ? '#F2B705' : red ? '#E5484D' : '#FFFFFF'); RK.stanceM.scale.setScalar(1 + Math.sin(now / 160) * 0.06);
+  }
+}
+function rkCamera(dt) {
+  const c = RK.c, me = RK.P[RK.my], s = RK.my, bd = RK.k === 'bd', port = camera.aspect < 0.8;
+  const back = (bd ? 4.6 : 3.9) + (port ? 1.6 : 0), hy = (bd ? 3.3 : 2.6) + (port ? 0.6 : 0);
+  // 鏡頭固定在自己正後方；球場靠牆時鏡頭會在牆外，擋住視線的那面外牆在對戰時自動隱藏（drawFrame 裡）
+  const [cx, cz] = rkW(c, me.x + s * back, me.z * 0.7), [lx, lz] = rkW(c, me.x - s * 4.5, me.z * 0.35);
+  const want = new THREE.Vector3(cx, Math.min(hy, state.building.H - 0.6), cz);
+  if (!RK.cam) RK.cam = want.clone(); else RK.cam.lerp(want, 1 - Math.exp(-dt * 6));
+  camera.position.copy(RK.cam); camera.lookAt(lx, 0.9, lz);
+  const fov = port ? 72 : 60; if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+// ---- 介面
+function rkSay(t, kind = '', ms = 1100) { const m = $('rk-msg'); m.textContent = t; m.dataset.k = kind; m.hidden = false; clearTimeout(RK.sayT); RK.sayT = setTimeout(() => { m.hidden = true; }, ms); }
+function rkHud() {
+  const st = RK.st, a = st.sc[RK.my > 0 ? 0 : 1], b = st.sc[RK.my > 0 ? 1 : 0], meSrv = st.srv === RK.my, op = RK.P[-RK.my];
+  $('rk-a').innerHTML = `${meSrv ? '<i></i>' : ''}你`; $('rk-b').innerHTML = `${esc(op.name)}${meSrv ? '' : '<i></i>'}`;
+  $('rk-sc').textContent = `${a}：${b}`;
+  const touch = coarse(), bd = RK.k === 'bd';
+  $('rk-tip').textContent = RK.phase === 'serve' && meSrv
+    ? (bd ? (touch ? '你發球：軟＝短球、抽＝平快、挑＝長球' : '你發球：J 短球・K 平快・L 長球') : (touch ? '你發球：按任一顆（低手發到對角，要過廚房線）' : '你發球：J／K／L 任一鍵（低手發到對角，要過廚房線）'))
+    : touch ? '左邊搖桿跑位，右邊按鈕擊球：提早按，球到了自動揮' : `WASD 跑位・J 軟・K 抽（高球自動殺）・L 挑・提早按，球到了自動揮・擊球時按著 A／D 控制左右${bd ? '' : '・匹克球要先讓發球、接發球各落地一次'}`;
+}
+function rkPress(shot) {
+  if (!RK.on || RK.phase === 'over') return;
+  const me = RK.P[RK.my];
+  if (RK.phase === 'serve' && RK.st.srv === RK.my) { rkServe(me, shot); return; }
+  if (RK.phase !== 'rally') return;
+  me.queued = { shot, t0: RK.clock }; me.prevCost = null;
+  const pad = document.querySelector(`#rk-pad [data-rk="${shot}"]`); if (pad) { pad.classList.add('on'); setTimeout(() => pad.classList.remove('on'), 160); }
+}
+function rkOpenMenu(it) {
+  const c = rkCourtNear(walk.x, walk.z, it) || rkCourtNear(walk.x, walk.z); if (!c) { toast('站到羽球場或匹克球場上再開打'); return; }
+  RK.menuC = c; const bd = c.k === 'bd', m = $('rk-menu');
+  if (RK.opt.assist == null) RK.opt.assist = coarse();   // 手機上跑位比較難，預設開擊球輔助
+  m.innerHTML = `<div class="rk-box"><h3>${bd ? '🏸' : '🥒'} ${esc(rkLabel(c))}・單打</h3>
+    <p class="rk-sub">對手程度</p><div class="rk-seg">${[1, 2, 3].map((l) => `<button type="button" data-lv="${l}" aria-pressed="${RK.opt.lv === l}">${RK_LV[l].name}</button>`).join('')}</div>
+    ${bd ? `<p class="rk-sub">打到幾分</p><div class="rk-seg">${[11, 21].map((n) => `<button type="button" data-to="${n}" aria-pressed="${RK.opt.to === n}">${n} 分</button>`).join('')}</div>` : '<p class="rk-sub">規則：11 分、換發球制（只有發球方得分）、雙彈跳、廚房內不能截擊</p>'}
+    <label class="rk-chk"><input type="checkbox" id="rk-assist"${RK.opt.assist ? ' checked' : ''}> 擊球輔助（沒按方向時自動跑到站位圈、擊球範圍變大）</label>
+    <label class="rk-chk"><input type="checkbox" id="rk-hint"${RK.opt.hint ? ' checked' : ''}> 顯示落點和站位圈</label>
+    <div class="rk-btns"><button type="button" class="primary" data-rkm="ai">跟 AI 打</button><button type="button" data-rkm="net">${NET.on ? '連線對打（等房間裡的人）' : '連線對打（先開「多人連線」）'}</button><button type="button" data-rkm="close">取消</button></div>
+    <p class="rk-sub" style="margin-top:10px">${coarse() ? '左邊搖桿跑位；右邊「軟／抽／挑」三顆鍵' : 'WASD 跑位・J 軟・K 抽・L 挑'}：提早按，球進到擊球範圍就自動揮。站太近、太遠或撈太低，回球都會變差。</p></div>`;
+  m.hidden = false; unlockMouse();
+}
+function rkMenuClick(e) {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.lv) { RK.opt.lv = Number(t.dataset.lv); for (const q of $('rk-menu').querySelectorAll('[data-lv]')) q.setAttribute('aria-pressed', String(q === t)); return; }
+  if (t.dataset.to) { RK.opt.to = Number(t.dataset.to); for (const q of $('rk-menu').querySelectorAll('[data-to]')) q.setAttribute('aria-pressed', String(q === t)); return; }
+  const a = t.dataset.rkm; if (!a) return;
+  if ($('rk-assist')) { RK.opt.assist = $('rk-assist').checked; RK.opt.hint = $('rk-hint').checked; }
+  if (a === 'close') { $('rk-menu').hidden = true; RK.ask = null; return; }
+  if (a === 'quit') { rkStop(); return; }
+  if (a === 'again') { const c = RK.c; rkStop(true); rkStart(c); return; }
+  if (a === 'ai') { rkStart(RK.menuC); return; }
+  if (a === 'net') {
+    if (!NET.on) { toast('先按「多人連線」開一個房間，請朋友用代碼加入'); $('mp').hidden = false; return; }
+    const c = RK.menuC; RK.ask = { key: c.key, t: performance.now() };
+    NET.tx.publish('rk', { e: 'ask', key: c.key, to: RK.opt.to });
+    if (RK.peerAsk && RK.peerAsk.key === c.key && performance.now() - RK.peerAsk.t < 120000) { rkGo(RK.peerAsk.from, c.key, RK.peerAsk.to); return; }
+    $('rk-menu').hidden = true; toast(`等對手：請朋友走到「${rkLabel(c)}」也按「連線對打」`);
+  }
+}
+function rkGo(other, key, peerTo) {
+  const c = rkCourts().find((q) => q.key === key); if (!c) return;
+  const [a, b] = [NET.me, other].sort(), to = Math.min(RK.opt.to, peerTo || RK.opt.to);
+  NET.tx.publish('rk', { e: 'go', key, a, b, to });
+  rkStart(c, { net: other, side: a === NET.me ? 1 : -1, to });
+}
+function rkOnNet(d, from) {
+  if (d.e === 'ask') {
+    if (!RK.on && RK.ask && RK.ask.key === d.key && performance.now() - RK.ask.t < 120000) rkGo(from, d.key, d.to);
+    else { RK.peerAsk = { from, key: d.key, to: d.to, t: performance.now() }; const p2 = NET.peers.get(from); if (!RK.on && p2) toast(`${p2.n} 在等人一起打${SPORT[(rkCourts().find((q) => q.key === d.key) || {}).k] || '球'}：走到同一面場地按「開打」→「連線對打」`); }
+    return;
+  }
+  if (d.e === 'go') {
+    if (RK.on || (d.a !== NET.me && d.b !== NET.me)) return;
+    const c = rkCourts().find((q) => q.key === d.key); if (!c) return;
+    rkStart(c, { net: d.a === NET.me ? d.b : d.a, side: d.a === NET.me ? 1 : -1, to: d.to }); return;
+  }
+  if (!RK.on || from !== RK.netOp) return;
+  if (d.e === 'hit') {
+    RK.b = { p: [...d.p], v: [...d.v], live: true, by: d.side, serve: d.serve, t: 0, bounces: 0, bounceSide: 0, netHit: false, srvZ: RK.st.srvZ };
+    RK.path = rkPath(RK.S, d.p, d.v); RK.phase = 'rally'; RK.hitN = d.n; RK.rally++; RK.bounceReq = d.br; RK.popup = d.pop; RK.trailPts = []; RK.acc = 0;
+    const me = RK.P[RK.my]; me.prevCost = null; me.missed = false;
+    for (let i = 0; i < 12; i++) rkBallStep(RK_H);   // 補上大約 50 ms 的網路延遲
+  } else if (d.e === 'pt') rkApplyPt(d);
+  else if (d.e === 'bye') { rkStop(true); toast('對手離開了，對戰結束'); }
+}
+function rkKey(k) {
+  if (k === 'j') { rkPress('soft'); return true; }
+  if (k === 'k') { rkPress('drive'); return true; }
+  if (k === 'l') { rkPress('lob'); return true; }
+  if (['e', 'q', 'r', 'v', 'f', ' '].includes(k)) { if (performance.now() - (RK.keyT || 0) > 4000) { RK.keyT = performance.now(); toast('對戰中用 J 軟、K 抽、L 挑擊球'); } return true; }
+  return false;
+}
+$('rk-menu').addEventListener('click', rkMenuClick);
+$('rk-x').addEventListener('click', () => rkStop());
+for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) { /* ignore */ } rkPress(b.dataset.rk); });
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
 // ---------------------------------------------------------------- loop
 function resize() {
   const w = host.clientWidth || 1, h = host.clientHeight || 1;
@@ -7004,7 +7584,7 @@ function tick() { requestAnimationFrame(tick); drawFrame(false); }
 function drawFrame(force) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   if (mode === 'plan' || !state) return;
-  if (RP.on) updateReplay(dt); else if (walk.on) { updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
+  if (RP.on) updateReplay(dt); else if (walk.on) { if (window.__rkOn) rkUpdate(dt); else updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
   frameNo++;
   const e = camera.matrixWorld.elements, pr = camera.projectionMatrix.elements;
   const key = e[12].toFixed(3) + e[13].toFixed(3) + e[14].toFixed(3) + e[8].toFixed(4) + e[9].toFixed(4) + e[10].toFixed(4) + pr[8].toFixed(4) + pr[9].toFixed(4) + pr[0].toFixed(4);
@@ -7013,7 +7593,7 @@ function drawFrame(force) {
   if (!force && !walk.on && !camMoved && now > renderUntil && !(spinning && frameNo % 2 === 0)) return;
   const cp = camera.position;
   const { H } = state.building;
-  walls.forEach((wl, i) => { wl.visible = walk.on || (typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true); });
+  walls.forEach((wl, i) => { if (window.__rkOn) { const [nx, nz] = wl.userData.normal, [wx, wz] = wl.userData.center; wl.visible = (cp.x - wx) * nx + (cp.z - wz) * nz < 0.2; } else wl.visible = walk.on || (typeof wallVisible === 'function' ? wallVisible(wl, i, cp) : true); });
   if (roof) roof.visible = (walk.on && !RP.on) || cp.y < H + 0.5;
   for (const r of zoneRoofs) r.visible = walk.on && !RP.on;
   if (ceilingGroup && RP.on) ceilingGroup.visible = cp.y < H + 0.5;
@@ -7074,7 +7654,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
