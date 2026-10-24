@@ -395,6 +395,15 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .wk-use { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(27,38,56,.82); color: #fff; max-width: calc(100% - 24px); z-index: 11; }
 /* 導覽中滑鼠沒鎖定時（可以點按鈕、點物件），游標換成一顆排球；中間的白點是實際點到的位置 */
 .app[data-mode="walk"] #canvas-host, .app[data-mode="walk"] #canvas-host * { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CclipPath id='c'%3E%3Ccircle cx='16' cy='16' r='13'/%3E%3C/clipPath%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='13' fill='%23FFC400'/%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%231A3BB0' stroke-width='4.6' stroke-linecap='round'%3E%3Cpath d='M2 12C10 11 18 16 21 30'/%3E%3Cpath d='M28 5C22 11 21 20 26 31'/%3E%3Cpath d='M9 2C13 9 21 12 31 10'/%3E%3C/g%3E%3Cg clip-path='url%28%23c%29' fill='none' stroke='%23B88A00' stroke-width='.8' opacity='.7'%3E%3Cpath d='M2 15.5C9 15 15 19 17.5 30'/%3E%3Cpath d='M24.5 4C19 10 18 19 22.5 31'/%3E%3Cpath d='M6 5C10 11 18 14.5 30 13.5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%231B2638' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23fff' stroke='%231B2638' stroke-width='.8'/%3E%3Cellipse cx='11' cy='9.5' rx='3.2' ry='1.8' fill='%23fff' opacity='.55' transform='rotate%28-30 11 9.5%29'/%3E%3C/svg%3E") 16 16, crosshair; }
+/* 排球時機提示 */
+.vb-cue { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); padding: 6px 18px; border-radius: 999px; font-size: 24px; font-weight: 900; letter-spacing: .04em; color: #fff; background: rgba(15,23,36,.55); pointer-events: none !important; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.vb-cue[hidden] { display: none !important; }
+.vb-cue[data-k="ready"] { font-size: 16px; opacity: .8; }
+.vb-cue[data-k="jump"] { background: #30A46C; animation: cuePop .25s ease-out; }
+.vb-cue[data-k="hit"] { background: #F2B705; color: #1B2638; animation: cuePop .2s ease-out; }
+.vb-cue[data-k="block"] { background: #3E63DD; animation: cuePop .25s ease-out; }
+@keyframes cuePop { from { transform: translate(-50%, -50%) scale(1.4); } to { transform: translate(-50%, -50%) scale(1); } }
+.walk-ui.rk .vb-cue { display: none !important; }
 /* 底部按鍵提示列 */
 .wk-keys { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; padding: 3px 10px; border-radius: 8px; background: rgba(15,23,36,.45); color: rgba(255,255,255,.88); font-size: 11px; line-height: 1.6; pointer-events: none !important; }
 .wk-keys span { white-space: nowrap; } .wk-keys kbd { font-family: var(--font-mono); font-size: 10px; padding: 0 4px; margin-right: 3px; border-radius: 3px; background: rgba(255,255,255,.18); color: #fff; border: 0; }
@@ -761,6 +770,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="wk-use" id="wk-use" hidden></div>
+      <div class="vb-cue" id="vb-cue" hidden></div>
       <div class="vm-hud" id="vm-hud" hidden><div class="vm-sb"><b>🏖️ 2 對 2</b><span id="vm-a">你們</span><em id="vm-sc">0：0</em><span id="vm-b">AI 隊</span><small>先到 7 分</small><button type="button" id="vm-x">離開</button></div><div class="vm-msg" id="vm-msg" hidden></div></div>
       <div class="rk-hud" id="rk-hud" hidden><div class="rk-top"><span id="rk-a"></span><b id="rk-sc">0：0</b><span id="rk-b"></span><button type="button" id="rk-x">離開對戰</button></div><div class="rk-msg" id="rk-msg" hidden></div><p class="rk-tip" id="rk-tip"></p></div>
       <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button></div>
@@ -5443,7 +5453,7 @@ function startWalk() {
     try { $('mp-name').value = localStorage.getItem('vb.mp.name') || ''; } catch (e) { /* ignore */ }
     $('w-mp').addEventListener('click', () => { $('mp').hidden = !$('mp').hidden; unlockMouse(); });
     $('w-assist').addEventListener('click', () => { VB.assist = !VB.assist; $('w-assist').textContent = `接球輔助：${VB.assist ? '開' : '關'}`; setPressed($('w-assist'), VB.assist); toast(VB.assist ? '接球輔助開了：對方打過來時，身體會輕輕被帶到落點' : '接球輔助關了：全部自己跑位（落點圈還是會顯示）'); });
-    $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use],[data-rkopen],[data-npc],[data-vmopen]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (!b || !c) return; if (b.dataset.vmopen) vmOpenMenu(c); else if (b.dataset.npc) { vbNpcToggle(); renderUseBar(c); } else if (b.dataset.rkopen) rkOpenMenu(c); else setCourtUse(c, b.dataset.use); });
+    $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use],[data-rkopen],[data-npc],[data-vmopen]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (!b) return; if (b.dataset.rkopen) { rkOpenMenu(null); return; } if (!c) return; if (b.dataset.vmopen) vmOpenMenu(c); else if (b.dataset.npc) { vbNpcToggle(); renderUseBar(c); } else if (b.dataset.rkopen) rkOpenMenu(c); else setCourtUse(c, b.dataset.use); });
     $('wk-use').addEventListener('pointerdown', (e) => e.stopPropagation());
     $('mp-x').addEventListener('click', () => { $('mp').hidden = true; });
     $('mp-new').addEventListener('click', () => netJoin(roomCode()));
@@ -5490,8 +5500,8 @@ function solidSegs(ballOnly) {
   for (const it of state.items) {
     const def = CAT[it.type]; if (!def) continue;
     if (it.type === 'netwall') { const { w } = sizeOf(it); out.push([...toWorldOf(it, -w / 2, 0), ...toWorldOf(it, w / 2, 0)]); continue; }
-    if (ballOnly || !def.court || it.mode === 'lines') continue;
-    const use = it.use || def.court;
+    if (ballOnly || !def.court) continue;
+    const use = it.mode === 'lines' ? def.court : it.use || def.court;
     if (use === 'vb') out.push([...toWorldOf(it, 0, -5.5), ...toWorldOf(it, 0, 5.5)]);
     else if (use === 'bd' || use === 'pb') {
       const hw = use === 'bd' ? 3.05 : 3.35;
@@ -5629,10 +5639,10 @@ function updateFocus() {
   let t = '';
   if (skill.mode) t = skill.mode === 'set' ? '球回到手上時按 E 繼續舉球（Q 換墊球）' : '球掉到手臂時按 Q 繼續墊球（E 換舉球）';
   else if (walk.serve) t = '';
-  else if (walk.hold) t = 'E 舉球・Q 接球・F 傳給面前的人・V 發球・R 扣球（空白鍵＋R 跳扣）';
+  else if (walk.hold) t = 'V 發球・F 拋給隊友・1／2／3 自己拋起來舉・C 自己墊・E 自己舉著玩';
   else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
-  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = 'R 扣球・空白鍵＋R 跳起來扣';
+  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按 V 攻擊';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
@@ -6382,6 +6392,7 @@ function updateBalls(dt) {
       b.m.position.addScaledVector(b.v, h);
       const p = b.m.position;
       if (p.y < BALL_R) {
+        if (!b.floorHit) b.floorHit = [p.x, p.z];
         p.y = BALL_R;
         if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
         if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
@@ -6993,9 +7004,9 @@ function zoneAt(x, z) {
 }
 function itemsIn(test) { return state.items.filter((it) => !CAT[it.type].court && !CAT[it.type].wall && test(it.x, it.z)); }
 function updateZoneCard(force) {
-  const hit = zoneAt(walk.x, walk.z), key = hit ? (hit.kind === 'zone' ? hit.z.id : hit.c.id) : '';
-  if (!force && key === walk.zoneKey) return;
-  walk.zoneKey = key;
+  const hit = zoneAt(walk.x, walk.z), key = hit ? (hit.kind === 'zone' ? hit.z.id : hit.c.id) : '', rk = rkCourtNear(walk.x, walk.z), rkKey = rk ? rk.key : '';
+  if (!force && key === walk.zoneKey && rkKey === walk.rkKey) return;
+  walk.zoneKey = key; walk.rkKey = rkKey;
   const card = $('zcard');
   if (!hit) { card.classList.add('out'); renderUseBar(null); return; }
   const dl = [];
@@ -7021,12 +7032,15 @@ function updateZoneCard(force) {
 }
 // 走進複合球場：上方出現「這面場地要打」的按鈕，按了就換網子（排球網、羽球柱、匹克球網架、收起來）
 function renderUseBar(c) {
-  const bar = $('wk-use'), def = c && CAT[c.type], use = c && (c.use || def.court);
-  const comp = c && c.mode !== 'lines' && c.extra && c.extra.length, racket = c && c.mode !== 'lines' && (use === 'bd' || use === 'pb'), vbc = c && c.mode !== 'lines' && use === 'vb';
+  const bar = $('wk-use'), def = c && CAT[c.type], use = c && (c.use || def.court), rc = rkCourtNear(walk.x, walk.z);
+  const comp = c && c.mode !== 'lines' && c.extra && c.extra.length, racket = !!rc, vbc = c && c.mode !== 'lines' && use === 'vb';
   if (!comp && !racket && !vbc) { bar.hidden = true; bar.dataset.id = ''; return; }
-  bar.dataset.id = c.id;
-  bar.innerHTML = (comp ? `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>` : `<span>${esc(labelOf(c))}</span>`)
-    + (racket ? `<button type="button" class="rk-go" data-rkopen="1">${use === 'bd' ? '🏸' : '🥒'} 開打（跟 AI／連線）</button>` : '')
+  bar.dataset.id = c ? c.id : '';
+  // 第一次站上羽球場／匹克球場：提示入口在哪
+  if (rc && !walk.rkHint) walk.rkHint = new Set();
+  if (rc && !walk.rkHint.has(rc.k)) { walk.rkHint.add(rc.k); toast(`這裡可以打${SPORT[rc.k]}：按上方的「${rc.k === 'bd' ? '🏸' : '🥒'} 開打${SPORT[rc.k]}」，跟 AI 或朋友對打`, 3500); }
+  bar.innerHTML = (comp ? `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>` : `<span>${esc(c ? labelOf(c) : rkLabel(rc))}</span>`)
+    + (racket ? `<button type="button" class="rk-go" data-rkopen="1">${rc.k === 'bd' ? '🏸' : '🥒'} 開打${SPORT[rc.k]}</button>` : '')
     + (vbc ? `<button type="button" data-npc="1" aria-pressed="${!!VB.npc}">${VB.npc ? '陪練收工' : '🙋 叫陪練舉球'}</button><button type="button" class="rk-go" data-vmopen="1">🏖️ 2 對 2（對 AI）</button>` : '');
   bar.hidden = false;
 }
@@ -7183,8 +7197,8 @@ const rkGauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.
 function rkCourts() {
   const out = [];
   for (const it of state.items) {
-    const def = CAT[it.type]; if (!def || !def.court || it.mode === 'lines') continue;
-    const use = it.use || def.court; if (use !== 'bd' && use !== 'pb') continue;
+    const def = CAT[it.type]; if (!def || !def.court) continue;
+    const use = it.mode === 'lines' ? def.court : it.use || def.court; if (use !== 'bd' && use !== 'pb') continue;
     const L = use === def.court ? [{ x: 0, z: 0, r: false }] : extraLayout(use, def.w, def.d);
     L.forEach((l, i) => { const [cx, cz] = toWorldOf(it, l.x, l.z); out.push({ key: it.id + ':' + i, k: use, it, cx, cz, yaw: (it.rot * Math.PI) / 180 + (l.r ? Math.PI / 2 : 0), n: L.length > 1 ? i + 1 : 0 }); });
   }
@@ -7631,7 +7645,7 @@ function rkPress(shot) {
   const pad = document.querySelector(`#rk-pad [data-rk="${shot}"]`); if (pad) { pad.classList.add('on'); setTimeout(() => pad.classList.remove('on'), 160); }
 }
 function rkOpenMenu(it) {
-  const c = rkCourtNear(walk.x, walk.z, it) || rkCourtNear(walk.x, walk.z); if (!c) { toast('站到羽球場或匹克球場上再開打'); return; }
+  const c = (it && rkCourtNear(walk.x, walk.z, it)) || rkCourtNear(walk.x, walk.z); if (!c) { toast('站到羽球場或匹克球場上再開打'); return; }
   RK.menuC = c; const bd = c.k === 'bd', m = $('rk-menu');
   if (RK.opt.assist == null) RK.opt.assist = coarse();   // 手機上跑位比較難，預設開擊球輔助
   m.innerHTML = `<div class="rk-box"><h3>${bd ? '🏸' : '🥒'} ${esc(rkLabel(c))}・單打</h3>
@@ -7707,7 +7721,7 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 // 接球微輔助：對方打過來、球會落在你附近時，地上出現落點圈，身體會被輕輕帶過去（自己按反方向就不帶）
 // 舉球 1 前舉（4 號位）、2 中間快攻、3 後舉（2 號位）：舉出去一定會到那個攻擊點，難的是先跑到球下面
 const VB = { assist: true, target: null, setSpot: null, npc: null, ringLand: null, ringSet: null };
-const VB_REACH = { atk: 0.85, recv: 0.95, set: 0.9 };
+const VB_REACH = { atk: 1.0, recv: 0.95, set: 0.9 };
 const vbFwd = () => [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
 // 我站的排球場（網子收起來的複合球場不算）
 function vbCourt() { const ct = courtAt(walk.x, walk.z, true); return ct && !ct.c.use ? ct : null; }
@@ -7717,11 +7731,11 @@ function vbPredict(p, v, y) {
   const t = (-b - Math.sqrt(d)) / (2 * a); return t > 0 ? { t, x: p.x + v.x * t, z: p.z + v.z * t } : null;
 }
 function vbMine(b) { b.mine = true; b.mineT = performance.now(); }
-// ---- 跳：起跳速度看助跑速度（原地約 0.43 m、全速助跑約 0.75 m），空中保持衝勁，只能微調方向
+// ---- 跳：起跳速度看助跑速度（原地約 0.52 m、全速助跑約 1 m；攔網約 0.78 m），空中保持衝勁，只能微調方向
 function vbJump(kind) {
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   const hv = walk.vel || [0, 0], hs = Math.hypot(hv[0], hv[1]), block = kind === 'block';
-  walk.air = { y: 0, vy: block ? 3.3 : 2.9 + 0.26 * hs, vx: hv[0] * (block ? 0.25 : 0.85), vz: hv[1] * (block ? 0.25 : 0.85), block, t: 0 };
+  walk.air = { y: 0, vy: block ? 3.9 : 3.2 + 0.32 * hs, vx: hv[0] * (block ? 0.25 : 0.85), vz: hv[1] * (block ? 0.25 : 0.85), block, t: 0 };
   if (block) { pose = 'block'; hands.visible = true; }
 }
 function vbAirStep(dt) {
@@ -7740,15 +7754,16 @@ function vbAttack(tip) {
 }
 function vbSwingStep(dt) {
   const s = walk.swing; if (!s) return;
-  s.t += dt; if (s.t > 0.07 && pose === 'cock') pose = 'swing';
+  s.t += dt;
   if (!s.done) {
     const H = vbHand(), R = VB_REACH.atk * (VB.assist ? 1.12 : 1); let best = null;
     for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 250)) continue; const d = b.m.position.distanceTo(H); if (d < R && (!best || d < best.d)) best = { b, d }; }
-    if (best && ((s.prev != null && best.d > s.prev + 1e-3) || s.t > 0.2)) { vbHitAttack(best.b, best.d, s.tip); s.done = true; }
+    // 提早按也可以：0.4 秒內球進到手邊，揮到最近的那一下
+    if (best && ((s.prev != null && best.d > s.prev + 1e-3) || s.t > 0.38)) { vbHitAttack(best.b, best.d, s.tip); s.done = true; s.doneT = s.t; pose = 'swing'; }
     else if (best) s.prev = best.d;
-    else if (s.t > 0.22) { s.done = true; if (balls.some((b) => b.m.position.distanceTo(H) < 2.2)) toast('揮空了：球要進到頭上前方、手碰得到的地方再按 V', 1500); }
+    else if (s.t > 0.4) { s.done = true; s.doneT = s.t; pose = 'swing'; if (balls.some((b) => b.m.position.distanceTo(H) < 2.4)) toast('揮空了：等「按 V！」出現（球會發亮）再按', 1500); }
   }
-  if (s.t > 0.42) { walk.swing = null; pose = walk.air && walk.air.block ? 'block' : 'hold'; hands.visible = !!walk.hold || !!(walk.air && walk.air.block); }
+  if (s.done && s.t > s.doneT + 0.3) { walk.swing = null; pose = walk.air && walk.air.block ? 'block' : 'hold'; hands.visible = !!walk.hold || !!(walk.air && walk.air.block); }
 }
 // 給落點和球速：球速快＝壓下去的直線，慢＝拋物線（找飛行時間讓出手速度剛好是 spd）
 function vbShotVel(p, tx, tz, spd) {
@@ -7991,7 +8006,34 @@ function vbRings() {
   const s = VB.setSpot, on = !!(s && performance.now() < s.until && balls.includes(s.b));
   VB.ringSet.visible = on; if (on) { VB.ringSet.position.set(s.x, 0.02, s.z); VB.ringSet.scale.setScalar(1 + Math.sin(performance.now() / 150) * 0.07); }
 }
-function vbUpdate(dt) { vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); }
+function vbCue() {
+  let cue = null; const touch = coarse();
+  // 起跳：舉過來的球，算它掉到 2.9 m 還要多久；跟你起跳到最高點的時間差不多時提示「跳！」
+  const sp = VB.setSpot, sb = sp && performance.now() < sp.until && balls.includes(sp.b) ? sp.b : null;
+  if (!walk.air && sb && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) {
+    const pr = vbPredict(sb.m.position, sb.v, 2.9), hv = walk.vel || [0, 0], tApex = (3.2 + 0.32 * Math.hypot(hv[0], hv[1])) / 9.8;
+    if (pr) { const d = pr.t - tApex; if (d < 0.14 && d > -0.12) cue = ['jump', touch ? '跳！' : '跳！（空白鍵）']; else if (d >= 0.14 && d < 0.9) cue = ['ready', '準備起跳…']; }
+  }
+  // 揮臂：在空中、球進到手邊（還沒揮）就提示，球也會發亮
+  let glow = null;
+  if (walk.air && !walk.air.block && !(walk.swing && walk.swing.done)) {
+    const H = vbHand(); for (const b of balls) if (b.rest < 0.3 && b.m.position.distanceTo(H) < VB_REACH.atk * 1.35) { glow = b; cue = ['hit', touch ? '攻擊！' : '按 V！']; break; }
+  }
+  if (VB.glow && VB.glow !== glow) VB.glow.m.material = ballMat;
+  if (glow) glow.m.material = ballHot; VB.glow = glow;
+  // 攔網：你在網前、對面有人起跳攻擊、在你左右 2.2 m 內
+  if (!cue && !walk.air && VM.on) {
+    const ct = vbCourt();
+    if (ct && Math.abs(ct.lx) < 1.6) for (const a of VM.ai.values()) {
+      if (a.team === vmTeamOf(vmMe()) || a.y < 0.05) continue;
+      const [, alz] = VM.host ? [a.x, a.z] : vmL(a.wx ?? 0, a.wz ?? 0); if (Math.abs(alz - ct.lz) < 2.2) { cue = ['block', touch ? '攔網！' : '攔網！（B）']; break; }
+    }
+  }
+  const el = $('vb-cue');
+  if (!cue) { el.hidden = true; } else { el.hidden = false; el.dataset.k = cue[0]; if (el.textContent !== cue[1]) el.textContent = cue[1]; }
+  if (VB.ringSet) VB.ringSet.material.color.set(cue && cue[0] === 'jump' ? '#30A46C' : '#F2B705');
+}
+function vbUpdate(dt) { vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 function vbStop() { walk.air = null; walk.swing = null; walk.recv = null; walk.setQ = null; VB.setSpot = null; VB.target = null; if (VB.ringLand) { VB.ringLand.visible = false; VB.ringSet.visible = false; } if (VB.npc) vbNpcToggle(); }
 // ---- 旁觀：別人的羽球／匹克球對戰，球照同一套物理飛給大家看
 const RKV = new Map();
@@ -8132,7 +8174,7 @@ function vmAiServe(a) {
 function vmOnTouch(b, id, kind) {
   if (!VM.on || !VM.host) return;
   const team = vmTeamOf(id); if (team < 0) return;
-  VM.ball = b; b.spike = null;
+  VM.ball = b; b.spike = null; b.floorHit = null;
   if (VM.phase === 'serve') { VM.phase = 'rally'; VM.touch = { team, n: 3, last: id }; VM.poss = [null, null]; return; }   // 發球那一下：對方要接，自己這隊不能再碰
   if (VM.phase !== 'rally') return;
   if (team === VM.touch.team) {
@@ -8157,9 +8199,8 @@ function vmOver() {
   m.hidden = false; unlockMouse();
 }
 function vmJudge() {
-  const b = VM.ball; if (!b || !balls.includes(b)) return;
-  if (b.m.position.y > BALL_R + 0.01) return;
-  const B = vmBallL(b), inside = Math.abs(B.x) <= 9 + BALL_R && Math.abs(B.z) <= 4.5 + BALL_R, sideTeam = Math.sign(B.x) === VM.sg ? 0 : 1;
+  const b = VM.ball; if (!b || !balls.includes(b) || !b.floorHit) return;
+  const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, inside = Math.abs(B.x) <= 9 + BALL_R && Math.abs(B.z) <= 4.5 + BALL_R, sideTeam = Math.sign(B.x) === VM.sg ? 0 : 1;
   if (inside) vmPoint(1 - sideTeam, sideTeam === 0 ? '球落在你們場內' : '落地得分');
   else { const lose = VM.touch.team < 0 ? sideTeam : VM.touch.team; vmPoint(1 - lose, 'OUT 出界'); vmOut(B); }
 }
