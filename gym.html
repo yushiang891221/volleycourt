@@ -226,6 +226,25 @@ details.more[open] > summary { margin-bottom: 10px; }
 #plan-svg .mono { font-family: var(--font-mono); }
 #plan-svg .zone { cursor: move; }
 #plan-svg .court { cursor: move; }
+#plan-svg .court.ghost { opacity: .13; pointer-events: none; }
+.layers { position: absolute; right: 12px; top: 104px; width: 248px; max-height: calc(100% - 190px); display: flex; flex-direction: column; background: rgba(27,38,56,.94); color: #fff; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 8px; z-index: 6; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.layers[hidden] { display: none; }
+.ly-h { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 6px; font-size: 13px; }
+.ly-h button { min-height: 0; padding: 0 8px; font-size: 13px; background: transparent; color: #fff; border-color: rgba(255,255,255,.25); }
+.layers.fold .ly-list, .layers.fold .ly-tip { display: none; }
+.ly-list { overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.ly-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.ly-row:hover { background: rgba(255,255,255,.08); }
+.ly-row.on { background: rgba(242,183,5,.22); box-shadow: inset 0 0 0 1px #F2B705; }
+.ly-row.off .ly-n, .ly-row.off .ly-sw { opacity: .4; }
+.ly-row button { min-height: 0; padding: 1px 5px; font-size: 11px; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 5px; }
+.ly-row button:disabled { opacity: .25; }
+.ly-row .ly-eye { border: 0; font-size: 13px; color: #F2B705; padding: 0 2px; }
+.ly-sw { width: 14px; height: 14px; border-radius: 3px; flex: none; box-sizing: border-box; }
+.ly-n { flex: 1; min-width: 0; line-height: 1.3; overflow: hidden; }
+.ly-n small { display: block; font-size: 10.5px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ly-tip { margin: 6px 2px 0; font-size: 11px; line-height: 1.5; opacity: .6; }
+@media (max-width: 900px) { .layers { top: 96px; right: 8px; width: 200px; max-height: 45%; } .ly-tip { display: none; } }
 #plan-svg .handle { fill: var(--sheet); stroke: var(--accent); cursor: nwse-resize; }
 #plan-svg .handle[data-h="n"], #plan-svg .handle[data-h="s"] { cursor: ns-resize; }
 #plan-svg .handle[data-h="e"], #plan-svg .handle[data-h="w"] { cursor: ew-resize; }
@@ -690,6 +709,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <button type="button" id="p-undo">復原</button>
     </div>
     <div class="draw-badge" id="draw-badge" hidden></div>
+    <div class="layers mode-plan" id="layers" hidden><div class="ly-h"><b>圖層・球場</b><button type="button" id="ly-fold" aria-label="收合圖層">—</button></div><div class="ly-list" id="ly-list"></div><p class="ly-tip">上面的疊在上層。點一下選取被壓住的球場；在圖上同一個位置再點一下也會換到下一層</p></div>
     <div class="zoom-ctl mode-plan"><button type="button" id="z-in" aria-label="放大">＋</button><button type="button" id="z-out" aria-label="縮小">－</button><button type="button" id="z-fit" aria-label="符合畫面" style="font-size:12px">⤢</button></div>
     <p class="plan-tip mode-plan">拖空白處移動圖紙・滾輪縮放・Delete 刪除・R 旋轉球場・Ctrl+Z 復原</p>
     <div class="stage-top mode-3d">
@@ -4469,6 +4489,8 @@ function zoomAt(f, cx, cy) {
   pv.ox = wx - (cx - left) / pv.s; pv.oz = wz - (cy - top) / pv.s; applyView(); renderPlan();
 }
 const snapP = (v) => (snapOn ? Math.round(v * 2) / 2 : Math.round(v * 100) / 100);
+// 圖層：在平面圖上暫時藏起來的球場（只影響平面圖，方便點到壓在下面的東西；不存檔）
+var planHide = new Set();   // var：初始化時 renderPlan 可能比這行早跑
 
 // 平面圖上要畫的物件：球場與落地的家具（牆上、天花板上的只畫燈具的虛線）
 const planItem = (it) => !CAT[it.type].wall && !CAT[it.type].ceiling;
@@ -4703,7 +4725,7 @@ function renderPlan() {
   // 區域、球場、家具
   // 整片地板在最底層，球場畫在它上面，其他區域再蓋上來
   for (const z of zonesInOrder()) if (z.type === 'floor') a(zoneSvg(z, z.id === selZoneId));
-  for (const it of state.items) if (CAT[it.type].court) a(courtSvg(it, isSel(it.id)));
+  for (const it of state.items) if (CAT[it.type].court) a(planHide && planHide.has(it.id) ? courtSvg(it, false).replace('<g class="court"', '<g class="court ghost"') : courtSvg(it, isSel(it.id)));
   for (const z of zonesInOrder()) if (z.type !== 'floor') a(zoneSvg(z, z.id === selZoneId));
   for (const z of zonesInOrder()) if (!z.bare) zoneFixtures(z).forEach((f, i) => a(ghostSvg(f, z.id, i)));
   for (const it of state.items) if (planItem(it) && !CAT[it.type].court) a(itemSvg(it, isSel(it.id)));
@@ -4755,6 +4777,7 @@ function renderPlan() {
   // 拖拉中的新區域
   if (planDrag && planDrag.kind === 'draw' && planDrag.r) { const r = planDrag.r; a(`<rect class="rubber" x="${X(r.x0)}" y="${Y(r.z0)}" width="${M(r.x1 - r.x0)}" height="${M(r.z1 - r.z0)}"/>`); a(`<text class="seldim mono" x="${X((r.x0 + r.x1) / 2)}" y="${Y(r.z0 - 10 / pv.s)}" text-anchor="middle" style="font-size:${M(12 / pv.s)}px">${ZONES[drawType].label} ${fmt1(r.x1 - r.x0)} × ${fmt1(r.z1 - r.z0)} m</text>`); }
   svgEl.innerHTML = o.join('');
+  renderLayers();
   if (!pv.fitted) fitPlan(); else applyView();
 }
 function titleBlock(x0, z0, x1, z1, K, text, line, sw) {
@@ -4836,6 +4859,45 @@ function hitAt(e) {
   return null;
 }
 let selWallId = null, wallKind = 'solid';
+// ---- 圖層（平面圖右側）：列出所有球場，上面的疊在上層；點一下選取、眼睛暫時藏起來、▲▼ 換上下層、鎖頭鎖定
+function courtsTopFirst() { return state.items.filter((i) => CAT[i.type].court).reverse(); }
+function planCycle(w) {
+  const under = courtsTopFirst().filter((c) => { if (planHide.has(c.id)) return false; const [lx, lz] = toLocalOf(c, w[0], w[1]); return Math.abs(lx) <= CAT[c.type].w / 2 && Math.abs(lz) <= CAT[c.type].d / 2; });
+  if (under.length < 2) return;
+  const i = under.findIndex((c) => c.id === selectedId), next = under[(i + 1) % under.length];
+  selectPlanItem(next.id); toast(`選到下一層：${labelOf(next)}${next.mode === 'lines' ? '（畫線）' : ''}　再點一下換下一層`);
+}
+function renderLayers() {
+  const box = $('layers'); if (!box || !planHide) return;
+  const list = courtsTopFirst();
+  box.hidden = list.length < 2;
+  if (box.hidden) return;
+  const sw = (c) => { const k = CAT[c.type].court, col = { vb: '#4E9468', bd: '#3C8A63', pb: '#2F6F86', bk: '#B5763E' }[k]; return c.mode === 'lines' ? `border:2px solid ${EXTRA_COL[k] === '#FFFFFF' ? '#9AA4B2' : EXTRA_COL[k]};background:transparent` : `background:${col}`; };
+  $('ly-list').innerHTML = list.map((c, i) => {
+    const k = CAT[c.type].court, ex = (c.extra || []).map((q) => SPORT[q]).join('、'), hid = planHide.has(c.id);
+    return `<div class="ly-row${isSel(c.id) ? ' on' : ''}${hid ? ' off' : ''}" data-ly="${c.id}">
+      <button type="button" class="ly-eye" data-lyact="eye" aria-pressed="${!hid}" title="${hid ? '在平面圖上顯示' : '在平面圖上暫時藏起來（方便點到下面的東西）'}">${hid ? '◌' : '●'}</button>
+      <i class="ly-sw" style="${sw(c)}"></i>
+      <span class="ly-n">${esc(labelOf(c))}<small>${SPORT[k]}${c.mode === 'lines' ? '・只畫線' : ''}${ex ? `＋${esc(ex)}線` : ''}${c.use ? `・架${c.use === 'none' ? '：收起來' : SPORT[c.use] + '網'}` : ''}</small></span>
+      <button type="button" data-lyact="up" title="往上一層"${i === 0 ? ' disabled' : ''}>▲</button><button type="button" data-lyact="down" title="往下一層"${i === list.length - 1 ? ' disabled' : ''}>▼</button>
+      <button type="button" data-lyact="lock" aria-pressed="${!!c.locked}" title="${c.locked ? '解除鎖定' : '鎖定（不會被拖到）'}">${c.locked ? '🔒' : '🔓'}</button></div>`;
+  }).join('');
+}
+$('layers').addEventListener('click', (e) => {
+  if (e.target.closest('#ly-fold')) { $('layers').classList.toggle('fold'); return; }
+  const row = e.target.closest('[data-ly]'); if (!row) return;
+  const it = state.items.find((i) => i.id === row.dataset.ly); if (!it) return;
+  const act = e.target.closest('[data-lyact]') && e.target.closest('[data-lyact]').dataset.lyact;
+  if (act === 'eye') { if (planHide.has(it.id)) planHide.delete(it.id); else { planHide.add(it.id); if (isSel(it.id)) select(null); } renderPlan(); renderZoneSel(); return; }
+  if (act === 'lock') { pushHistory(); if (it.locked) delete it.locked; else it.locked = true; commit(); renderZoneSel(); return; }
+  if (act === 'up' || act === 'down') {
+    // 換上下層：跟上一個／下一個球場交換在清單裡的順序（畫的順序＝疊的順序，3D 也一樣）
+    const idx = state.items.indexOf(it), courts = state.items.map((q, i) => [q, i]).filter(([q]) => CAT[q.type].court), ci = courts.findIndex(([q]) => q === it), other = courts[ci + (act === 'up' ? 1 : -1)];
+    if (!other) return;
+    pushHistory(); state.items[idx] = other[0]; state.items[other[1]] = it; planChanged(); return;
+  }
+  planHide.delete(it.id); selZoneId = null; selWallId = null; selectPlanItem(it.id);
+});
 function selectZone(id) { selZoneId = id; if (id) { selWallId = null; selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
 function selectWall(id) { selWallId = id; if (id) { selZoneId = null; selectedId = null; updateOutline(); renderSelection(); } renderPlan(); renderZoneSel(); planToolState(); }
 function selectPlanItem(id) { selZoneId = null; selWallId = null; select(id); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); }
@@ -4898,8 +4960,12 @@ svgEl.addEventListener('pointerdown', (e) => {
     const it = state.items.find((x) => x.id === hit.id);
     if (e.shiftKey || e.ctrlKey || e.metaKey) { selZoneId = null; selWallId = null; toggleSel(hit.id); planDrag = { ...base, kind: 'none' }; return; }
     if (isSel(hit.id) && selItems().length > 1) { planDrag = { ...base, kind: 'gmove', id: hit.id, orig: { x: it.x, z: it.z }, group: selItems().filter((i) => !i.locked).map((i) => ({ it: i, x: i.x, z: i.z })) }; return; }
-    if (selectedId !== hit.id) selectPlanItem(hit.id);
-    planDrag = { ...base, kind: it && it.locked ? 'locked' : 'imove', id: hit.id, orig: it ? { x: it.x, z: it.z } : null };
+    // 已經選了一面被壓在下面的球場、又點在它範圍裡：保持選它（拖曳也是拖它），放開時換到再下一層
+    const cur = selectedId && state.items.find((x) => x.id === selectedId), inCur = (q) => { const [lx, lz] = toLocalOf(q, w[0], w[1]); return Math.abs(lx) <= CAT[q.type].w / 2 && Math.abs(lz) <= CAT[q.type].d / 2; };
+    const keep = !!(cur && cur.id !== hit.id && it && CAT[it.type].court && CAT[cur.type].court && inCur(cur));
+    const wasSel = selectedId === hit.id || keep, tgt = keep ? cur : it;
+    if (!wasSel) selectPlanItem(hit.id);
+    planDrag = { ...base, kind: tgt && tgt.locked ? 'locked' : 'imove', id: tgt ? tgt.id : hit.id, orig: tgt ? { x: tgt.x, z: tgt.z } : null, wasSel };
   } else if (e.shiftKey || planTool === 'box') planDrag = { ...base, kind: 'box', add: e.shiftKey, r: null };
   else planDrag = { ...base, kind: 'pan', ox: pv.ox, oz: pv.oz, empty: true };
   if (planDrag && planDrag.kind === 'pan' && selWallId) { selWallId = null; renderPlan(); renderZoneSel(); planToolState(); }
@@ -5021,6 +5087,7 @@ function endPlanDrag(e) {
   }
   if (['wend', 'wmove', 'zrot', 'irot'].includes(d.kind) && d.pushed) { if (d.kind === 'irot') { const it = state.items.find((x) => x.id === d.id); if (it) rerenderOne(it); } planChanged(); renderZoneSel(); return; }
   if (d.kind === 'pan' && d.empty && !d.moved) { if (selZoneId || selectedId) { selZoneId = null; select(null); renderPlan(); renderZoneSel(); renderZoneTable(); planToolState(); } return; }
+  if ((d.kind === 'imove' || d.kind === 'locked') && !d.moved && d.wasSel) { planCycle(d.w0); return; }
   if (d.kind === 'locked' && d.moved) { lockedMsg(); return; }
   if ((d.kind === 'zmove' || d.kind === 'imove' || d.kind === 'resize' || d.kind === 'gmove') && d.pushed) planChanged();
   if (d.kind === 'box') {
