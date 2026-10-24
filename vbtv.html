@@ -166,7 +166,7 @@ const CH = {
   pb: { name: '匹克球新手村', color: '#2E8B57', subs: '9,910' },
 };
 const V = [
-  { id: 'nandian', src: 'video/nandian-2022-fcu-vs-nsysu.mp4', t0: 4, ch: 'hq', views: '1,284', ago: '2 年前', tags: ['排球', '比賽'],
+  { id: 'nandian', src: 'video/nandian-2022-fcu-vs-nsysu-v2.mp4', t0: 4, ch: 'hq', views: '1,284', ago: '2 年前', tags: ['排球', '比賽'],
     title: '2022 南電盃｜逢甲通訊 A vs 中山機電',
     desc: '2022 南電盃系際排球賽，逢甲通訊 A 對上中山機電。\n這段影片也是智慧球場攝影機「比賽辨識」的測試素材：系統會自動找出每一個回合、記下得分方。\n\n#排球 #南電盃 #系際盃' },
   { id: 'rally', src: 'video/rally-demo.mp4', t0: 6, ch: 'hq', views: '962', ago: '1 週前', tags: ['排球', '球館', '教學'],
@@ -224,7 +224,7 @@ function cardHtml(v) {
 function wireThumbs(root) {
   for (const vid of root.querySelectorAll('video[data-v]')) {
     const id = vid.dataset.v, v = V.find((x) => x.id === id);
-    vid.addEventListener('loadedmetadata', () => { if (!durs[id]) { durs[id] = vid.duration; store.set('durs', durs); } for (const b of document.querySelectorAll(`[data-dur="${id}"]`)) b.textContent = fmtT(vid.duration); });
+    vid.addEventListener('loadedmetadata', () => { if (durs[id] !== vid.duration) { durs[id] = vid.duration; store.set('durs', durs); } for (const b of document.querySelectorAll(`[data-dur="${id}"]`)) b.textContent = fmtT(vid.duration); });
     const card = vid.closest('.card, .mini-card');
     if (matchMedia('(hover: hover)').matches && card) {
       card.addEventListener('mouseenter', () => { vid.currentTime = v.t0; vid.play().catch(() => {}); });
