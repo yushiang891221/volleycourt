@@ -324,6 +324,10 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .pc-credit a { color: #F2B705; }
 .pc-credit { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; height: 24px; line-height: 24px; padding: 0 8px; font-size: 11px; color: #C9D1DC; background: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pc-empty { color: #fff; padding: 20px; }
+.cctv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; background: #111820; color: #fff; font-size: 13px; }
+.cctv-bar button { min-height: 0; padding: 4px 12px; font-size: 13px; }
+.cctv-bar button.on { background: #E5484D; color: #fff; border-color: #E5484D; }
+.cctv-bar span { font-size: 11.5px; opacity: .65; }
 .cctv { display: grid; gap: 4px; padding: 4px; background: #000; min-height: 100%; align-content: start; }
 .cctv figure { margin: 0; position: relative; } .cctv canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; display: block; background: #111; }
 .cctv figcaption { position: absolute; left: 6px; top: 4px; font: 12px monospace; color: #7BE0A5; text-shadow: 0 1px 2px #000; }
@@ -368,6 +372,16 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .joy { position: absolute; left: max(22px, env(safe-area-inset-left, 0px)); bottom: max(26px, env(safe-area-inset-bottom, 0px)); width: 128px; height: 128px; border-radius: 50%; border: 1.5px solid var(--hl); background: rgba(244,239,230,.55); touch-action: none; }
 .joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: var(--ink); opacity: .8; }
 .joy[hidden] { display: none; }
+.wk-use { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); width: max-content; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(27,38,56,.82); color: #fff; max-width: calc(100% - 24px); z-index: 11; }
+.wk-use[hidden], .walk-ui:has(.pcwin:not([hidden])) .wk-use, .walk-ui:has(.rp:not([hidden])) .wk-use { display: none; }
+.walk-ui:has(.rp:not([hidden])) .zcard { display: none; }
+.app[data-mode="walk"]:has(#wk-use:not([hidden])) .toast { top: 112px; }
+html.phone-walk .app[data-mode="walk"]:has(#wk-use:not([hidden])) .toast { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 48px); }
+.wk-use > span { font-size: 13px; font-weight: 700; padding: 0 4px; }
+.wk-use button { min-height: 0; padding: 5px 10px; font-size: 13px; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.3); display: inline-flex; align-items: center; gap: 5px; }
+.wk-use button i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.wk-use button[aria-pressed="true"] { background: #F2B705; color: #1B2638; border-color: #F2B705; font-weight: 800; }
+html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-area-inset-left, 0px)); transform: none; justify-content: flex-start; max-width: calc(100% - 20px); }
 .joy i { transition: background .15s; }
 .joy .joy-run { position: absolute; left: 50%; top: -40px; transform: translateX(-50%); padding: 4px 10px; border-radius: 999px; background: rgba(27,38,56,.55); color: rgba(255,255,255,.8); font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; transition: background .15s, color .15s, transform .15s; }
 .joy.run .joy-run, .joy.lock .joy-run { background: #F2B705; color: #1B2638; transform: translateX(-50%) scale(1.12); }
@@ -671,6 +685,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
       <div class="wk-lock" id="wk-lock" hidden>點一下畫面：之後移動滑鼠就能轉頭看（Esc 放開滑鼠）</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
+      <div class="wk-use" id="wk-use" hidden></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
       <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">⇡ 推到底跑步</b><i></i></div>
       <div class="vpad" id="vpad" hidden>
@@ -5291,6 +5306,8 @@ function startWalk() {
     $('pc-close').addEventListener('click', pcClose); $('pc-off').addEventListener('click', closePC);
     try { $('mp-name').value = localStorage.getItem('vb.mp.name') || ''; } catch (e) { /* ignore */ }
     $('w-mp').addEventListener('click', () => { $('mp').hidden = !$('mp').hidden; unlockMouse(); });
+    $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (b && c) setCourtUse(c, b.dataset.use); });
+    $('wk-use').addEventListener('pointerdown', (e) => e.stopPropagation());
     $('mp-x').addEventListener('click', () => { $('mp').hidden = true; });
     $('mp-new').addEventListener('click', () => netJoin(roomCode()));
     $('mp-go').addEventListener('click', () => netJoin($('mp-code').value));
@@ -5694,7 +5711,7 @@ function cctvHtml() {
   const list = cctvList();
   if (!list.length) return '<p class="pc-empty">館內還沒有攝影機。到「加入 3D 元件」的素材庫放「網路攝影機（智慧球場）」或「監視器」，這裡就會出現畫面。</p>';
   const cols = list.length <= 1 ? 1 : list.length <= 4 ? 2 : list.length <= 9 ? 3 : 4;
-  return `<div class="cctv" style="grid-template-columns:repeat(${cols},1fr)">${list.map((it, i) => `<figure><canvas data-cam="${i}" width="480" height="270"></canvas><figcaption>CH${String(i + 1).padStart(2, '0')}・${esc(labelOf(it))}</figcaption></figure>`).join('')}</div>`;
+  return `<div class="cctv-bar"><b>錄影 ＋ 球路偵測</b><button type="button" id="pc-rec" class="${REC.on ? 'on' : ''}">${REC.on ? '■ 停止' : '● 錄影'}</button><button type="button" id="pc-play"${REC.on || REC.frames.length < 10 ? ' disabled' : ''}>▶ 球路回放</button><span>錄的是球和人的位置（不是影片檔），回放時可以再下載成影片</span></div><div class="cctv" style="grid-template-columns:repeat(${cols},1fr)">${list.map((it, i) => `<figure><canvas data-cam="${i}" width="480" height="270"></canvas><figcaption>CH${String(i + 1).padStart(2, '0')}・${esc(labelOf(it))}</figcaption></figure>`).join('')}</div>`;
 }
 function setupCctv() {
   const H = state.building.H;
@@ -5708,6 +5725,10 @@ function setupCctv() {
     return { it, cam, canvas: $('pc-body').querySelector(`canvas[data-cam="${i}"]`) };
   });
   pc.camI = 0;
+  if ($('pc-rec')) {
+    $('pc-rec').addEventListener('click', () => recToggle('pc'));
+    $('pc-play').addEventListener('click', () => { closePC(); openReplay(); });
+  }
 }
 function renderCctv(now) {
   if (pc.app !== 'cctv' || !pc.cams.length || now - pc.last < 70) return;
@@ -5722,6 +5743,12 @@ function renderCctv(now) {
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, c.canvas.width, c.canvas.height);
   ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, c.canvas.height - 22, c.canvas.width, 22); ctx.fillStyle = '#fff'; ctx.font = '13px monospace';
   ctx.fillText(new Date().toLocaleString('zh-TW', { hour12: false }), 8, c.canvas.height - 7);
+  if (REC.on) {
+    const sec = Math.floor((now - REC.t0) / 1000), on = Math.floor(now / 500) % 2;
+    const X0 = c.canvas.width - 112; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(X0, 6, 104, 24);
+    if (on) { ctx.fillStyle = '#E5484D'; ctx.beginPath(); ctx.arc(X0 + 12, 18, 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px monospace'; ctx.fillText(`REC ${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`, X0 + 24, 23);
+  }
   avatar.visible = false; hands.visible = hv; if (g) g.visible = vis;
 }
 // ---- 電腦：播影片
@@ -6158,21 +6185,19 @@ function updateServe(dt) {
   if (t >= 0.6 && !s.hit) {
     s.hit = true;
     const p0 = s.ball.position.clone();
-    // 對面場地：如果站在排球場附近，瞄準網子另一邊、沿著你看的方向；不然往前 14 m
-    let target = null, court = null, sg = 1;
+    // 落點＝你面向的那條線：站在排球場附近、面向網子另一邊，就落在對面 4.5～7 m 深；面向別處就照方向往前 13 m（瞄出界就是出界）
+    let tx = walk.x + s.fwd.x * 13, tz = walk.z + s.fwd.z * 13, court = null, sg = 1;
     for (const c of state.items) {
-      if (CAT[c.type].court !== 'vb') continue;
+      if (CAT[c.type].court !== 'vb' || c.mode === 'lines' || c.use) continue;
       const [lx, lz] = toLocalOf(c, walk.x, walk.z); if (Math.abs(lx) > 14 || Math.abs(lz) > 7) continue;
       sg = Math.sign(lx) || 1; court = c;
-      const tx = -sg * (4.5 + Math.random() * 2.5);
-      const [fx, fz] = toLocalOf(c, walk.x + s.fwd.x, walk.z + s.fwd.z), dlx = fx - lx, dlz = fz - lz;
-      const k = Math.abs(dlx) > 0.05 ? (tx - lx) / dlx : 0;
-      const tz = clamp(k > 0 ? lz + dlz * k : lz, -4.2, 4.2);
-      const [wx, wz] = toWorldOf(c, tx, tz); target = new THREE.Vector3(wx, BALL_R, wz); break;
+      const [ax, az] = toLocalOf(c, walk.x + s.fwd.x, walk.z + s.fwd.z), dlx = ax - lx, dlz = az - lz;
+      const depth = 4.5 + Math.random() * 2.5, k = dlx * -sg > 0.05 ? (-sg * depth - lx) / dlx : 0;
+      if (k > 0) [tx, tz] = toWorldOf(c, lx + dlx * k, lz + dlz * k);
+      break;
     }
-    if (!target) target = new THREE.Vector3(walk.x, BALL_R, walk.z).addScaledVector(s.fwd, 14);
-    const D = Math.hypot(target.x - p0.x, target.z - p0.z), T = 0.55 + D * 0.06;
-    const v = new THREE.Vector3((target.x - p0.x) / T, (target.y - p0.y) / T + 0.5 * 9.8 * T, (target.z - p0.z) / T);
+    const D = Math.hypot(tx - p0.x, tz - p0.z);
+    const v = solveShot(p0, tx, tz, court, sg, 0.55 + D * 0.06);
     s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: court ? { c: court, sg } : null, serve: true }; balls.push(s.ball.userData.ball);
     if (NET.on) netBallHit(s.ball.userData.ball, 'serve');
     recHit({ x: p0.x, y: p0.y, z: p0.z, v: v.length(), kind: 'serve' });
@@ -6184,7 +6209,7 @@ function updateServe(dt) {
 function updateBalls(dt) {
   updateTweens(dt); updateDoors(dt); updateWind(dt);
   if (!balls.length || !dt) return;
-  const H = state.building.H, steps = 3, h = dt / steps, segs = blockers(), netCourts = state.items.filter((c) => CAT[c.type].court === 'vb' && c.mode !== 'lines');
+  const H = state.building.H, steps = 3, h = dt / steps, segs = blockers(), netCourts = state.items.filter((c) => CAT[c.type].court === 'vb' && c.mode !== 'lines' && !c.use);
   for (const b of balls) {
     if (b.rest > 2) continue;
     for (let k = 0; k < steps; k++) {
@@ -6511,6 +6536,7 @@ function coReplace(raw) {
   if (keepSel && !state.items.some((i) => i.id === keepSel)) selectedId = null;
   if (keepZone && !state.zones.some((z) => z.id === keepZone)) selZoneId = null;
   fullRefresh(); if (mode === 'plan') renderPlan(); renderZoneSel(); renderZoneTable(); planToolState();
+  if (walk.on) updateZoneCard(true);
   CO.last = coSnap(); CO.applying = false;
 }
 function coQueue() {
@@ -6577,13 +6603,22 @@ addEventListener('pagehide', () => { if (CO.on) try { CO.tx.close(); } catch (e)
 // 「▶ 球路回放」從那支攝影機（或俯視、跟球）重播：軌跡線、落點圈、擊球球速、最高點，統計擊球次數、最快球速、過網次數，可以下載影片
 const REC = { on: false, t0: 0, last: 0, frames: [], events: [], cam: null, ids: new Map(), nid: 0 };
 function recId(o) { if (!REC.ids.has(o.uuid)) REC.ids.set(o.uuid, ++REC.nid); return REC.ids.get(o.uuid); }
-function recToggle() {
-  if (REC.on) { REC.on = false; $('cv-rec').textContent = '● 錄影'; $('cv-rec').classList.remove('on'); $('cv-play').disabled = REC.frames.length < 10; toast(`錄好了（${(REC.frames.length / 30).toFixed(1)} 秒）：按「▶ 球路回放」看球路`); return; }
-  if (!camView.cam) { toast('先打開一支智慧球場攝影機'); return; }
+// 錄影可以從兩個地方開：攝影機畫面（cv-），或電腦的監視器 App（pc-）；兩邊按鈕狀態一起更新
+function recUI() {
+  for (const [r, pl] of [['cv-rec', 'cv-play'], ['pc-rec', 'pc-play']]) {
+    const b = $(r); if (b) { b.textContent = REC.on ? '■ 停止' : '● 錄影'; b.classList.toggle('on', REC.on); }
+    const q = $(pl); if (q) q.disabled = REC.on || REC.frames.length < 10;
+  }
+}
+function pcRecCam() { const c = pc.cams.find((x) => x.it.type === 'camera') || pc.cams[0]; return c && c.cam; }
+function recToggle(src) {
+  if (REC.on) { REC.on = false; recUI(); toast(`錄好了（${(REC.frames.length / 30).toFixed(1)} 秒）：按「▶ 球路回放」看球路`); return; }
+  const cam = src === 'pc' ? pcRecCam() : camView.cam;
+  if (!cam) { toast(src === 'pc' ? '館內還沒有攝影機，先到素材庫放一支' : '先打開一支智慧球場攝影機'); return; }
   REC.on = true; REC.t0 = performance.now(); REC.last = 0; REC.frames = []; REC.events = []; REC.ids.clear(); REC.nid = 0;
-  REC.cam = { p: camView.cam.position.clone(), q: camView.cam.quaternion.clone(), fov: camView.cam.fov };
-  $('cv-rec').textContent = '■ 停止'; $('cv-rec').classList.add('on'); $('cv-play').disabled = true;
-  toast('開始錄影（最多 3 分鐘）：去打球吧，打完按「■ 停止」');
+  REC.cam = { p: cam.position.clone(), q: cam.quaternion.clone(), fov: cam.fov };
+  recUI();
+  toast(src === 'pc' ? '開始錄影（最多 3 分鐘）：監視器畫面左上角會顯示 REC，打完按「■ 停止」' : '開始錄影（最多 3 分鐘）：去打球吧，打完按「■ 停止」');
 }
 function recEvent(type, e) { if (REC.on) REC.events.push({ type, t: (performance.now() - REC.t0) / 1000, ...e }); }
 function recTick(now) {
@@ -6784,7 +6819,7 @@ function updateZoneCard(force) {
   if (!force && key === walk.zoneKey) return;
   walk.zoneKey = key;
   const card = $('zcard');
-  if (!hit) { card.classList.add('out'); return; }
+  if (!hit) { card.classList.add('out'); renderUseBar(null); return; }
   const dl = [];
   if (hit.kind === 'zone') {
     const q = hit.z, Z = ZONES[q.type], inside = itemsIn((x, z) => inZone(q, x, z));
@@ -6804,6 +6839,24 @@ function updateZoneCard(force) {
   }
   $('zc-dl').innerHTML = dl.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
   card.classList.remove('out');
+  renderUseBar(hit.kind !== 'zone' ? hit.c : null);
+}
+// 走進複合球場：上方出現「這面場地要打」的按鈕，按了就換網子（排球網、羽球柱、匹克球網架、收起來）
+function renderUseBar(c) {
+  const bar = $('wk-use');
+  if (!c || c.mode === 'lines' || !(c.extra && c.extra.length)) { bar.hidden = true; bar.dataset.id = ''; return; }
+  const def = CAT[c.type], use = c.use || def.court;
+  bar.dataset.id = c.id;
+  bar.innerHTML = `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>`;
+  bar.hidden = false;
+}
+function setCourtUse(c, k) {
+  const def = CAT[c.type], now = c.use || def.court; if (now === k) return;
+  pushHistory();
+  if (k === def.court) delete c.use; else c.use = k;
+  rerenderOne(c); commit(); renderUseBar(c);
+  const n = k !== 'none' && k !== def.court ? extraLayout(k, def.w, def.d).length : 1;
+  toast(k === 'none' ? `${labelOf(c)}的網子都收起來了` : `${labelOf(c)}改成${SPORT[k]}${n > 1 ? `（${n} 面）` : ''}，網子架好了`);
 }
 addEventListener('keydown', (e) => {
   if (!walk.on) return;
@@ -7015,7 +7068,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
