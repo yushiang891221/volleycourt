@@ -598,7 +598,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     </section>
     <section class="sec mode-3d">
       <h2><span class="num">02</span>加入 3D 元件<small>OBJECTS</small></h2>
-      <p class="hint">點一下會放在畫面中央並選取，直接在 3D 畫面裡拖到想要的位置。其他物件要先點一下選取，才拖得動；擺好的可以按「鎖定」。</p>
+      <p class="hint">點一下會放在畫面中央並選取，直接在 3D 畫面裡拖到想要的位置。按住任何元件都能直接拖（球場要先點一下選取）；擺好的可以按「鎖定」。自由移動視角時，新元件會放在你前面 4 m。</p>
       <div id="palette"></div>
     </section>
     <section class="sec mode-3d" id="sec-selected">
@@ -700,9 +700,9 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <button type="button" id="btn-undo">復原</button>
     </div>
     <div class="co-badge" id="co-badge" hidden></div>
-    <p class="stage-hint mode-3d">先點一下選取，再拖曳才會移動｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
+    <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D（Esc 離開）">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭（<kbd>Esc</kbd> 放開滑鼠）・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 前舉／快攻／後舉、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中 <kbd>V</kbd> 攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短、<kbd>Shift</kbd>＋<kbd>V</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球 <kbd>V</kbd> 發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只會放開滑鼠）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
@@ -2875,7 +2875,10 @@ function addItem(type) {
   const def = CAT[type];
   const { L, W } = state.building;
   pushHistory();
-  const it = { id: uid(), type, x: snap(clamp(controls.target.x, -L / 2 + 1, L / 2 - 1)), z: snap(clamp(controls.target.z, -W / 2 + 1, W / 2 - 1)), rot: type === 'light' ? 90 : 0 };
+  // 放在畫面中央看著的地方；自由移動時鏡頭就在你眼前，改放到前面 4 m 的地上
+  let sx = controls.target.x, sz = controls.target.z;
+  if (fly.on) { const f = new THREE.Vector3().subVectors(controls.target, camera.position); f.y = 0; if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); sx = camera.position.x + f.x * 4; sz = camera.position.z + f.z * 4; }
+  const it = { id: uid(), type, x: snap(clamp(sx, -L / 2 + 1, L / 2 - 1)), z: snap(clamp(sz, -W / 2 + 1, W / 2 - 1)), rot: type === 'light' ? 90 : 0 };
   if (def.resize || def.diam) { it.w = def.w; it.d = def.d; }
   let overlay = false;
   if (def.court) {
@@ -3423,8 +3426,9 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   drag = { id, sx: e.clientX, sy: e.clientY, moved: false, pid: e.pointerId };
   const hitIt = id && state.items.find((x) => x.id === id);
   if (hitIt && hitIt.locked && !(isSel(id) && selItems().length > 1)) { drag.locked = true; return; }
-  // only an object that is already selected can be dragged; the first press just selects (or turns the view)
-  if (id && !isSel(id)) { drag.selectOnly = true; return; }
+  // 一般元件：按住就能直接拖；球場鋪滿地板，要先點一下選起來才拖得動（不然轉視角時很容易拖到）
+  if (id && !isSel(id) && hitIt && CAT[hitIt.type].court) { drag.selectOnly = true; return; }
+  if (id && !isSel(id) && !e.shiftKey) select(id);
   if (id) {
     const it = state.items.find((x) => x.id === id);
     const p = floorHit();
@@ -5317,10 +5321,10 @@ const targetMark = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 32), new THR
 targetMark.rotation.x = -Math.PI / 2; targetMark.visible = false; scene.add(targetMark);
 // 手機進導覽：整個畫面給 3D（瀏覽器支援的話也進系統全螢幕），右上角只留「⋯」和「✕」
 const isPhone = () => matchMedia('(pointer: coarse) and (max-width: 900px), (pointer: coarse) and (max-height: 520px)').matches;
-function phoneFull(on) {
+function phoneFull(on, force) {
   const de = document.documentElement;
-  if (on && !isPhone()) return;
-  de.classList.toggle('phone-walk', on); $('stage').scrollLeft = 0; $('stage').scrollTop = 0;
+  if (on && !isPhone() && !force) return;
+  de.classList.toggle('phone-walk', on); if ($('w-full')) { $('w-full').textContent = on ? '離開全螢幕' : '全螢幕'; setPressed($('w-full'), on); } $('stage').scrollLeft = 0; $('stage').scrollTop = 0;
   $('walk-ui').querySelector('.walk-top').classList.remove('open'); $('w-fs-menu').setAttribute('aria-expanded', 'false');
   try {
     if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
@@ -5329,6 +5333,8 @@ function phoneFull(on) {
   window.wakeRender && window.wakeRender(600);
 }
 $('w-fs-x').addEventListener('click', () => $('w-exit').click());
+$('w-full').addEventListener('click', () => phoneFull(!document.documentElement.classList.contains('phone-walk'), true));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && walk.on && !isPhone() && document.documentElement.classList.contains('phone-walk')) phoneFull(false); });
 $('w-fs-menu').addEventListener('click', () => { const t = $('walk-ui').querySelector('.walk-top'), o = t.classList.toggle('open'); $('w-fs-menu').setAttribute('aria-expanded', String(o)); });
 function startWalk() {
   walk.on = true; window.__walk = true;
@@ -7838,10 +7844,12 @@ function vbAssist(inputMag) {
 function vbCamAssist(dt) {
   if (performance.now() - (walk.lookT || 0) < 700 || walk.air) return;
   let p = null, yawOk = true;
-  if (VB.target && !walk.recv) p = VB.target.b.m.position;
+  const P0 = VM.on && VM.host ? VM.poss[0] : null, setting = walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1);
+  if (setting) { let best = null; for (const b of balls) { if (b.rest > 0.3 || b.mine) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < 8 && (!best || d < best.d)) best = { b, d }; } if (best) p = best.b.m.position; }
+  if (!p && VB.target && !walk.recv) p = VB.target.b.m.position;
   else if (VB.setSpot && performance.now() < VB.setSpot.until && balls.includes(VB.setSpot.b) && Math.hypot(VB.setSpot.x - walk.x, VB.setSpot.z - walk.z) < 6) { p = VB.setSpot.b.m.position; yawOk = false; }
   if (!p) return;
-  const dx = p.x - walk.x, dz = p.z - walk.z, dh = Math.hypot(dx, dz), k = 1 - Math.exp(-dt * 2.2);
+  const dx = p.x - walk.x, dz = p.z - walk.z, dh = Math.hypot(dx, dz), k = 1 - Math.exp(-dt * (setting ? 4.5 : 2.2));
   if (yawOk && dh > 0.6) { let d = Math.atan2(-dx, -dz) - walk.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); walk.yaw += d * k * 0.7; }
   walk.pitch += (clamp(Math.atan2(p.y - camera.position.y, Math.max(0.6, dh)), -0.8, 0.9) - walk.pitch) * k * 0.6;
 }
@@ -7870,7 +7878,9 @@ function vbNpcStep(dt) {
   if (tgt) { const p = tgt.b.m.position; if (Math.hypot(p.x - n.x, p.z - n.z) < 0.9 && p.y < 2.5 && p.y > 1.5 && tgt.b.v.y < 0) vbNpcSet(tgt.b); }
   // 動作：跑步擺腿、面向網子；球來了兩手舉高
   const av = n.av, k = 1 - Math.exp(-dt * 12), spd = Math.hypot(n.vx, n.vz);
-  av.g.position.set(n.x, 0, n.z); const [ax, az] = toWorldOf(n.c, 0, 0), [bx, bz] = toWorldOf(n.c, n.sg, 0); av.g.rotation.y = Math.atan2(ax - bx, az - bz);
+  av.g.position.set(n.x, 0, n.z); const [ax, az] = toWorldOf(n.c, 0, 0), [bx, bz] = toWorldOf(n.c, n.sg, 0); let ry = Math.atan2(ax - bx, az - bz);
+  if (tgt) ry = Math.atan2(tgt.b.m.position.x - n.x, tgt.b.m.position.z - n.z);
+  let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
   av.phase += dt * Math.min(12, spd * 5.5); const sw = Math.min(0.6, spd * 0.3) * Math.sin(av.phase);
   av.legs[0].rotation.x += (sw - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-sw - av.legs[1].rotation.x) * k;
   n.up = Math.max(0, n.up - dt); const up = tgt || n.up > 0 ? -2.7 : -0.2;
@@ -8179,7 +8189,10 @@ function vmRenderAi(dt) {
     if (VM.host) [x, z] = vmW(a.x, a.z); else { x = av.g.position.x + ((a.wx ?? av.g.position.x) - av.g.position.x) * k; z = av.g.position.z + ((a.wz ?? av.g.position.z) - av.g.position.z) * k; }
     const sp = Math.hypot(x - av.g.position.x, z - av.g.position.z) / Math.max(dt, 1e-3);
     av.g.position.set(x, 0, z); av.body.position.y += (a.y - av.body.position.y) * 0.6;
-    const sd = vmSide(a.team), [ax, az] = vmW(0, 0), [bx, bz] = vmW(sd, 0); av.g.rotation.y = Math.atan2(ax - bx, az - bz);
+    const sd = vmSide(a.team), [ax, az] = vmW(0, 0), [bx, bz] = vmW(sd, 0); let ry = Math.atan2(ax - bx, az - bz);
+    const bb = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find((q) => q.room);
+    if (bb) { const ddx = bb.m.position.x - x, ddz = bb.m.position.z - z, dd = Math.hypot(ddx, ddz), [blx] = vmL(bb.m.position.x, bb.m.position.z); if (dd > 0.3 && dd < 10 && Math.sign(blx) === sd) ry = Math.atan2(ddx, ddz); }
+    let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
     av.phase += dt * Math.min(12, sp * 5.5); const sw = a.y > 0.05 ? 0 : Math.min(0.6, sp * 0.3) * Math.sin(av.phase);
     av.legs[0].rotation.x += (sw - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-sw - av.legs[1].rotation.x) * k;
     const P2 = a.swingT > 0 || a.y > 0 ? a.pose : 0;
