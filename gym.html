@@ -5730,7 +5730,8 @@ function updateWalk(dt) {
   else { walk.vel = [vx, vz]; const as = vbAssist(mag); if (as) { vx += as[0]; vz += as[1]; } }
   if (game && !walk.air && !walk.dive) {   // 急停、急轉（速度掉一半、或方向轉超過 60°）：球鞋「唧」
     const pv = walk.pv || [0, 0], ps = Math.hypot(pv[0], pv[1]), cs = Math.hypot(vx, vz), cosA = ps > 0.1 && cs > 0.1 ? (pv[0] * vx + pv[1] * vz) / (ps * cs) : 1;
-    if (ps > 2.2 && (cs < ps * 0.5 || cosA < 0.5) && performance.now() - (walk.sqT || 0) > 450) { walk.sqT = performance.now(); sfx('squeak', 0.8, new THREE.Vector3(walk.x, 0.05, walk.z)); }
+    // 急停、急轉、突然起跑都會「吱」（球場上最常聽到的聲音）
+    if (((ps > 1.8 && (cs < ps * 0.6 || cosA < 0.7)) || (ps < 1 && cs > 3)) && performance.now() - (walk.sqT || 0) > 300) { walk.sqT = performance.now(); sfx('squeak', 0.7 + Math.random() * 0.3, new THREE.Vector3(walk.x, 0.05, walk.z)); }
     walk.pv = [vx, vz];
   }
   walk.low = (walk.low || 0) + (((walk.dive && walk.dive.t > 0.08) || walk.down > 0.2 ? 1.1 : 0) - (walk.low || 0)) * Math.min(1, dt * (walk.dive ? 12 : 4));
@@ -8268,7 +8269,6 @@ function sfx(kind, q = 1, pos) {
 //   扣球／發球：全掌包住球的響亮爆破「啪！」（尖銳的瞬間＋清脆的拍擊＋球裡空氣的共鳴＋一點超低頻的力量感）
 //   攔網：悶、雙重的碰撞（兩隻手一前一後，球改方向時音高往下掉）
 //   落地：球打在木地板的「咚」（球的共鳴＋木地板的低頻）；標誌桿：塑膠桿被打到的脆響；揮臂：空氣被撕開的「咻」
-const SFX_KINDS = ['spike', 'bump', 'set', 'block', 'floor', 'antenna', 'whoosh'];
 async function sfxSynth(kind, seed) {
   const sr = 48000, dur = { spike: 0.3, bump: 0.25, set: 0.12, block: 0.3, floor: 0.4, antenna: 0.45, whoosh: 0.22 }[kind] || 0.3, oc = new OfflineAudioContext(1, Math.round(sr * dur), sr);
   const rnd = (() => { let x = seed * 9301 + 49297; return () => ((x = (x * 9301 + 49297) % 233280) / 233280); })(), J = () => 0.96 + rnd() * 0.08;
@@ -8310,10 +8310,14 @@ async function sfxSynth(kind, seed) {
   const buf = await oc.startRendering(), d = buf.getChannelData(0); let pk = 0; for (const x of d) pk = Math.max(pk, Math.abs(x)); const k = 0.9 / (pk || 1); for (let i = 0; i < d.length; i++) d[i] *= k;
   return buf;
 }
-// 第一次要出聲時，每種先做 4 段（種子不同＝每一下都有一點差異）
+// 真實音效（sfx/ 裡，室內球場錄的）：扣球、發球、球彈地、球打進網子、球鞋吱吱聲；舉球（短的「啵」）和墊球（悶的）是從發球那一聲切短、調音色做的
+const SFX_FILES = { spike: ['vb-spike'], serve: ['vb-serve'], floor: ['vb-floor-1', 'vb-floor-2'], net: ['vb-net'], set: ['vb-set'], bump: ['vb-bump'], squeak: [1, 2, 3, 4, 5, 6].map((i) => 'vb-squeak-' + i) };
+// 第一次要出聲時載入；標誌桿的脆響沒有錄音，照舊合成
 function sfxLoad() {
   if (SFX.recLoading) return; SFX.recLoading = true; SFX.rec = {};
-  for (const k of SFX_KINDS) for (let i = 1; i <= 4; i++) sfxSynth(k, i).then((buf) => { (SFX.rec[k] = SFX.rec[k] || []).push(buf); }).catch(() => {});
+  const ac = SFX.ctx || new OfflineAudioContext(1, 1, 32000);
+  for (const [k, list] of Object.entries(SFX_FILES)) for (const f of list) fetch(`sfx/${f}.wav`).then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b)).then((buf) => { (SFX.rec[k] = SFX.rec[k] || []).push(buf); }).catch(() => {});
+  for (let i = 1; i <= 3; i++) sfxSynth('antenna', i).then((buf) => { (SFX.rec.antenna = SFX.rec.antenna || []).push(buf); }).catch(() => {});
 }
 // 播一段：每次隨機挑一段、音高差一點點，不會每一下都一模一樣
 function sfxRec(ac, dry, kind, gain, rate = 1, at = ac.currentTime + 0.004) {
@@ -8340,16 +8344,19 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
   // 照錄音校正好的合成聲；還沒做好（第一下）才用簡易版
   const R = (k, g, rate, at) => sfxRec(ac, dry, k, g, rate, at);
   switch (kind) {
-    case 'spike': if (R('spike', 1.6 * (0.75 + 0.25 * Math.min(1, p)), 1)) return; break;
-    case 'serve': if (R('spike', 1.35, 0.98)) return; break;
-    case 'hit': if (R('spike', 1.1, 1.03)) return; break;
-    case 'tip': if (R('set', 0.7, 1.12)) return; break;
-    case 'block': if (R('block', 1.3, 1)) return; break;   // 兩隻手掌一前一後
-    case 'bump': if (R('bump', 1.3, 1)) return; break;
-    case 'set': if (R('set', 0.8, 1.04)) return; break;
-    case 'floor': if (R('floor', 0.35 + 0.75 * Math.min(1, p), 1)) return; break;
+    case 'spike': if (R('spike', 0.75 + 0.25 * Math.min(1, p), 1)) return; break;   // 沉重、渾厚的擊球
+    case 'serve': if (R('serve', 0.9, 1)) return; break;
+    case 'hit': if (R('spike', 0.7, 1.05)) return; break;
+    case 'tip': if (R('set', 0.8, 0.95)) return; break;
+    case 'block': if (R('spike', 0.85, 0.9)) { R('bump', 0.45, 1, t + 0.012); return; } break;   // 兩隻手一前一後
+    case 'bump': if (R('bump', 0.85, 1)) return; break;
+    case 'set': if (R('set', 0.75, 1)) { R('set', 0.45, 1.06, t + 0.022); return; } break;   // 「啵啵」：手指碰兩下的短音
+    case 'floor': if (R('floor', 0.3 + 0.7 * Math.min(1, p), 1)) return; break;
+    case 'net': if (R('net', 0.45 + 0.55 * Math.min(1, p), 1)) return; break;
+    case 'tape': if (R('net', 0.55, 1.05)) return; break;
+    case 'squeak': if (R('squeak', 0.35 + 0.3 * Math.min(1, q), 1)) return; break;   // 球鞋吱吱聲
     case 'antenna': if (R('antenna', 0.8 * Math.min(1, p), 1)) return; break;
-    case 'whoosh': if (R('whoosh', 0.3, 1)) return; break;
+    case 'whoosh': return;   // 揮臂不出聲
     case 'wall': if (R('floor', 0.45 * Math.min(1, p), 0.85)) return; break;
     case 'cheer': return;   // 不要人聲
   }
@@ -8419,7 +8426,6 @@ function vbAttack(tip) {
   if (walk.swing || walk.sit || walk.serve) return;
   walk.swing = { t: 0, tip: !!tip, done: false, prev: null };
   pose = 'cock'; hands.visible = true;
-  if (walk.air && !tip) sfx('whoosh', 1, camera.position.clone());
 }
 function vbSwingStep(dt) {
   const s = walk.swing; if (!s) return;
@@ -9123,6 +9129,10 @@ function vmAiStep(a, dt) {
       if (VM.touch.team !== a.team) VM.poss[a.team] = null;
     }
   }
+  // AI 球員急停、急轉：球鞋吱一聲
+  { const ps = Math.hypot(a.pvx || 0, a.pvz || 0), cs = Math.hypot(a.vx, a.vz), cosA = ps > 0.1 && cs > 0.1 ? ((a.pvx || 0) * a.vx + (a.pvz || 0) * a.vz) / (ps * cs) : 1;
+    if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && VM.t - (a.sqT || 0) > 0.5) { a.sqT = VM.t; const [wx, wz] = vmW(a.x, a.z); sfx('squeak', 0.6 + Math.random() * 0.3, new THREE.Vector3(wx, 0.05, wz)); }
+    const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
   // 移動、跳
   const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? Math.min(vmLv(a).speed, d * 5) : 0, kk = 1 - Math.exp(-dt * 9);
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
