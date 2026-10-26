@@ -6982,7 +6982,7 @@ function netTick(dt, now) {
     else if (!p2.rk && p2.racket) { av.hands[0].remove(p2.racket); p2.racket = null; p2.racketK = null; }
     // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
     if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
-    avDrive(av, avPoseOf(p2.pose, p2.poseT / 0.45, VM.on && VM.phase === 'rally'), Math.min(1, k * 1.3), sp, y > 0.08);
+    avDrive(av, avPoseOf(p2.pose, p2.poseT / 0.45), Math.min(1, k * 1.3), sp, y > 0.08);
     av.g.rotation.order = 'YXZ'; av.g.rotation.x += ((p2.pose === 10 ? 1.25 : 0) - av.g.rotation.x) * Math.min(1, k * 1.5);   // 撲救：整個人往前倒
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
     if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
@@ -8247,7 +8247,21 @@ function sfx(kind, q = 1, pos) {
     sfxPlay(ac, kind, q, vol, pan);
   } catch (e) { /* 不支援就安靜 */ }
 }
+// 真實錄音：從一段排球比賽錄音（Pixabay／freesound_community「birds-volleyball」，可免費商用）切出來的擊球聲
+// 扣球（清脆、壓縮感）、墊球（前臂圓潤的悶擊）、舉球（雙手輕的一下）、落地；去掉低頻轟聲和鳥叫的高頻，再過球館殘響
+const SFX_REC = { spike: 4, bump: 4, set: 4, floor: 2 };
+function sfxLoad(ac) {
+  if (SFX.recLoading) return; SFX.recLoading = true; SFX.rec = {};
+  for (const [k, n] of Object.entries(SFX_REC)) for (let i = 1; i <= n; i++) fetch(`sfx/vb-${k}-${i}.wav`).then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b)).then((buf) => { (SFX.rec[k] = SFX.rec[k] || []).push(buf); }).catch(() => {});
+}
+// 播一段錄音：每次隨機挑一段、音高差一點點，不會每一下都一模一樣
+function sfxRec(ac, dry, kind, gain, rate = 1, at = ac.currentTime + 0.004) {
+  const list = SFX.rec && SFX.rec[kind]; if (!list || !list.length) return false;
+  const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = list[Math.floor(Math.random() * list.length)]; s.playbackRate.value = rate * (0.96 + Math.random() * 0.08); g.gain.value = gain;
+  s.connect(g).connect(dry); s.start(at); return true;
+}
 function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
+  if (!SFX.recLoading) sfxLoad(SFX.ctx || ac);
   const bus = sfxBus(ac), t = ac.currentTime + 0.004, J = () => 1 + (Math.random() - 0.5) * 0.08, A = () => 0.85 + Math.random() * 0.3;
   const dry = ac.createGain(); dry.gain.value = vol;
   let node = dry; if (ac.createStereoPanner) { const pn = ac.createStereoPanner(); pn.pan.value = pan; dry.connect(pn); node = pn; }
@@ -8262,6 +8276,20 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
   const slap = (g, bright, dur = 0.005, at = t) => { burst(dur * 1.4, 700, 0.45, 0.9 * g, 'bandpass', at); burst(dur, 1700 + 900 * bright, 0.45, 0.62 * g, 'bandpass', at); burst(dur * 1.2, 2700 + 900 * bright, 0.6, 1.1 * g * (0.3 + 0.7 * bright), 'bandpass', at); burst(dur * 0.6, 7000, 0.7, 0.07 * g * bright, 'highpass', at); };
   const net = (g) => { for (let i = 0; i < 9; i++) burst(0.03 + Math.random() * 0.05, 1300 + Math.random() * 1400, 0.9, g * (0.5 - i * 0.045) * A(), 'bandpass', t + i * 0.028 + Math.random() * 0.012); ring(96 * J(), 0.09, 0.22 * g, 'triangle'); ring(193 * J(), 0.05, 0.08 * g, 'triangle'); };   // 網線一格一格抖動＋鋼索的嗡
   const p = clamp(q, 0, 1.3);
+  // 有真實錄音就用錄音；還沒載完（第一下）才用合成的
+  const R = (k, g, rate, at) => sfxRec(ac, dry, k, g, rate, at);
+  switch (kind) {
+    case 'spike': if (R('spike', 1.0 * (0.75 + 0.25 * Math.min(1, p)), 1)) return; break;
+    case 'serve': if (R('spike', 0.85, 0.98)) return; break;
+    case 'hit': if (R('spike', 0.7, 1.03)) return; break;
+    case 'tip': if (R('set', 0.45, 1.12)) return; break;
+    case 'block': if (R('spike', 0.85, 0.94)) { R('spike', 0.4, 0.97, t + 0.008); return; } break;   // 兩隻手掌一前一後
+    case 'bump': if (R('bump', 0.85, 1)) return; break;
+    case 'set': if (R('set', 0.5, 1.04)) return; break;
+    case 'floor': if (R('floor', 0.35 + 0.65 * Math.min(1, p), 0.97)) { ring(108 * J(), 0.045, 0.3 * Math.min(1, p)); return; } break;   // 木地板再補一點低頻「咚」
+    case 'wall': if (R('floor', 0.45 * Math.min(1, p), 0.9)) return; break;
+    case 'cheer': return;   // 不要人聲
+  }
   switch (kind) {
     case 'spike': case 'serve': case 'hit': {   // 手掌扣到球：響亮的「啪」＋球的共鳴＋一點手臂的悶
       const k = kind === 'spike' ? 1 : kind === 'serve' ? 0.85 : 0.75;
@@ -8334,7 +8362,7 @@ function vbSwingStep(dt) {
   s.t += dt;
   if (!s.done) {
     const H = vbHand(), R = VB_REACH.atk * (VB.assist ? 1.12 : 1); let best = null;
-    for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 250) || (VM.on && b.floorHit)) continue; const d = b.m.position.distanceTo(H); if (d < R && (!best || d < best.d)) best = { b, d, dn: vbNext(b).distanceTo(H) }; }
+    for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 250) || (VM.on && (b.floorHit || !vbOwnSide(b)))) continue; const d = b.m.position.distanceTo(H); if (d < R && (!best || d < best.d)) best = { b, d, dn: vbNext(b).distanceTo(H) }; }
     // 提早按也可以：0.6 秒內球進到手邊，在離手最近的那一下揮（下一格就會變遠＝現在打，不會讓球跑過手再拉回來）
     if (best && ((s.prev != null && best.d > s.prev + 1e-3) || best.dn >= best.d - 1e-4 || s.t > 0.6)) { vbHitAttack(best.b, best.d, s.tip); s.done = true; s.doneT = s.t; pose = 'swing'; }
     else if (best) s.prev = best.d;
@@ -8417,7 +8445,7 @@ function vbRecvStep() {
   const R = r.dive ? 0.85 : VB_REACH.recv * (VB.assist ? 1.25 : 1), top = r.dive ? 1.0 : 1.6 + (walk.air ? walk.air.y : 0), low = r.dive ? 0.06 : 0.15, hy = r.dive ? 0.35 : 0.8, ideal = r.dive ? 0 : 0.45; let best = null;
   const costOf = (q) => { const dh = Math.hypot(q.x - cx, q.z - cz); return dh > R || q.y < low || q.y > top ? null : Math.abs(dh - ideal) + Math.abs(q.y - hy) * 0.6; };
   for (const b of balls) {
-    if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 400) || (VM.on && b.floorHit)) continue;   // 比賽中落地過的球不能再救
+    if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 400) || (VM.on && (b.floorHit || !vbOwnSide(b)))) continue;   // 比賽中落地過的球、還在對面的球都碰不到
     const p = b.m.position, cost = costOf(p); if (cost == null) continue;
     if (!best || cost < best.cost) { const cn = costOf(vbNext(b)); best = { b, dx: p.x - walk.x, dz: p.z - walk.z, cost, cn }; }
   }
@@ -8456,6 +8484,7 @@ function vmFreeBall() {
   if (walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null, ct = vbCourt();
   if (!b || b.floorHit || !ct) { toast('E：球在身邊時，把球推過網', 1400); return; }
+  if (!vbOwnSide(b)) { toast('球還在對面：等它過網再碰', 1200); return; }
   const p = b.m.position, dh = Math.hypot(p.x - walk.x, p.z - walk.z);
   if (dh > 1.2 || p.y < 0.25 || p.y > camera.position.y + 1.1) { toast('球太遠了：靠近一點再按 E', 1200); return; }
   const sg = Math.sign(ct.lx) || 1, [tx, tz] = toWorldOf(ct.c, -sg * (5.5 + Math.random() * 1.5), (Math.random() - 0.5) * 4), T = 1.45;
@@ -8486,7 +8515,7 @@ function vbSetStep() {
   const cy = camera.position.y, R = VB_REACH.set * (VB.assist ? 1.2 : 1); let best = null;
   const costOf = (q) => { const dh = Math.hypot(q.x - walk.x, q.z - walk.z); return dh > R || q.y < cy - 0.6 || q.y > cy + 1.1 ? null : Math.abs(dh - 0.3) + Math.abs(q.y - (cy + 0.3)) * 0.5; };
   for (const b of balls) {
-    if (b.rest > 0.3 || (b.mine && b.mineT && performance.now() - b.mineT < 400) || b.v.y > 2 || (VM.on && b.floorHit)) continue;
+    if (b.rest > 0.3 || (b.mine && b.mineT && performance.now() - b.mineT < 400) || b.v.y > 2 || (VM.on && (b.floorHit || !vbOwnSide(b)))) continue;
     const cost = costOf(b.m.position); if (cost == null) continue;
     if (!best || cost < best.cost) best = { b, cost, cn: costOf(vbNext(b)) };
   }
@@ -8701,6 +8730,12 @@ function vbFx(b, q, word) {
   $('walk-ui').appendChild(el); VB.fx = VB.fx || []; VB.fx.push({ el, b, t0: performance.now() });
 }
 function vbTurn(dt) { const t = walk.turn; if (!t) return; t.t -= dt; let d = t.yaw - walk.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); walk.yaw += d * Math.min(1, dt * 9); walk.pitch += (0.32 - walk.pitch) * Math.min(1, dt * 6); if (t.t <= 0) walk.turn = null; }
+// 比賽中：球在對面那一邊（越過網子那個平面）就碰不到，手不能伸過網接、舉、打、推；攔網另外算
+function vbOwnSide(b) {
+  if (!VM.on || !VM.c) return true;
+  const team = vmTeamOf(vmMe()); if (team < 0) return true;
+  const [lx] = toLocalOf(VM.c, b.m.position.x, b.m.position.z); return lx * vmSide(team) > -0.02;
+}
 // 球下一格會在哪裡（比賽中觸球判斷用：最近的那一刻就碰，不等球跑過頭）
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
 function vbUpdate(dt) { VB.dt = dt; vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
@@ -8724,8 +8759,13 @@ function myAvPose() {
   if (walk.recv) return [AVP.bump, 0.4];
   if (walk.hold) return [AVP.hold, k];
   // 比賽中：在網前、對面有人要攻擊＝攔網準備；球在場上＝低重心準備姿勢
-  if (game && VM.phase === 'rally') { const ct = vbCourt(); if (ct && Math.abs(ct.lx) < 1.3) return [AVP.blockReady, k]; return [AVP.ready, k]; }
-  if (VB.npc) return [AVP.ready, k];
+  // 比賽中：球正往你這邊來（會落在你 3.5 m 內）才壓低準備接；在網前、對面要攻擊才舉手準備攔網；其他時候自然站
+  if (game && VM.phase === 'rally') {
+    const ct = vbCourt(), B = VM.ball && balls.includes(VM.ball) ? VM.ball : null;
+    if (ct && Math.abs(ct.lx) < 1.3 && B && !vbOwnSide(B)) return [AVP.blockReady, k];
+    if (VB.target && VB.target.t < 1.6) return [AVP.ready, k];
+  }
+  if (VB.npc && VB.target) return [AVP.ready, k];
   return [AVP.idle, k];
 }
 function tpBegin(dt) {
@@ -8924,7 +8964,7 @@ function vmOnTouch(b, id, kind) {
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
   VM.phase = 'dead'; VM.sc[win]++;
-  sfx('whistle', 1); if (win === 0) setTimeout(() => sfx('cheer', 1), 250);
+  sfx('whistle', 1);
   if (win !== VM.srvTeam) { VM.srvTeam = win; VM.srvIdx[win]++; }
   const a = VM.sc[0], b = VM.sc[1], hi = Math.max(a, b), over = (hi >= VM.to && Math.abs(a - b) >= 2) || hi >= VM.to + 2;
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
@@ -9111,7 +9151,9 @@ function vmAiRole(a, P, B, sd) {
   function b2d(H) { return VM.ball.m.position.distanceTo(H); }
 }
 // AI 碰球：照目標（球場座標）算出初速；err＝落點誤差（公尺）
+function vmAiOwnSide(a) { const [lx] = vmL(VM.ball.m.position.x, VM.ball.m.position.z); return lx * vmSide(a.team) > -0.02; }
 function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose) {
+  if (!vmAiOwnSide(a)) return;
   const b = VM.ball, [wx, wz] = vmW(tlx + rkGauss() * err * 0.5, tlz + rkGauss() * err), [ax0, az0] = vmW(a.x, a.z);
   const p = b.m.position.clone().lerp(new THREE.Vector3(ax0, a.y + (kind === 'set' ? 2.35 : 0.75), az0).lerp(b.m.position, 0.25), 0.65);
   b.mine = false; b.setT = kind === 'set' ? performance.now() : 0;
@@ -9133,6 +9175,7 @@ function vmPickGap(a, sd, x0, x1, zMax) {
   return best;
 }
 function vmAiSpike(a, sd) {
+  if (!vmAiOwnSide(a)) return;
   const b = VM.ball, r = Math.random(), L = vmLv(a), [ax0, az0] = vmW(a.x - sd * 0.25, a.z), p = b.m.position.clone().lerp(new THREE.Vector3(ax0, a.y + 2.45, az0), 0.7);
   const gap = vmPickGap(a, sd, 2.5, 8.3, 3.9), netGuard = vmOppPos(a.team).some((q) => Math.abs(q.x) < 2.5);
   let tx = gap.tx, tz = gap.tz, spd = L.spike[0] + Math.random() * (L.spike[1] - L.spike[0]), tip = false;
@@ -9180,7 +9223,9 @@ function vmRenderAi(dt) {
     av.phase += dt * Math.min(12, sp * 5.5);
     // AI：碰球那一下照動作做（swingT 從 0.35～0.4 倒數＝動作進度）；攔網的人在網前雙手舉在肩前；球在場上時低重心準備
     const P2 = a.swingT > 0 || a.y > 0 ? a.pose : 0, pr2 = 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
-    let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : VM.phase === 'rally' ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
+    // AI：只有這一球輪到他接、球正往他那邊來才蹲
+    const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team);
+    let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
     avDrive(av, pz, kk, sp, a.y > 0.05);
   }
