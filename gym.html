@@ -407,6 +407,13 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .walk-ui.tp .wk-cross, .walk-ui.tp .zcard { display: none !important; }
 /* 回放時不顯示對戰計分列 */
 .walk-ui:has(.rp:not([hidden])) .rk-hud { display: none !important; }
+/* 選角色 */
+.ch-box { width: min(720px, 94vw); }
+.ch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; max-height: 62vh; overflow-y: auto; margin: 8px 0 10px; }
+.ch-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; min-height: 0; border-radius: 10px; background: rgba(255,255,255,.06); border: 2px solid #B8352E; color: #fff; }
+.ch-tile img { width: 100%; aspect-ratio: 1; border-radius: 6px; display: block; background: #2EC4D6; }
+.ch-tile span { font-size: 12px; font-weight: 700; }
+.ch-tile[aria-pressed="true"] { border-color: #F2B705; box-shadow: 0 0 0 2px #F2B705; }
 /* 體力條 */
 .sta { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); width: 240px; height: 9px; border-radius: 6px; background: rgba(15,23,36,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); pointer-events: none !important; z-index: 7; }
 .sta[hidden] { display: none !important; }
@@ -759,7 +766,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個 Q 版角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（往哪看打哪、往上看打深，對面的黃圈是落點）、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
@@ -6883,7 +6890,113 @@ function renderMpList() {
   if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人`, 'ok');
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
-function makeAvatar(color) {
+
+// ---- Q 版角色（同人造型，私人遊玩用）：大頭、短手腳；臉、髮型、配件、服裝配色照每個角色的特徵用幾何形狀做
+// hair：[髮型, 顏色, 挑染]；top：[上衣, 線條]；sleeve＝長袖外套；pants＝長褲；acc＝配件；glow＝眼睛發光；faceless＝臉被遮住
+const CHARS = {
+  jett: { name: 'Jett', skin: '#F1CBA8', hair: ['ponytail', '#E9EEF3'], top: ['#22304E', '#9FD8F5'], shorts: '#22304E', shoe: '#E9EEF3', eyes: '#36507A', acc: [] },
+  sage: { name: 'Sage', skin: '#EBC59E', hair: ['ponytail', '#17181D'], top: ['#ECEFEF', '#2FB7A7'], shorts: '#25333B', shoe: '#F4F4F2', eyes: '#2B2B2B', acc: [['jade', '#2FB7A7']] },
+  reyna: { name: 'Reyna', skin: '#B9845F', hair: ['long', '#1A1420', '#A24DFF'], top: ['#2A1F3D', '#B14DFF'], shorts: '#1B1426', shoe: '#2A1F3D', eyes: '#C46BFF', glow: true, pants: true, acc: [] },
+  phoenix: { name: 'Phoenix', skin: '#7A4E35', hair: ['curly', '#1A1412'], top: ['#F2F2F0', '#FF7A2F'], shorts: '#2B2B2B', shoe: '#F2F2F0', eyes: '#2B1D14', sleeve: true, acc: [] },
+  raze: { name: 'Raze', skin: '#8A5A3C', hair: ['short', '#2A1A12'], top: ['#2F6F5E', '#FF8C2A'], shorts: '#3A3A3A', shoe: '#FF8C2A', eyes: '#2B1D14', acc: [['beanie', '#FF8C2A'], ['goggles', '#2B2B2B']] },
+  killjoy: { name: 'Killjoy', skin: '#E6B994', hair: ['long', '#2B241F'], top: ['#F5C518', '#2B2B2B'], shorts: '#2B2B2B', shoe: '#F5C518', eyes: '#3A2C22', sleeve: true, acc: [['beanie', '#4E8C3A'], ['glassesRound', '#222222']] },
+  omen: { name: 'Omen', skin: '#141A33', hair: null, top: ['#232A4A', '#59C8FF'], shorts: '#1A1F36', shoe: '#1A1F36', eyes: '#7FE3FF', glow: true, faceless: true, sleeve: true, pants: true, gloves: '#141A33', acc: [['hood', '#2A3158']] },
+  skye: { name: 'Skye', skin: '#F0C3A0', hair: ['long', '#C2462A'], top: ['#3E7B3A', '#B8E07A'], shorts: '#2E4A2A', shoe: '#6B4A2A', eyes: '#3C6B3A', acc: [['headband', '#3E9B4A']] },
+  neon: { name: 'Neon', skin: '#B88560', hair: ['pigtails', '#2F6BFF'], top: ['#1C2C5A', '#59E0FF'], shorts: '#1C2C5A', shoe: '#F2F2F0', eyes: '#2B1D14', acc: [['bolt', '#59E0FF']] },
+  viper: { name: 'Viper', skin: '#E2BFA0', hair: ['long', '#141414'], top: ['#1E2A20', '#4CC66A'], shorts: '#151B16', shoe: '#151B16', eyes: '#3A3A3A', pants: true, sleeve: true, acc: [['mask', '#2E7D3E']] },
+  sova: { name: 'Sova', skin: '#EBC7A8', hair: ['short', '#E3D6A8'], top: ['#2E4B78', '#E3D6A8'], shorts: '#22324F', shoe: '#3B2B20', eyes: '#3D6BB0', sleeve: true, acc: [] },
+  brimstone: { name: 'Brimstone', skin: '#E2B08E', hair: null, top: ['#3E5A3A', '#FF8C2A'], shorts: '#2E3A2A', shoe: '#3B2B20', eyes: '#3A2C22', sleeve: true, acc: [['beret', '#D2552B'], ['beard', '#C9C3BA']] },
+  cypher: { name: 'Cypher', skin: '#C9A07E', hair: null, top: ['#E8E4D8', '#2B2B2B'], shorts: '#2B2B2B', shoe: '#2B2B2B', eyes: '#7FE3FF', glow: true, faceless: true, sleeve: true, pants: true, acc: [['faceMask', '#F2F0EA'], ['hat', '#2B2B2B']] },
+  yoru: { name: 'Yoru', skin: '#EBC7A8', hair: ['spiky', '#1E3FA8'], top: ['#1E3FA8', '#F2F2F0'], shorts: '#15204A', shoe: '#F2F2F0', eyes: '#2B2B2B', sleeve: true, acc: [] },
+  kayo: { name: 'KAY/O', skin: '#9AA3AD', hair: null, top: ['#3A4048', '#59A8FF'], shorts: '#2A2F36', shoe: '#2A2F36', eyes: '#59A8FF', glow: true, faceless: true, robot: true, pants: true, sleeve: true, gloves: '#3A4048', acc: [['visor', '#59A8FF']] },
+  chamber: { name: 'Chamber', skin: '#C9946E', hair: ['slick', '#1A1412'], top: ['#F2EEE6', '#C9A24A'], shorts: '#2B2B2B', shoe: '#2B2B2B', eyes: '#2B1D14', sleeve: true, acc: [['glassesRect', '#1A1A1A'], ['goatee', '#1A1412']] },
+};
+const CHAR_IDS = Object.keys(CHARS);
+const myChar = () => { try { const c = localStorage.getItem('vb.char'); return CHARS[c] ? c : null; } catch (e) { return null; } };
+function makeChibi(C) {
+  const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
+  const M = (c, o) => mat(c, { roughness: 0.65, ...(o || {}) }), skin = M(C.skin, C.robot ? { metalness: 0.4, roughness: 0.4 } : undefined), top = M(C.top[0]), line = M(C.top[1]), dark = M(C.shorts), shoe = M(C.shoe), pad = M('#1E2026');
+  const add = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  const sph = (r, m, x, y, z, parent, sx = 1, sy = 1, sz = 1) => { const o = add(new THREE.SphereGeometry(r, 16, 12), m, x, y, z, parent); o.scale.set(sx, sy, sz); return o; };
+  // 腿：大腿 0.3、小腿 0.3（臀部高 0.62）＋護膝、球鞋
+  const legs = [], knees = [];
+  for (const sx of [-1, 1]) {
+    const hip = new THREE.Group(); hip.position.set(sx * 0.085, 0.62, 0); root.add(hip);
+    add(new THREE.CylinderGeometry(0.07, 0.06, 0.3, 12), C.pants ? dark : skin, 0, -0.15, 0, hip);
+    const knee = new THREE.Group(); knee.position.set(0, -0.3, 0); hip.add(knee);
+    sph(0.068, pad, 0, 0, 0.012, knee, 1, 0.9, 1);   // 護膝
+    add(new THREE.CylinderGeometry(0.058, 0.048, 0.28, 12), C.pants ? dark : skin, 0, -0.14, 0, knee);
+    const sh = add(new THREE.BoxGeometry(0.11, 0.075, 0.2), shoe, 0, -0.3, 0.035, knee); sh.scale.set(1, 1, 1);
+    legs.push(hip); knees.push(knee);
+  }
+  add(new THREE.CylinderGeometry(0.15, 0.14, 0.17, 16), dark, 0, 0.63, 0, root);   // 短褲
+  const spine = new THREE.Group(); spine.position.set(0, 0.68, 0); root.add(spine);
+  add(new THREE.CylinderGeometry(0.165, 0.14, 0.38, 16), top, 0, 0.19, 0, spine);
+  add(new THREE.CylinderGeometry(0.168, 0.168, 0.045, 16), line, 0, 0.2, 0, spine);   // 胸前一圈線條
+  add(new THREE.BoxGeometry(0.04, 0.3, 0.02), line, 0, 0.19, 0.155, spine);
+  const arms = [], elbows = [], hands = [];
+  for (const sx of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(sx * 0.2, 0.35, 0); spine.add(sh);
+    sph(0.06, top, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.048, 0.042, 0.21, 10), C.sleeve ? top : skin, 0, -0.105, 0, sh);
+    const el = new THREE.Group(); el.position.set(0, -0.21, 0); sh.add(el);
+    sph(0.044, C.sleeve ? top : skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.042, 0.036, 0.19, 10), C.sleeve ? top : skin, 0, -0.095, 0, el);
+    const hd = new THREE.Group(); hd.position.set(0, -0.2, 0); el.add(hd); sph(0.052, C.gloves ? M(C.gloves) : skin, 0, 0, 0, hd);
+    arms.push(sh); elbows.push(el); hands.push(hd);
+  }
+  // 頭：半徑 0.23 的大頭（Q 版），臉朝 +z
+  const head = new THREE.Group(); head.position.set(0, 0.42, 0); spine.add(head);
+  add(new THREE.CylinderGeometry(0.055, 0.06, 0.08, 10), skin, 0, 0.0, 0, head);
+  const R = 0.23, hc = new THREE.Group(); hc.position.y = 0.24; head.add(hc);
+  if (C.robot) { const hb = add(new THREE.BoxGeometry(0.4, 0.4, 0.38), skin, 0, 0, 0, hc); hb.geometry.translate(0, 0, 0); } else sph(R, skin, 0, 0, 0, hc);
+  const hairM = C.hair ? M(C.hair[1], { roughness: 0.55 }) : null;
+  // 臉：大眼睛（深色瞳孔＋白色反光）、眉毛、小嘴；發光的眼睛用不受光的材質
+  const eyeM = C.glow ? new THREE.MeshBasicMaterial({ color: C.eyes }) : M(C.eyes, { roughness: 0.3 }), white = new THREE.MeshBasicMaterial({ color: '#FFFFFF' });
+  for (const sx of [-1, 1]) {
+    if (C.faceless && !C.glow) continue;
+    const ex = sx * 0.078, ez = R * 0.92 + (C.robot ? 0.0 : 0);
+    if (C.faceless) { const e = sph(0.03, eyeM, ex, 0.0, C.robot ? 0.2 : R * 0.95, hc, 1.2, C.robot ? 0.5 : 0.8, 0.4); if (C.robot) e.position.z = 0.2; continue; }
+    sph(0.04, eyeM, ex, -0.005, ez, hc, 1, 1.35, 0.45); sph(0.012, white, ex + 0.014, 0.022, ez + 0.012, hc);
+    if (C.hair) { const br = add(new THREE.BoxGeometry(0.06, 0.012, 0.012), hairM, ex, 0.075, R * 0.93, hc); br.rotation.z = sx * -0.15; }
+  }
+  if (!C.faceless) add(new THREE.BoxGeometry(0.05, 0.01, 0.01), M('#7A3B33'), 0, -0.095, R * 0.95, hc);
+  // 髮型
+  const cap = (r = 1.07, phi = 1.75) => { const o = add(new THREE.SphereGeometry(R * r, 22, 14, 0, Math.PI * 2, 0, phi), hairM, 0, 0.012, -0.012, hc); o.rotation.x = -0.22; return o; };
+  const cone = (x, y, z, rx, rz, l = 0.12, r = 0.045) => { const o = add(new THREE.ConeGeometry(r, l, 8), hairM, x, y, z, hc); o.rotation.set(rx, 0, rz); return o; };
+  if (C.hair) {
+    const kind = C.hair[0];
+    if (kind === 'short' || kind === 'spiky' || kind === 'curly' || kind === 'slick') cap(kind === 'slick' ? 1.04 : 1.07, kind === 'slick' ? 1.5 : 1.75);
+    if (kind === 'short') for (let i = -2; i <= 2; i++) cone(i * 0.06, 0.17, R * 0.8, 1.9, i * 0.15, 0.09, 0.04);
+    if (kind === 'spiky') for (let i = 0; i < 7; i++) { const a = -0.9 + i * 0.3; cone(Math.sin(a) * 0.12, 0.2, -0.04 + Math.cos(a) * 0.05, -0.6, -a * 0.6, 0.16, 0.05); }
+    if (kind === 'curly') for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; sph(0.06, hairM, Math.cos(a) * 0.15, 0.17, Math.sin(a) * 0.15 - 0.02, hc); }
+    if (kind === 'ponytail' || kind === 'long' || kind === 'pigtails') { cap(); for (let i = -2; i <= 2; i++) cone(i * 0.055, 0.15, R * 0.82, 2.1, i * 0.12, 0.08, 0.04); }
+    if (kind === 'ponytail') { sph(0.05, hairM, 0, 0.1, -R * 0.95, hc); const t = add(new THREE.CylinderGeometry(0.05, 0.025, 0.3, 10), hairM, 0, -0.04, -R * 1.1, hc); t.rotation.x = 0.35; }
+    if (kind === 'long') { const b = add(new THREE.BoxGeometry(0.4, 0.34, 0.1), hairM, 0, -0.12, -R * 0.62, hc); b.rotation.x = 0.12; for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.07, 0.24, 0.08), hairM, sx * R * 0.92, -0.1, 0.03, hc); }
+    if (kind === 'pigtails') for (const sx of [-1, 1]) { sph(0.045, hairM, sx * R * 0.95, 0.06, -0.04, hc); const t = add(new THREE.CylinderGeometry(0.045, 0.02, 0.32, 10), hairM, sx * R * 1.08, -0.12, -0.05, hc); t.rotation.z = sx * 0.25; }
+    if (C.hair[2]) { const st = add(new THREE.BoxGeometry(0.05, 0.05, 0.25), M(C.hair[2]), 0.1, 0.17, 0.04, hc); st.rotation.x = -0.4; }   // 挑染
+  }
+  // 配件
+  for (const [kind, col] of C.acc || []) {
+    const am = M(col), glowM = new THREE.MeshBasicMaterial({ color: col });
+    if (kind === 'beanie') { const o = add(new THREE.SphereGeometry(R * 1.12, 22, 14, 0, Math.PI * 2, 0, 1.45), am, 0, 0.03, -0.01, hc); o.rotation.x = -0.15; add(new THREE.TorusGeometry(R * 1.02, 0.03, 8, 24), am, 0, 0.06, 0, hc).rotation.x = Math.PI / 2 - 0.15; }
+    if (kind === 'goggles') { add(new THREE.TorusGeometry(R * 1.05, 0.018, 6, 24), am, 0, 0.12, 0, hc).rotation.x = Math.PI / 2 - 0.15; for (const sx of [-1, 1]) sph(0.045, new THREE.MeshStandardMaterial({ color: '#FFB25A', roughness: 0.2, metalness: 0.3 }), sx * 0.08, 0.13, R * 0.95, hc, 1, 0.8, 0.5); }
+    if (kind === 'glassesRound') { for (const sx of [-1, 1]) add(new THREE.TorusGeometry(0.045, 0.008, 6, 18), am, sx * 0.078, 0, R * 1.0, hc); add(new THREE.BoxGeometry(0.06, 0.008, 0.008), am, 0, 0.01, R * 1.0, hc); }
+    if (kind === 'glassesRect') { for (const sx of [-1, 1]) { const f = add(new THREE.BoxGeometry(0.085, 0.055, 0.008), new THREE.MeshStandardMaterial({ color: '#B9D6FF', transparent: true, opacity: 0.35 }), sx * 0.078, 0.0, R * 1.0, hc); add(new THREE.BoxGeometry(0.09, 0.008, 0.01), am, sx * 0.078, 0.03, R * 1.0, hc); void f; } }
+    if (kind === 'headband') add(new THREE.TorusGeometry(R * 1.03, 0.02, 6, 24), am, 0, 0.1, 0, hc).rotation.x = Math.PI / 2 - 0.2;
+    if (kind === 'mask') { const o = add(new THREE.SphereGeometry(R * 1.02, 20, 10, -0.9, 1.8 + Math.PI / 2 - 0.2, Math.PI / 2, 0.75), am, 0, 0, 0, hc); o.rotation.y = Math.PI / 2 - 0.35; }
+    if (kind === 'hood') { const o = add(new THREE.SphereGeometry(R * 1.28, 22, 16, Math.PI * 0.62, Math.PI * 1.76, 0, 2.2), am, 0, 0.02, -0.02, hc); o.rotation.y = 0; const tip = add(new THREE.ConeGeometry(0.14, 0.22, 12), am, 0, 0.26, -0.08, hc); tip.rotation.x = -0.5; }
+    if (kind === 'beret') { const o = add(new THREE.CylinderGeometry(R * 1.1, R * 1.05, 0.08, 20), am, 0.04, 0.17, -0.02, hc); o.rotation.z = -0.25; }
+    if (kind === 'beard') { const o = add(new THREE.SphereGeometry(R * 0.85, 18, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45), am, 0, -0.03, 0.04, hc); o.scale.set(1.05, 1.1, 1); add(new THREE.BoxGeometry(0.14, 0.03, 0.04), am, 0, -0.05, R * 0.92, hc); }
+    if (kind === 'goatee') add(new THREE.BoxGeometry(0.05, 0.05, 0.03), am, 0, -0.14, R * 0.86, hc);
+    if (kind === 'faceMask') { const o = sph(R * 0.82, am, 0, -0.01, R * 0.38, hc, 1, 1.05, 0.75); void o; add(new THREE.BoxGeometry(0.03, 0.03, 0.02), new THREE.MeshBasicMaterial({ color: C.eyes }), 0, 0.02, R * 1.0, hc); }
+    if (kind === 'hat') { add(new THREE.CylinderGeometry(R * 1.55, R * 1.55, 0.02, 24), am, 0, 0.12, 0, hc); add(new THREE.CylinderGeometry(R * 0.85, R * 0.95, 0.18, 20), am, 0, 0.22, 0, hc); }
+    if (kind === 'visor') add(new THREE.BoxGeometry(0.34, 0.06, 0.02), glowM, 0, 0.0, 0.2, hc);
+    if (kind === 'jade') sph(0.035, glowM, 0, 0.27, 0.15, spine);
+    if (kind === 'bolt') for (const sx of [-1, 1]) { const o = add(new THREE.BoxGeometry(0.02, 0.18, 0.02), glowM, sx * 0.17, 0.2, 0.05, spine); o.rotation.z = sx * 0.4; }
+  }
+  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true, L1: 0.3, L2: 0.3, hipH: 0.62, chibi: true };
+}
+function makeAvatar(color, ch) {
+  if (ch && CHARS[ch]) return makeChibi(CHARS[ch]);
   // 人形骨架：body（跳的時候整個往上）→ root（蹲低時往下）→ 大腿／膝蓋／小腿、腰（上身前傾、轉身）→ 肩膀／手肘／手掌、頭
   // 面向 +z；[0] 是右手／右腳（打球、拿拍的那隻）
   const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
@@ -6960,11 +7073,11 @@ function avDrive(av, P, k, sp = 0, air = false) {
     const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i];
     a.rotation.x += (shT - a.rotation.x) * k; a.rotation.z += (sx * abT - a.rotation.z) * k;
     e.rotation.x += (-elT - e.rotation.x) * k; h.rotation.x += (-hipT - h.rotation.x) * k; kn.rotation.x += (knT - kn.rotation.x) * k;
-    const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = 0.44 * Math.cos(hh) + 0.46 * Math.cos(hh - kk);
+    const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = (av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk);
   }
   av.spine.rotation.x += (P.sp + run * 0.18 - av.spine.rotation.x) * k; av.spine.rotation.y += ((P.tw || 0) - av.spine.rotation.y) * k;
   av.head.rotation.x += (-P.sp * 0.6 - av.head.rotation.x) * k;   // 上身往前傾時頭抬起來看球
-  const drop = air ? 0 : Math.max(0, 0.9 - Math.max(ext[0], ext[1]));
+  const drop = air ? 0 : Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1]));
   av.root.position.y += (-drop - av.root.position.y) * Math.min(1, k * 1.5);
 }
 // 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
@@ -7012,6 +7125,10 @@ function netOnMessage(t, d, from) {
     p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
     if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) p2.jump = d.jp.vy ? { vy: d.jp.vy, y: 0 } : { h: d.jp.h, T: d.jp.T, t: 0 }; }
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
+    if ((d.ch || null) !== (p2.ch || null)) {   // 換角色：重做人形，名牌、球拍搬過去
+      p2.ch = d.ch || null; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
+      if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
+    }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai);
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
@@ -7059,7 +7176,7 @@ function netTick(dt, now) {
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || undefined, b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
@@ -7735,7 +7852,7 @@ function rkBallMesh(k) {
 }
 // ---- 開始／結束
 function rkMkPlayer(side, color, name, ai) {
-  const av = makeAvatar(color); scene.add(av.g);
+  const av = makeAvatar(color, ai ? vmPickChar(new Set([myChar()])) : myChar()); scene.add(av.g);
   const rk = makeRacket(RK.k); av.hands[0].add(rk);
   let tag = null;
   if (ai) { const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name; tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); }
@@ -8789,7 +8906,7 @@ function vbCamAssist(dt) {
 function vbNpcToggle() {
   if (VB.npc) { scene.remove(VB.npc.av.g); VB.npc.tag.element.remove(); VB.npc = null; toast('陪練舉球員收工了'); renderUseBar(state.items.find((i) => i.id === $('wk-use').dataset.id)); return; }
   const ct = vbCourt(); if (!ct) { toast('站到排球場上再叫陪練'); return; }
-  const sg = Math.sign(ct.lx) || 1, home = toWorldOf(ct.c, sg * 1.1, -sg * 1.2), av = makeAvatar('#30A46C');
+  const sg = Math.sign(ct.lx) || 1, home = toWorldOf(ct.c, sg * 1.1, -sg * 1.2), av = makeAvatar('#30A46C', vmPickChar(new Set([myChar()])));
   const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = '陪練舉球'; const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
   VB.npc = { av, tag, c: ct.c, sg, x: home[0], z: home[1], home, vx: 0, vz: 0, up: 0 };
   toast('陪練來了：把球拋給他（F）或接到網前（C），他會舉給你。你站左邊就前舉、靠近他就快攻、站右邊就後舉', 5000);
@@ -8940,7 +9057,8 @@ function myAvPose() {
 function tpBegin(dt) {
   const on = tpActive(); $('walk-ui').classList.toggle('tp', on);
   if (!on) { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } return false; }
-  if (!TP.av) { TP.av = makeAvatar(NET.color || '#F2B705'); scene.add(TP.av.g); TP.ball = newBallMesh(); scene.add(TP.ball); }
+  if (TP.av && TP.avCh !== myChar()) { scene.remove(TP.av.g); TP.av = null; }   // 換了角色就重做
+  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
   av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = (walk.low || 0) * 1.15; av.body.position.y += (air - av.body.position.y) * 0.6;
@@ -9048,16 +9166,19 @@ function vmStart(c, sg, mateId, opps = []) {
   STA.v = 1; STA.lock = false;
   Object.assign(VM, { on: true, host: true, c, sg, to: VM_OPT.to, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
-  if (!mateId) vmMkAi('aiT', 0, 'AI 隊友', '#30A46C');
-  if (!opps[0]) vmMkAi('ai1', 1, 'AI・阿凱', '#E5484D'); if (!opps[1]) vmMkAi('ai2', 1, 'AI・小魚', '#F76B15');
+  const used = new Set([myChar()]); VM.chars = {};
+  for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
+  if (!mateId) vmMkAi('aiT', 0, `AI 隊友・${CHARS[VM.chars.aiT].name}`, '#30A46C', VM.chars.aiT);
+  if (!opps[0]) vmMkAi('ai1', 1, `AI・${CHARS[VM.chars.ai1].name}`, '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, `AI・${CHARS[VM.chars.ai2].name}`, '#F76B15', VM.chars.ai2);
   for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
-  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name, aiT: 'AI 隊友', ai1: 'AI・阿凱', ai2: 'AI・小魚' }, to: VM.to, cw: [c.x, c.z, c.rot] });
+  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot] });
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
   vmSetupServe();
   toast(`2 對 2 開始！先到 ${VM.to} 分・對手：${opps.length ? VM.team[1].map(vmName).join('＋') : 'AI（' + VM_LEVELS[VM_OPT.lv].name + '）'}`, 2400);
 }
-function vmMkAi(id, team, name, color) {
-  const av = makeAvatar(color), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
+function vmPickChar(used) { const pool = CHAR_IDS.filter((c) => !used.has(c)); const c = pool[Math.floor(Math.random() * pool.length)] || CHAR_IDS[0]; used.add(c); return c; }
+function vmMkAi(id, team, name, color, ch) {
+  const av = makeAvatar(color, ch), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
   const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
   const side = vmSide(team), a = { id, team, name, color, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
   VM.ai.set(id, a); VM.names[id] = name; return a;
@@ -9438,7 +9559,7 @@ function vmOnNet(d, from) {
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0 });
     if (d.ts) VB.ts = d.ts;
     const colors = { aiT: '#30A46C', ai1: '#E5484D', ai2: '#F76B15' };
-    for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D'); a.wx = null; }
+    for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D', d.chars && d.chars[id]); a.wx = null; }
     $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
     toast(d.team[0].includes(NET.me) ? `${(NET.peers.get(from) || {}).n || '隊友'} 開了 2 對 2，你們一隊！` : d.team[1].includes(NET.me) ? `${(NET.peers.get(from) || {}).n || '對手'} 開了 2 對 2，你在對面那一隊！` : '旁邊開打 2 對 2 了（你在旁邊看）', 2500);
     return;
@@ -9478,6 +9599,37 @@ $('rk-menu').addEventListener('click', (e) => {
   if (a === 'goai') vmStart(VM.menu.c, VM.menu.sg, null);
 });
 
+// ---------------------------------------------------------------- 選角色：方格頭像（用 3D 人形拍一張頭像），點一下就換
+const CHAR_THUMB = new Map();
+function charThumb(id) {
+  if (CHAR_THUMB.has(id)) return CHAR_THUMB.get(id);
+  const sc2 = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, 1, 0.1, 20), rt = new THREE.WebGLRenderTarget(160, 160); rt.texture.colorSpace = THREE.SRGBColorSpace;
+  sc2.add(new THREE.AmbientLight('#ffffff', 1.4)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(1.5, 3, 3); sc2.add(dl);
+  const av = id ? makeAvatar('#F2B705', id) : makeAvatar('#F2B705'); for (let i = 0; i < 30; i++) avDrive(av, AVP.idle, 0.3, 0, false); sc2.add(av.g); av.g.updateMatrixWorld(true);
+  const hp = new THREE.Vector3(); (av.chibi ? av.head.children[1] : av.head).getWorldPosition(hp); if (av.chibi) hp.y -= 0.02;
+  cam.position.set(hp.x + 0.25, hp.y + 0.05, hp.z + (av.chibi ? 1.35 : 1.1)); cam.lookAt(hp.x, hp.y - 0.03, hp.z);
+  const prevBg = sc2.background; sc2.background = new THREE.Color('#2EC4D6');
+  renderer.setRenderTarget(rt); renderer.render(sc2, cam); const px = new Uint8Array(160 * 160 * 4); renderer.readRenderTargetPixels(rt, 0, 0, 160, 160, px); renderer.setRenderTarget(null);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 160; const cx = cv.getContext('2d'), img = cx.createImageData(160, 160);
+  for (let y = 0; y < 160; y++) img.data.set(px.subarray((159 - y) * 640, (160 - y) * 640), y * 640);
+  cx.putImageData(img, 0, 0); const url = cv.toDataURL('image/png'); rt.dispose(); void prevBg; CHAR_THUMB.set(id, url); return url;
+}
+function openCharMenu() {
+  const m = $('rk-menu'), cur = myChar();
+  m.innerHTML = `<div class="rk-box ch-box"><h3>🎭 選角色</h3><p class="rk-sub">Q 版角色（同人造型，自己玩用）。第三人稱、連線的人、回放都看得到；AI 隊友和對手會隨機分到其他角色</p>
+    <div class="ch-grid">${['', ...CHAR_IDS].map((id) => `<button type="button" class="ch-tile" data-ch="${id}" aria-pressed="${(cur || '') === id}"><img alt="" src="${charThumb(id || null)}"><span>${id ? CHARS[id].name : '原本的人形'}</span></button>`).join('')}</div>
+    <div class="rk-btns"><button type="button" data-chx="1">關閉</button></div></div>`;
+  m.hidden = false; unlockMouse();
+}
+$('w-char').addEventListener('click', openCharMenu);
+$('rk-menu').addEventListener('click', (e) => {
+  if (e.target.closest('[data-chx]')) { $('rk-menu').hidden = true; return; }
+  const t = e.target.closest('[data-ch]'); if (!t) return;
+  try { if (t.dataset.ch) localStorage.setItem('vb.char', t.dataset.ch); else localStorage.removeItem('vb.char'); } catch (er) { /* ignore */ }
+  for (const b of $('rk-menu').querySelectorAll('[data-ch]')) b.setAttribute('aria-pressed', String(b === t));
+  if (NET.on) NET.forceSt = true;
+  toast(t.dataset.ch ? `換成 ${CHARS[t.dataset.ch].name}（按 T 切第三人稱看得到自己）` : '換回原本的人形', 1800);
+});
 // ---------------------------------------------------------------- loop
 function resize() {
   const w = host.clientWidth || 1, h = host.clientHeight || 1;
