@@ -761,8 +761,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>V</kbd>攻擊（拿球＝發球）</span><span><kbd>X</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中 <kbd>V</kbd> 攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短、<kbd>X</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球 <kbd>V</kbd> 發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>／<kbd>V</kbd>攻擊（拿球＝發球）</span><span><kbd>右鍵</kbd>／<kbd>X</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>（或 <kbd>V</kbd>）攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>或 <kbd>X</kbd> 吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>（或 <kbd>V</kbd>）發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -7436,7 +7436,11 @@ document.addEventListener('pointerlockchange', () => { if (!locked()) walk.unloc
 // 瀏覽器不讓鎖定滑鼠（有些內嵌視窗、舊瀏覽器）：改用按住拖曳轉頭，點一下照樣互動
 document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
 function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; }
+// 排球（比賽、陪練、站在排球場上）而且滑鼠已鎖定（轉頭模式）：左鍵＝攻擊（拿著球＝發球）、右鍵＝吊球
+const vbClickOK = () => VM.on || !!VB.npc || !!vbCourt();
+renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); vbAttack(e.button === 2); return; }
   if (!walk.on || e.button !== 0 || window.__rkOn) return;
   if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
   walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
@@ -8354,7 +8358,7 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
     case 'floor': if (R('floor', 0.3 + 0.7 * Math.min(1, p), 1)) return; break;
     case 'net': if (R('net', 0.45 + 0.55 * Math.min(1, p), 1)) return; break;
     case 'tape': if (R('net', 0.55, 1.05)) return; break;
-    case 'squeak': if (R('squeak', 0.15 + 0.13 * Math.min(1, q), 1)) return; break;   // 球鞋吱吱聲
+    case 'squeak': if (R('squeak', 0.09 + 0.08 * Math.min(1, q), 1)) return; break;   // 球鞋吱吱聲
     case 'antenna': if (R('antenna', 0.8 * Math.min(1, p), 1)) return; break;
     case 'whoosh': return;   // 揮臂不出聲
     case 'wall': if (R('floor', 0.45 * Math.min(1, p), 0.85)) return; break;
@@ -8436,7 +8440,7 @@ function vbSwingStep(dt) {
     // 提早按也可以：0.6 秒內球進到手邊，在離手最近的那一下揮（下一格就會變遠＝現在打，不會讓球跑過手再拉回來）
     if (best && ((s.prev != null && best.d > s.prev + 1e-3) || best.dn >= best.d - 1e-4 || s.t > 0.6)) { vbHitAttack(best.b, best.d, s.tip); s.done = true; s.doneT = s.t; pose = 'swing'; }
     else if (best) s.prev = best.d;
-    else if (s.t > 0.62) { s.done = true; s.doneT = s.t; pose = 'swing'; if (balls.some((b) => b.m.position.distanceTo(H) < 2.4)) toast('揮空了：等「按 V！」出現（球會發亮）再按', 1500); }
+    else if (s.t > 0.62) { s.done = true; s.doneT = s.t; pose = 'swing'; if (balls.some((b) => b.m.position.distanceTo(H) < 2.4)) toast('揮空了：等「攻擊！」出現（球會發亮）再按左鍵', 1500); }
   }
   if (s.done && s.t > s.doneT + 0.3) { walk.swing = null; pose = walk.air && walk.air.block ? 'block' : 'hold'; hands.visible = !!walk.hold || !!(walk.air && walk.air.block); }
 }
@@ -8749,7 +8753,7 @@ function vbCue() {
   // 揮臂：在空中、球進到手邊（還沒揮）就提示，球也會發亮
   let glow = null;
   if (walk.air && !walk.air.block && !(walk.swing && walk.swing.done)) {
-    const H = vbHand(); for (const b of balls) if (b.rest < 0.3 && b.m.position.distanceTo(H) < VB_REACH.atk * 1.05) { glow = b; cue = ['hit', touch ? '攻擊！' : '按 V！']; break; }
+    const H = vbHand(); for (const b of balls) if (b.rest < 0.3 && b.m.position.distanceTo(H) < VB_REACH.atk * 1.05) { glow = b; cue = ['hit', touch ? '攻擊！' : '攻擊！（左鍵）']; break; }
   }
   if (VB.glow && VB.glow !== glow) VB.glow.m.material = ballMat;
   if (glow) glow.m.material = ballHot; VB.glow = glow;
@@ -8942,7 +8946,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
     <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">C 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中 V 攻擊、X 吊球、B 攔網、拿著球 V 發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">C 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中滑鼠左鍵（或 V）攻擊、右鍵（或 X）吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vmStart(c, sg, mateId, opps = []) {
@@ -8988,7 +8992,7 @@ function vmSetupServe() {
     else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
     else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = k === 0 ? 2.1 : -2.1; }
   }
-  vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按 V' : ''}`, 'srv', 3200);
+  vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按滑鼠左鍵（或 V）' : ''}`, 'srv', 3200);
   if (srv === vmMe()) vmPrepServe();
   else if (!VM.ai.has(srv) && NET.on) NET.tx.publish('vm', { e: 'serve', id: srv, seq: VM.srvSeq, s });
   vmBroadcast(true);
@@ -8999,7 +9003,7 @@ function vmPrepServe(s = VM.sg) {
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
   const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; walk.air = null;
   const [ax, az] = vmW(0, 0); walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
-  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：瞄好方向按 V（拋球、揮臂）', 2600);
+  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：瞄好方向按滑鼠左鍵（或 V）', 2600);
 }
 function vmAiServe(a) {
   const sd = vmSide(a.team), err = Math.random(), L = vmLv(a);
