@@ -6694,7 +6694,7 @@ function updateBalls(dt) {
       if (b.float) { const F = b.float; F.t += h; b.v.x += Math.sin(F.t * F.w + F.ph) * F.a * h; b.v.z += Math.cos(F.t * F.w * 0.73 + F.ph * 1.7) * F.a * h; b.v.y += Math.sin(F.t * F.w * 1.3 + F.ph) * F.a * 0.25 * h; }
       p.addScaledVector(b.v, h);
       if (p.y < BALL_R) {
-        if (!b.floorHit) b.floorHit = [p.x, p.z];
+        if (!b.floorHit) { b.floorHit = [p.x, p.z]; b.floorT = performance.now(); }
         b.acc = null; b.float = null;
         p.y = BALL_R;
         if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
@@ -7147,6 +7147,7 @@ function netOnMessage(t, d, from) {
     // 位置修正：差很多（新的擊球）就直接換；差一點就在 0.15 秒內慢慢拉過去，不會閃
     const err = P.clone().sub(b.m.position);
     if (newer || tie || err.length() > 1.2) { b.m.position.copy(P); b.err = null; } else b.err = err;
+    b.acc = d.a ? new THREE.Vector3(d.a[0], d.a[1], d.a[2]) : null; b.float = d.f ? { t: d.f[0], w: d.f[1], ph: d.f[2], a: d.f[3] } : null; if (newer || tie) b.floorHit = null;
     b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     if (newer || tie) { b.mine = false; if (d.w === 'set') vbMarkSet(b); }
@@ -7172,6 +7173,8 @@ function netBallMsg(b, kind) {
   const m = { h: NET.hitN, by: NET.me, p: b.m.position.toArray().map((v) => +v.toFixed(3)), v: b.v.toArray().map((v) => +v.toFixed(3)) };
   if (kind) m.w = kind;
   if (b.spike && b.spike.c) m.k = { c: b.spike.c.id, sg: b.spike.sg };
+  if (b.acc) m.a = b.acc.toArray().map((q) => +q.toFixed(2));
+  if (b.float) m.f = [+b.float.t.toFixed(3), +b.float.w.toFixed(3), +b.float.ph.toFixed(3), +b.float.a.toFixed(2)];
   return m;
 }
 function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
@@ -9279,6 +9282,11 @@ function vmOver() {
 }
 function vmJudge() {
   const b = VM.ball; if (!b || !balls.includes(b) || !b.floorHit) return;
+  // 連線：落點附近有別的真人玩家時，先等 0.6 秒——他可能在自己的畫面上已經接到了，只是「接到球」的訊息還在路上（收到就取消這次落地）
+  if (NET.on && performance.now() - (b.floorT || 0) < 600) {
+    const near = [...VM.team[0], ...VM.team[1]].some((id) => { if (id === vmMe() || VM.ai.has(id)) return false; const q = NET.peers.get(id); return q && Math.hypot(q.x - b.floorHit[0], q.z - b.floorHit[1]) < 3.5; });
+    if (near) return;
+  }
   const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, inside = Math.abs(B.x) <= 9 + BALL_R && Math.abs(B.z) <= 4.5 + BALL_R, sideTeam = Math.sign(B.x) === VM.sg ? 0 : 1;
   vmMark(b.floorHit[0], b.floorHit[1], inside);
   if (inside) vmPoint(1 - sideTeam, '落地得分');
@@ -9726,7 +9734,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), vbAttack: (t) => vbAttack(t), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), vbAttack: (t) => vbAttack(t), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
