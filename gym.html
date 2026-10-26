@@ -6263,7 +6263,7 @@ function placeHeld() {
 function releaseBall(v) {
   // 手上的球變成場上的球（世界座標＋初速）
   const m = walk.hold; if (!m) return; walk.hold = null;
-  const p = new THREE.Vector3(); m.getWorldPosition(p); camera.remove(m); m.position.copy(p); m.material = ballMat; delete m.userData.noPick;
+  const p = new THREE.Vector3(); m.getWorldPosition(p); camera.remove(m); m.position.copy(p); m.material = ballMat; m.visible = true; delete m.userData.noPick;
   m.userData.ball = { m, v, rest: 0 }; ballsGroup.add(m); balls.push(m.userData.ball);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
   skill.mode = null; skill.dip = 0; hands.visible = false;
@@ -6592,7 +6592,7 @@ function startServe(type = 'std') {
   if (vbServeInside()) return;
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
   const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
-  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
+  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; ball.visible = true; delete ball.userData.noPick; ballsGroup.add(ball);   // 第三人稱時手上的球被藏起來過，拋出去要讓它看得見
   const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
   const top = new THREE.Vector3(walk.x, EYE + 0.95, walk.z).addScaledVector(fwd, 0.45);
   walk.serve = { t: 0, ball, from: p, top, fwd, hit: false, type, aim: vbServeAim() };   // 落點在按下去那一刻就定了（拋球時鏡頭會抬頭，不能再算）
@@ -6606,7 +6606,7 @@ function startJumpServe() {
   if (vbServeInside()) return;
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
   const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
-  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
+  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; ball.visible = true; delete ball.userData.noPick; ballsGroup.add(ball);
   const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
   walk.jserve = { t: 0, ball, from: p, fwd, vy0: 7.0, vf: 1.15, hit: false, swung: false, jumped: false, aim: vbServeAim() };
   hands.visible = true; pose = 'cock';
@@ -6924,30 +6924,30 @@ function makeChibi(C) {
   // 腿：大腿 0.3、小腿 0.3（臀部高 0.62）＋護膝、球鞋
   const legs = [], knees = [];
   for (const sx of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(sx * 0.085, 0.62, 0); root.add(hip);
-    add(new THREE.CylinderGeometry(0.07, 0.06, 0.3, 12), C.pants ? dark : skin, 0, -0.15, 0, hip);
-    const knee = new THREE.Group(); knee.position.set(0, -0.3, 0); hip.add(knee);
+    const hip = new THREE.Group(); hip.position.set(sx * 0.09, 0.86, 0); root.add(hip);
+    add(new THREE.CylinderGeometry(0.072, 0.06, 0.42, 12), C.pants ? dark : skin, 0, -0.21, 0, hip);
+    const knee = new THREE.Group(); knee.position.set(0, -0.42, 0); hip.add(knee);
     sph(0.068, pad, 0, 0, 0.012, knee, 1, 0.9, 1);   // 護膝
-    add(new THREE.CylinderGeometry(0.058, 0.048, 0.28, 12), C.pants ? dark : skin, 0, -0.14, 0, knee);
-    const sh = add(new THREE.BoxGeometry(0.11, 0.075, 0.2), shoe, 0, -0.3, 0.035, knee); sh.scale.set(1, 1, 1);
+    add(new THREE.CylinderGeometry(0.058, 0.046, 0.38, 12), C.pants ? dark : skin, 0, -0.19, 0, knee);
+    add(new THREE.BoxGeometry(0.11, 0.075, 0.22), shoe, 0, -0.4, 0.04, knee);
     legs.push(hip); knees.push(knee);
   }
-  add(new THREE.CylinderGeometry(0.15, 0.14, 0.17, 16), dark, 0, 0.63, 0, root);   // 短褲
-  const spine = new THREE.Group(); spine.position.set(0, 0.68, 0); root.add(spine);
-  add(new THREE.CylinderGeometry(0.165, 0.14, 0.38, 16), top, 0, 0.19, 0, spine);
-  add(new THREE.CylinderGeometry(0.168, 0.168, 0.045, 16), line, 0, 0.2, 0, spine);   // 胸前一圈線條
-  add(new THREE.BoxGeometry(0.04, 0.3, 0.02), line, 0, 0.19, 0.155, spine);
+  add(new THREE.CylinderGeometry(0.155, 0.145, 0.22, 16), dark, 0, 0.86, 0, root);   // 短褲
+  const spine = new THREE.Group(); spine.position.set(0, 0.92, 0); root.add(spine);
+  add(new THREE.CylinderGeometry(0.17, 0.145, 0.46, 16), top, 0, 0.23, 0, spine);
+  add(new THREE.CylinderGeometry(0.172, 0.172, 0.045, 16), line, 0, 0.26, 0, spine);   // 胸前一圈線條
+  add(new THREE.BoxGeometry(0.04, 0.36, 0.02), line, 0, 0.23, 0.16, spine);
   const arms = [], elbows = [], hands = [];
   for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.2, 0.35, 0); spine.add(sh);
-    sph(0.06, top, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.048, 0.042, 0.21, 10), C.sleeve ? top : skin, 0, -0.105, 0, sh);
-    const el = new THREE.Group(); el.position.set(0, -0.21, 0); sh.add(el);
-    sph(0.044, C.sleeve ? top : skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.042, 0.036, 0.19, 10), C.sleeve ? top : skin, 0, -0.095, 0, el);
-    const hd = new THREE.Group(); hd.position.set(0, -0.2, 0); el.add(hd); sph(0.052, C.gloves ? M(C.gloves) : skin, 0, 0, 0, hd);
+    const sh = new THREE.Group(); sh.position.set(sx * 0.21, 0.43, 0); spine.add(sh);
+    sph(0.062, top, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.048, 0.042, 0.3, 10), C.sleeve ? top : skin, 0, -0.15, 0, sh);
+    const el = new THREE.Group(); el.position.set(0, -0.3, 0); sh.add(el);
+    sph(0.044, C.sleeve ? top : skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.042, 0.036, 0.27, 10), C.sleeve ? top : skin, 0, -0.135, 0, el);
+    const hd = new THREE.Group(); hd.position.set(0, -0.285, 0); el.add(hd); sph(0.052, C.gloves ? M(C.gloves) : skin, 0, 0, 0, hd);
     arms.push(sh); elbows.push(el); hands.push(hd);
   }
   // 頭：半徑 0.23 的大頭（Q 版），臉朝 +z
-  const head = new THREE.Group(); head.position.set(0, 0.42, 0); spine.add(head);
+  const head = new THREE.Group(); head.position.set(0, 0.5, 0); spine.add(head);
   add(new THREE.CylinderGeometry(0.055, 0.06, 0.08, 10), skin, 0, 0.0, 0, head);
   const R = 0.23, hc = new THREE.Group(); hc.position.y = 0.24; head.add(hc);
   if (C.robot) { const hb = add(new THREE.BoxGeometry(0.4, 0.4, 0.38), skin, 0, 0, 0, hc); hb.geometry.translate(0, 0, 0); } else sph(R, skin, 0, 0, 0, hc);
@@ -6993,10 +6993,10 @@ function makeChibi(C) {
     if (kind === 'faceMask') { const o = sph(R * 0.82, am, 0, -0.01, R * 0.38, hc, 1, 1.05, 0.75); void o; add(new THREE.BoxGeometry(0.03, 0.03, 0.02), new THREE.MeshBasicMaterial({ color: C.eyes }), 0, 0.02, R * 1.0, hc); }
     if (kind === 'hat') { add(new THREE.CylinderGeometry(R * 1.55, R * 1.55, 0.02, 24), am, 0, 0.12, 0, hc); add(new THREE.CylinderGeometry(R * 0.85, R * 0.95, 0.18, 20), am, 0, 0.22, 0, hc); }
     if (kind === 'visor') add(new THREE.BoxGeometry(0.34, 0.06, 0.02), glowM, 0, 0.0, 0.2, hc);
-    if (kind === 'jade') sph(0.035, glowM, 0, 0.27, 0.15, spine);
-    if (kind === 'bolt') for (const sx of [-1, 1]) { const o = add(new THREE.BoxGeometry(0.02, 0.18, 0.02), glowM, sx * 0.17, 0.2, 0.05, spine); o.rotation.z = sx * 0.4; }
+    if (kind === 'jade') sph(0.035, glowM, 0, 0.33, 0.16, spine);
+    if (kind === 'bolt') for (const sx of [-1, 1]) { const o = add(new THREE.BoxGeometry(0.02, 0.22, 0.02), glowM, sx * 0.17, 0.25, 0.05, spine); o.rotation.z = sx * 0.4; }
   }
-  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true, L1: 0.3, L2: 0.3, hipH: 0.62, chibi: true };
+  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true, L1: 0.42, L2: 0.44, hipH: 0.86, chibi: true };
 }
 function makeAvatar(color, ch) {
   if (ch && CHARS[ch]) return makeChibi(CHARS[ch]);
