@@ -768,8 +768,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個 Q 版角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（往哪看打哪、往上看打深，對面的黃圈是落點）、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -3508,6 +3508,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { fly.keys.delete(e.key.toLowerCase()); });
 addEventListener('blur', () => fly.keys.clear());
 renderer.domElement.addEventListener('wheel', (e) => {
+  if (walk.on && walk.hold && (VM.on || vbCourt())) { e.preventDefault(); VB.aimDepth = clamp((VB.aimDepth ?? 6) + (e.deltaY < 0 ? 0.25 : -0.25), 2.5, 9.6); return; }   // 發球深淺：滾輪往上＝打深
   if (!fly.on || walk.on || mode !== '3d') return;
   e.preventDefault();
   const fwd = new THREE.Vector3().subVectors(controls.target, camera.position).normalize().multiplyScalar(-Math.sign(e.deltaY) * 0.8);
@@ -6521,7 +6522,8 @@ function vbServeAim() {
   if (!court) return null;
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw), [ax, az] = toLocalOf(court, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
   if (dlx * -sg < 0.05) return null;   // 沒有面向對面
-  const depth = clamp(3 + ((walk.pitch + 0.2) / 0.7) * 5.6, 2.5, 9.6), k = (-sg * depth - lx) / dlx, tlz = lz + dlz * k, [tx, tz] = toWorldOf(court, -sg * depth, tlz);
+  // 深淺：電腦用滑鼠滾輪微調（每格 25 cm，離網 2.5～9.6 m）；手機沒有滾輪，照舊用抬頭低頭
+  const depth = coarse() ? clamp(3 + ((walk.pitch + 0.2) / 0.7) * 5.6, 2.5, 9.6) : (VB.aimDepth ?? 6), k = (-sg * depth - lx) / dlx, tlz = lz + dlz * k, [tx, tz] = toWorldOf(court, -sg * depth, tlz);
   // 球要從兩根標誌桿中間過網：直線路徑在網子那裡的位置超過 ±4.5 m＝從標誌桿外過網（犯規）
   const kz = (0 - lx) / (-sg * depth - lx), netZ = lz + (tlz - lz) * kz, ant = Math.abs(netZ) > 4.5 - BALL_R;
   return { court, sg, tx, tz, depth, tlz, ant, inside: depth <= 9 && Math.abs(tlz) <= 4.5 && !ant };
@@ -6529,11 +6531,28 @@ function vbServeAim() {
 function vbAimRing() {
   const show = !RP.on && (walk.hold || (walk.jserve && !walk.jserve.hit) || (walk.serve && !walk.serve.hit)) && (VM.on || vbCourt());
   const a = !show ? null : walk.jserve ? walk.jserve.aim : walk.serve ? walk.serve.aim : vbServeAim();
-  if (!VB.aim) { const g = new THREE.Group(), mk = (r0, r1) => new THREE.Mesh(new THREE.RingGeometry(r0, r1, 36), new THREE.MeshBasicMaterial({ color: '#F2B705', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); g.add(mk(0.32, 0.4), mk(0, 0.06)); g.children.forEach((m) => { m.rotation.x = -Math.PI / 2; }); g.position.y = 0.02; scene.add(g); VB.aim = g; }
-  VB.aim.visible = !!a; if (!a) return;
-  VB.aim.position.set(a.tx, 0.02, a.tz); for (const m of VB.aim.children) m.material.color.set(a.inside ? '#F2B705' : '#E5484D');
+  // 紅色目標圈：外圈、半透明底、十字、中心點；旁邊標「離網幾 m」（出界或從標誌桿外過網＝灰色＋標出來）
+  if (!VB.aim) {
+    const g = new THREE.Group(), M2 = (o = 0.95) => new THREE.MeshBasicMaterial({ color: '#E5484D', transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide });
+    const parts = [new THREE.Mesh(new THREE.RingGeometry(0.62, 0.78, 40), M2()), new THREE.Mesh(new THREE.CircleGeometry(0.62, 40), M2(0.22)), new THREE.Mesh(new THREE.CircleGeometry(0.09, 20), M2()), new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.05), M2(0.8)), new THREE.Mesh(new THREE.PlaneGeometry(0.05, 1.8), M2(0.8))];
+    for (const m of parts) { m.rotation.x = -Math.PI / 2; m.renderOrder = 3; g.add(m); }
+    // 從底線斜斜看過去地上的圈會很扁：再加一個浮在空中、往下指的紅色倒三角＋一道淡淡的光柱
+    const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.42, 4), M2()); arrow.rotation.x = Math.PI; arrow.position.y = 1.55; arrow.renderOrder = 3; arrow.userData.arrow = true; g.add(arrow);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.3, 8), M2(0.35)); beam.position.y = 0.66; g.add(beam);
+    scene.add(g); VB.aim = g;
+  }
+  VB.aim.visible = !!a; if (VB.aimLbl) VB.aimLbl.visible = !!a; if (!a) return;
+  const col = a.inside ? '#E5484D' : '#9AA4B2', txt = a.ant ? '標誌桿外' : !a.inside ? '出界' : `離網 ${a.depth.toFixed(1)} m`;
+  VB.aim.position.set(a.tx, 0.025, a.tz); for (const m of VB.aim.children) m.material.color.set(col);
+  if (VB.aimTxt !== txt) { if (VB.aimLbl) { scene.remove(VB.aimLbl); VB.aimLbl.material.map.dispose(); } VB.aimLbl = labelSprite(txt, col, 1.5); VB.aimLblK = 1; scene.add(VB.aimLbl); VB.aimTxt = txt; }
+  VB.aimLbl.position.set(a.tx, 2.15, a.tz);
+  const ar = VB.aim.children.find((m) => m.userData.arrow); if (ar) {   // 離得越遠箭頭放越大，而且不會被網子擋住
+    const k = clamp(Math.hypot(camera.position.x - a.tx, camera.position.z - a.tz) / 4.5, 1, 4); ar.scale.setScalar(k); ar.material.depthTest = false;
+    ar.position.y = 1.55 + 0.3 * (k - 1) + Math.sin(performance.now() / 220) * 0.08 * k; ar.rotation.y += 0.03; VB.aimLbl.position.y = 2.2 + 0.55 * (k - 1); VB.aimLbl.scale.multiplyScalar(k / (VB.aimLblK || 1)); VB.aimLblK = k;
+    for (const m of VB.aim.children) if (!m.userData.arrow && m.geometry.type !== 'CylinderGeometry') m.scale.setScalar(1 + (k - 1) * 0.35);   // 地上的圈遠的時候也放大一點（從底線看過去很扁）
+  }
   if (a.ant && walk.hold && performance.now() - (VB.antT || 0) > 3000) { VB.antT = performance.now(); toast('這個方向會從標誌桿外面過網（犯規）', 1500); }
-  VB.aim.scale.setScalar(1 + Math.sin(performance.now() / 180) * 0.06);
+
 }
 // 給落點、球速、重力（上旋球下墜快＝重力大）：找出手速度剛好是 spd 的拋物線；過不了網就放慢拉高
 function serveVel(p, tx, tz, spd, g, court, sg) {
@@ -9237,7 +9256,7 @@ function vmPrepServe(s = VM.sg) {
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
   const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; walk.air = null;
   const [ax, az] = vmW(0, 0); walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
-  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：對面黃圈是落點（轉頭換方向、往上看打深）。左鍵站發、右鍵站飄、空白鍵拋球起跳後左鍵跳發／右鍵跳飄', 4200);
+  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：對面紅圈是落點（轉頭調左右、滾輪調深淺）。左鍵站發、右鍵站飄、空白鍵拋球起跳後左鍵跳發／右鍵跳飄', 4200);
 }
 function vmAiServe(a) {
   const sd = vmSide(a.team), err = Math.random(), L = vmLv(a);
