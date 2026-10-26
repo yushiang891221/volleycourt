@@ -6579,6 +6579,7 @@ function vbServeZone() {
 }
 // 站在場內按發球：不行，要先退到底線後面
 function vbServeInside() {
+  if (!VM.on) return false;   // 練習時哪裡都可以發；開始比賽才照規則
   const z = vbServeSide(); if (!z) return false;
   const [lx, lz] = toLocalOf(z.c, walk.x, walk.z); if (Math.abs(lx) > 14) return false;
   if (lx * z.sg < 9.0) { toast('要退到底線後面才能發球', 1600); return true; }
@@ -6912,7 +6913,9 @@ const CHARS = {
   chamber: { name: 'Chamber', skin: '#C9946E', hair: ['slick', '#1A1412'], top: ['#F2EEE6', '#C9A24A'], shorts: '#2B2B2B', shoe: '#2B2B2B', eyes: '#2B1D14', sleeve: true, acc: [['glassesRect', '#1A1A1A'], ['goatee', '#1A1412']] },
 };
 const CHAR_IDS = Object.keys(CHARS);
-const myChar = () => { try { const c = localStorage.getItem('vb.char'); return CHARS[c] ? c : null; } catch (e) { return null; } };
+// 沒選過角色的人：照代號固定分到一個 Q 版角色（每次都一樣）；選了「原本的人形」才用原本的
+const autoChar = (id) => { let h = 0; for (const ch of String(id || 'me')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CHAR_IDS[h % CHAR_IDS.length]; };
+const myChar = () => { let c = null; try { c = localStorage.getItem('vb.char'); } catch (e) { /* ignore */ } if (c === 'none') return null; return CHARS[c] ? c : autoChar(NET.me || 'me'); };
 function makeChibi(C) {
   const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
   const M = (c, o) => mat(c, { roughness: 0.65, ...(o || {}) }), skin = M(C.skin, C.robot ? { metalness: 0.4, roughness: 0.4 } : undefined), top = M(C.top[0]), line = M(C.top[1]), dark = M(C.shorts), shoe = M(C.shoe), pad = M('#1E2026');
@@ -7125,8 +7128,9 @@ function netOnMessage(t, d, from) {
     p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
     if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) p2.jump = d.jp.vy ? { vy: d.jp.vy, y: 0 } : { h: d.jp.h, T: d.jp.T, t: 0 }; }
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
-    if ((d.ch || null) !== (p2.ch || null)) {   // 換角色：重做人形，名牌、球拍搬過去
-      p2.ch = d.ch || null; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
+    const dch = d.ch === undefined ? autoChar(from) : d.ch === 'none' ? null : CHARS[d.ch] ? d.ch : null;
+    if (dch !== (p2.ch || null)) {   // 換角色：重做人形，名牌、球拍搬過去
+      p2.ch = dch; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
       if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
     }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai);
@@ -7176,7 +7180,7 @@ function netTick(dt, now) {
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || undefined, b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || 'none', b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
@@ -7355,12 +7359,12 @@ function recTick(now) {
   if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bl.push([recId(walk.hold), +v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3), 1]); }
   for (const s0 of [walk.spike, walk.serve]) if (s0 && s0.ball && !s0.hit) bl.push([recId(s0.ball), +s0.ball.position.x.toFixed(3), +s0.ball.position.y.toFixed(3), +s0.ball.position.z.toFixed(3), 1]);
   for (const p2 of NET.peers.values()) if (p2.ball && p2.ball.visible) bl.push([recId(p2.ball), +p2.ball.position.x.toFixed(3), +p2.ball.position.y.toFixed(3), +p2.ball.position.z.toFixed(3), 1]);
-  const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你']];
-  for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n]);
-  const npcRow = (id, g, y, poseC, col, name) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name]);
-  if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name);
-  if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練');
-  if (RK.on) { for (const P of Object.values(RK.P)) if (P.ai && P.av) npcRow('rkai', P.av.g, P.jy, P.swing ? (P.swing.over ? 7 : 8) : 6, '#E5484D', P.name); const q = RK.ballM.position; bl.push([recId(RK.ballM), +q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), RK.b.held != null ? 1 : 0, RK.k]); }
+  const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你', myChar()]];
+  for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n, p2.ch || null]);
+  const npcRow = (id, g, y, poseC, col, name, ch) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name, ch || null]);
+  if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name, a.ch);
+  if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練', VB.npc.ch);
+  if (RK.on) { for (const P of Object.values(RK.P)) if (P.ai && P.av) npcRow('rkai', P.av.g, P.jy, P.swing ? (P.swing.over ? 7 : 8) : 6, '#E5484D', P.name, P.ch); const q = RK.ballM.position; bl.push([recId(RK.ballM), +q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), RK.b.held != null ? 1 : 0, RK.k]); }
   REC.frames.push({ t, b: bl, p: ppl });
 }
 // ---- 分析：每顆球的時間序列 → 落地點、擊球點與球速、最高點、過網次數
@@ -7457,8 +7461,8 @@ function updateReplay(dt) {
   // 人
   const seen = new Set();
   for (const p0 of f0.p) {
-    const [id, x, z, y, yaw, poseC, col] = p0, q = f1.p.find((r2) => r2[0] === id) || p0;
-    let av = RP.actors.get(id); if (!av) { av = makeAvatar(col || '#F2B705'); RP.g.add(av.g); RP.actors.set(id, av); }
+    const [id, x, z, y, yaw, poseC, col, , ch] = p0, q = f1.p.find((r2) => r2[0] === id) || p0;
+    let av = RP.actors.get(id); if (!av) { av = makeAvatar(col || '#F2B705', ch); RP.g.add(av.g); RP.actors.set(id, av); }
     seen.add(id); av.g.visible = true;
     const X = x + (q[1] - x) * k, Z = z + (q[2] - z) * k; let dy = q[4] - yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     const sp = Math.hypot(q[1] - x, q[2] - z) * 30;
@@ -7852,11 +7856,11 @@ function rkBallMesh(k) {
 }
 // ---- 開始／結束
 function rkMkPlayer(side, color, name, ai) {
-  const av = makeAvatar(color, ai ? vmPickChar(new Set([myChar()])) : myChar()); scene.add(av.g);
+  const ch = ai ? vmPickChar(new Set([myChar()])) : myChar(), av = makeAvatar(color, ch); scene.add(av.g);
   const rk = makeRacket(RK.k); av.hands[0].add(rk);
   let tag = null;
   if (ai) { const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name; tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); }
-  return { side, ai, name, x: side * 4, z: 0, vx: 0, vz: 0, av, tag, queued: null, swing: null, prevCost: null, jy: 0, reactAt: 0, plan: null };
+  return { side, ai, name, ch, x: side * 4, z: 0, vx: 0, vz: 0, av, tag, queued: null, swing: null, prevCost: null, jy: 0, reactAt: 0, plan: null };
 }
 function rkStart(c, o = {}) {
   if (RK.on) rkStop(true);
@@ -8906,9 +8910,9 @@ function vbCamAssist(dt) {
 function vbNpcToggle() {
   if (VB.npc) { scene.remove(VB.npc.av.g); VB.npc.tag.element.remove(); VB.npc = null; toast('陪練舉球員收工了'); renderUseBar(state.items.find((i) => i.id === $('wk-use').dataset.id)); return; }
   const ct = vbCourt(); if (!ct) { toast('站到排球場上再叫陪練'); return; }
-  const sg = Math.sign(ct.lx) || 1, home = toWorldOf(ct.c, sg * 1.1, -sg * 1.2), av = makeAvatar('#30A46C', vmPickChar(new Set([myChar()])));
+  const sg = Math.sign(ct.lx) || 1, home = toWorldOf(ct.c, sg * 1.1, -sg * 1.2), npcCh = vmPickChar(new Set([myChar()])), av = makeAvatar('#30A46C', npcCh);
   const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = '陪練舉球'; const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
-  VB.npc = { av, tag, c: ct.c, sg, x: home[0], z: home[1], home, vx: 0, vz: 0, up: 0 };
+  VB.npc = { av, tag, ch: npcCh, c: ct.c, sg, x: home[0], z: home[1], home, vx: 0, vz: 0, up: 0 };
   toast('陪練來了：把球拋給他（F）或接到網前（C），他會舉給你。你站左邊就前舉、靠近他就快攻、站右邊就後舉', 5000);
 }
 function vbNpcStep(dt) {
@@ -9180,7 +9184,7 @@ function vmPickChar(used) { const pool = CHAR_IDS.filter((c) => !used.has(c)); c
 function vmMkAi(id, team, name, color, ch) {
   const av = makeAvatar(color, ch), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
   const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
-  const side = vmSide(team), a = { id, team, name, color, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
+  const side = vmSide(team), a = { id, team, name, color, ch, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
   VM.ai.set(id, a); VM.names[id] = name; return a;
 }
 function vmStop(silent) {
@@ -9625,7 +9629,7 @@ $('w-char').addEventListener('click', openCharMenu);
 $('rk-menu').addEventListener('click', (e) => {
   if (e.target.closest('[data-chx]')) { $('rk-menu').hidden = true; return; }
   const t = e.target.closest('[data-ch]'); if (!t) return;
-  try { if (t.dataset.ch) localStorage.setItem('vb.char', t.dataset.ch); else localStorage.removeItem('vb.char'); } catch (er) { /* ignore */ }
+  try { localStorage.setItem('vb.char', t.dataset.ch || 'none'); } catch (er) { /* ignore */ }
   for (const b of $('rk-menu').querySelectorAll('[data-ch]')) b.setAttribute('aria-pressed', String(b === t));
   if (NET.on) NET.forceSt = true;
   toast(t.dataset.ch ? `換成 ${CHARS[t.dataset.ch].name}（按 T 切第三人稱看得到自己）` : '換回原本的人形', 1800);
