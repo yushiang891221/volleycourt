@@ -6735,8 +6735,9 @@ function updateBalls(dt) {
       vbBlockTest(b, h); vmBlockTest(b, h);
     }
     if (b.err) {
-      const kk = Math.min(1, dt * 7), before = b.m.position.clone(); b.m.position.addScaledVector(b.err, kk); b.err.multiplyScalar(1 - kk); if (b.err.lengthSq() < 1e-5) b.err = null;
-      for (const c of netCourts) { const [a0, z0] = toLocalOf(c, before.x, before.z), [a1] = toLocalOf(c, b.m.position.x, b.m.position.z); if (Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3 && before.y < NETS[state.net].h + 0.2) { b.m.position.copy(before); b.err = null; } }
+      const kk = Math.min(1, dt * 10), before = b.m.position.clone(); b.m.position.addScaledVector(b.err, kk); b.err.multiplyScalar(1 - kk); if (b.err.lengthSq() < 1e-5) b.err = null;
+      // 拉的途中不能低低的穿過網子：那就直接跳到對方那邊的位置（很少發生）
+      for (const c of netCourts) { const [a0, z0] = toLocalOf(c, before.x, before.z), [a1] = toLocalOf(c, b.m.position.x, b.m.position.z); if (b.err && Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3 && before.y < NETS[state.net].h + 0.2) { b.m.position.add(b.err); b.err = null; } }
     }
     const sp = Math.hypot(b.v.x, b.v.z);
     if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
@@ -7144,11 +7145,17 @@ function netOnMessage(t, d, from) {
     let b = balls.find((q) => q.room);
     const P = new THREE.Vector3(d.p[0], d.p[1], d.p[2]);
     if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); b.m.position.copy(P); }
-    // 位置修正：差很多（新的擊球）就直接換；差一點就在 0.15 秒內慢慢拉過去，不會閃
-    const err = P.clone().sub(b.m.position);
-    if (newer || tie || err.length() > 1.2) { b.m.position.copy(P); b.err = null; } else b.err = err;
-    b.acc = d.a ? new THREE.Vector3(d.a[0], d.a[1], d.a[2]) : null; b.float = d.f ? { t: d.f[0], w: d.f[1], ph: d.f[2], a: d.f[3] } : null; if (newer || tie) b.floorHit = null;
-    b.v.set(d.v[0], d.v[1], d.v[2]); b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
+    // 訊息裡的球是對方「送出那一刻」的位置；傳到我這裡已經過了一小段時間（約 0.1 秒），不能照舊位置把球拉回去（會閃）
+    //   新的擊球：沿著新的路線往前補上延遲那一段，再在 0.1 秒內平滑靠過去
+    //   一般校正：在對方的路線上找離我這顆球最近的一點；差不到 35 cm 就不動，差多了才慢慢拉過去
+    const V = new THREE.Vector3(d.v[0], d.v[1], d.v[2]), A = d.a ? new THREE.Vector3(d.a[0], d.a[1], d.a[2]) : new THREE.Vector3(), gy = -9.8 + A.y;
+    const at = (tau) => [new THREE.Vector3(P.x + V.x * tau + 0.5 * A.x * tau * tau, Math.max(BALL_R, P.y + V.y * tau + 0.5 * gy * tau * tau), P.z + V.z * tau + 0.5 * A.z * tau * tau), new THREE.Vector3(V.x + A.x * tau, V.y + gy * tau, V.z + A.z * tau)];
+    const cur = b.m.position; let tgt = null, vel = null;
+    if (newer || tie) [tgt, vel] = at(0.1 * VB.ts);
+    else { let best = 1e9; for (let tau = 0; tau <= 0.6 * VB.ts; tau += 0.01) { const [q, w] = at(tau), dd = q.distanceTo(cur); if (dd < best) { best = dd; tgt = q; vel = w; } } if (best < 0.35) tgt = null; }
+    if (tgt) { const err = tgt.clone().sub(cur); if (err.length() > 4) { cur.copy(tgt); b.err = null; } else b.err = err; b.v.copy(vel); }
+    b.acc = d.a ? A.clone() : null; if (newer || tie || !b.float) b.float = d.f ? { t: d.f[0], w: d.f[1], ph: d.f[2], a: d.f[3] } : null; if (newer || tie) b.floorHit = null;
+    b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     if (newer || tie) { b.mine = false; if (d.w === 'set') vbMarkSet(b); }
     if (newer) vmOnTouch(b, d.by, d.w);
