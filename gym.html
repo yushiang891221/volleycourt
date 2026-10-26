@@ -1098,12 +1098,26 @@ function zoneFloor(z) { return z.floor || ZONES[z.type].floor; }
 // 自由畫的牆：a、b 兩端（公尺），kind = solid 實心牆、glass 玻璃、half 半牆、net 圍網；h 高度
 const WALL_KINDS = { solid: '實心牆', glass: '玻璃隔間', half: '半牆（1.1 m）', net: '圍網' };
 // 自訂顏色：館內地板、球場內場、球場外圍、牆面、防撞墊（沒設就用配色組合的顏色）
-const COLOR_KEYS = ['hall', 'court', 'free', 'wall', 'pad'];
+const COLOR_KEYS = ['hall', 'court', 'free', 'wood', 'wall', 'roof', 'steel', 'pad'];
 function scheme() {
   const sc = SCHEMES[state.floor] || SCHEMES.pu, c = state.colors || {};
-  return { ...sc, ...(c.court ? { court: c.court } : {}), ...(c.free ? { free: c.free } : {}), ...(c.pad ? { pad: c.pad } : {}) };
+  // 木地板顏色：木紋配色的球場內外場都換成這個木色（外圍稍微深一點）；再單獨設內場／外圍的話以那個為準
+  const wood = c.wood && (sc.grain || sc.wood) ? { court: c.wood, free: sc.grain ? c.wood : shadeHex(c.wood, 0.9) } : {};
+  return { ...sc, ...wood, ...(c.court ? { court: c.court } : {}), ...(c.free ? { free: c.free } : {}), ...(c.pad ? { pad: c.pad } : {}) };
 }
+function shadeHex(hex, f) { const c = new THREE.Color(hex); c.multiplyScalar(f); return '#' + c.getHexString(); }
 const tintCache = new Map();
+// 換色但保留貼圖紋路（浪板、木紋）：用「選的顏色 ÷ 貼圖平均色」去乘，換完看起來就是選的那個顏色，紋路還在
+function tintedKeep(base, hex, meanHex) {
+  if (!hex) return base;
+  const k = 'keep' + base.uuid + hex;
+  if (!tintCache.has(k)) {
+    const m = base.clone(), want = new THREE.Color(hex), mean = new THREE.Color(meanHex);
+    m.color.setRGB(clamp(want.r / Math.max(0.05, mean.r), 0.05, 2.2), clamp(want.g / Math.max(0.05, mean.g), 0.05, 2.2), clamp(want.b / Math.max(0.05, mean.b), 0.05, 2.2));
+    m.metalness = Math.min(m.metalness || 0, 0.3); tintCache.set(k, m);
+  }
+  return tintCache.get(k);
+}
 function tinted(base, hex) {
   if (!hex) return base;
   const k = base.uuid + hex;
@@ -2281,13 +2295,14 @@ function buildBuilding() {
   disposeGroup(buildingGroup); mainDoors.length = 0;
   walls = []; cols = []; colliders = [];
   const { H } = state.building, P = outlinePoly(), sc = scheme(), col = state.colors || {};
-  const metal = isMetal(), wallMat = tinted(metal ? sheetWallMat : plasterMat, col.wall);
+  const metal = isMetal(), wallMat = metal ? tintedKeep(sheetWallMat, col.wall, '#DFE2E5') : tinted(plasterMat, col.wall);
+  const roofMat = tintedKeep(roofSheetMat, col.roof, '#D8DBDE'), stMat = col.steel ? tintedKeep(steelMat, col.steel, '#3B3F45') : steelMat;
   const B = hallBounds();
   fitShadow(Math.max(B.x1 - B.x0, B.z1 - B.z0));
   // 地坪：木地板（UV＝公尺）
   const shape = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
   const floorBase = sc.wood ? FLOOR_MATS.wood : sc.hall ? (FLOOR_MATS[sc.hall] || FLOOR_MATS.hall) : state.floor === 'pu' ? FLOOR_MATS.hall : new THREE.MeshStandardMaterial({ color: sc.base, roughness: 0.85 });
-  const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), tinted(floorBase, col.hall));
+  const hallHex = col.hall || (sc.wood && col.wood) || null, floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), sc.wood && hallHex ? tintedKeep(floorBase, hallHex, '#A8825A') : tinted(floorBase, col.hall));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.userData.noInk = true;
   buildingGroup.add(floor);
   // 外牆：白色粉刷牆，底下一圈深色踢腳；入口那一面留 3 m 的玻璃自動門
@@ -2300,7 +2315,7 @@ function buildBuilding() {
       const ax = e.a[0] + e.dx * s0 + ox, az = e.a[1] + e.dz * s0 + oz, bx = e.a[0] + e.dx * s1 + ox, bz = e.a[1] + e.dz * s1 + oz;
       const ex = s0 === 0 ? t / 2 : 0, ey = s1 === e.len ? t / 2 : 0;   // 轉角接起來
       wallBox(grp, wallMat, ax - e.dx * ex, az - e.dz * ex, bx + e.dx * ey, bz + e.dz * ey, eave, t);
-      wallBox(grp, steelMat, ax - e.nx * 0.13, az - e.nz * 0.13, bx - e.nx * 0.13, bz - e.nz * 0.13, 0.12, 0.02).userData.noInk = true;
+      wallBox(grp, stMat, ax - e.nx * 0.13, az - e.nz * 0.13, bx - e.nx * 0.13, bz - e.nz * 0.13, 0.12, 0.02).userData.noInk = true;
       colliders.push([e.a[0] + e.dx * s0, e.a[1] + e.dz * s0, e.a[0] + e.dx * s1, e.a[1] + e.dz * s1]);
     }
     if (sameEdge(e, ent.e)) {
@@ -2321,7 +2336,7 @@ function buildBuilding() {
       mainDoors.push(md);
     }
     // the low skirt stays when the wall hides, so the outline stays readable
-    const sk = wallBox(buildingGroup, steelMat, e.a[0] + ox, e.a[1] + oz, e.b[0] + ox, e.b[1] + oz, 0.12, t + 0.02);
+    const sk = wallBox(buildingGroup, stMat, e.a[0] + ox, e.a[1] + oz, e.b[0] + ox, e.b[1] + oz, 0.12, t + 0.02);
     sk.userData.noInk = true;
     // 高窗：每一跨一扇，在牆的上段（入口那段跳過），天光從這裡進來
     const nw = Math.max(1, Math.round(e.len / 6));
@@ -2340,7 +2355,7 @@ function buildBuilding() {
   // 鋼構柱（預設隱藏，導覽時出現）
   for (const [px, pz] of columnPoints()) {
     const c = new THREE.Group(); c.position.set(px, 0, pz);
-    box(c, 0.3, eave, 0.08, steelMat, 0, 0, -0.11); box(c, 0.3, eave, 0.08, steelMat, 0, 0, 0.11); box(c, 0.06, eave, 0.22, steelMat, 0, 0, 0);
+    box(c, 0.3, eave, 0.08, stMat, 0, 0, -0.11); box(c, 0.3, eave, 0.08, stMat, 0, 0, 0.11); box(c, 0.06, eave, 0.22, stMat, 0, 0, 0);
     if (!metal) c.userData.structure = true;   // 鐵皮屋的柱子本來就外露
     buildingGroup.add(c); cols.push(c);
   }
@@ -2355,8 +2370,8 @@ function buildBuilding() {
   // 一根沿著兩點的鋼樑（H 型：腹板＋上下翼板）
   const beam = (a, b, depth, width, grp = ceilingGroup) => {
     const g = new THREE.Group(), len = a.distanceTo(b); g.position.copy(a).lerp(b, 0.5); g.lookAt(b); grp.add(g);
-    box(g, 0.012 + width * 0.08, depth, len, steelMat, 0, -depth / 2, 0).userData.noShadow = true;
-    for (const yy of [0, -depth]) box(g, width, 0.02, len, steelMat, 0, yy - 0.01, 0).userData.noShadow = true;
+    box(g, 0.012 + width * 0.08, depth, len, stMat, 0, -depth / 2, 0).userData.noShadow = true;
+    for (const yy of [0, -depth]) box(g, width, 0.02, len, stMat, 0, yy - 0.01, 0).userData.noShadow = true;
     return g;
   };
   const nF = Math.max(2, Math.round((u1 - u0) / 6));
@@ -2388,19 +2403,19 @@ function buildBuilding() {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap((q) => [q.x, q.y, q.z]), 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, slope, spanU, slope, spanU, 0, 0, 0], 2));
     geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals();
-    const pl = new THREE.Mesh(geo, roofSheetMat); pl.userData.noShadow = true; roof.add(pl);
+    const pl = new THREE.Mesh(geo, roofMat); pl.userData.noShadow = true; roof.add(pl);
   }
   // 山牆（兩端的三角形）：也是浪板
   for (const sd of [-1, 1]) {
     const tri = new THREE.Shape([new THREE.Vector2(-halfV, 0), new THREE.Vector2(halfV, 0), new THREE.Vector2(0, rise)]);
     const tg = new THREE.ShapeGeometry(tri);
-    const gm = new THREE.Mesh(tg, tinted(metal ? sheetWallMat : plasterMat, col.wall).clone()); gm.material.side = THREE.DoubleSide;
+    const gm = new THREE.Mesh(tg, wallMat.clone()); gm.material.side = THREE.DoubleSide;
     const uw = sd < 0 ? u0 : u1;
     if (alongX) { gm.rotation.y = Math.PI / 2; gm.position.set(uw + sd * 0.12, eave, vc); } else { gm.position.set(vc, eave, uw + sd * 0.12); }
     gm.userData.noShadow = true; roof.add(gm);
   }
   // 鐵皮屋的牆內側：兩道橫向鋼樑（牆檁）
-  if (metal) for (const e of edgesOf(P)) for (const hy of [H * 0.38, H * 0.76]) { const ix = -e.nx * 0.12, iz = -e.nz * 0.12; const gb = wallBox(ceilingGroup.parent, steelMat, e.a[0] + ix, e.a[1] + iz, e.b[0] + ix, e.b[1] + iz, 0.18, 0.06, hy); if (gb) { gb.userData.noShadow = true; gb.userData.softInk = true; } }
+  if (metal) for (const e of edgesOf(P)) for (const hy of [H * 0.38, H * 0.76]) { const ix = -e.nx * 0.12, iz = -e.nz * 0.12; const gb = wallBox(ceilingGroup.parent, stMat, e.a[0] + ix, e.a[1] + iz, e.b[0] + ix, e.b[1] + iz, 0.18, 0.06, hy); if (gb) { gb.userData.noShadow = true; gb.userData.softInk = true; } }
   buildingGroup.add(roof);
   inkify(buildingGroup);
   roof.traverse((o) => { if (o.isMesh) o.castShadow = false; });
@@ -2850,17 +2865,20 @@ function initBuildingInputs() {
   $('design-name').addEventListener('input', (e) => { state.name = e.target.value.slice(0, 40) || '未命名方案'; saveDraftSoon(); renderSaved(); });
 }
 // 顏色：每一項一個色票＋「預設」；改了 3D 立刻更新
-const COLOR_LABELS = { hall: '館內地板', court: '球場內場', free: '球場外圍（緩衝區）', wall: '牆面', pad: '防撞墊' };
+const COLOR_LABELS = { hall: '館內地板', court: '球場內場', free: '球場外圍（緩衝區）', wood: '木地板顏色（木紋還在）', wall: '牆面（鐵皮浪板紋路還在）', roof: '鐵皮屋頂', steel: '鋼構（柱子、屋樑）', pad: '防撞墊' };
 const COLOR_SWATCH = {
   hall: ['#E6E3DD', '#B9BCC0', '#8E9399', '#C9A06A', '#3E7B5B', '#2D5DA1'],
   court: ['#E07B39', '#C4553A', '#3E7B5B', '#2D5DA1', '#E3C08C', '#F2C230'],
   free: ['#2D5DA1', '#2E8C8C', '#3E7B5B', '#8E9399', '#C4553A', '#E3C08C'],
   wall: ['#EFEBE4', '#DADDDF', '#F4F4F2', '#2F3B4C', '#B8322B', '#2F5FA8'],
+  wood: ['#E3C08C', '#D9B07A', '#C9A06A', '#B07A44', '#8E5A33', '#F0D9AE'],
+  roof: ['#DADDE0', '#B9C2CC', '#2F5FA8', '#3E7B5B', '#B8352E', '#4A4F57'],
+  steel: ['#3B3F45', '#1F2124', '#E8E6E1', '#2F5FA8', '#B8352E', '#3E7B5B'],
   pad: ['#24345A', '#B8322B', '#2F5FA8', '#2E8B57', '#F2B705', '#1F2124'],
 };
 function colorDefault(k) {
   const sc = SCHEMES[state.floor] || SCHEMES.pu;
-  return { hall: sc.wood ? '#C9A06A' : sc.base || '#E6E3DD', court: sc.court, free: sc.free, wall: isMetal() ? '#D4D8DC' : '#EFEBE4', pad: sc.pad }[k] || '#888888';
+  return { hall: sc.wood ? '#C9A06A' : sc.base || '#E6E3DD', court: sc.court, free: sc.free, wood: sc.court, wall: isMetal() ? '#D4D8DC' : '#EFEBE4', roof: '#DADDE0', steel: '#3B3F45', pad: sc.pad }[k] || '#888888';
 }
 // 調色器：一排常用色＋「調色」打開 R、G、B 三個拉桿（0–255）自己調；拉的時候色塊即時變，放開才套用
 let cpOpen = '';   // 哪一個調色器的 RGB 拉桿開著（重畫後保持打開）
@@ -2895,7 +2913,7 @@ function reopenPicker(root) { if (!root || !cpOpen.startsWith(root.id + ':')) re
 function renderColorInputs() {
   const box = $('b-colors'); if (!box) return;
   const c = state.colors || {};
-  box.innerHTML = `<p class="hint" style="margin:10px 0 6px">顏色：點色塊直接換，或按「調色」用 R、G、B 拉桿調。每一面球場也可以各自選色（選取那面球場）。</p>` + COLOR_KEYS.map((k) => colorPickerHtml(k, COLOR_LABELS[k], c[k] || colorDefault(k), !!c[k], COLOR_SWATCH[k])).join('');
+  box.innerHTML = `<p class="hint" style="margin:10px 0 6px">顏色：點色塊直接換，或按「調色」用 R、G、B 拉桿調。每一面球場也可以各自選色（選取那面球場）。</p>` + COLOR_KEYS.filter((k) => (k !== 'roof' && k !== 'steel') || isMetal()).filter((k) => k !== 'wood' || (SCHEMES[state.floor] || {}).grain || (SCHEMES[state.floor] || {}).wood).map((k) => colorPickerHtml(k, COLOR_LABELS[k], c[k] || colorDefault(k), !!c[k], COLOR_SWATCH[k])).join('');
   reopenPicker(box);
 }
 // 單一面球場的顏色（沒設就跟全館一樣）
