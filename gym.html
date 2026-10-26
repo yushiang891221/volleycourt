@@ -6882,6 +6882,8 @@ function netOnMessage(t, d, from) {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
     // 收到的位置放進時間軸，畫面上落後 130 ms 播放，兩筆之間內插 → 動作連續不跳
     p2.buf.push({ t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw }); if (p2.buf.length > 30) p2.buf.shift();
+    p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
+    if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) p2.jump = d.jp.vy ? { vy: d.jp.vy, y: 0 } : { h: d.jp.h, T: d.jp.T, t: 0 }; }
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai);
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
@@ -6927,31 +6929,34 @@ function netBallMsg(b, kind) {
 function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
 function netTick(dt, now) {
   if (!NET.on) return;
-  // 我的狀態：有在動就每秒 12 次，站著不動每 0.5 秒一次（省流量）
+  // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
+  const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined };
+  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
-  const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
+  const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
   const gap = (document.hidden ? 10000 : moved ? 330 : 2000) * NETQ.slow;
   if (NET.forceSt || (poseChanged && now - NET.lastSt > 120) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > 1000 * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
-  // 對方的人形：照時間軸內插（落後 0.4 秒，每秒 3 筆也能連續），走路擺腿、跳、手臂動作
-  const rt = now - 400, k = 1 - Math.exp(-dt * 14);
+  // 對方的人形：最新一筆位置＋速度往前推算到「現在」（最多 0.5 秒），畫面平滑靠過去；差太多（瞬移、剛進來）就直接跳過去
+  const k = 1 - Math.exp(-dt * 14), kp = 1 - Math.exp(-dt * 15);
   for (const p2 of NET.peers.values()) {
-    const B = p2.buf; if (!B.length) continue;
-    let a = B[0], b2 = B[B.length - 1];
-    for (let i = 0; i < B.length - 1; i++) if (B[i].t <= rt && B[i + 1].t >= rt) { a = B[i]; b2 = B[i + 1]; break; }
-    let x, z, y, yaw;
-    if (rt >= b2.t) { const ex = Math.min(0.15, (rt - b2.t) / 1000); x = b2.x + p2.vx * ex; z = b2.z + p2.vz * ex; y = b2.y; yaw = b2.yaw; }
-    else if (rt <= a.t) { x = a.x; z = a.z; y = a.y; yaw = a.yaw; }
-    else { const f = (rt - a.t) / Math.max(1, b2.t - a.t); x = a.x + (b2.x - a.x) * f; z = a.z + (b2.z - a.z) * f; y = a.y + (b2.y - a.y) * f; let dy = b2.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); yaw = a.yaw + dy * f;
-      p2.vx = (b2.x - a.x) / Math.max(0.03, (b2.t - a.t) / 1000); p2.vz = (b2.z - a.z) / Math.max(0.03, (b2.t - a.t) / 1000); }
-    const sp = Math.hypot(x - p2.x, z - p2.z) / Math.max(dt, 1e-3);
+    const Ls = p2.last; if (!Ls) continue;
+    const age = Math.min(0.5, (now - Ls.t) / 1000), vx = Ls.vx || 0, vz = Ls.vz || 0, tx = Ls.x + vx * age, tz = Ls.z + vz * age;
+    const ox = p2.x, oz = p2.z, far = p2.seen == null || Math.hypot(tx - p2.x, tz - p2.z) > 3; p2.seen = true;
+    const x = far ? tx : p2.x + (tx - p2.x) * kp, z = far ? tz : p2.z + (tz - p2.z) * kp;
+    let dy = Ls.yaw - p2.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); const yaw = far ? Ls.yaw : p2.yaw + dy * Math.min(1, dt * 12);
+    // 高度：有起跳事件就自己照物理算弧線（不會因為取樣少變矮）；沒有就跟著收到的高度
+    let y = Ls.y;
+    const J = p2.jump;
+    if (J) { if (J.vy != null) { J.vy -= 9.8 * dt; J.y += J.vy * dt; y = Math.max(0, J.y); if (J.y <= 0 && J.vy < 0) p2.jump = null; } else { J.t += dt; y = J.h * Math.sin(Math.PI * Math.min(1, J.t / J.T)); if (J.t >= J.T) p2.jump = null; } }
+    p2.vx = vx; p2.vz = vz;
+    const sp = Math.hypot(x - ox, z - oz) / Math.max(dt, 1e-3);
     p2.x = x; p2.z = z; p2.y = y; p2.yaw = yaw;
-    const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y += (y - av.body.position.y) * k;
+    const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y += (y - av.body.position.y) * (p2.jump ? 1 : k);
     // 走路：速度越快腿擺越大；空中時兩腳收起
     av.phase += dt * Math.min(12, sp * 5.5);
     // 手臂：0 一般（跟著走路擺）、1 拿球、2 舉球（兩手高舉）、3 墊球（兩手併攏往前下）、4 攻擊（右手高舉）、5 跳
@@ -7684,6 +7689,7 @@ function rkJump() {
   const me = RK.P[RK.my]; if (me.air || me.dive || me.down > 0) return;
   const bd = RK.k === 'bd', tired = staUse(0.06) ? 1 : 0.6;
   me.air = { t: 0, T: (bd ? 0.62 : 0.5) * (0.8 + 0.2 * tired), h: (bd ? 0.55 : 0.38) * tired };
+  if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, h: +me.air.h.toFixed(2), T: +me.air.T.toFixed(2) }; NET.forceSt = true; }
   const pad = document.querySelector('#rk-pad [data-rk="jump"]'); if (pad) { pad.classList.add('on'); setTimeout(() => pad.classList.remove('on'), 160); }
 }
 // 撲救：往球路上第一個低球點（地上 0.1～1.6 m）衝過去；拍子範圍多 1.3 m，回球品質打七折
@@ -8287,7 +8293,8 @@ function vbJump(kind) {
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   if (walk.dive || walk.down > 0) return;
   const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', tired = staGame() && !staUse(0.06) ? 0.82 : 1;
-  walk.air = { y: 0, vy: (block ? 3.9 : 3.2 + 0.32 * hs) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0 };   // 助跑的速度大多變成高度，空中只往前飄約 1 m
+  walk.air = { y: 0, vy: (block ? 3.9 : 3.2 + 0.32 * hs) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0 };
+  if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
 }
 function vbAirStep(dt) {
