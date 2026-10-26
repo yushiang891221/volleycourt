@@ -5741,6 +5741,7 @@ function updateWalk(dt) {
     if (walk.target && Math.hypot(nx - walk.x, nz - walk.z) < Math.hypot(vx, vz) * dt * 0.2) { walk.target = null; targetMark.visible = false; }
     walk.x = nx; walk.z = nz;
   }
+  vbServeZone();
   const bob = mag > 0.01 || walk.target ? Math.sin(performance.now() / 160) * 0.015 : 0;
   camera.position.set(walk.x, EYE + bob - (skill.dip || 0) - (walk.low || 0) + jumpY(dt), walk.z);
   if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a; }
@@ -6554,9 +6555,28 @@ function serveLaunch(ball, p0, type, q, aim) {
   toast({ std: '發球！', float: '飄球！', jump: q >= 0.85 ? '跳發！（擊球點完美）' : '跳發！', jfloat: '跳飄！' }[type], 1100);
 }
 // ---- 站發（左鍵）／站飄（右鍵）：左手把球拋到頭前上方，右手拉弓、在最高點附近揮臂
+// 發球區：底線後面、兩條邊線延長線之間。比賽中輪到你發球時走不進場內；跳發的起跳也在線後（落地可以在場內）
+function vbServeSide() {
+  if (VM.on && VM.c) { const team = vmTeamOf(vmMe()); return team < 0 ? null : { c: VM.c, sg: vmSide(team) }; }
+  const ct = vbCourt(); return ct ? { c: ct.c, sg: Math.sign(ct.lx) || 1 } : null;
+}
+function vbServeZone() {
+  if (!VM.on || !(walk.hold || walk.serve || (walk.jserve && !walk.jserve.jumped))) return;
+  const z = vbServeSide(); if (!z) return;
+  const [lx, lz] = toLocalOf(z.c, walk.x, walk.z); if (lx * z.sg >= 9.1 && Math.abs(lz) <= 4.5) return;
+  const [x, w] = toWorldOf(z.c, z.sg * Math.max(9.1, lx * z.sg), clamp(lz, -4.5, 4.5)); walk.x = x; walk.z = w;
+  if (performance.now() - (walk.szT || 0) > 2500) { walk.szT = performance.now(); toast('發球要站在底線後面（兩條邊線延長線之間）', 1600); }
+}
+// 站在場內按發球：不行，要先退到底線後面
+function vbServeInside() {
+  const z = vbServeSide(); if (!z) return false;
+  const [lx] = toLocalOf(z.c, walk.x, walk.z); if (lx * z.sg >= 9.0 || Math.abs(lx) > 14) return false;
+  toast('要退到底線後面才能發球', 1600); return true;
+}
 function startServe(type = 'std') {
   if (walk.serve || walk.spike || walk.sit) return;
   if (!walk.hold) { toast('先拿一顆球（看著球車按 E）才能發球'); return; }
+  if (vbServeInside()) return;
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
   const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
   const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
@@ -6570,6 +6590,7 @@ function startServe(type = 'std') {
 //      球最好打的時候：你跳到最高點、球剛好掉到手的高度（球會發亮）；拋了沒打到＝發球失誤
 function startJumpServe() {
   if (walk.serve || walk.jserve || walk.air || walk.sit || !walk.hold) return;
+  if (vbServeInside()) return;
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
   const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
   const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
@@ -6583,7 +6604,7 @@ function updateJumpServe(dt) {
   if (!s.hit) {
     b.position.set(s.from.x + s.fwd.x * s.vf * t, s.from.y + s.vy0 * t - 4.9 * t * t, s.from.z + s.fwd.z * s.vf * t); b.rotation.y += dt * 4;
     // 助跑兩步（0.25～0.72 秒往前約 0.9 m），0.72 秒起跳；這樣跳到最高點時球剛好掉到手的高度
-    if (t > 0.25 && t < 0.72 && !walk.air) { const [nx, nz] = collide(walk.x + s.fwd.x * 1.9 * dt, walk.z + s.fwd.z * 1.9 * dt); walk.x = nx; walk.z = nz; }
+    if (t > 0.25 && t < 0.72 && !walk.air) { const [nx, nz] = collide(walk.x + s.fwd.x * 1.9 * dt, walk.z + s.fwd.z * 1.9 * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑到底線就停（起跳一定在線後）
     if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: 3.7, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, t: 0 }; if (staGame()) staUse(0.06); }
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮
