@@ -6515,7 +6515,9 @@ function vbServeAim() {
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw), [ax, az] = toLocalOf(court, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
   if (dlx * -sg < 0.05) return null;   // 沒有面向對面
   const depth = clamp(3 + ((walk.pitch + 0.2) / 0.7) * 5.6, 2.5, 9.6), k = (-sg * depth - lx) / dlx, tlz = lz + dlz * k, [tx, tz] = toWorldOf(court, -sg * depth, tlz);
-  return { court, sg, tx, tz, depth, tlz, inside: depth <= 9 && Math.abs(tlz) <= 4.5 };
+  // 球要從兩根標誌桿中間過網：直線路徑在網子那裡的位置超過 ±4.5 m＝從標誌桿外過網（犯規）
+  const kz = (0 - lx) / (-sg * depth - lx), netZ = lz + (tlz - lz) * kz, ant = Math.abs(netZ) > 4.5 - BALL_R;
+  return { court, sg, tx, tz, depth, tlz, ant, inside: depth <= 9 && Math.abs(tlz) <= 4.5 && !ant };
 }
 function vbAimRing() {
   const show = !RP.on && (walk.hold || (walk.jserve && !walk.jserve.hit) || (walk.serve && !walk.serve.hit)) && (VM.on || vbCourt());
@@ -6523,6 +6525,7 @@ function vbAimRing() {
   if (!VB.aim) { const g = new THREE.Group(), mk = (r0, r1) => new THREE.Mesh(new THREE.RingGeometry(r0, r1, 36), new THREE.MeshBasicMaterial({ color: '#F2B705', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); g.add(mk(0.32, 0.4), mk(0, 0.06)); g.children.forEach((m) => { m.rotation.x = -Math.PI / 2; }); g.position.y = 0.02; scene.add(g); VB.aim = g; }
   VB.aim.visible = !!a; if (!a) return;
   VB.aim.position.set(a.tx, 0.02, a.tz); for (const m of VB.aim.children) m.material.color.set(a.inside ? '#F2B705' : '#E5484D');
+  if (a.ant && walk.hold && performance.now() - (VB.antT || 0) > 3000) { VB.antT = performance.now(); toast('這個方向會從標誌桿外面過網（犯規）', 1500); }
   VB.aim.scale.setScalar(1 + Math.sin(performance.now() / 180) * 0.06);
 }
 // 給落點、球速、重力（上旋球下墜快＝重力大）：找出手速度剛好是 spd 的拋物線；過不了網就放慢拉高
@@ -6570,8 +6573,10 @@ function vbServeZone() {
 // 站在場內按發球：不行，要先退到底線後面
 function vbServeInside() {
   const z = vbServeSide(); if (!z) return false;
-  const [lx] = toLocalOf(z.c, walk.x, walk.z); if (lx * z.sg >= 9.0 || Math.abs(lx) > 14) return false;
-  toast('要退到底線後面才能發球', 1600); return true;
+  const [lx, lz] = toLocalOf(z.c, walk.x, walk.z); if (Math.abs(lx) > 14) return false;
+  if (lx * z.sg < 9.0) { toast('要退到底線後面才能發球', 1600); return true; }
+  if (Math.abs(lz) > 4.5) { toast('要站在兩條邊線（標誌桿）延長線之間發球', 1800); return true; }
+  return false;
 }
 function startServe(type = 'std') {
   if (walk.serve || walk.spike || walk.sit) return;
