@@ -6729,17 +6729,104 @@ function renderMpList() {
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 function makeAvatar(color) {
-  // 人形：腿、手臂都有關節（臀部、肩膀）可以擺動；身體在 body 群組裡，跳的時候整個往上
-  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 });
-  const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
-  const legs = [-1, 1].map((sx) => { const hip = new THREE.Group(); hip.position.set(sx * 0.1, 0.86, 0); body.add(hip); add(new THREE.CylinderGeometry(0.065, 0.055, 0.82, 12), skin, 0, -0.43, 0, hip); add(new THREE.BoxGeometry(0.11, 0.08, 0.26), mat('#F4F4F2'), 0, -0.82, -0.04, hip); return hip; });
-  add(new THREE.CylinderGeometry(0.17, 0.15, 0.24, 16), dark, 0, 0.92, 0);
-  add(new THREE.CylinderGeometry(0.18, 0.16, 0.52, 16), jersey, 0, 1.3, 0);
-  const arms = [-1, 1].map((sx) => { const sh = new THREE.Group(); sh.position.set(sx * 0.22, 1.52, 0); body.add(sh); add(new THREE.CylinderGeometry(0.045, 0.04, 0.62, 10), skin, 0, -0.31, 0, sh); add(new THREE.SphereGeometry(0.045, 10, 8), skin, 0, -0.64, 0, sh); return sh; });
-  add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 1.72, 0);
-  add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 1.75, 0);
-  return { g, body, arms, legs, phase: 0 };
+  // 人形骨架：body（跳的時候整個往上）→ root（蹲低時往下）→ 大腿／膝蓋／小腿、腰（上身前傾、轉身）→ 肩膀／手肘／手掌、頭
+  // 面向 +z；[0] 是右手／右腳（打球、拿拍的那隻）
+  const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
+  const skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 }), shoe = mat('#F4F4F2');
+  const add = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  const legs = [], knees = [];
+  for (const sx of [-1, 1]) {
+    const hip = new THREE.Group(); hip.position.set(sx * 0.1, 0.9, 0); root.add(hip);
+    add(new THREE.CylinderGeometry(0.075, 0.06, 0.44, 12), skin, 0, -0.22, 0, hip);
+    const knee = new THREE.Group(); knee.position.set(0, -0.44, 0); hip.add(knee);
+    add(new THREE.SphereGeometry(0.06, 10, 8), skin, 0, 0, 0, knee); add(new THREE.CylinderGeometry(0.058, 0.045, 0.42, 12), skin, 0, -0.21, 0, knee);
+    add(new THREE.BoxGeometry(0.11, 0.07, 0.26), shoe, 0, -0.43, 0.05, knee);
+    legs.push(hip); knees.push(knee);
+  }
+  add(new THREE.CylinderGeometry(0.17, 0.155, 0.26, 16), dark, 0, 0.9, 0, root);   // 短褲
+  const spine = new THREE.Group(); spine.position.set(0, 0.98, 0); root.add(spine);
+  add(new THREE.CylinderGeometry(0.18, 0.16, 0.5, 16), jersey, 0, 0.27, 0, spine);
+  const arms = [], elbows = [], hands = [];
+  for (const sx of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(sx * 0.22, 0.52, 0); spine.add(sh);
+    add(new THREE.SphereGeometry(0.055, 10, 8), jersey, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.046, 0.04, 0.3, 10), skin, 0, -0.15, 0, sh);
+    const el = new THREE.Group(); el.position.set(0, -0.3, 0); sh.add(el);
+    add(new THREE.SphereGeometry(0.04, 8, 6), skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.04, 0.034, 0.27, 10), skin, 0, -0.135, 0, el);
+    const hd = new THREE.Group(); hd.position.set(0, -0.29, 0); el.add(hd); add(new THREE.SphereGeometry(0.045, 10, 8), skin, 0, 0, 0, hd);
+    arms.push(sh); elbows.push(el); hands.push(hd);
+  }
+  const head = new THREE.Group(); head.position.set(0, 0.62, 0); spine.add(head);
+  add(new THREE.CylinderGeometry(0.05, 0.055, 0.1, 10), skin, 0, 0.0, 0, head);
+  add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 0.13, 0, head);
+  add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 0.16, 0, head);
+  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true };
+}
+// ---- 全身姿勢（弧度）：sh＝肩膀 [往前抬（負）, 往外張]、el＝手肘彎、hip＝大腿往前抬、kn＝膝蓋彎、sp＝上身前傾（負＝後仰）、tw＝上身轉、arm＝跑步時手要不要擺
+// 參考排球動作：接球低重心、前臂伸直併攏成平台；舉球雙手在額頭前、手肘彎成窗戶再一起推出去；扣球起跳拉弓（右手肘高、左手指球）、揮臂、收在身體另一側；攔網雙手伸直往網子上方壓
+const AVP = {
+  idle: { sh: [[-0.08, 0.1], [-0.08, 0.1]], el: [0.3, 0.3], hip: [0.02, 0.02], kn: [0.06, 0.06], sp: 0.04, tw: 0 },
+  ready: { sh: [[-0.75, 0.15], [-0.75, 0.15]], el: [1.0, 1.0], hip: [0.75, 0.75], kn: [1.3, 1.3], sp: 0.55, tw: 0, arm: 0.3 },
+  bump: { sh: [[-0.95, -0.2], [-0.95, -0.2]], el: [0.03, 0.03], hip: [0.85, 0.85], kn: [1.45, 1.45], sp: 0.55, tw: 0, arm: 0 },
+  bumpHit: { sh: [[-1.3, -0.2], [-1.3, -0.2]], el: [0, 0], hip: [0.45, 0.45], kn: [0.7, 0.7], sp: 0.32, tw: 0, arm: 0 },
+  setReady: { sh: [[-2.5, 0.42], [-2.5, 0.42]], el: [1.6, 1.6], hip: [0.32, 0.32], kn: [0.6, 0.6], sp: 0.02, tw: 0, arm: 0 },
+  setPush: { sh: [[-2.95, 0.15], [-2.95, 0.15]], el: [0.2, 0.2], hip: [0.08, 0.08], kn: [0.12, 0.12], sp: -0.08, tw: 0, arm: 0 },
+  setBack: { sh: [[-3.15, 0.12], [-3.15, 0.12]], el: [0.15, 0.15], hip: [0.02, 0.02], kn: [0.08, 0.08], sp: -0.4, tw: 0, arm: 0 },
+  hold: { sh: [[-0.85, -0.1], [-0.85, -0.1]], el: [1.0, 1.0], hip: [0.03, 0.03], kn: [0.08, 0.08], sp: 0.04, tw: 0, arm: 0 },
+  approach: { sh: [[0.7, 0.15], [0.7, 0.15]], el: [0.15, 0.15], hip: [0.7, 0.4], kn: [1.2, 0.9], sp: 0.5, tw: 0, arm: 0 },   // 助跑最後一步：雙手甩到後面、蹲低
+  airUp: { sh: [[-2.45, 0.6], [-2.8, 0.1]], el: [2.0, 0.2], hip: [0.55, 0.3], kn: [1.1, 0.7], sp: -0.3, tw: 0.3, arm: 0 },
+  spikeHit: { sh: [[-3.0, 0.15], [-1.0, 0.25]], el: [0.08, 1.2], hip: [0.4, 0.2], kn: [0.8, 0.5], sp: 0.1, tw: -0.2, arm: 0 },
+  spikeFollow: { sh: [[-0.6, -0.35], [-0.4, 0.2]], el: [0.35, 1.3], hip: [0.55, 0.4], kn: [0.9, 0.7], sp: 0.5, tw: -0.35, arm: 0 },
+  serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35, arm: 0 },
+  blockReady: { sh: [[-2.15, 0.28], [-2.15, 0.28]], el: [1.7, 1.7], hip: [0.35, 0.35], kn: [0.7, 0.7], sp: 0.08, tw: 0, arm: 0 },
+  block: { sh: [[-3.0, 0.1], [-3.0, 0.1]], el: [0.08, 0.08], hip: [0.15, 0.15], kn: [0.35, 0.35], sp: 0.1, tw: 0, arm: 0 },
+  land: { sh: [[-0.6, 0.3], [-0.6, 0.3]], el: [0.8, 0.8], hip: [0.65, 0.65], kn: [1.15, 1.15], sp: 0.38, tw: 0, arm: 0 },
+  dive: { sh: [[-3.0, 0.18], [-3.0, 0.18]], el: [0.05, 0.05], hip: [-0.1, -0.1], kn: [0.15, 0.45], sp: 0, tw: 0, arm: 0 },
+  down: { sh: [[-1.7, 0.35], [-1.7, 0.35]], el: [1.3, 1.3], hip: [0.1, 0.1], kn: [0.4, 0.6], sp: 0, tw: 0, arm: 0 },
+  // 球拍：準備（拍頭在前上方）、上手（拉拍→擊球→收拍）、側身抽球
+  rkReady: { sh: [[-1.2, 0.6], [-0.8, 0.25]], el: [1.5, 0.9], hip: [0.55, 0.55], kn: [0.95, 0.95], sp: 0.35, tw: 0, arm: 0 },
+  rkOverCock: { sh: [[-2.6, 0.75], [-2.7, 0.1]], el: [2.1, 0.2], hip: [0.2, 0.4], kn: [0.3, 0.6], sp: -0.25, tw: 0.5, arm: 0 },
+  rkOverHit: { sh: [[-3.05, 0.1], [-1.2, 0.2]], el: [0.05, 1.0], hip: [0.2, 0.3], kn: [0.3, 0.5], sp: 0.05, tw: -0.1, arm: 0 },
+  rkOverFollow: { sh: [[-0.7, -0.5], [-0.5, 0.2]], el: [0.4, 1.1], hip: [0.4, 0.3], kn: [0.6, 0.5], sp: 0.4, tw: -0.5, arm: 0 },
+  rkSideBack: { sh: [[-1.2, 1.3], [-0.9, 0.2]], el: [0.9, 0.8], hip: [0.6, 0.4], kn: [1.0, 0.7], sp: 0.3, tw: 0.7, arm: 0 },
+  rkSideFollow: { sh: [[-1.5, -0.6], [-0.6, 0.3]], el: [0.6, 0.9], hip: [0.5, 0.5], kn: [0.9, 0.9], sp: 0.3, tw: -0.6, arm: 0 },
+};
+function avMix(a, b, t) {
+  t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t;
+  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1) };
+}
+// 套用姿勢：每個關節往目標靠近（k＝這一格靠近的比例）；跑步時腿、手照步伐擺；蹲低時整個人往下，腳一直踩在地上
+function avDrive(av, P, k, sp = 0, air = false) {
+  if (!av.rig) return;
+  const run = air ? 0 : clamp(sp / 2.5, 0, 1), A = air ? 0 : Math.min(0.8, sp * 0.3), legSw = [Math.sin(av.phase) * A, Math.sin(av.phase + Math.PI) * A], arm = P.arm ?? 1;
+  const ext = [0, 0];
+  for (let i = 0; i < 2; i++) {
+    const sx = i === 0 ? -1 : 1, hipT = P.hip[i] + legSw[i], knT = P.kn[i] + Math.max(0, -legSw[i]) * 1.5 + run * 0.2;
+    const shT = P.sh[i][0] + arm * -legSw[1 - i] * 1.1, abT = P.sh[i][1], elT = P.el[i] + arm * run * 1.0;
+    const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i];
+    a.rotation.x += (shT - a.rotation.x) * k; a.rotation.z += (sx * abT - a.rotation.z) * k;
+    e.rotation.x += (-elT - e.rotation.x) * k; h.rotation.x += (-hipT - h.rotation.x) * k; kn.rotation.x += (knT - kn.rotation.x) * k;
+    const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = 0.44 * Math.cos(hh) + 0.46 * Math.cos(hh - kk);
+  }
+  av.spine.rotation.x += (P.sp + run * 0.18 - av.spine.rotation.x) * k; av.spine.rotation.y += ((P.tw || 0) - av.spine.rotation.y) * k;
+  av.head.rotation.x += (-P.sp * 0.6 - av.head.rotation.x) * k;   // 上身往前傾時頭抬起來看球
+  const drop = air ? 0 : Math.max(0, 0.9 - Math.max(ext[0], ext[1]));
+  av.root.position.y += (-drop - av.root.position.y) * Math.min(1, k * 1.5);
+}
+// 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
+function avPoseOf(code, t = 0.5, ready = false) {
+  switch (code) {
+    case 1: return AVP.hold;
+    case 2: return t < 0.15 ? AVP.setReady : AVP.setPush;
+    case 3: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bump, (t - 0.3) / 0.5);
+    case 4: return t < 0.18 ? avMix(AVP.airUp, AVP.spikeHit, t / 0.18) : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.18) / 0.5);
+    case 5: return AVP.airUp;
+    case 6: return AVP.rkReady;
+    case 7: return t < 0.4 ? avMix(AVP.rkOverCock, AVP.rkOverHit, t / 0.4) : avMix(AVP.rkOverHit, AVP.rkOverFollow, (t - 0.4) / 0.6);
+    case 8: return avMix(AVP.rkSideBack, AVP.rkSideFollow, t);
+    case 9: return AVP.block;
+    case 10: return AVP.dive;
+    default: return ready ? AVP.ready : AVP.idle;
+  }
 }
 function netPeer(id, d) {
   let p2 = NET.peers.get(id);
@@ -6835,16 +6922,14 @@ function netTick(dt, now) {
     const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y += (y - av.body.position.y) * k;
     // 走路：速度越快腿擺越大；空中時兩腳收起
     av.phase += dt * Math.min(12, sp * 5.5);
-    const swing = y > 0.08 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
-    av.legs[0].rotation.x += (swing - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-swing - av.legs[1].rotation.x) * k;
     // 手臂：0 一般（跟著走路擺）、1 拿球、2 舉球（兩手高舉）、3 墊球（兩手併攏往前下）、4 攻擊（右手高舉）、5 跳
-    if (p2.rk && p2.racketK !== p2.rk) { if (p2.racket) av.arms[0].remove(p2.racket); p2.racket = makeRacket(p2.rk); p2.racket.position.set(0, -0.62, 0); av.arms[0].add(p2.racket); p2.racketK = p2.rk; }
-    else if (!p2.rk && p2.racket) { av.arms[0].remove(p2.racket); p2.racket = null; p2.racketK = null; }
-    const P2 = p2.pose;
-    const tgt = P2 === 9 ? [[-3.0, 0.12], [-3.0, -0.12]] : P2 === 6 ? [[-0.8, -0.3], [-0.45, 0.2]] : P2 === 7 ? [[-2.9, -0.1], [-2.2, 0.2]] : P2 === 8 ? [[-1.3, 0.4], [-0.7, 0.5]] : P2 === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : P2 === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : P2 === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : P2 === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : P2 === 5 ? [[-2.2, 0.2], [-2.2, -0.2]] : [[-swing * 0.8, 0.06], [swing * 0.8, -0.06]];
-    av.arms.forEach((arm, i) => { arm.rotation.x += (tgt[i][0] - arm.rotation.x) * k; arm.rotation.z += (tgt[i][1] - arm.rotation.z) * k; });
+    if (p2.rk && p2.racketK !== p2.rk) { if (p2.racket) av.hands[0].remove(p2.racket); p2.racket = makeRacket(p2.rk); av.hands[0].add(p2.racket); p2.racketK = p2.rk; }
+    else if (!p2.rk && p2.racket) { av.hands[0].remove(p2.racket); p2.racket = null; p2.racketK = null; }
+    // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
+    if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
+    avDrive(av, avPoseOf(p2.pose, p2.poseT / 0.45, VM.on && VM.phase === 'rally'), Math.min(1, k * 1.3), sp, y > 0.08);
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
-    if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; const ra = T[3] === 7 ? [-2.9, -0.1] : T[3] === 8 ? [-1.3, 0.4] : [-0.8, -0.3]; A.arms[0].rotation.x += (ra[0] - A.arms[0].rotation.x) * k; A.arms[0].rotation.z += (ra[1] - A.arms[0].rotation.z) * k; }
+    if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
   }
 }
 // ---------------------------------------------------------------- 即時共同編輯：同一個球館（候選場地／現有球館／自由規劃）頁面的人自動連在一起
@@ -7096,10 +7181,9 @@ function updateReplay(dt) {
     const X = x + (q[1] - x) * k, Z = z + (q[2] - z) * k; let dy = q[4] - yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     const sp = Math.hypot(q[1] - x, q[2] - z) * 30;
     av.g.position.set(X, 0, Z); av.g.rotation.y = yaw + dy * k + Math.PI; av.body.position.y = y + (q[3] - y) * k;
-    av.phase += dt * Math.min(12, sp * 5.5) * RP.speed; const sw = av.body.position.y > 0.08 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
-    av.legs[0].rotation.x = sw; av.legs[1].rotation.x = -sw;
-    const tg = poseC === 9 ? [[-3.05, 0.12], [-3.05, -0.12]] : poseC === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : poseC === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : poseC === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : poseC === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : poseC === 7 ? [[-3.0, -0.15], [-2.2, 0.2]] : poseC === 8 ? [[-1.3, -1.0], [-0.7, 0.5]] : poseC === 6 ? [[-0.75, -0.25], [-0.45, 0.2]] : [[-sw * 0.8, 0.06], [sw * 0.8, -0.06]];
-    av.arms.forEach((arm, i) => { arm.rotation.x += (tg[i][0] - arm.rotation.x) * 0.4; arm.rotation.z += (tg[i][1] - arm.rotation.z) * 0.4; });
+    av.phase += dt * Math.min(12, sp * 5.5) * RP.speed;
+    if (av.poseC !== poseC) { av.poseC = poseC; av.poseT = 0; } av.poseT = (av.poseT || 0) + dt * RP.speed;
+    avDrive(av, avPoseOf(poseC, av.poseT / 0.45), 0.4, sp, av.body.position.y > 0.08);
   }
   for (const [id, av] of RP.actors) if (!seen.has(id)) av.g.visible = false;
   // 球＋軌跡（最近 2.5 秒，越舊越淡）
@@ -7484,7 +7568,7 @@ function rkBallMesh(k) {
 // ---- 開始／結束
 function rkMkPlayer(side, color, name, ai) {
   const av = makeAvatar(color); scene.add(av.g);
-  const rk = makeRacket(RK.k); rk.position.set(0, -0.62, 0); av.arms[0].add(rk);
+  const rk = makeRacket(RK.k); av.hands[0].add(rk);
   let tag = null;
   if (ai) { const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name; tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); }
   return { side, ai, name, x: side * 4, z: 0, vx: 0, vz: 0, av, tag, queued: null, swing: null, prevCost: null, jy: 0, reactAt: 0, plan: null };
@@ -7848,18 +7932,17 @@ function rkAnim(P, dt) {
   av.g.position.set(x, 0, z);
   const [ax, az] = rkW(c, 0, 0), [bx, bz] = rkW(c, P.side, 0); av.g.rotation.y = Math.atan2(ax - bx, az - bz);
   const sp = Math.hypot(P.vx, P.vz); av.phase += dt * Math.min(13, sp * 5.5);
-  const swing = Math.min(0.7, sp * 0.3) * Math.sin(av.phase);
-  av.legs[0].rotation.x += (swing - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-swing - av.legs[1].rotation.x) * k;
-  let ra = [-0.75, -0.25], la = [-0.45, 0.2], jy = 0;
-  if (P.swing) {
+  // 準備姿勢（低重心、拍頭在前）→ 上手：拉拍、擊球、收拍；平抽：拉到側後方、往前掃
+  let pz = RK.phase === 'rally' ? AVP.rkReady : AVP.idle, jy = 0, kk = k;
+  if (P.dive || P.down > 0) pz = P.dive ? AVP.dive : AVP.down;
+  else if (P.swing) {
     P.swing.t += dt; const s = P.swing.t / 0.3;
     if (s >= 1) P.swing = null;
-    else if (P.swing.over) { ra = [-3.0 + s * 2.2, -0.15]; la = [-2.2, 0.2]; if (P.swing.kind === 'smash') jy = Math.sin(s * Math.PI) * 0.35; }
-    else { ra = [-1.3, -1.2 + s * 1.9]; la = [-0.7, 0.5]; }
-  } else if (P.queued) { ra = [-1.6, -0.9]; la = [-1.0, 0.35]; }
-  av.arms[0].rotation.x += (ra[0] - av.arms[0].rotation.x) * (P.swing ? 0.6 : k); av.arms[0].rotation.z += (ra[1] - av.arms[0].rotation.z) * (P.swing ? 0.6 : k);
-  av.arms[1].rotation.x += (la[0] - av.arms[1].rotation.x) * k; av.arms[1].rotation.z += (la[1] - av.arms[1].rotation.z) * k;
+    else { pz = avPoseOf(P.swing.over ? 7 : 8, s); kk = 0.5; if (P.swing.over && P.swing.kind === 'smash') jy = Math.sin(s * Math.PI) * 0.35; }
+  } else if (P.queued) pz = RK.b && RK.b.p[1] > 1.8 ? AVP.rkOverCock : AVP.rkSideBack;
+  else if (P.air) pz = AVP.rkOverCock;
   jy = Math.max(jy, rkAirY(P));
+  avDrive(av, pz, kk, sp, jy > 0.05);
   av.g.rotation.order = 'YXZ'; av.g.rotation.x += (((P.dive && P.dive.t > 0.06) || P.down > 0.15 ? 1.2 : 0) - av.g.rotation.x) * (P.dive ? 0.35 : 0.15);
   P.jy = jy; av.body.position.y += (jy - av.body.position.y) * 0.5;
 }
@@ -8175,7 +8258,7 @@ function vbJump(kind) {
 function vbAirStep(dt) {
   const a = walk.air; if (!a) return 0;
   a.t += dt; a.vy -= 9.8 * dt; a.y += a.vy * dt;
-  if (a.y <= 0) { walk.air = null; if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
+  if (a.y <= 0) { walk.air = null; walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
   return a.y;
 }
 // ---- 攻擊：按 V 揮臂，0.22 秒內手（頭上前方）碰到球才算；碰到的位置決定好不好
@@ -8457,10 +8540,9 @@ function vbNpcStep(dt) {
   av.g.position.set(n.x, 0, n.z); const [ax, az] = toWorldOf(n.c, 0, 0), [bx, bz] = toWorldOf(n.c, n.sg, 0); let ry = Math.atan2(ax - bx, az - bz);
   if (tgt) ry = Math.atan2(tgt.b.m.position.x - n.x, tgt.b.m.position.z - n.z);
   let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
-  av.phase += dt * Math.min(12, spd * 5.5); const sw = Math.min(0.6, spd * 0.3) * Math.sin(av.phase);
-  av.legs[0].rotation.x += (sw - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-sw - av.legs[1].rotation.x) * k;
-  n.up = Math.max(0, n.up - dt); const up = tgt || n.up > 0 ? -2.7 : -0.2;
-  for (const [i, z] of [[0, 0.15], [1, -0.15]]) { av.arms[i].rotation.x += (up - av.arms[i].rotation.x) * k; av.arms[i].rotation.z += (z - av.arms[i].rotation.z) * k; }
+  av.phase += dt * Math.min(12, spd * 5.5);
+  n.up = Math.max(0, n.up - dt);
+  avDrive(av, n.up > 0 ? AVP.setPush : tgt ? AVP.setReady : AVP.idle, k, spd);
 }
 function vbNpcSet(b) {
   const n = VB.npc, [nlx, nlz] = toLocalOf(n.c, n.x, n.z), [plx, plz] = toLocalOf(n.c, walk.x, walk.z);
@@ -8546,6 +8628,28 @@ function vbTurn(dt) { const t = walk.turn; if (!t) return; t.t -= dt; let d = t.
 function vbUpdate(dt) { vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
 function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VM.on || !!VB.npc; }
+// 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
+function myAvPose() {
+  const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
+  if (walk.dive || walk.down > 0) return [walk.dive ? AVP.dive : AVP.down, fast];
+  if (walk.air && walk.air.block) return [AVP.block, fast];
+  if (walk.swing) {   // 揮臂：還沒碰到球＝拉弓；碰到之後 0.07 秒是擊球那一下、接著收到身體另一側
+    const s2 = walk.swing; if (!s2.done) return [walk.air ? AVP.airUp : avMix(AVP.idle, AVP.airUp, 0.85), fast];
+    const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
+  }
+  if (walk.serve) { const t2 = walk.serve.t; return [t2 < 0.5 ? AVP.serveToss : t2 < 0.62 ? avMix(AVP.serveToss, AVP.spikeHit, (t2 - 0.5) / 0.12) : avMix(AVP.spikeHit, avMix(AVP.spikeFollow, AVP.idle, 0.3), (t2 - 0.62) / 0.25), 0.5]; }
+  if (walk.air) return [AVP.airUp, fast];
+  if (walk.landT && performance.now() - walk.landT < 220) return [AVP.land, 0.4];
+  if (walk.flash > 0 && (pose === 'setPush' || pose === 'setBack')) return [pose === 'setBack' ? AVP.setBack : AVP.setPush, fast];
+  if (walk.setQ) return [AVP.setReady, k];
+  if (walk.flash > 0 && pose === 'bumpHit') return [AVP.bumpHit, fast];
+  if (walk.recv) return [AVP.bump, 0.4];
+  if (walk.hold) return [AVP.hold, k];
+  // 比賽中：在網前、對面有人要攻擊＝攔網準備；球在場上＝低重心準備姿勢
+  if (game && VM.phase === 'rally') { const ct = vbCourt(); if (ct && Math.abs(ct.lx) < 1.3) return [AVP.blockReady, k]; return [AVP.ready, k]; }
+  if (VB.npc) return [AVP.ready, k];
+  return [AVP.idle, k];
+}
 function tpBegin(dt) {
   const on = tpActive(); $('walk-ui').classList.toggle('tp', on);
   if (!on) { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } return false; }
@@ -8554,16 +8658,7 @@ function tpBegin(dt) {
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
   av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = (walk.low || 0) * 1.15; av.body.position.y += (air - av.body.position.y) * 0.6;
   const v = walk.vel || [0, 0], sp = walk.air ? 0 : Math.hypot(v[0], v[1]); av.phase += dt * Math.min(12, sp * 5.5);
-  const sw = air > 0.05 ? 0 : Math.min(0.65, sp * 0.33) * Math.sin(av.phase);
-  av.legs[0].rotation.x += (sw - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-sw - av.legs[1].rotation.x) * k;
-  const P2 = myPoseCode(), tgt = P2 === 9 ? [[-3.0, 0.12], [-3.0, -0.12]] : P2 === 2 ? [[-2.7, 0.15], [-2.7, -0.15]] : P2 === 3 ? [[-1.0, -0.35], [-1.0, 0.35]] : P2 === 4 ? [[-1.4, 0.1], [-3.0, -0.1]] : P2 === 1 ? [[-0.9, -0.3], [-0.9, 0.3]] : P2 === 5 ? [[-2.2, 0.2], [-2.2, -0.2]] : [[-sw * 0.8, 0.06], [sw * 0.8, -0.06]];
-  let tg = tgt, kk = k;
-  if (walk.swing) { const s2 = walk.swing; if (!s2.done) tg = [[-1.7, 0.35], [-3.25, -0.4]]; else { const e2 = clamp((s2.t - s2.doneT) / 0.16, 0, 1); tg = [[-1.0 + 0.4 * e2, 0.2], [-3.25 + 2.6 * e2, -0.4 + 0.3 * e2]]; } kk = 0.55; }
-  else if (walk.setQ) tg = [[-2.55, 0.25], [-2.55, -0.25]];
-  else if (walk.flash > 0 && (pose === 'setPush' || pose === 'setBack')) tg = pose === 'setBack' ? [[-3.35, 0.1], [-3.35, -0.1]] : [[-3.05, 0.12], [-3.05, -0.12]];
-  else if (walk.recv) tg = [[-1.05, -0.32], [-1.05, 0.32]];
-  else if (walk.flash > 0 && pose === 'bumpHit') tg = [[-1.35, -0.3], [-1.35, 0.3]];
-  av.arms.forEach((arm, i) => { arm.rotation.x += (tg[i][0] - arm.rotation.x) * kk; arm.rotation.z += (tg[i][1] - arm.rotation.z) * kk; });
+  avDrive(av, ...myAvPose(), sp, air > 0.05);
   // 手上的球：第一人稱掛在鏡頭上，第三人稱改畫在人的手上
   TP.ball.visible = !!walk.hold; if (walk.hold) walk.hold.getWorldPosition(TP.ball.position);
   TP.saved = { p: E, q: camera.quaternion.clone(), hv: hands.visible };
@@ -8595,7 +8690,7 @@ function rkAiState() { if (!RK.on || RK.netOp) return undefined; const P = RK.P[
 function rkPeerAi(p2, a) {
   if (!a) { if (p2.aiAv) { scene.remove(p2.aiAv.g); p2.aiTag.element.remove(); p2.aiAv = null; } return; }
   if (!p2.aiAv) {
-    const av = makeAvatar('#E5484D'), rk = makeRacket(a[4]); rk.position.set(0, -0.62, 0); av.arms[0].add(rk);
+    const av = makeAvatar('#E5484D'), rk = makeRacket(a[4]); av.hands[0].add(rk);
     const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = `AI（${p2.n} 的對手）`; const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag);
     av.g.position.set(a[0], 0, a[1]); scene.add(av.g); p2.aiAv = av; p2.aiTag = tag;
   }
@@ -8983,12 +9078,12 @@ function vmRenderAi(dt) {
     const bb = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find((q) => q.room);
     if (bb) { const ddx = bb.m.position.x - x, ddz = bb.m.position.z - z, dd = Math.hypot(ddx, ddz), [blx] = vmL(bb.m.position.x, bb.m.position.z); if (dd > 0.3 && dd < 10 && Math.sign(blx) === sd) ry = Math.atan2(ddx, ddz); }
     let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
-    av.phase += dt * Math.min(12, sp * 5.5); const sw = a.y > 0.05 ? 0 : Math.min(0.6, sp * 0.3) * Math.sin(av.phase);
-    av.legs[0].rotation.x += (sw - av.legs[0].rotation.x) * k; av.legs[1].rotation.x += (-sw - av.legs[1].rotation.x) * k;
-    const P2 = a.swingT > 0 || a.y > 0 ? a.pose : 0;
-    const pr2 = 1 - clamp(a.swingT / 0.35, 0, 1);
-    const tgt = P2 === 9 ? [[-3.05, 0.12], [-3.05, -0.12]] : P2 === 2 ? [[-2.7 - 0.4 * pr2, 0.15], [-2.7 - 0.4 * pr2, -0.15]] : P2 === 3 ? [[-1.0 - 0.35 * pr2, -0.35], [-1.0 - 0.35 * pr2, 0.35]] : P2 === 4 ? [[-1.0, 0.2], [-3.2 + 2.6 * pr2, -0.3]] : P2 === 5 ? [[-1.7, 0.3], [-3.2, -0.35]] : [[-sw * 0.8, 0.06], [sw * 0.8, -0.06]];
-    av.arms.forEach((arm, i) => { arm.rotation.x += (tgt[i][0] - arm.rotation.x) * k; arm.rotation.z += (tgt[i][1] - arm.rotation.z) * k; });
+    av.phase += dt * Math.min(12, sp * 5.5);
+    // AI：碰球那一下照動作做（swingT 從 0.35～0.4 倒數＝動作進度）；攔網的人在網前雙手舉在肩前；球在場上時低重心準備
+    const P2 = a.swingT > 0 || a.y > 0 ? a.pose : 0, pr2 = 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
+    let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : VM.phase === 'rally' ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
+    if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
+    avDrive(av, pz, kk, sp, a.y > 0.05);
   }
   vmHud();
 }
@@ -9139,7 +9234,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
