@@ -761,8 +761,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊（拿球＝發球）</span><span><kbd>右鍵</kbd>吊球</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>發球、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（往哪看打哪、往上看打深，對面的黃圈是落點）、<kbd>F</kbd> 拋給隊友<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -5689,6 +5689,7 @@ function updateWalk(dt) {
   const k = walk.keys;
   if (walk.spike) { updateSpike(dt); applyPose(dt); if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); } return; }
   if (walk.serve) updateServe(dt);
+  if (walk.jserve) updateJumpServe(dt);
   if (reachState) updateReach(dt);
   if (walk.sit) {
     // 坐著：一開始走路（或點地板）就站起來
@@ -6505,8 +6506,55 @@ function updateWind(dt) {
     a.needsUpdate = true;
   }
 }
-// ---- 發球（V）：左手把球拋到頭前上方，右手拉弓、在最高點附近揮臂，球往你看的方向飛、要過網
-function startServe() {
+// ---- 發球瞄準：轉頭左右＝方向、往上看＝打深（到底線前）、往下看＝打短（網前約 3 m）；拿著球時對面場上畫一個圈（黃＝場內、紅＝出界）
+function vbServeAim() {
+  let court = null, sg = 1, lx = 0, lz = 0;
+  for (const c of vbNetCourts()) { const [x, z] = toLocalOf(c, walk.x, walk.z); if (Math.abs(x) > 14 || Math.abs(z) > 7) continue; court = c; sg = Math.sign(x) || 1; lx = x; lz = z; break; }
+  if (!court) return null;
+  const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw), [ax, az] = toLocalOf(court, walk.x + fx, walk.z + fz), dlx = ax - lx, dlz = az - lz;
+  if (dlx * -sg < 0.05) return null;   // 沒有面向對面
+  const depth = clamp(3 + ((walk.pitch + 0.2) / 0.7) * 5.6, 2.5, 9.6), k = (-sg * depth - lx) / dlx, tlz = lz + dlz * k, [tx, tz] = toWorldOf(court, -sg * depth, tlz);
+  return { court, sg, tx, tz, depth, tlz, inside: depth <= 9 && Math.abs(tlz) <= 4.5 };
+}
+function vbAimRing() {
+  const show = !RP.on && (walk.hold || (walk.jserve && !walk.jserve.hit) || (walk.serve && !walk.serve.hit)) && (VM.on || vbCourt());
+  const a = !show ? null : walk.jserve ? walk.jserve.aim : walk.serve ? walk.serve.aim : vbServeAim();
+  if (!VB.aim) { const g = new THREE.Group(), mk = (r0, r1) => new THREE.Mesh(new THREE.RingGeometry(r0, r1, 36), new THREE.MeshBasicMaterial({ color: '#F2B705', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); g.add(mk(0.32, 0.4), mk(0, 0.06)); g.children.forEach((m) => { m.rotation.x = -Math.PI / 2; }); g.position.y = 0.02; scene.add(g); VB.aim = g; }
+  VB.aim.visible = !!a; if (!a) return;
+  VB.aim.position.set(a.tx, 0.02, a.tz); for (const m of VB.aim.children) m.material.color.set(a.inside ? '#F2B705' : '#E5484D');
+  VB.aim.scale.setScalar(1 + Math.sin(performance.now() / 180) * 0.06);
+}
+// 給落點、球速、重力（上旋球下墜快＝重力大）：找出手速度剛好是 spd 的拋物線；過不了網就放慢拉高
+function serveVel(p, tx, tz, spd, g, court, sg) {
+  const V = (T) => new THREE.Vector3((tx - p.x) / T, (BALL_R - p.y) / T + 0.5 * g * T, (tz - p.z) / T);
+  // 球速最慢的那條拋物線（Tmin）；要求的球速比它快，就在 Tmin 左邊（比較平、比較快）找剛好的
+  let a = 0.12, c = 4; for (let i = 0; i < 40; i++) { const m1 = a + (c - a) / 3, m2 = c - (c - a) / 3; if (V(m1).length() < V(m2).length()) c = m2; else a = m1; }
+  const Tmin = (a + c) / 2; let T = Tmin;
+  if (V(Tmin).length() < spd) { let lo = 0.08, hi = Tmin; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (V(m).length() > spd) lo = m; else hi = m; } T = hi; }
+  const clear = (v) => { if (!court) return true; const [l0] = toLocalOf(court, p.x, p.z), [l1] = toLocalOf(court, tx, tz); if (Math.sign(l0) === Math.sign(l1)) return true; const t = (l0 / (l0 - l1)) * T; return p.y + v.y * t - 0.5 * g * t * t > NETS[state.net].h + BALL_R + 0.12; };
+  let v = V(T); for (let i = 0; i < 40 && !clear(v); i++) { T += 0.03; v = V(T); }
+  return v;
+}
+// 發球打出去：瞄準點＋誤差（打得越不準誤差越大；跳發最難控、站發最穩）
+function serveLaunch(ball, p0, type, q, aim) {
+  const a = aim !== undefined ? aim : vbServeAim(), fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));   // 沒對著對面時就往前 13 m
+  let tx = a ? a.tx : walk.x + fwd.x * 13, tz = a ? a.tz : walk.z + fwd.z * 13;
+  const err = (1 - q) * 2.2 + { std: 0.25, float: 0.35, jump: 0.5, jfloat: 0.45 }[type]; tx += rkGauss() * err * 0.6; tz += rkGauss() * err * 0.6;
+  const spd = { std: 13, float: 12.5, jump: 19 + 7 * q, jfloat: 14 + 3 * q }[type], g = type === 'jump' ? 14.3 : 9.8;
+  const v = serveVel(p0, tx, tz, spd, g, a && a.court, a && a.sg);
+  const b = { m: ball, v, rest: 0, spike: a ? { c: a.court, sg: a.sg } : null, serve: true };
+  if (type === 'jump') b.acc = new THREE.Vector3(0, -4.5, 0);   // 上旋：下墜比一般快
+  if (type === 'float' || type === 'jfloat') b.float = { t: 0, w: 4.5 + Math.random() * 3, ph: Math.random() * 6.3, a: type === 'jfloat' ? 3.2 : 2.4 };   // 飄球：沒有旋轉，空中左右亂飄
+  ball.userData.ball = b; balls.push(b);
+  if (NET.on) netBallHit(b, 'serve');
+  if (VM.on) { b.spike = null; vmOnTouch(b, vmMe(), 'serve'); }
+  vbImpact(b, type === 'jump' ? 'spike' : 'serve', q);
+  recHit({ x: p0.x, y: p0.y, z: p0.z, v: v.length(), kind: 'serve' });
+  while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
+  toast({ std: '發球！', float: '飄球！', jump: q >= 0.85 ? '跳發！（擊球點完美）' : '跳發！', jfloat: '跳飄！' }[type], 1100);
+}
+// ---- 站發（左鍵）／站飄（右鍵）：左手把球拋到頭前上方，右手拉弓、在最高點附近揮臂
+function startServe(type = 'std') {
   if (walk.serve || walk.spike || walk.sit) return;
   if (!walk.hold) { toast('先拿一顆球（看著球車按 E）才能發球'); return; }
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
@@ -6514,9 +6562,48 @@ function startServe() {
   const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
   const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
   const top = new THREE.Vector3(walk.x, EYE + 0.95, walk.z).addScaledVector(fwd, 0.45);
-  walk.serve = { t: 0, ball, from: p, top, fwd, hit: false };
+  walk.serve = { t: 0, ball, from: p, top, fwd, hit: false, type, aim: vbServeAim() };   // 落點在按下去那一刻就定了（拋球時鏡頭會抬頭，不能再算）
   hands.visible = true; pose = 'cock';
-  toast('拋球——');
+  toast(type === 'float' ? '拋球——（飄球）' : '拋球——');
+}
+// ---- 跳發／跳飄：拿著球按空白鍵＝拋球（往前上方拋高），自動跑兩步起跳；在空中按左鍵＝跳發（重、上旋下墜）、右鍵＝跳飄（不轉、會飄）
+//      球最好打的時候：你跳到最高點、球剛好掉到手的高度（球會發亮）；拋了沒打到＝發球失誤
+function startJumpServe() {
+  if (walk.serve || walk.jserve || walk.air || walk.sit || !walk.hold) return;
+  if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
+  const p = new THREE.Vector3(); walk.hold.getWorldPosition(p); camera.remove(walk.hold);
+  const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; delete ball.userData.noPick; ballsGroup.add(ball);
+  const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
+  walk.jserve = { t: 0, ball, from: p, fwd, vy0: 7.0, vf: 1.15, hit: false, swung: false, jumped: false, aim: vbServeAim() };
+  hands.visible = true; pose = 'cock';
+  toast('拋球——跳起來在空中按左鍵（跳發）或右鍵（跳飄）', 2200);
+}
+function updateJumpServe(dt) {
+  const s = walk.jserve; s.t += dt; const t = s.t, b = s.ball;
+  if (!s.hit) {
+    b.position.set(s.from.x + s.fwd.x * s.vf * t, s.from.y + s.vy0 * t - 4.9 * t * t, s.from.z + s.fwd.z * s.vf * t); b.rotation.y += dt * 4;
+    // 助跑兩步（0.25～0.72 秒往前約 0.9 m），0.72 秒起跳；這樣跳到最高點時球剛好掉到手的高度
+    if (t > 0.25 && t < 0.72 && !walk.air) { const [nx, nz] = collide(walk.x + s.fwd.x * 1.9 * dt, walk.z + s.fwd.z * 1.9 * dt); walk.x = nx; walk.z = nz; }
+    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: 3.7, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, t: 0 }; if (staGame()) staUse(0.06); }
+    walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
+    // 時機提示：球進到手邊就發亮
+    const near = walk.air && b.position.distanceTo(vbHand()) < 0.7; b.material = near ? ballHot : ballMat;
+    if (b.position.y < 1.0) {   // 拋了沒打到：球掉下去，發球失誤
+      b.material = ballMat; const ob = { m: b, v: new THREE.Vector3(s.fwd.x * s.vf, s.vy0 - 9.8 * t, s.fwd.z * s.vf), rest: 0 }; b.userData.ball = ob; balls.push(ob);
+      walk.jserve = null; hands.visible = false; pose = 'hold'; toast('拋了沒打到：發球失誤', 1600);
+      if (VM.on && VM.host && VM.phase === 'serve') { const team = vmTeamOf(vmMe()); VM.phase = 'rally'; VM.ball = ob; VM.touch = { team, n: 3, last: vmMe(), serve: true }; vmPoint(1 - team, '發球失誤（拋了沒打到）'); }
+    }
+  } else if (t > s.hitT + 0.5 && !walk.air) { walk.jserve = null; hands.visible = false; pose = 'hold'; }
+}
+// 空中擊球：手離球越近越好（0.3 m 內＝完美）；太遠就揮空（只能揮一次）
+function jumpServeHit(type) {
+  const s = walk.jserve; if (!s || s.hit || s.swung || !walk.air) return;
+  const H = vbHand(), d = s.ball.position.distanceTo(H);
+  walk.swing = { t: 0, tip: false, done: true, doneT: 0, prev: null }; pose = 'swing';   // 揮臂動作
+  if (d > 0.95) { s.swung = true; toast('揮空了：等球發亮（掉到手邊）再按', 1500); return; }
+  const q = clamp(1 - (Math.max(0, d - 0.3) / 0.65) * 0.65, 0.3, 1);
+  s.hit = true; s.hitT = s.t; s.ball.material = ballMat;
+  serveLaunch(s.ball, s.ball.position.clone(), type === 'float' ? 'jfloat' : 'jump', q, s.aim);
 }
 function updateServe(dt) {
   const s = walk.serve; s.t += dt; const t = s.t;
@@ -6527,30 +6614,7 @@ function updateServe(dt) {
     walk.pitch += (0.35 - walk.pitch) * (1 - Math.exp(-dt * 6));
   }
   pose = t < 0.55 ? 'cock' : 'swing';
-  if (t >= 0.6 && !s.hit) {
-    s.hit = true;
-    const p0 = s.ball.position.clone();
-    // 落點＝你面向的那條線：站在排球場附近、面向網子另一邊，就落在對面 4.5～7 m 深；面向別處就照方向往前 13 m（瞄出界就是出界）
-    let tx = walk.x + s.fwd.x * 13, tz = walk.z + s.fwd.z * 13, court = null, sg = 1;
-    for (const c of state.items) {
-      if (CAT[c.type].court !== 'vb' || c.mode === 'lines' || c.use) continue;
-      const [lx, lz] = toLocalOf(c, walk.x, walk.z); if (Math.abs(lx) > 14 || Math.abs(lz) > 7) continue;
-      sg = Math.sign(lx) || 1; court = c;
-      const [ax, az] = toLocalOf(c, walk.x + s.fwd.x, walk.z + s.fwd.z), dlx = ax - lx, dlz = az - lz;
-      const depth = 4.5 + Math.random() * 2.5, k = dlx * -sg > 0.05 ? (-sg * depth - lx) / dlx : 0;
-      if (k > 0) [tx, tz] = toWorldOf(c, lx + dlx * k, lz + dlz * k);
-      break;
-    }
-    const D = Math.hypot(tx - p0.x, tz - p0.z);
-    const v = solveShot(p0, tx, tz, court, sg, 0.55 + D * 0.06);
-    s.ball.userData.ball = { m: s.ball, v, rest: 0, spike: court ? { c: court, sg } : null, serve: true }; balls.push(s.ball.userData.ball);
-    if (NET.on) netBallHit(s.ball.userData.ball, 'serve');
-    if (VM.on) { s.ball.userData.ball.spike = null; vmOnTouch(s.ball.userData.ball, vmMe(), 'serve'); }
-    vbImpact(s.ball.userData.ball, 'serve', 1);
-    recHit({ x: p0.x, y: p0.y, z: p0.z, v: v.length(), kind: 'serve' });
-    while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
-    toast('發球！');
-  }
+  if (t >= 0.6 && !s.hit) { s.hit = true; serveLaunch(s.ball, s.ball.position.clone(), s.type === 'float' ? 'float' : 'std', 1, s.aim); }   // 落點＝瞄準圈（站發誤差最小）
   if (t > 1.15) { walk.serve = null; hands.visible = false; pose = 'hold'; }
 }
 const ballShadows = [];
@@ -6592,9 +6656,12 @@ function updateBalls(dt) {
     for (let k = 0; k < steps; k++) {
       const p = b.m.position, ox = p.x, oy = p.y, oz = p.z;
       b.v.y -= 9.8 * h;
+      if (b.acc) b.v.addScaledVector(b.acc, h);
+      if (b.float) { const F = b.float; F.t += h; b.v.x += Math.sin(F.t * F.w + F.ph) * F.a * h; b.v.z += Math.cos(F.t * F.w * 0.73 + F.ph * 1.7) * F.a * h; b.v.y += Math.sin(F.t * F.w * 1.3 + F.ph) * F.a * 0.25 * h; }
       p.addScaledVector(b.v, h);
       if (p.y < BALL_R) {
         if (!b.floorHit) b.floorHit = [p.x, p.z];
+        b.acc = null; b.float = null;
         p.y = BALL_R;
         if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
         if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); sfx('floor', Math.min(1, -b.v.y / 9), p); }
@@ -7411,7 +7478,7 @@ addEventListener('keydown', (e) => {
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on) vmFreeBall(); else doInteract(); return; }
   if ((k === 'c' || k === 'q') && !e.repeat) { e.preventDefault(); vbReceive(); return; }
   if (['1', '2', '3', '4'].includes(k) && !e.repeat) { e.preventDefault(); vbSet(Number(k)); return; }
-  if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) vbJump('attack'); return; }
+  if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && (VM.on || vbCourt())) startJumpServe(); else vbJump('attack'); } return; }
   if (k === 'b' && !e.repeat) { e.preventDefault(); vbJump('block'); return; }
   if (k === 't' && !e.repeat) { e.preventDefault(); TP.manual = !tpActive(); toast(TP.manual ? '第三人稱：看得到自己和球（T 換回第一人稱）' : '第一人稱（T 換成第三人稱）', 1800); return; }
   if (k === 'f' && !e.repeat) { e.preventDefault(); passToFacing(); return; }
@@ -8196,7 +8263,7 @@ function vbPredict(p, v, y) {
 function vbMine(b) { b.mine = true; b.mineT = performance.now(); }
 // 接觸：球先在幾十毫秒內「吸」到真正碰到的位置（手掌、前臂、額頭前的雙手），從那裡才飛出去；不會隔空轉彎，也不會穿過身體
 function vbLaunch(b, cp, v, kind, q = 1) {
-  const from = b.m.position.clone();
+  const from = b.m.position.clone(); b.acc = null; b.float = null;   // 被碰到：上旋、飄的效果就沒了
   if (from.distanceTo(cp) > 0.2) cp = from.clone().add(cp.clone().sub(from).setLength(0.2));
   for (const c of vbNetCourts()) { const [a0, z0] = toLocalOf(c, from.x, from.z), [a1] = toLocalOf(c, cp.x, cp.z); if (Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3) cp = from.clone(); }
   b.m.position.copy(cp); b.v.copy(v); b.rest = 0; b.serve = false; b.err = null;
@@ -8424,7 +8491,8 @@ function vbAirStep(dt) {
 // ---- 攻擊：按 V 揮臂，0.22 秒內手（頭上前方）碰到球才算；碰到的位置決定好不好
 function vbHand() { const [fx, fz] = vbFwd(); return new THREE.Vector3(walk.x + fx * 0.35 - fz * 0.12, camera.position.y + 0.75, walk.z + fz * 0.35 + fx * 0.12); }
 function vbAttack(tip) {
-  if (walk.hold && !walk.air) { startServe(); return; }
+  if (walk.jserve && !walk.jserve.hit) { jumpServeHit(tip ? 'float' : 'jump'); return; }
+  if (walk.hold && !walk.air) { startServe(tip ? 'float' : 'std'); return; }
   if (walk.swing || walk.sit || walk.serve) return;
   walk.swing = { t: 0, tip: !!tip, done: false, prev: null };
   pose = 'cock'; hands.visible = true;
@@ -8812,7 +8880,7 @@ function vbOwnSide(b) {
 }
 // 球下一格會在哪裡（比賽中觸球判斷用：最近的那一刻就碰，不等球跑過頭）
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
-function vbUpdate(dt) { VB.dt = dt; vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
+function vbUpdate(dt) { VB.dt = dt; vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
 function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VM.on || !!VB.npc; }
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
@@ -8824,6 +8892,7 @@ function myAvPose() {
     const s2 = walk.swing; if (!s2.done) return [walk.air ? AVP.airUp : avMix(AVP.idle, AVP.airUp, 0.85), fast];
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
+  if (walk.jserve && !walk.jserve.hit && !walk.air) return [AVP.serveToss, 0.5];
   if (walk.serve) { const t2 = walk.serve.t; return [t2 < 0.5 ? AVP.serveToss : t2 < 0.62 ? avMix(AVP.serveToss, AVP.spikeHit, (t2 - 0.5) / 0.12) : avMix(AVP.spikeHit, avMix(AVP.spikeFollow, AVP.idle, 0.3), (t2 - 0.62) / 0.25), 0.5]; }
   if (walk.air) return [AVP.airUp, fast];
   if (walk.landT && performance.now() - walk.landT < 220) return [AVP.land, 0.4];
@@ -9001,7 +9070,7 @@ function vmPrepServe(s = VM.sg) {
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
   const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; walk.air = null;
   const [ax, az] = vmW(0, 0); walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
-  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：瞄好方向按滑鼠左鍵', 2600);
+  VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：對面黃圈是落點（轉頭換方向、往上看打深）。左鍵站發、右鍵站飄、空白鍵拋球起跳後左鍵跳發／右鍵跳飄', 4200);
 }
 function vmAiServe(a) {
   const sd = vmSide(a.team), err = Math.random(), L = vmLv(a);
@@ -9475,7 +9544,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m) => vmStart(c, sg, m), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), vbAttack: (t) => vbAttack(t), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
