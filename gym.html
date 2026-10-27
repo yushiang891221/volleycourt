@@ -6645,8 +6645,8 @@ function startJumpServe() {
   // 先算好：助跑多遠（比賽中遇到底線就提早停）、0.72 秒起跳、跳到最高點時手在哪；把球拋到那個時間、那個位置
   let appr = 0.9; const zs = VM.on ? vbServeSide() : null;
   if (zs) { const [lx0] = toLocalOf(zs.c, walk.x, walk.z), [lx1] = toLocalOf(zs.c, walk.x + fwd.x, walk.z + fwd.z), dl = (lx1 - lx0) * zs.sg; if (dl < -0.05) appr = clamp((lx0 * zs.sg - 9.12) / -dl, 0, 0.9); }
-  const VY = 3.7, tA = 0.72 + VY / 9.8, drift = 0.55 * (VY / 9.8), fx = fwd.x, fz = fwd.z, ox = walk.x + fx * (appr + drift), oz = walk.z + fz * (appr + drift);
-  const hand = new THREE.Vector3(ox + fx * 0.35 - fz * 0.12, EYE + 0.75 + (VY * VY) / 19.6 - 0.05, oz + fz * 0.35 + fx * 0.12);
+  const VY = 3.7, tA = 0.72 + VY / JUMP_G, drift = 0.55 * (VY / JUMP_G), fx = fwd.x, fz = fwd.z, ox = walk.x + fx * (appr + drift), oz = walk.z + fz * (appr + drift);
+  const hand = new THREE.Vector3(ox + fx * 0.35 - fz * 0.12, EYE + 0.75 + (VY * VY) / (2 * JUMP_G) - 0.05, oz + fz * 0.35 + fx * 0.12);
   const v0 = new THREE.Vector3((hand.x - p.x) / tA, (hand.y - p.y + 4.9 * tA * tA) / tA, (hand.z - p.z) / tA);
   walk.jserve = { t: 0, ball, from: p, fwd, v0, appr, vy: VY, hit: false, swung: false, jumped: false, aim: vbServeAim() };
   hands.visible = true; pose = 'cock';
@@ -7424,7 +7424,7 @@ function netOnMessage(t, d, from) {
       p2.ch = dch; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
       if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
     }
-    p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai);
+    p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
@@ -7483,7 +7483,7 @@ function netTick(dt, now) {
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || 'none', b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || 'none', b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
@@ -7503,7 +7503,7 @@ function netTick(dt, now) {
     // 高度：有起跳事件就自己照物理算弧線（不會因為取樣少變矮）；沒有就跟著收到的高度
     let y = Ls.y;
     const J = p2.jump;
-    if (J) { if (J.vy != null) { J.vy -= 9.8 * dt; J.y += J.vy * dt; y = Math.max(0, J.y); if (J.y <= 0 && J.vy < 0) p2.jump = null; } else { J.t += dt; y = J.h * Math.sin(Math.PI * Math.min(1, J.t / J.T)); if (J.t >= J.T) p2.jump = null; } }
+    if (J) { if (J.vy != null) { J.vy -= JUMP_G * dt; J.y += J.vy * dt; y = Math.max(0, J.y); if (J.y <= 0 && J.vy < 0) p2.jump = null; } else { J.t += dt; y = J.h * Math.sin(Math.PI * Math.min(1, J.t / J.T)); if (J.t >= J.T) p2.jump = null; } }
     p2.vx = vx; p2.vz = vz;
     const sp = Math.hypot(x - ox, z - oz) / Math.max(dt, 1e-3);
     p2.x = x; p2.z = z; p2.y = y; p2.yaw = yaw;
@@ -8674,11 +8674,14 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 // 接球微輔助：對方打過來、球會落在你附近時，地上出現落點圈，身體會被輕輕帶過去（自己按反方向就不帶）
 // 舉球 1 前舉（4 號位）、2 中間快攻、3 後舉（2 號位）：舉出去一定會到那個攻擊點，難的是先跑到球下面
 // ---- 體力（比賽、陪練、球拍對戰時才算）：每個動作都會耗一點，越用力耗越多，要想清楚什麼時候衝、什麼時候跳
-//   Shift 衝刺每秒 12%；起跳攻擊、跳發 8%，攔網起跳 6%，扣球揮臂 4%，站著打、發球 2%，吊球、舉球 1.5%，接球 1%，撲救 22%
-//   回復慢：球在打的時候每秒 2%（站著不動 4%），死球、等發球時每秒 5%（停下來 0.8 秒後才開始回）——正常打可以撐整場，一直衝、每球都跳就會越打越累
+//   Shift 衝刺每秒 16%；起跳攻擊、跳發 12%，攔網起跳 9%，扣球揮臂 6%，站著打、發球 3%，吊球、舉球 2%，接球 1.5%，撲救 30%
+//   回復慢：球在打的時候每秒 1.2%（站著不動 2.5%），死球、等發球時每秒 3.5%（停下來 0.8 秒後才開始回）——正常打可以撐整場，一直衝、每球都跳就會越打越累
 //   累了效果變差（30% 以下跳得比較矮、扣得比較慢，最低八成），但接、舉、吊、站著打永遠做得到；衝刺用光要回到 25% 才能再衝。導覽時不用體力
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
-const STA_COST = { jump: 0.08, block: 0.06, jserve: 0.08, spike: 0.04, hit: 0.02, serve: 0.02, tip: 0.015, set: 0.015, bump: 0.01, dive: 0.22 };
+const STA_REGEN = { move: 0.012, still: 0.025, dead: 0.035 };   // 每秒回多少：球在打的時候跑動／站著、死球和等發球
+// 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
+const JUMP_G = 8.4;
+const STA_COST = { jump: 0.12, block: 0.09, jserve: 0.12, spike: 0.06, hit: 0.03, serve: 0.03, tip: 0.02, set: 0.02, bump: 0.015, dive: 0.3 };
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
 function staPay(kind) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - (STA_COST[kind] || 0)); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(window.__rkOn || VM.on || VB.npc); }
@@ -8688,7 +8691,7 @@ function staSprint(want, dt) {
   if (!staGame()) return want;
   if (!want) return false;
   if (STA.lock) { staWarn(); return false; }
-  STA.v = Math.max(0, STA.v - 0.12 * dt); STA.useT = performance.now();
+  STA.v = Math.max(0, STA.v - 0.16 * dt); STA.useT = performance.now();
   if (STA.v <= 0) { STA.lock = true; staWarn(); return false; }
   return true;
 }
@@ -8697,7 +8700,7 @@ function staTick(dt) {
   if (!on) { STA.v = 1; STA.lock = false; if (el && !el.hidden) el.hidden = true; return; }
   if (performance.now() - STA.useT > 800) {
     const live = window.__rkOn ? RK.phase === 'rally' : VM.on ? VM.phase === 'rally' : true, still = Math.hypot(...(walk.vel || [0, 0])) < 0.5;
-    STA.v = Math.min(1, STA.v + (live ? (still ? 0.04 : 0.02) : 0.05) * dt);
+    STA.v = Math.min(1, STA.v + (live ? (still ? STA_REGEN.still : STA_REGEN.move) : STA_REGEN.dead) * dt);
   }
   if (STA.lock && STA.v >= 0.25) STA.lock = false;
   if (!el) return;
@@ -8946,7 +8949,7 @@ function vbJump(kind) {
 }
 function vbAirStep(dt) {
   const a = walk.air; if (!a) return 0;
-  a.t += dt; a.vy -= 9.8 * dt; a.y += a.vy * dt;
+  a.t += dt; a.vy -= JUMP_G * dt; a.y += a.vy * dt;
   if (a.y <= 0) { walk.air = null; walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
   return a.y;
 }
@@ -9371,7 +9374,7 @@ function vbCue() {
   // 起跳：舉過來的球，算它掉到 2.9 m 還要多久；跟你起跳到最高點的時間差不多時提示「跳！」
   const sp = VB.setSpot, sb = sp && performance.now() < sp.until && balls.includes(sp.b) ? sp.b : null;
   if (!walk.air && sb && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) {
-    const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), tApex = vy / 9.8, hand = EYE + 0.75 + (vy * vy) / 19.6 - 0.15;
+    const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), tApex = vy / JUMP_G, hand = EYE + 0.75 + (vy * vy) / (2 * JUMP_G) - 0.15;
     const pr = vbPredict(sb.m.position, sb.v, hand) || vbPredict(sb.m.position, sb.v, 2.9);
     if (pr) { const d = pr.t - tApex; if (d < 0.14 && d > -0.12) cue = ['jump', touch ? '跳！' : '跳！（空白鍵）']; else if (d >= 0.14 && d < 0.9) cue = ['ready', '準備起跳…']; }
   }
@@ -9399,7 +9402,7 @@ function vbUpcoming() {
   let best = null; const now = performance.now(), cy = camera.position.y;
   const consider = (b, t, kind) => { if (t != null && t > -0.05 && t < 1.0 && (!best || t < best.t)) best = { b, t, kind }; };
   if (walk.air && !walk.air.block && !(walk.swing && walk.swing.done)) { const H = vbHand(); for (const b of balls) { if (b.rest > 0.3) continue; const d = b.m.position.distanceTo(H); if (d < 3) consider(b, (d - 0.3) / Math.max(3, b.v.length() * VB.ts), 'atk'); } }
-  const sp = VB.setSpot; if (!walk.air && sp && now < sp.until && balls.includes(sp.b) && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) { const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), pr = vbPredict(sp.b.m.position, sp.b.v, EYE + 0.75 + (vy * vy) / 19.6 - 0.15) || vbPredict(sp.b.m.position, sp.b.v, 2.9); if (pr) consider(sp.b, pr.t - vy / 9.8, 'atk'); }
+  const sp = VB.setSpot; if (!walk.air && sp && now < sp.until && balls.includes(sp.b) && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) { const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), pr = vbPredict(sp.b.m.position, sp.b.v, EYE + 0.75 + (vy * vy) / (2 * JUMP_G) - 0.15) || vbPredict(sp.b.m.position, sp.b.v, 2.9); if (pr) consider(sp.b, pr.t - vy / JUMP_G, 'atk'); }
   const P0 = VM.on && VM.host ? VM.poss[0] : null;
   if (walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1)) for (const b of balls) { if (b.rest > 0.3 || b.mine || Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) > 6) continue; const pr = vbPredict(b.m.position, b.v, cy + 0.3); if (pr) consider(b, pr.t, 'set'); }
   if (VB.target) { const pr = vbPredict(VB.target.b.m.position, VB.target.b.v, 0.8); if (pr) consider(VB.target.b, pr.t, 'recv'); }
@@ -9660,7 +9663,7 @@ function vmAiServe(a) {
   const m = newBallMesh(); m.position.copy(p); ballsGroup.add(m);
   const b = { m, v: new THREE.Vector3((wx - p.x) / T, (BALL_R - p.y) / T + 4.9 * T, (wz - p.z) / T), rest: 0 }; m.userData.ball = b; balls.push(b);
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
-  a.pose = 4; a.swingT = 0.35;
+  a.pose = 4; a.swingT = 0.35; aiPay(a, 'serve');
   if (NET.on) netBallHit(b, 'serve');
   vbImpact(b, 'serve', 1);
   vmOnTouch(b, a.id, 'serve');
@@ -9817,14 +9820,16 @@ function vmAiStep(a, dt) {
     if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && VM.t - (a.sqT || 0) > 0.5) { a.sqT = VM.t; const [wx, wz] = vmW(a.x, a.z); sfx('squeak', 0.6 + Math.random() * 0.3, new THREE.Vector3(wx, 0.05, wz)); }
     const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
   // 移動、跳
-  const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(vmLv(a).speed, 4.8) : Math.min(vmLv(a).speed, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
+  { const v0 = Math.hypot(a.vx, a.vz); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - 0.1 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + (VM.phase === 'rally' ? (v0 < 0.5 ? STA_REGEN.still : STA_REGEN.move) : STA_REGEN.dead) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
+  const spMax = vmLv(a).speed * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1));   // 累了跑比較慢
+  const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
   a.x += a.vx * dt; a.z += a.vz * dt; a.x = sd * clamp(a.x * sd, 0.35, 12); a.z = clamp(a.z, -7, 7);
   if (VM.six) for (const o of VM.ai.values()) {   // 6 個人：隊友之間不要疊在一起
     if (o === a || o.team !== a.team) continue; const ex = a.x - o.x, ez = a.z - o.z, e = Math.hypot(ex, ez);
     if (e > 0.01 && e < 0.7) { a.x += (ex / e) * (0.7 - e) * 0.5; a.z += (ez / e) * (0.7 - e) * 0.5; }
   }
-  if (a.y > 0 || a.vy > 0) { a.vy -= 9.8 * dt; a.y += a.vy * dt; if (a.y <= 0) { a.y = 0; a.vy = 0; } }
+  if (a.y > 0 || a.vy > 0) { a.vy -= JUMP_G * dt; a.y += a.vy * dt; if (a.y <= 0) { a.y = 0; a.vy = 0; } }
 }
 // 對面的攻擊手（你、真人隊友或 AI）：位置、是不是已經起跳
 function vmThreat(team) {
@@ -9857,7 +9862,7 @@ function vmAiBlock(a, sd, b) {
   if (!a.blk) a.blk = { until: VM.t + 3 };
   a.tx = sd * 0.45; a.tz = clamp(th.z + lane + (Math.random() - 0.5) * 0.1, -4.2, 4.2);
   // 攻擊手起跳後，過反應時間就跟著跳
-  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + L.react * 0.6; if (VM.t >= a.blk.jumpAt) { a.vy = 4.0; a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }
+  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + L.react * 0.6; if (VM.t >= a.blk.jumpAt) { a.vy = aiJump(a, 4.0, 'block'); a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }
   if (!th.air) a.blk.jumpAt = 0;
   return true;
 }
@@ -9934,10 +9939,10 @@ function vmAiRole(a, P, B, sd) {
     if (p && a.y === 0) {
       let tx = p.x + sd * 0.55; if (VM.six && !vm6Front(a.id)) tx = sd * Math.max(3.25, tx * sd);   // 後排攻擊（6 對 6）：在 3 公尺線後起跳
       const tz = p.z, uz = clamp((a.z - tz) * 0.35, -0.6, 0.6), un = Math.hypot(1, uz), sx = tx + (sd / un) * 2.8, sz = tz + (uz / un) * 2.8;   // 助跑起點：起跳點往後（斜斜的從場內）2.8 m＝三步
-      const dT = Math.hypot(a.x - tx, a.z - tz), wait = p.t - 0.43 - dT / 4.8;   // 起跳到最高點約 0.43 秒；助跑約每秒 4.8 m
+      const dT = Math.hypot(a.x - tx, a.z - tz), tUp = 4.3 / JUMP_G, wait = p.t - tUp - dT / 4.8;   // 起跳到最高點的時間（約 0.5 秒）；助跑約每秒 4.8 m
       if (!a.run && wait > 0.04) { a.tx = sx; a.tz = sz; a.appr = false; }
       else { a.run = true; a.tx = tx; a.tz = tz; a.appr = true; }
-      if (a.run && (dT < 0.45 || p.t < 0.45)) { a.vy = 4.3; a.pose = 5; a.appr = false; a.run = false; a.vx *= 0.25; a.vz *= 0.25; }   // 踩到起跳點就跳：衝的速度大多變成高度，空中只往前飄一點
+      if (a.run && (dT < 0.45 || p.t < tUp)) { a.vy = aiJump(a, 4.3, 'jump'); a.pose = 5; a.appr = false; a.run = false; a.vx *= 0.25; a.vz *= 0.25; }   // 踩到起跳點就跳：衝的速度大多變成高度，空中只往前飄一點
     }
     const H = hand();
     if (b2d(H) < 1.0 && B.y > 2.0) vmAiSpike(a, sd);
@@ -9950,12 +9955,16 @@ function vmAiRole(a, P, B, sd) {
 }
 // AI 碰球：照目標（球場座標）算出初速；err＝落點誤差（公尺）
 function vmAiOwnSide(a) { const [lx] = vmL(VM.ball.m.position.x, VM.ball.m.position.z); return lx * vmSide(a.team) > -0.02; }
+// AI 的體力（跟玩家同一套扣法）：累了跳得矮、跑得慢、扣得慢；連線時跟著狀態送給大家（隊友腳下的圓環）
+function aiEff(a) { return 0.8 + 0.2 * clamp((a.sta ?? 1) / 0.3, 0, 1); }
+function aiPay(a, kind) { const f = aiEff(a); a.sta = Math.max(0, (a.sta ?? 1) - (STA_COST[kind] || 0)); return f; }
+function aiJump(a, vy, kind) { return vy * (0.4 + 0.6 * aiPay(a, kind)); }
 function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose) {
   if (!vmAiOwnSide(a)) return;
   if ((kind === 'set' || (kind === 'bump' && ty > 1)) && tlx * vmSide(a.team) < 0.7) tlx = vmSide(a.team) * 0.7;   // 傳、舉都留在自己這邊
   const b = VM.ball, [wx, wz] = vmW(tlx + rkGauss() * err * 0.5, tlz + rkGauss() * err), [ax0, az0] = vmW(a.x, a.z);
   const p = b.m.position.clone().lerp(new THREE.Vector3(ax0, a.y + (kind === 'set' ? 2.35 : 0.75), az0).lerp(b.m.position, 0.25), 0.65);
-  b.mine = false; b.setT = kind === 'set' ? performance.now() : 0;
+  b.mine = false; b.setT = kind === 'set' ? performance.now() : 0; aiPay(a, kind === 'set' ? 'set' : 'bump');
   a.pose = pose; a.swingT = 0.4; a.reactAt = VM.t + 0.25;
   vbLaunch(b, p, new THREE.Vector3((wx - p.x) / T, (ty - p.y) / T + 4.9 * T, (wz - p.z) / T), kind, 0.85);
   if (kind === 'set') vbMarkSet(b);
@@ -9977,7 +9986,7 @@ function vmAiSpike(a, sd) {
   if (!vmAiOwnSide(a)) return;
   const b = VM.ball, r = Math.random(), L = vmLv(a), [ax0, az0] = vmW(a.x - sd * 0.25, a.z), p = b.m.position.clone().lerp(new THREE.Vector3(ax0, a.y + 2.45, az0), 0.7);
   const gap = vmPickGap(a, sd, 2.5, 8.3, 3.9), netGuard = vmOppPos(a.team).some((q) => Math.abs(q.x) < 2.5);
-  let tx = gap.tx, tz = gap.tz, spd = L.spike[0] + Math.random() * (L.spike[1] - L.spike[0]), tip = false;
+  let tx = gap.tx, tz = gap.tz, spd = (L.spike[0] + Math.random() * (L.spike[1] - L.spike[0])) * (0.6 + 0.4 * aiEff(a)), tip = false;
   if (r < L.out) { if (Math.random() < 0.5) tx = -sd * (9.5 + Math.random() * 1.8); else tz = Math.sign(tz || 1) * (4.8 + Math.random() * 1.2); }
   else if (!netGuard && r < L.out + L.tip) { tip = true; tx = -sd * (1.5 + Math.random() * 1.5); }   // 網前沒人才吊，吊在網後
   const [wx, wz] = vmW(tx, tz);
@@ -9989,7 +9998,7 @@ function vmAiSpike(a, sd) {
     // 過網：先往深處打（速度不變），還不夠才放慢一點；不會變成慢慢飄過去的球
     if (r > L.out + L.tip + L.net || (netGuard && r >= L.out && r < L.out + L.tip)) { let sp2 = spd; for (let i = 0; i < 12 && netY(v) < NETS[state.net].h + BALL_R + 0.08; i++) { if (i < 6 && Math.abs(tx) < 8.4) tx -= sd * 0.6; else sp2 *= 0.92; const w2 = vmW(tx, tz); v = vbShotVel(p, w2[0], w2[1], sp2); } }
   }
-  b.mine = false; a.pose = 4; a.swingT = 0.35;
+  b.mine = false; a.pose = 4; a.swingT = 0.35; aiPay(a, tip ? 'tip' : 'spike');
   vbLaunch(b, p, v, tip ? 'tip' : 'spike', 0.85);
   vmOnTouch(b, a.id, tip ? 'tip' : 'spike');
 }
@@ -10025,7 +10034,7 @@ function vm6Menu(c, sg) {
     <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
-    <p class="rk-sub">體力（畫面上的體力條）：衝刺、起跳、扣球最耗，吊球、舉球、接球耗一點；比賽中回得慢、死球時回快一點。體力 30% 以下跳得比較矮、扣得比較慢，但接、舉、吊永遠做得到。</p>
+    <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：衝刺、起跳、扣球最耗，吊球、舉球、接球耗一點；比賽中回得很慢、死球時回快一點。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
     <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="close">取消</button></div>
     <p class="rk-sub" style="margin-top:10px">C 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
@@ -10254,12 +10263,12 @@ function vm6Quick(a, P, B, sd) {
   const tx = sd * Math.max(0.95, Math.abs(pr.x) - 0.1), tz = clamp(pr.z + sd * 0.9, -4, 4), D = Math.hypot(a.x - tx, a.z - tz);
   if (!a.run && pr.t - 0.12 > D / 4.5 + 0.05) { a.tx = tx + sd * 2.0; a.tz = tz; a.appr = false; }
   else { a.run = true; a.tx = tx; a.tz = tz; a.appr = true; }
-  if (a.run && (pr.t < 0.2 || D < 0.4)) { a.vy = 4.3; a.pose = 5; a.run = false; a.appr = false; a.vx *= 0.25; a.vz *= 0.25; P.qkJ = true; }
+  if (a.run && (pr.t < 0.28 || D < 0.4)) { a.vy = aiJump(a, 4.3, 'jump'); a.pose = 5; a.run = false; a.appr = false; a.vx *= 0.25; a.vz *= 0.25; P.qkJ = true; }
   return true;
 }
 // cover：攻擊手後面圍一個半圓——最近的三個人在他身後 1.5～3 m（左右各一、中間一個），另外兩個在後面 5 m 補深球
-const V6_COVER = [[1.5, -1.4], [1.5, 1.4], [3.0, 0], [5.0, -2.4], [5.0, 2.4]];
-const V6_COVER_BACK = [[1.4, -1.6], [1.4, 1.6], [2.6, 0], [6.6, -2.4], [6.6, 2.4]];   // 後排攻擊：被攔回來的球掉在網前——三個人在攻擊手前面（網前左右、3 公尺線），兩個在後面補深球（[離網, 往左]）
+const V6_COVER = [[1.4, -1.6], [1.4, 1.6], [3.2, -2.2], [3.2, 2.2], [5.6, 0]];   // 前排攻擊：都站在助跑路線兩側（攻擊手正後方 4 m 內不站人），最後一個在很後面補深球
+const V6_COVER_BACK = [[1.4, -1.6], [1.4, 1.6], [2.0, 0], [6.8, -2.6], [6.8, 2.6]];   // 後排攻擊：被攔回來的球掉在網前——三個人在攻擊手前面（網前左右、3 公尺線），兩個在後面補深球（[離網, 往左]）
 function vm6CoverSpot(a, attId) {
   const at = vmPos(attId); if (!at) return null;
   const sd = vmSide(a.team), ids = VM.team[a.team].filter((id) => id !== attId).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q).sort((p, q) => Math.hypot(p.q.x - at.x, p.q.z - at.z) - Math.hypot(q.q.x - at.x, q.q.z - at.z));
@@ -10318,11 +10327,33 @@ function vmRenderAi(dt) {
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
     avDrive(av, pz, kk, sp, a.y > 0.05);
   }
+  vmStaRings();
   vmHud();
+}
+// 隊友腳下的體力圓環：圈越滿體力越多；綠＝夠、黃＝一半以下、紅＝快沒了（只看得到自己隊的）
+const STA_RING = new Map(), staArcGeo = new Map();
+function staArc(n) { if (!staArcGeo.has(n)) staArcGeo.set(n, new THREE.RingGeometry(0.46, 0.64, 48, 1, Math.PI / 2, -(Math.PI * 2 * n) / 40)); return staArcGeo.get(n); }
+function vmStaRings() {
+  const my = VM.on && !RP.on ? vmTeamOf(vmMe()) : -1, seen = new Set();
+  if (my >= 0) for (const id of VM.team[my]) {
+    if (id === vmMe()) continue;
+    const a = VM.ai.get(id), p2 = a ? null : NET.peers.get(id), g = a ? a.av.g : p2 && p2.av ? p2.av.g : null, v = a ? a.sta ?? 1 : p2 ? p2.sta : null;
+    if (!g || v == null) continue;
+    let r = STA_RING.get(id);
+    if (!r) {
+      r = new THREE.Group(); const M = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide });
+      const bg = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.64, 48), M('#1B2638', 0.55)), fg = new THREE.Mesh(staArc(40), M('#30A46C', 0.95));
+      bg.rotation.x = fg.rotation.x = -Math.PI / 2; fg.position.y = 0.003; fg.renderOrder = 2; r.add(bg, fg); r.fg = fg; r.n = -1; scene.add(r); STA_RING.set(id, r);
+    }
+    seen.add(id); r.visible = true; r.position.set(g.position.x, 0.07, g.position.z);   // 抬高一點：球場地板比地面高幾公分，不然會被蓋住
+    const n = Math.round(clamp(v, 0, 1) * 40);
+    if (n !== r.n) { r.n = n; r.fg.visible = n > 0; if (n > 0) r.fg.geometry = staArc(n); r.fg.material.color.set(v > 0.5 ? '#30A46C' : v > 0.3 ? '#F2B705' : '#E5484D'); }
+  }
+  for (const [id, r] of STA_RING) if (!seen.has(id)) r.visible = false;
 }
 // ---- 連線：開局的人每 0.1 秒送比分與 AI 位置；其他人照著顯示
 function vmStatePayload() {
-  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0]; });
+  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2)]; });
   return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined };
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
@@ -10351,7 +10382,7 @@ function vmOnNet(d, from) {
     VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv; VM.tc = d.tc || null;
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
-    for (const [id, x, z, y, pose] of d.ai) { const a = VM.ai.get(id); if (a) { a.wx = x; a.wz = z; a.y = y; a.pose = pose; a.swingT = pose ? 0.2 : 0; } }
+    for (const [id, x, z, y, pose, sta] of d.ai) { const a = VM.ai.get(id); if (a) { a.wx = x; a.wz = z; a.y = y; a.pose = pose; a.swingT = pose ? 0.2 : 0; if (sta != null) a.sta = sta; } }
     if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     if (d.ph === 'over') vmOver();
