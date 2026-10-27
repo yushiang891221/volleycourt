@@ -766,7 +766,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個 Q 版角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>C</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
@@ -865,6 +865,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
@@ -6920,111 +6921,256 @@ function renderMpList() {
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
-// ---- Q 版角色（同人造型，私人遊玩用）：大頭、短手腳；臉、髮型、配件、服裝配色照每個角色的特徵用幾何形狀做
-// hair：[髮型, 顏色, 挑染]；top：[上衣, 線條]；sleeve＝長袖外套；pants＝長褲；acc＝配件；glow＝眼睛發光；faceless＝臉被遮住
+// ---- 角色（同人造型，私人遊玩用）：照 Valorant 特務的造型用幾何做，卡通著色（三階明暗）
+// 身形：髖 0.98 m、大腿 0.46、小腿 0.46、腳踝到地 0.06；肩膀約 1.43 m；頭頂連頭髮約 1.84 m；舉手摸高約 2.1 m
+// 欄位：skin 膚色、eyes 眼睛（glow＝發光）、fem＝窄肩細腰；hair [髮型, 顏色, 挑染]；top [上衣, 配色]；
+//   jk 外套 {c 顏色, c2 滾邊／袖口, len short|hip|coat, collar high|hood|fur|none, open 前面敞開, fur 毛領顏色}
+//   sleeve 長袖顏色（沒有＝短袖露手臂）、gl 手套、pants 長褲／shorts 短褲、shoe [鞋, 鞋底]、boots 靴子、belt 皮帶、pads 肩甲、wrist 手腕發光環
+//   bionic 機械手臂顏色、metal 機器人、faceless 臉被遮住、brow 眉毛角度、acc 配件 [[種類, 顏色]]
 const CHARS = {
-  jett: { name: 'Jett', skin: '#F1CBA8', hair: ['ponytail', '#E9EEF3'], top: ['#22304E', '#9FD8F5'], shorts: '#22304E', shoe: '#E9EEF3', eyes: '#36507A', acc: [] },
-  sage: { name: 'Sage', skin: '#EBC59E', hair: ['ponytail', '#17181D'], top: ['#ECEFEF', '#2FB7A7'], shorts: '#25333B', shoe: '#F4F4F2', eyes: '#2B2B2B', acc: [['jade', '#2FB7A7']] },
-  reyna: { name: 'Reyna', skin: '#B9845F', hair: ['long', '#1A1420', '#A24DFF'], top: ['#2A1F3D', '#B14DFF'], shorts: '#1B1426', shoe: '#2A1F3D', eyes: '#C46BFF', glow: true, pants: true, acc: [] },
-  phoenix: { name: 'Phoenix', skin: '#7A4E35', hair: ['curly', '#1A1412'], top: ['#F2F2F0', '#FF7A2F'], shorts: '#2B2B2B', shoe: '#F2F2F0', eyes: '#2B1D14', sleeve: true, acc: [] },
-  raze: { name: 'Raze', skin: '#8A5A3C', hair: ['short', '#2A1A12'], top: ['#2F6F5E', '#FF8C2A'], shorts: '#3A3A3A', shoe: '#FF8C2A', eyes: '#2B1D14', acc: [['beanie', '#FF8C2A'], ['goggles', '#2B2B2B']] },
-  killjoy: { name: 'Killjoy', skin: '#E6B994', hair: ['long', '#2B241F'], top: ['#F5C518', '#2B2B2B'], shorts: '#2B2B2B', shoe: '#F5C518', eyes: '#3A2C22', sleeve: true, acc: [['beanie', '#4E8C3A'], ['glassesRound', '#222222']] },
-  omen: { name: 'Omen', skin: '#141A33', hair: null, top: ['#232A4A', '#59C8FF'], shorts: '#1A1F36', shoe: '#1A1F36', eyes: '#7FE3FF', glow: true, faceless: true, sleeve: true, pants: true, gloves: '#141A33', acc: [['hood', '#2A3158']] },
-  skye: { name: 'Skye', skin: '#F0C3A0', hair: ['long', '#C2462A'], top: ['#3E7B3A', '#B8E07A'], shorts: '#2E4A2A', shoe: '#6B4A2A', eyes: '#3C6B3A', acc: [['headband', '#3E9B4A']] },
-  neon: { name: 'Neon', skin: '#B88560', hair: ['pigtails', '#2F6BFF'], top: ['#1C2C5A', '#59E0FF'], shorts: '#1C2C5A', shoe: '#F2F2F0', eyes: '#2B1D14', acc: [['bolt', '#59E0FF']] },
-  viper: { name: 'Viper', skin: '#E2BFA0', hair: ['long', '#141414'], top: ['#1E2A20', '#4CC66A'], shorts: '#151B16', shoe: '#151B16', eyes: '#3A3A3A', pants: true, sleeve: true, acc: [['mask', '#2E7D3E']] },
-  sova: { name: 'Sova', skin: '#EBC7A8', hair: ['short', '#E3D6A8'], top: ['#2E4B78', '#E3D6A8'], shorts: '#22324F', shoe: '#3B2B20', eyes: '#3D6BB0', sleeve: true, acc: [] },
-  brimstone: { name: 'Brimstone', skin: '#E2B08E', hair: null, top: ['#3E5A3A', '#FF8C2A'], shorts: '#2E3A2A', shoe: '#3B2B20', eyes: '#3A2C22', sleeve: true, acc: [['beret', '#D2552B'], ['beard', '#C9C3BA']] },
-  cypher: { name: 'Cypher', skin: '#C9A07E', hair: null, top: ['#E8E4D8', '#2B2B2B'], shorts: '#2B2B2B', shoe: '#2B2B2B', eyes: '#7FE3FF', glow: true, faceless: true, sleeve: true, pants: true, acc: [['faceMask', '#F2F0EA'], ['hat', '#2B2B2B']] },
-  yoru: { name: 'Yoru', skin: '#EBC7A8', hair: ['spiky', '#1E3FA8'], top: ['#1E3FA8', '#F2F2F0'], shorts: '#15204A', shoe: '#F2F2F0', eyes: '#2B2B2B', sleeve: true, acc: [] },
-  kayo: { name: 'KAY/O', skin: '#9AA3AD', hair: null, top: ['#3A4048', '#59A8FF'], shorts: '#2A2F36', shoe: '#2A2F36', eyes: '#59A8FF', glow: true, faceless: true, robot: true, pants: true, sleeve: true, gloves: '#3A4048', acc: [['visor', '#59A8FF']] },
-  chamber: { name: 'Chamber', skin: '#C9946E', hair: ['slick', '#1A1412'], top: ['#F2EEE6', '#C9A24A'], shorts: '#2B2B2B', shoe: '#2B2B2B', eyes: '#2B1D14', sleeve: true, acc: [['glassesRect', '#1A1A1A'], ['goatee', '#1A1412']] },
+  jett: { name: 'Jett', fem: true, skin: '#F3D2B8', eyes: '#5B7FB5', hair: ['jett', '#EEF2F6'], top: ['#2B3A5C', '#7CC6F0'], jk: { c: '#E9EEF3', c2: '#7CC6F0', len: 'short', collar: 'high', open: true }, gl: '#2A3550', pants: '#2A3550', shoe: ['#E9EEF3', '#2A3550'], boots: true, belt: '#7CC6F0', acc: [] },
+  sage: { name: 'Sage', fem: true, skin: '#E8C3A0', eyes: '#3C2F2A', hair: ['pony', '#141518'], top: ['#20323A', '#2FB7A7'], jk: { c: '#F1F3F2', c2: '#2FB7A7', len: 'coat', collar: 'high', open: false }, pants: '#22313A', shoe: ['#EDEFEF', '#22313A'], boots: true, belt: '#2FB7A7', acc: [['orb', '#3FE0C8']] },
+  reyna: { name: 'Reyna', fem: true, skin: '#A87452', eyes: '#C35BFF', glow: true, hair: ['long', '#1A1420', '#A24DFF'], top: ['#2A1F3D', '#B14DFF'], sleeve: '#2A1F3D', gl: '#1B1426', pants: '#1B1426', shoe: ['#2A1F3D', '#140F1C'], boots: true, belt: '#B14DFF', collarTop: true, acc: [] },
+  phoenix: { name: 'Phoenix', skin: '#6E4530', eyes: '#2B1D14', hair: ['twists', '#1A1412'], top: ['#2B2B2B', '#FF7A2F'], jk: { c: '#F2F2F0', c2: '#FF7A2F', len: 'hip', collar: 'high', open: true }, pants: '#3A3A44', shoe: ['#F2F2F0', '#FF7A2F'], wrist: '#FF8A3A', acc: [] },
+  raze: { name: 'Raze', fem: true, skin: '#8A5A3C', eyes: '#2B1D14', hair: ['braids', '#2A1A12'], top: ['#3F7F6E', '#FF8C2A'], shorts: '#4A4A3E', pants: '#4A4A3E', shoe: ['#FF8C2A', '#2B2B2B'], gl: '#FF8C2A', belt: '#2B2B2B', acc: [['cap', '#FF8C2A'], ['goggles', '#2B2B2B']] },
+  killjoy: { name: 'Killjoy', fem: true, skin: '#E9BE98', eyes: '#3A2C22', hair: ['bun', '#2B241F'], top: ['#2B2B2B', '#F5C518'], jk: { c: '#F5C518', c2: '#2B2B2B', len: 'hip', collar: 'high', open: true }, pants: '#2E3238', shoe: ['#F5C518', '#2B2B2B'], acc: [['beanie', '#4E8C3A'], ['glassesRound', '#222222']] },
+  omen: { name: 'Omen', skin: '#1A2140', eyes: '#7FE3FF', glow: true, faceless: true, hair: null, top: ['#232A4A', '#59C8FF'], jk: { c: '#2A3158', c2: '#59C8FF', len: 'coat', collar: 'none', open: true }, gl: '#141A33', pants: '#1A1F36', shoe: ['#1A1F36', '#10142A'], boots: true, acc: [['hoodUp', '#2A3158'], ['omenMarks', '#7FE3FF']] },
+  skye: { name: 'Skye', fem: true, skin: '#F1C6A3', eyes: '#3C6B3A', hair: ['long', '#C2462A'], top: ['#3E7B3A', '#B8E07A'], gl: '#6B4A2A', pants: '#5A4632', shoe: ['#6B4A2A', '#3A2A1A'], boots: true, belt: '#6B4A2A', pads: '#6B4A2A', acc: [['headband', '#3E9B4A']] },
+  neon: { name: 'Neon', fem: true, skin: '#B88560', eyes: '#2B1D14', hair: ['pigtails', '#2F6BFF'], top: ['#1C2C5A', '#59E0FF'], jk: { c: '#22356B', c2: '#59E0FF', len: 'short', collar: 'high', open: true }, shorts: '#1C2C5A', shoe: ['#F2F2F0', '#59E0FF'], wrist: '#59E0FF', acc: [['bolt', '#59E0FF']] },
+  viper: { name: 'Viper', fem: true, skin: '#E2C2A6', eyes: '#3A3A3A', hair: ['long', '#141414'], top: ['#1E2A20', '#4CC66A'], jk: { c: '#26362A', c2: '#4CC66A', len: 'coat', collar: 'high', open: true }, gl: '#4CC66A', pants: '#151B16', shoe: ['#151B16', '#0C100D'], boots: true, acc: [['gasMask', '#2E7D3E']] },
+  sova: { name: 'Sova', skin: '#EBC7A8', eyes: '#3D6BB0', hair: ['short', '#E3D6A8'], top: ['#1E2D47', '#E3D6A8'], jk: { c: '#2E4B78', c2: '#E3D6A8', len: 'coat', collar: 'fur', fur: '#E3E0D6', open: true }, gl: '#3B2B20', pants: '#22324F', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', acc: [['bionicEye', '#59C8FF']] },
+  brimstone: { name: 'Brimstone', skin: '#E2B08E', eyes: '#3A2C22', hair: null, top: ['#3E5A3A', '#FF8C2A'], jk: { c: '#4A5E3E', c2: '#2E3A28', len: 'hip', collar: 'none', open: false }, pants: '#3A4632', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', wrist: '#FF8C2A', acc: [['beret', '#C8402B'], ['beard', '#D8D2C8']] },
+  cypher: { name: 'Cypher', skin: '#C9A07E', eyes: '#7FE3FF', glow: true, faceless: true, hair: null, top: ['#2B2B2B', '#7FE3FF'], jk: { c: '#E8E4D8', c2: '#2B2B2B', len: 'coat', collar: 'high', open: true }, gl: '#2B2B2B', pants: '#2B2B2B', shoe: ['#2B2B2B', '#141414'], boots: true, acc: [['faceMask', '#F2F0EA'], ['hat', '#2B2B2B']] },
+  yoru: { name: 'Yoru', skin: '#EBC7A8', eyes: '#2B2B2B', hair: ['spiky', '#1E3FA8'], top: ['#15204A', '#F2F2F0'], jk: { c: '#1E3FA8', c2: '#F2F2F0', len: 'hip', collar: 'high', open: true }, pants: '#15204A', shoe: ['#F2F2F0', '#15204A'], gl: '#15204A', brow: -0.25, acc: [] },
+  kayo: { name: 'KAY/O', skin: '#8E98A3', eyes: '#59A8FF', glow: true, faceless: true, metal: true, hair: null, top: ['#3A4048', '#59A8FF'], sleeve: '#4A525C', gl: '#3A4048', pants: '#2A2F36', shoe: ['#2A2F36', '#1A1E22'], boots: true, pads: '#59636E', acc: [['robotHead', '#59A8FF']] },
+  chamber: { name: 'Chamber', skin: '#C9946E', eyes: '#2B1D14', hair: ['slick', '#1A1412'], top: ['#2B2B2B', '#C9A24A'], jk: { c: '#F2EEE6', c2: '#C9A24A', len: 'hip', collar: 'none', open: true }, gl: '#2B2B2B', pants: '#3A3A3A', shoe: ['#5A3A22', '#2B1D14'], acc: [['glassesRect', '#1A1A1A'], ['goatee', '#1A1412']] },
+  gekko: { name: 'Gekko', skin: '#B57E5A', eyes: '#2B1D14', hair: ['messy', '#2A1E14', '#8EE36A'], top: ['#E9E2CF', '#8EE36A'], jk: { c: '#E86A2A', c2: '#8EE36A', len: 'hip', collar: 'hood', open: true }, pants: '#3A3D52', shoe: ['#8EE36A', '#F2F2F0'], acc: [] },
+  fade: { name: 'Fade', fem: true, skin: '#C99C78', eyes: '#3A2C22', hair: ['wavy', '#18161A'], top: ['#3A2A33', '#B0A0C8'], jk: { c: '#2B2B33', c2: '#5A4A60', len: 'coat', collar: 'high', open: true }, gl: '#2B2B33', pants: '#2A2830', shoe: ['#2B2B33', '#141418'], boots: true, acc: [['earrings', '#D9C38A']] },
+  harbor: { name: 'Harbor', skin: '#9B6A47', eyes: '#2B1D14', hair: ['wavy', '#1A1412'], top: ['#E9E2CF', '#3FB8C4'], jk: { c: '#2B6E6A', c2: '#3FB8C4', len: 'hip', collar: 'none', open: true }, pants: '#3A3A44', shoe: ['#5A3A22', '#2B1D14'], wrist: '#3FD8E4', acc: [['beardShort', '#1A1412']] },
+  iso: { name: 'Iso', skin: '#D9B08C', eyes: '#2B2B2B', hair: ['short', '#1A1A22'], top: ['#22202E', '#B07CFF'], jk: { c: '#2A2440', c2: '#B07CFF', len: 'hip', collar: 'high', open: false }, gl: '#22202E', pants: '#22202E', shoe: ['#2A2440', '#B07CFF'], wrist: '#B07CFF', brow: -0.2, acc: [] },
+  breach: { name: 'Breach', skin: '#E0A982', eyes: '#3A2C22', hair: ['short', '#C2602E'], top: ['#3A3F46', '#FF9A3A'], bionic: '#5A5F66', gl: '#4A4F56', pants: '#3A3A30', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', wrist: '#FF9A3A', acc: [['beardShort', '#B0582A']] },
+  astra: { name: 'Astra', fem: true, skin: '#6E4530', eyes: '#2B1D14', hair: ['afro', '#1A1412', '#E8C35A'], top: ['#3A2A5A', '#E8C35A'], jk: { c: '#4A2E6E', c2: '#E8C35A', len: 'coat', collar: 'none', open: true }, pants: '#2A2140', shoe: ['#E8C35A', '#2A2140'], wrist: '#E8C35A', acc: [['earrings', '#E8C35A']] },
+  deadlock: { name: 'Deadlock', fem: true, skin: '#F0D5C2', eyes: '#5A7A9A', hair: ['bob', '#EDEDEA'], top: ['#5A6066', '#E9EDF0'], jk: { c: '#D9DCDF', c2: '#5A6066', len: 'hip', collar: 'high', open: false }, gl: '#4A5056', pants: '#4A5056', shoe: ['#2B2F33', '#1A1D20'], boots: true, acc: [] },
+  clove: { name: 'Clove', skin: '#EBC7A8', eyes: '#6A3A6A', hair: ['bob', '#3A2A4A', '#E07AD0'], top: ['#2A2A33', '#E07AD0'], jk: { c: '#3A3A44', c2: '#E07AD0', len: 'short', collar: 'none', open: true }, pants: '#2A2A33', shoe: ['#E9E2EC', '#2A2A33'], acc: [['butterfly', '#F08ADF']] },
 };
 const CHAR_IDS = Object.keys(CHARS);
-// 沒選過角色的人：照代號固定分到一個 Q 版角色（每次都一樣）；選了「原本的人形」才用原本的
+// 沒選過角色的人：照代號固定分到一個角色（每次都一樣）；選了「原本的人形」才用原本的
 const autoChar = (id) => { let h = 0; for (const ch of String(id || 'me')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CHAR_IDS[h % CHAR_IDS.length]; };
 const myChar = () => { let c = null; try { c = localStorage.getItem('vb.char'); } catch (e) { /* ignore */ } if (c === 'none') return null; return CHARS[c] ? c : autoChar(NET.me || 'me'); };
+// 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
+const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toonCache = new Map();
+function toon(c, kind) {   // kind：'glow' 發光、'ds' 兩面都畫（敞開的外套、帽子內側）
+  const k = c + (kind || ''); if (toonCache.has(k)) return toonCache.get(k);
+  const m = kind === 'glow' ? new THREE.MeshBasicMaterial({ color: c, toneMapped: false }) : new THREE.MeshToonMaterial({ color: c, gradientMap: TOON_RAMP, side: kind === 'ds' ? THREE.DoubleSide : THREE.FrontSide });
+  toonCache.set(k, m); return m;
+}
+const chGeo = new Map(), cg = (k, f) => { let q = chGeo.get(k); if (!q) { q = f(); chGeo.set(k, q); } return q; };
+const latheGeo = (pts, seg = 18, p0 = 0, pl = Math.PI * 2) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(Math.max(0, r), y)), seg, p0, pl);
+// 四肢：從關節往下長 len；上粗下細、中段微鼓（肌肉）、兩端圓
+const limbGeo = (r0, r1, len, bulge = 0.08) => cg(`limb${r0}|${r1}|${len}|${bulge}`, () => latheGeo([[0, -len - r1 * 0.9], [r1 * 0.75, -len - r1 * 0.62], [r1, -len], [((r0 + r1) / 2) * (1 + bulge), -len * 0.45], [r0, -len * 0.08], [r0 * 0.8, r0 * 0.5], [0, r0 * 0.85]], 14));
+// 軀幹剖面 [高度, 半徑]（腰窄、胸寬、肩膀收進脖子）；女生肩窄、腰細
+const TORSO = {
+  m: [[-0.085, 0], [-0.08, 0.11], [0, 0.126], [0.08, 0.13], [0.18, 0.143], [0.28, 0.166], [0.35, 0.176], [0.402, 0.155], [0.432, 0.09], [0.445, 0.05], [0.447, 0]],
+  f: [[-0.085, 0], [-0.08, 0.112], [0, 0.118], [0.08, 0.112], [0.18, 0.128], [0.28, 0.15], [0.35, 0.158], [0.4, 0.14], [0.43, 0.085], [0.445, 0.045], [0.447, 0]],
+};
+const torsoR = (P, y) => { for (let i = 1; i < P.length; i++) if (y <= P[i][0]) { const [ya, ra] = P[i - 1], [yb, rb] = P[i], t = (y - ya) / (yb - ya || 1); return ra + (rb - ra) * t; } return 0; };
+// 同一個身形放大 d 的一段（衣服、配色條）：y0～y1
+const torsoBand = (P, y0, y1, d, n = 8, rMin = 0) => { const pts = []; for (let i = 0; i <= n; i++) { const y = y0 + ((y1 - y0) * i) / n; pts.push([Math.max(rMin, torsoR(P, Math.max(-0.07, y))) + d, y]); } return pts; };
+// 同一個部位、同一個材質的小零件合併成一個（一個人約 40 次繪製，不然會上百次）
+function chMerge(top) {
+  const groups = []; top.traverse((o) => { if (!o.isMesh) groups.push(o); });
+  for (const grp of groups) {
+    const byM = new Map();
+    for (const o of grp.children) if (o.isMesh) { o.updateMatrix(); if (!byM.has(o.material)) byM.set(o.material, []); byM.get(o.material).push(o); }
+    for (const [m, list] of byM) {
+      if (list.length < 2) continue;
+      const geos = list.map((o) => { const q = (o.geometry.index ? o.geometry : o.geometry).clone(); for (const k of Object.keys(q.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') q.deleteAttribute(k); q.applyMatrix4(o.matrix); return q; });
+      const mg = mergeGeometries(geos); geos.forEach((q) => q.dispose()); if (!mg) continue;
+      for (const o of list) grp.remove(o);
+      grp.add(new THREE.Mesh(mg, m));
+    }
+  }
+  top.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+}
+// 頭（hc＝頭骨中心）：橢球半徑
+const HRX = 0.118, HRY = 0.13, HRZ = 0.122;
+// 頭髮：頭頂、後腦兩片髮殼＋一束一束的髮絲（瀏海、側邊、後面）＋各髮型的馬尾、雙馬尾、包頭、捲髮、辮子、刺刺
+const HAIR = {
+  jett: { bangs: 7, bang: 0.075, sweep: 0.55, side: 0.12, back: 0.12, n: 9, pony: 0.16, ponyEl: 0.25 },
+  pony: { bangs: 7, bang: 0.06, side: 0.15, back: 0.09, n: 9, pony: 0.46, ponyEl: 0.95 },
+  long: { bangs: 6, bang: 0.065, sweep: 0.15, side: 0.3, back: 0.4, n: 11 },
+  twists: { cap: 1.2, curls: 46, curlR: 0.024, side: 0.02 },
+  braids: { cap: 1.15, side: 0.06, back: 0.08, n: 7, braids: 5 },
+  short: { cap: 1.12, bangs: 6, bang: 0.04, side: 0.035, back: 0.05, n: 9, top: 7 },
+  spiky: { cap: 1.12, bangs: 5, bang: 0.07, sweep: 0.2, side: 0.05, back: 0.07, n: 9, spikes: 13, spike: 0.1 },
+  slick: { cap: 1.0, back: 0.04, n: 9, slick: true },
+  pigtails: { bangs: 7, bang: 0.06, side: 0.1, back: 0.08, n: 9, pig: 0.44 },
+  messy: { cap: 1.12, bangs: 6, bang: 0.07, side: 0.06, back: 0.07, n: 9, spikes: 10, spike: 0.075 },
+  wavy: { bangs: 4, bang: 0.07, sweep: -0.35, side: 0.2, back: 0.24, n: 11, wave: true },
+  afro: { cap: 1.25, curls: 70, curlR: 0.03, puffs: true },
+  bob: { bangs: 9, bang: 0.065, side: 0.15, back: 0.13, n: 11 },
+  bun: { bangs: 6, bang: 0.055, side: 0.07, back: 0.06, n: 9, bun: true },
+};
 function makeChibi(C) {
   const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
-  const M = (c, o) => mat(c, { roughness: 0.65, ...(o || {}) }), skin = M(C.skin, C.robot ? { metalness: 0.4, roughness: 0.4 } : undefined), top = M(C.top[0]), line = M(C.top[1]), dark = M(C.shorts), shoe = M(C.shoe), pad = M('#1E2026');
-  const add = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
-  const sph = (r, m, x, y, z, parent, sx = 1, sy = 1, sz = 1) => { const o = add(new THREE.SphereGeometry(r, 16, 12), m, x, y, z, parent); o.scale.set(sx, sy, sz); return o; };
-  // 腿：大腿 0.3、小腿 0.3（臀部高 0.62）＋護膝、球鞋
-  const legs = [], knees = [];
+  const fem = !!C.fem, P = fem ? TORSO.f : TORSO.m, T = toon, rnd = (() => { let x = 0; for (const ch of C.name) x = (x * 31 + ch.charCodeAt(0)) % 9973; return () => ((x = (x * 9301 + 49297) % 233280) / 233280); })();
+  const add = (geo, m, x = 0, y = 0, z = 0, parent = root, s) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (s) o.scale.set(s[0], s[1], s[2]); parent.add(o); return o; };
+  const sph = (r, m, x, y, z, parent, s, ws = 14, hs = 10) => add(cg(`s${r}|${ws}|${hs}`, () => new THREE.SphereGeometry(r, ws, hs)), m, x, y, z, parent, s);
+  const cyl = (r0, r1, h, m, x, y, z, parent, s, open) => add(cg(`c${r0}|${r1}|${h}|${!!open}`, () => new THREE.CylinderGeometry(r0, r1, h, 16, 1, !!open)), m, x, y, z, parent, s);
+  const box = (w, h, d, m, x, y, z, parent) => add(cg(`b${w}|${h}|${d}`, () => new THREE.BoxGeometry(w, h, d)), m, x, y, z, parent);
+  const tor = (R, r, m, x, y, z, parent, s, rx = Math.PI / 2) => { const o = add(cg(`t${R}|${r}`, () => new THREE.TorusGeometry(R, r, 8, 30)), m, x, y, z, parent, s); o.rotation.x = rx; return o; };
+  const skin = T(C.skin), top = T(C.top[0]), ac = T(C.top[1]), J = C.jk;
+  // ---- 腿：大腿、護膝、小腿、襪子、鞋（鞋面＋鞋底）；長褲就整條褲管、短褲是大腿上一截
+  const pantsM = C.pants && !C.shorts ? T(C.pants) : null, shortsM = T(C.shorts || C.pants || '#2B2B2B'), legM = pantsM || skin;
+  const shoeM = T(C.shoe[0]), soleM = T(C.shoe[1] || '#F2F2F0'), padM = T(C.pad || '#24262C');
+  const legs = [], knees = [], feet = [];
   for (const sx of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(sx * 0.09, 0.86, 0); root.add(hip);
-    add(new THREE.CylinderGeometry(0.072, 0.06, 0.42, 12), C.pants ? dark : skin, 0, -0.21, 0, hip);
-    const knee = new THREE.Group(); knee.position.set(0, -0.42, 0); hip.add(knee);
-    sph(0.068, pad, 0, 0, 0.012, knee, 1, 0.9, 1);   // 護膝
-    add(new THREE.CylinderGeometry(0.058, 0.046, 0.38, 12), C.pants ? dark : skin, 0, -0.19, 0, knee);
-    add(new THREE.BoxGeometry(0.11, 0.075, 0.22), shoe, 0, -0.4, 0.04, knee);
-    legs.push(hip); knees.push(knee);
+    const hip = new THREE.Group(); hip.position.set(sx * 0.092, 0.98, 0); root.add(hip);
+    add(limbGeo(pantsM ? 0.088 : 0.08, pantsM ? 0.068 : 0.06, 0.46), legM, 0, 0, 0, hip);
+    if (!pantsM) cyl(0.09, 0.085, 0.2, shortsM, 0, -0.07, 0, hip);
+    const knee = new THREE.Group(); knee.position.y = -0.46; hip.add(knee);
+    add(limbGeo(pantsM ? 0.068 : 0.06, pantsM ? 0.052 : 0.043, 0.46, 0.14), legM, 0, 0, 0, knee);
+    sph(0.07, padM, 0, -0.01, 0.024, knee, [1, 1.1, 0.72]);   // 護膝
+    if (!pantsM && !C.boots) cyl(0.049, 0.046, 0.13, T('#F2F2F0'), 0, -0.39, 0, knee);   // 襪子
+    const ank = new THREE.Group(); ank.position.y = -0.46; knee.add(ank);
+    if (C.boots) cyl(0.062, 0.058, 0.2, shoeM, 0, 0.06, 0.004, ank);   // 靴筒
+    sph(0.058, shoeM, 0, -0.02, 0.05, ank, [0.95, 0.72, 2.05]);   // 鞋面
+    box(0.104, 0.026, 0.25, soleM, 0, -0.047, 0.046, ank);   // 鞋底
+    legs.push(hip); knees.push(knee); feet.push(ank);
   }
-  add(new THREE.CylinderGeometry(0.155, 0.145, 0.22, 16), dark, 0, 0.86, 0, root);   // 短褲
-  const spine = new THREE.Group(); spine.position.set(0, 0.92, 0); root.add(spine);
-  add(new THREE.CylinderGeometry(0.17, 0.145, 0.46, 16), top, 0, 0.23, 0, spine);
-  add(new THREE.CylinderGeometry(0.172, 0.172, 0.045, 16), line, 0, 0.26, 0, spine);   // 胸前一圈線條
-  add(new THREE.BoxGeometry(0.04, 0.36, 0.02), line, 0, 0.23, 0.16, spine);
+  add(latheGeo([[0, 0.875], [0.12, 0.88], [0.152, 0.93], [0.152, 1.0], [0.132, 1.06], [0, 1.066]]), pantsM || shortsM, 0, 0, 0, root, [1, 1, 0.78]);   // 骨盆／褲頭
+  if (C.belt) { tor(0.14, 0.014, T(C.belt), 0, 1.035, 0, root, [1, 0.78, 1]); box(0.05, 0.035, 0.012, T('#C9C2B0'), 0, 1.035, 0.112, root); }
+  if (J && J.len === 'coat') {   // 長大衣下擺：從腰到膝蓋，前面敞開
+    const cp = []; for (let i = 0; i <= 6; i++) cp.push([0.24 - (0.075 * i) / 6, 0.5 + (0.46 * i) / 6]);
+    add(latheGeo(cp, 22, 0.62, Math.PI * 2 - 1.24), T(J.c, 'ds'), 0, 0, 0, root, [1, 1, 0.82]);
+    for (const s of [-1, 1]) add(latheGeo(cp.map(([r, y]) => [r + 0.004, y]), 2, s > 0 ? 0.62 : Math.PI * 2 - 0.62 - 0.1, 0.1), T(J.c2 || J.c, 'ds'), 0, 0, 0, root, [1, 1, 0.82]);
+  }
+  // ---- 上身：有腰身的軀幹（前後扁）＋胸前配色＋外套
+  const spine = new THREE.Group(); spine.position.y = 1.03; root.add(spine);
+  const tz = [1, 1, 0.72];
+  add(latheGeo(P.map(([y, r]) => [r, y]), 20), top, 0, 0, 0, spine, tz);
+  add(latheGeo(torsoBand(P, 0.25, 0.285, 0.004, 3), 20, -1.1, 2.2), ac, 0, 0, 0, spine, tz);   // 胸前一條配色
+  add(latheGeo(torsoBand(P, -0.02, 0.4, 0.005, 10), 3, -0.035, 0.07), ac, 0, 0, 0, spine, tz);   // 中線拉鍊
+  if (C.collarTop) add(latheGeo([[0.068, 0.41], [0.07, 0.48], [0.074, 0.5]], 16), top, 0, 0, 0, spine);
+  if (J) {
+    const gap = J.open ? 0.4 : 0, yb = J.len === 'short' ? 0.12 : -0.17, jm = T(J.c, 'ds'), j2 = T(J.c2 || J.c, 'ds');
+    const pts = torsoBand(P, yb, 0.43, 0.018, 14, 0).map(([r, y]) => [y < 0.02 ? Math.max(r, 0.172) : r, y]);
+    add(latheGeo(pts, 22, gap, Math.PI * 2 - gap * 2), jm, 0, 0, 0, spine, tz);
+    if (gap) for (const s of [-1, 1]) add(latheGeo(pts.map(([r, y]) => [r + 0.003, y]), 2, s > 0 ? gap : Math.PI * 2 - gap - 0.12, 0.12), j2, 0, 0, 0, spine, tz);   // 門襟滾邊
+    else add(latheGeo(pts.map(([r, y]) => [r + 0.003, y]), 2, -0.03, 0.06), j2, 0, 0, 0, spine, tz);
+    add(latheGeo(torsoBand(P, yb, yb + 0.03, 0.022, 2, 0).map(([r, y]) => [y < 0.02 ? Math.max(r, 0.176) : r, y]), 22, gap, Math.PI * 2 - gap * 2), j2, 0, 0, 0, spine, tz);   // 下擺收邊
+    if (J.collar === 'high') add(latheGeo([[0.074, 0.405], [0.08, 0.47], [0.088, 0.515]], 18, gap ? 0.55 : 0, gap ? Math.PI * 2 - 1.1 : Math.PI * 2), j2, 0, 0, 0, spine);
+    if (J.collar === 'fur') tor(0.105, 0.04, T(J.fur || '#E3E0D6'), 0, 0.42, -0.01, spine, [1, 0.78, 1]);
+    if (J.collar === 'hood') sph(0.105, jm, 0, 0.405, -0.11, spine, [1.2, 0.62, 0.7]);
+  }
+  // ---- 手：肩頭、上臂（短袖露手臂／長袖）、前臂、手掌（掌心朝身體）＋拇指
+  const slvM = J ? T(J.c) : C.sleeve ? T(C.sleeve) : C.metal ? skin : null, glM = C.gl ? T(C.gl) : skin, bio = C.bionic ? T(C.bionic) : null, ar = bio ? 1.3 : 1;
   const arms = [], elbows = [], hands = [];
   for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.21, 0.43, 0); spine.add(sh);
-    sph(0.062, top, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.048, 0.042, 0.3, 10), C.sleeve ? top : skin, 0, -0.15, 0, sh);
-    const el = new THREE.Group(); el.position.set(0, -0.3, 0); sh.add(el);
-    sph(0.044, C.sleeve ? top : skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.042, 0.036, 0.27, 10), C.sleeve ? top : skin, 0, -0.135, 0, el);
-    const hd = new THREE.Group(); hd.position.set(0, -0.285, 0); el.add(hd); sph(0.052, C.gloves ? M(C.gloves) : skin, 0, 0, 0, hd);
+    const sh = new THREE.Group(); sh.position.set(sx * (fem ? 0.178 : 0.194), 0.392, 0); spine.add(sh);
+    sph(0.054 * (bio ? 1.25 : 1), bio || slvM || top, 0, -0.012, 0, sh);
+    const t = slvM ? 0.008 : 0;
+    add(limbGeo(0.05 * ar + t, 0.041 * ar + t, 0.3, 0.12), bio || slvM || skin, 0, 0, 0, sh);
+    if (!slvM && !bio) cyl(0.064, 0.06, 0.12, top, 0, -0.045, 0, sh);   // 短袖
+    if (C.pads) sph(0.078, T(C.pads), 0, 0.035, 0, sh, [1, 0.6, 1.05]);
+    const el = new THREE.Group(); el.position.y = -0.3; sh.add(el);
+    add(limbGeo(0.042 * ar + t, 0.033 * ar + t * 1.2, 0.27, 0.14), bio || slvM || skin, 0, 0, 0, el);
+    if (slvM && J && J.c2) cyl(0.047, 0.047, 0.03, T(J.c2), 0, -0.25, 0, el);   // 袖口
+    if (C.wrist) tor(0.043 * ar, 0.011, T(C.wrist, 'glow'), 0, -0.21, 0, el);
+    const hd = new THREE.Group(); hd.position.y = -0.27; el.add(hd);
+    sph(0.05, glM, 0, -0.048, 0.004, hd, [0.48 * ar, 1.12, 0.9]);
+    sph(0.017, glM, sx * -0.004, -0.028, 0.036, hd, [0.8, 1.7, 0.85]);
     arms.push(sh); elbows.push(el); hands.push(hd);
   }
-  // 頭：半徑 0.23 的大頭（Q 版），臉朝 +z
-  const head = new THREE.Group(); head.position.set(0, 0.5, 0); spine.add(head);
-  add(new THREE.CylinderGeometry(0.055, 0.06, 0.08, 10), skin, 0, 0.0, 0, head);
-  const R = 0.23, hc = new THREE.Group(); hc.position.y = 0.24; head.add(hc);
-  if (C.robot) { const hb = add(new THREE.BoxGeometry(0.4, 0.4, 0.38), skin, 0, 0, 0, hc); hb.geometry.translate(0, 0, 0); } else sph(R, skin, 0, 0, 0, hc);
-  const hairM = C.hair ? M(C.hair[1], { roughness: 0.55 }) : null;
-  // 臉：大眼睛（深色瞳孔＋白色反光）、眉毛、小嘴；發光的眼睛用不受光的材質
-  const eyeM = C.glow ? new THREE.MeshBasicMaterial({ color: C.eyes }) : M(C.eyes, { roughness: 0.3 }), white = new THREE.MeshBasicMaterial({ color: '#FFFFFF' });
-  for (const sx of [-1, 1]) {
-    if (C.faceless && !C.glow) continue;
-    const ex = sx * 0.078, ez = R * 0.92 + (C.robot ? 0.0 : 0);
-    if (C.faceless) { const e = sph(0.03, eyeM, ex, 0.0, C.robot ? 0.2 : R * 0.95, hc, 1.2, C.robot ? 0.5 : 0.8, 0.4); if (C.robot) e.position.z = 0.2; continue; }
-    sph(0.04, eyeM, ex, -0.005, ez, hc, 1, 1.35, 0.45); sph(0.012, white, ex + 0.014, 0.022, ez + 0.012, hc);
-    if (C.hair) { const br = add(new THREE.BoxGeometry(0.06, 0.012, 0.012), hairM, ex, 0.075, R * 0.93, hc); br.rotation.z = sx * -0.15; }
+  // ---- 頭：脖子、頭骨＋下巴臉頰、耳朵、鼻子；臉：眼白、虹膜、瞳孔、反光、上睫毛、眉毛、嘴
+  cyl(0.046, 0.052, 0.12, C.metal ? T('#3A4048') : skin, 0, 0.47, 0, spine);
+  const head = new THREE.Group(); head.position.y = 0.5; spine.add(head);
+  const hc = new THREE.Group(); hc.position.set(0, 0.132, 0.006); hc.scale.setScalar(1.08); head.add(hc);   // 頭稍微大一點（遠遠看也認得出臉）
+  if (!C.metal) {
+    sph(1, skin, 0, 0, 0, hc, [HRX, HRY, HRZ], 26, 18);
+    sph(1, skin, 0, -0.055, 0.022, hc, [0.092, 0.08, 0.098], 22, 14);
+    for (const sx of [-1, 1]) sph(0.03, skin, sx * HRX * 0.96, -0.015, -0.006, hc, [0.42, 1, 0.75]);
+    const ns = add(cg('nose', () => new THREE.ConeGeometry(0.012, 0.028, 8)), skin, 0, -0.033, 0.121, hc); ns.rotation.x = Math.PI / 2;
   }
-  if (!C.faceless) add(new THREE.BoxGeometry(0.05, 0.01, 0.01), M('#7A3B33'), 0, -0.095, R * 0.95, hc);
-  // 髮型
-  const cap = (r = 1.07, phi = 1.75) => { const o = add(new THREE.SphereGeometry(R * r, 22, 14, 0, Math.PI * 2, 0, phi), hairM, 0, 0.012, -0.012, hc); o.rotation.x = -0.22; return o; };
-  const cone = (x, y, z, rx, rz, l = 0.12, r = 0.045) => { const o = add(new THREE.ConeGeometry(r, l, 8), hairM, x, y, z, hc); o.rotation.set(rx, 0, rz); return o; };
+  const dk = T('#1C1A1E'), browM = T(C.hair ? C.hair[1] : '#3A2C22');
+  if (!C.faceless) {
+    const iris = T(C.eyes, C.glow ? 'glow' : ''), wh = T('#FBFBF8'), hl = T('#FFFFFF', 'glow');
+    for (const sx of [-1, 1]) {
+      const ex = sx * 0.043, ey = -0.004, ez = 0.108;
+      sph(1, wh, ex, ey, ez, hc, [0.026, 0.021, 0.012]);
+      sph(1, iris, ex, ey - 0.001, ez + 0.007, hc, [0.0145, 0.0168, 0.008]);
+      sph(1, dk, ex, ey - 0.001, ez + 0.0105, hc, [0.0068, 0.0085, 0.004]);
+      sph(1, hl, ex + 0.0055, ey + 0.0065, ez + 0.0125, hc, [0.0036, 0.0036, 0.002]);
+      const lid = box(0.054, fem ? 0.008 : 0.006, 0.01, dk, ex, ey + 0.0195, ez + 0.003, hc); lid.rotation.z = sx * -0.12;
+      const br = box(0.044, 0.008, 0.008, browM, ex + sx * 0.002, ey + 0.043, ez + 0.003, hc); br.rotation.z = sx * (C.brow ?? -0.08);
+    }
+    box(0.03, 0.005, 0.006, T('#8E4B45'), 0, -0.078, 0.114, hc);
+  }
+  // ---- 頭髮
   if (C.hair) {
-    const kind = C.hair[0];
-    if (kind === 'short' || kind === 'spiky' || kind === 'curly' || kind === 'slick') cap(kind === 'slick' ? 1.04 : 1.07, kind === 'slick' ? 1.5 : 1.75);
-    if (kind === 'short') for (let i = -2; i <= 2; i++) cone(i * 0.06, 0.17, R * 0.8, 1.9, i * 0.15, 0.09, 0.04);
-    if (kind === 'spiky') for (let i = 0; i < 7; i++) { const a = -0.9 + i * 0.3; cone(Math.sin(a) * 0.12, 0.2, -0.04 + Math.cos(a) * 0.05, -0.6, -a * 0.6, 0.16, 0.05); }
-    if (kind === 'curly') for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; sph(0.06, hairM, Math.cos(a) * 0.15, 0.17, Math.sin(a) * 0.15 - 0.02, hc); }
-    if (kind === 'ponytail' || kind === 'long' || kind === 'pigtails') { cap(); for (let i = -2; i <= 2; i++) cone(i * 0.055, 0.15, R * 0.82, 2.1, i * 0.12, 0.08, 0.04); }
-    if (kind === 'ponytail') { sph(0.05, hairM, 0, 0.1, -R * 0.95, hc); const t = add(new THREE.CylinderGeometry(0.05, 0.025, 0.3, 10), hairM, 0, -0.04, -R * 1.1, hc); t.rotation.x = 0.35; }
-    if (kind === 'long') { const b = add(new THREE.BoxGeometry(0.4, 0.34, 0.1), hairM, 0, -0.12, -R * 0.62, hc); b.rotation.x = 0.12; for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.07, 0.24, 0.08), hairM, sx * R * 0.92, -0.1, 0.03, hc); }
-    if (kind === 'pigtails') for (const sx of [-1, 1]) { sph(0.045, hairM, sx * R * 0.95, 0.06, -0.04, hc); const t = add(new THREE.CylinderGeometry(0.045, 0.02, 0.32, 10), hairM, sx * R * 1.08, -0.12, -0.05, hc); t.rotation.z = sx * 0.25; }
-    if (C.hair[2]) { const st = add(new THREE.BoxGeometry(0.05, 0.05, 0.25), M(C.hair[2]), 0.1, 0.17, 0.04, hc); st.rotation.x = -0.4; }   // 挑染
+    const H = HAIR[C.hair[0]] || HAIR.short, hm = T(C.hair[1]), sm = C.hair[2] ? T(C.hair[2]) : hm, up = new THREE.Vector3(0, 1, 0);
+    const S = (az, el, k = 1.04) => new THREE.Vector3(HRX * Math.sin(az) * Math.cos(el) * k, HRY * Math.sin(el) * k, HRZ * Math.cos(az) * Math.cos(el) * k);
+    const lockGeo = (len, w) => cg(`L${len.toFixed(3)}|${w.toFixed(3)}`, () => { const q = new THREE.ConeGeometry(w, len, 7); q.rotateX(Math.PI); q.translate(0, -len / 2, 0); return q; });
+    const lock = (p, dir, len, w, m = hm, flat = 0.55) => {   // 一束頭髮：從 p 往 dir 長，扁的那面貼著頭
+      const o = add(lockGeo(len, w), m, p.x, p.y, p.z, hc), Y = dir.clone().normalize().negate(), n = p.clone().normalize(), Z = n.sub(Y.clone().multiplyScalar(n.dot(Y))); if (Z.lengthSq() < 1e-6) Z.set(0, 0, 1); Z.normalize();
+      o.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(Y, Z), Y, Z)); o.scale.z = flat; return o;
+    };
+    const k = 1.055, capT = H.cap || 1.12;
+    add(cg(`hcap${capT}`, () => new THREE.SphereGeometry(1, 28, 16, 0, Math.PI * 2, 0, capT)), hm, 0, 0.004, -0.004, hc, [HRX * k, HRY * k, HRZ * k]);
+    add(cg(`hback${H.back > 0.2 ? 2.3 : 1.85}`, () => new THREE.SphereGeometry(1, 28, 16, Math.PI - 0.62, Math.PI + 1.24, 0, H.back > 0.2 ? 2.3 : 1.85)), hm, 0, 0.004, -0.008, hc, [HRX * k, HRY * k, HRZ * k]);
+    if (H.bangs) for (let i = 0; i < H.bangs; i++) {
+      const u = i / (H.bangs - 1) - 0.5, az = u * 1.55 + (H.sweep || 0) * 0.25, p = S(az, 0.6, 1.05);
+      lock(p, new THREE.Vector3(Math.sin(az) * 0.3 + (H.sweep || 0) * (0.6 + u), -1, 0.34), H.bang * (0.8 + rnd() * 0.45), 0.03, i === 1 && C.hair[2] ? sm : hm);
+    }
+    if (H.side) for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const az = sx * (1.2 + i * 0.25), p = S(az, 0.42, 1.05); lock(p, new THREE.Vector3(Math.sin(az) * 0.12, -1, 0.06 - i * 0.06), H.side * (0.85 + rnd() * 0.3) + 0.03, 0.036); }
+    if (H.back) for (let i = 0; i < (H.n || 9); i++) { const az = 1.9 + (i / ((H.n || 9) - 1)) * (Math.PI * 2 - 3.8), p = S(az, 0.32, 1.05); lock(p, new THREE.Vector3(Math.sin(az) * (H.wave ? 0.3 : 0.14), -1, Math.cos(az) * (H.back > 0.2 ? 0.42 : 0.22)), H.back * (0.85 + rnd() * 0.3) + 0.04, 0.045, i === 2 && C.hair[2] ? sm : hm); }
+    if (H.top) for (let i = 0; i < H.top; i++) { const az = (i / H.top) * Math.PI * 2, p = S(az, 1.15, 1.04); lock(p, p.clone().normalize().add(new THREE.Vector3(0, 0.3, 0.4)), 0.06, 0.035); }
+    if (H.spikes) for (let i = 0; i < H.spikes; i++) { const az = (i / H.spikes) * Math.PI * 2 + rnd() * 0.3, el = 0.75 + rnd() * 0.6, p = S(az, el, 1.02); lock(p, p.clone().normalize().add(new THREE.Vector3(0, 0.6, -0.25)), H.spike * (0.8 + rnd() * 0.5), 0.04, i % 4 === 0 && C.hair[2] ? sm : hm, 0.7); }
+    if (H.curls) for (let i = 0; i < H.curls; i++) {   // 捲髮／小辮子：一顆一顆貼在頭上（臉的前面不放）
+      const az = rnd() * Math.PI * 2, el = 0.15 + rnd() * 1.35; if (Math.cos(az) > 0.55 && el < 0.85) continue;
+      const p = S(az, el, 1.08 + (H.puffs ? 0.12 : 0)); sph(H.curlR, i % 7 === 0 && C.hair[2] ? sm : hm, p.x, p.y, p.z, hc);
+    }
+    if (H.puffs) for (const sx of [-1, 1]) { const p = S(sx * 1.1, 0.95, 1.35); sph(0.085, hm, p.x, p.y, p.z, hc); }
+    if (H.pony) { const p = S(Math.PI, H.ponyEl, 1.04); sph(0.034, sm, p.x, p.y, p.z, hc); lock(p, new THREE.Vector3(0, -1, -0.45), H.pony, 0.05, hm, 0.75); }
+    if (H.pig) for (const sx of [-1, 1]) { const p = S(sx * 2.15, 0.62, 1.06); sph(0.03, T('#59E0FF', 'glow'), p.x, p.y, p.z, hc); lock(p, new THREE.Vector3(sx * 0.35, -1, -0.15), H.pig, 0.05, hm, 0.8); }
+    if (H.bun) { const p = S(Math.PI, 0.85, 1.22); sph(0.06, hm, p.x, p.y, p.z, hc); }
+    if (H.braids) for (let i = 0; i < H.braids; i++) { const az = Math.PI + (i - (H.braids - 1) / 2) * 0.32, p = S(az, 0.2, 1.05); for (let j = 0; j < 6; j++) sph(0.019, hm, p.x + Math.sin(az) * 0.01 * j, p.y - 0.045 * j, p.z - 0.012 * j, hc); sph(0.012, T('#E8C35A'), p.x, p.y - 0.28, p.z - 0.07, hc); }
+    void up;
   }
-  // 配件
+  // ---- 配件
   for (const [kind, col] of C.acc || []) {
-    const am = M(col), glowM = new THREE.MeshBasicMaterial({ color: col });
-    if (kind === 'beanie') { const o = add(new THREE.SphereGeometry(R * 1.12, 22, 14, 0, Math.PI * 2, 0, 1.45), am, 0, 0.03, -0.01, hc); o.rotation.x = -0.15; add(new THREE.TorusGeometry(R * 1.02, 0.03, 8, 24), am, 0, 0.06, 0, hc).rotation.x = Math.PI / 2 - 0.15; }
-    if (kind === 'goggles') { add(new THREE.TorusGeometry(R * 1.05, 0.018, 6, 24), am, 0, 0.12, 0, hc).rotation.x = Math.PI / 2 - 0.15; for (const sx of [-1, 1]) sph(0.045, new THREE.MeshStandardMaterial({ color: '#FFB25A', roughness: 0.2, metalness: 0.3 }), sx * 0.08, 0.13, R * 0.95, hc, 1, 0.8, 0.5); }
-    if (kind === 'glassesRound') { for (const sx of [-1, 1]) add(new THREE.TorusGeometry(0.045, 0.008, 6, 18), am, sx * 0.078, 0, R * 1.0, hc); add(new THREE.BoxGeometry(0.06, 0.008, 0.008), am, 0, 0.01, R * 1.0, hc); }
-    if (kind === 'glassesRect') { for (const sx of [-1, 1]) { const f = add(new THREE.BoxGeometry(0.085, 0.055, 0.008), new THREE.MeshStandardMaterial({ color: '#B9D6FF', transparent: true, opacity: 0.35 }), sx * 0.078, 0.0, R * 1.0, hc); add(new THREE.BoxGeometry(0.09, 0.008, 0.01), am, sx * 0.078, 0.03, R * 1.0, hc); void f; } }
-    if (kind === 'headband') add(new THREE.TorusGeometry(R * 1.03, 0.02, 6, 24), am, 0, 0.1, 0, hc).rotation.x = Math.PI / 2 - 0.2;
-    if (kind === 'mask') { const o = add(new THREE.SphereGeometry(R * 1.02, 20, 10, -0.9, 1.8 + Math.PI / 2 - 0.2, Math.PI / 2, 0.75), am, 0, 0, 0, hc); o.rotation.y = Math.PI / 2 - 0.35; }
-    if (kind === 'hood') { const o = add(new THREE.SphereGeometry(R * 1.28, 22, 16, Math.PI * 0.62, Math.PI * 1.76, 0, 2.2), am, 0, 0.02, -0.02, hc); o.rotation.y = 0; const tip = add(new THREE.ConeGeometry(0.14, 0.22, 12), am, 0, 0.26, -0.08, hc); tip.rotation.x = -0.5; }
-    if (kind === 'beret') { const o = add(new THREE.CylinderGeometry(R * 1.1, R * 1.05, 0.08, 20), am, 0.04, 0.17, -0.02, hc); o.rotation.z = -0.25; }
-    if (kind === 'beard') { const o = add(new THREE.SphereGeometry(R * 0.85, 18, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45), am, 0, -0.03, 0.04, hc); o.scale.set(1.05, 1.1, 1); add(new THREE.BoxGeometry(0.14, 0.03, 0.04), am, 0, -0.05, R * 0.92, hc); }
-    if (kind === 'goatee') add(new THREE.BoxGeometry(0.05, 0.05, 0.03), am, 0, -0.14, R * 0.86, hc);
-    if (kind === 'faceMask') { const o = sph(R * 0.82, am, 0, -0.01, R * 0.38, hc, 1, 1.05, 0.75); void o; add(new THREE.BoxGeometry(0.03, 0.03, 0.02), new THREE.MeshBasicMaterial({ color: C.eyes }), 0, 0.02, R * 1.0, hc); }
-    if (kind === 'hat') { add(new THREE.CylinderGeometry(R * 1.55, R * 1.55, 0.02, 24), am, 0, 0.12, 0, hc); add(new THREE.CylinderGeometry(R * 0.85, R * 0.95, 0.18, 20), am, 0, 0.22, 0, hc); }
-    if (kind === 'visor') add(new THREE.BoxGeometry(0.34, 0.06, 0.02), glowM, 0, 0.0, 0.2, hc);
-    if (kind === 'jade') sph(0.035, glowM, 0, 0.33, 0.16, spine);
-    if (kind === 'bolt') for (const sx of [-1, 1]) { const o = add(new THREE.BoxGeometry(0.02, 0.22, 0.02), glowM, sx * 0.17, 0.25, 0.05, spine); o.rotation.z = sx * 0.4; }
+    const am = T(col), gm = T(col, 'glow');
+    if (kind === 'beanie') { add(cg('beanie', () => new THREE.SphereGeometry(1, 26, 14, 0, Math.PI * 2, 0, 1.4)), am, 0, 0.02, -0.006, hc, [HRX * 1.16, HRY * 1.14, HRZ * 1.16]); tor(HRX * 1.13, 0.024, am, 0, 0.045, -0.004, hc, [1, HRZ / HRX, 1]); }
+    if (kind === 'cap') { add(cg('capdome', () => new THREE.SphereGeometry(1, 26, 14, 0, Math.PI * 2, 0, 1.45)), am, 0, 0.012, -0.004, hc, [HRX * 1.14, HRY * 1.1, HRZ * 1.14]); const b = add(cg('capbrim', () => new THREE.CylinderGeometry(0.1, 0.1, 0.012, 20, 1, false, -Math.PI / 2, Math.PI)), am, 0, 0.05, 0.08, hc, [1, 1, 0.9]); b.rotation.x = 0.12; }
+    if (kind === 'goggles') { tor(HRX * 1.12, 0.013, T('#2B2B2B'), 0, 0.075, -0.004, hc, [1, HRZ / HRX, 1]); for (const sx of [-1, 1]) sph(0.034, T('#FFB25A', 'glow'), sx * 0.047, 0.088, HRZ * 1.02, hc, [1, 0.8, 0.5]); }
+    if (kind === 'glassesRound') { for (const sx of [-1, 1]) tor(0.024, 0.0045, am, sx * 0.043, -0.004, 0.124, hc, undefined, 0); box(0.035, 0.005, 0.005, am, 0, 0.004, 0.126, hc); }
+    if (kind === 'glassesRect') for (const sx of [-1, 1]) { box(0.05, 0.03, 0.004, new THREE.MeshBasicMaterial({ color: '#B9D6FF', transparent: true, opacity: 0.35 }), sx * 0.043, -0.004, 0.124, hc); box(0.052, 0.006, 0.006, am, sx * 0.043, 0.012, 0.125, hc); }
+    if (kind === 'headband') tor(HRX * 1.08, 0.014, am, 0, 0.07, -0.004, hc, [1, HRZ / HRX, 1], Math.PI / 2 - 0.15);
+    if (kind === 'gasMask') { sph(1, am, 0, -0.05, 0.05, hc, [0.098, 0.065, 0.085]); for (const sx of [-1, 1]) { const c2 = cyl(0.026, 0.026, 0.045, T('#1E2A20'), sx * 0.06, -0.07, 0.1, hc); c2.rotation.z = sx * 1.1; } sph(0.012, T('#4CC66A', 'glow'), 0, -0.06, 0.134, hc); }
+    if (kind === 'faceMask') { sph(1, am, 0, -0.012, 0.035, hc, [0.112, 0.125, 0.098]); sph(0.011, T(C.eyes, 'glow'), 0, 0.012, 0.133, hc); box(0.09, 0.006, 0.006, T('#BFB9AC'), 0, -0.055, 0.128, hc); }
+    if (kind === 'hat') { cyl(0.22, 0.22, 0.014, am, 0, 0.085, 0, hc); cyl(0.12, 0.128, 0.11, am, 0, 0.15, 0, hc); cyl(0.13, 0.13, 0.02, T('#7A6A5A'), 0, 0.1, 0, hc); }
+    if (kind === 'beret') { const o = cyl(HRX * 1.18, HRX * 1.08, 0.06, am, 0.03, 0.115, -0.01, hc); o.rotation.z = -0.28; tor(HRX * 1.05, 0.012, T('#2B2B2B'), 0, 0.075, -0.004, hc, [1, HRZ / HRX, 1]); }
+    if (kind === 'beard') { add(cg('beard', () => new THREE.SphereGeometry(1, 22, 14, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5)), am, 0, -0.035, 0.03, hc, [0.098, 0.1, 0.1]); box(0.075, 0.016, 0.02, am, 0, -0.058, 0.118, hc); }
+    if (kind === 'beardShort') { add(cg('beard', () => new THREE.SphereGeometry(1, 22, 14, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5)), am, 0, -0.045, 0.026, hc, [0.094, 0.072, 0.1]); }
+    if (kind === 'goatee') { box(0.03, 0.035, 0.016, am, 0, -0.1, 0.105, hc); box(0.05, 0.008, 0.01, am, 0, -0.063, 0.118, hc); }
+    if (kind === 'robotHead') {
+      const mm = T('#9AA4AE'), md = T('#3A4048');
+      add(cg('rbox', () => new THREE.BoxGeometry(0.22, 0.22, 0.22, 2, 2, 2)), mm, 0, 0.01, 0, hc);
+      box(0.24, 0.07, 0.03, md, 0, 0.0, 0.11, hc); box(0.19, 0.035, 0.012, gm, 0, 0.0, 0.127, hc);   // 面罩＋發光的眼
+      cyl(0.012, 0.012, 0.08, md, 0.07, 0.15, -0.02, hc); sph(0.016, gm, 0.07, 0.19, -0.02, hc);
+      box(0.24, 0.03, 0.2, md, 0, 0.12, 0, hc);
+    }
+    if (kind === 'hoodUp') { add(cg('hoodUp', () => new THREE.SphereGeometry(1, 26, 18, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5, 0, 2.25)), T(col, 'ds'), 0, 0.012, -0.012, hc, [0.165, 0.175, 0.17]); add(cg('hoodTip', () => new THREE.ConeGeometry(0.12, 0.2, 14)), am, 0, 0.13, -0.09, hc).rotation.x = -0.75; }
+    if (kind === 'omenMarks') for (const i of [-1, 0, 1]) { const o = box(0.012, 0.045, 0.006, gm, i * 0.032, 0.0 + (i === 0 ? 0.012 : 0), 0.122, hc); o.rotation.z = i * 0.25; }
+    if (kind === 'bionicEye') { tor(0.022, 0.006, T('#2B2B2B'), -0.043, -0.004, 0.122, hc, undefined, 0); sph(0.012, gm, -0.043, -0.004, 0.124, hc); }
+    if (kind === 'earrings') for (const sx of [-1, 1]) sph(0.011, am, sx * HRX * 0.98, -0.055, 0.0, hc);
+    if (kind === 'butterfly') for (const sx of [-1, 1]) { const o = sph(0.03, gm, 0.075 + sx * 0.022, 0.1, 0.06, hc, [1, 0.7, 0.25]); o.rotation.z = sx * 0.5; }
+    if (kind === 'orb') sph(0.032, gm, 0, 0.33, 0.13, spine);
+    if (kind === 'bolt') for (const sx of [-1, 1]) { const o = box(0.016, 0.24, 0.016, gm, sx * 0.13, 0.17, 0.085, spine); o.rotation.z = sx * 0.35; }
   }
-  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true, L1: 0.42, L2: 0.44, hipH: 0.86, chibi: true };
+  chMerge(g);
+  return { g, body, root, spine, head, hc, arms, elbows, hands, legs, knees, feet, phase: 0, rig: true, L1: 0.46, L2: 0.52, hipH: 0.98, chibi: true };
 }
 function makeAvatar(color, ch) {
   if (ch && CHARS[ch]) return makeChibi(CHARS[ch]);
@@ -7064,23 +7210,25 @@ function makeAvatar(color, ch) {
 // 參考排球動作：接球低重心、前臂伸直併攏成平台；舉球雙手在額頭前、手肘彎成窗戶再一起推出去；扣球起跳拉弓（右手肘高、左手指球）、揮臂、收在身體另一側；攔網雙手伸直往網子上方壓
 const AVP = {
   idle: { sh: [[-0.08, 0.1], [-0.08, 0.1]], el: [0.3, 0.3], hip: [0.02, 0.02], kn: [0.06, 0.06], sp: 0.04, tw: 0 },
-  ready: { sh: [[-0.75, 0.15], [-0.75, 0.15]], el: [1.0, 1.0], hip: [0.75, 0.75], kn: [1.3, 1.3], sp: 0.55, tw: 0, arm: 0.3 },
-  bump: { sh: [[-0.95, -0.2], [-0.95, -0.2]], el: [0.03, 0.03], hip: [0.85, 0.85], kn: [1.45, 1.45], sp: 0.55, tw: 0, arm: 0 },
-  bumpHit: { sh: [[-1.3, -0.2], [-1.3, -0.2]], el: [0, 0], hip: [0.45, 0.45], kn: [0.7, 0.7], sp: 0.32, tw: 0, arm: 0 },
-  setReady: { sh: [[-2.5, 0.42], [-2.5, 0.42]], el: [1.6, 1.6], hip: [0.32, 0.32], kn: [0.6, 0.6], sp: 0.02, tw: 0, arm: 0 },
-  setPush: { sh: [[-2.95, 0.15], [-2.95, 0.15]], el: [0.2, 0.2], hip: [0.08, 0.08], kn: [0.12, 0.12], sp: -0.08, tw: 0, arm: 0 },
-  setBack: { sh: [[-3.15, 0.12], [-3.15, 0.12]], el: [0.15, 0.15], hip: [0.02, 0.02], kn: [0.08, 0.08], sp: -0.4, tw: 0, arm: 0 },
+  ready: { sh: [[-0.62, 0.22], [-0.62, 0.22]], el: [0.95, 0.95], hip: [0.85, 0.85], kn: [1.3, 1.3], hab: [0.2, 0.2], sp: 0.58, tw: 0, arm: 0.15, gait: 0.6 },   // 接球準備：腳比肩寬、膝蓋彎、重心往前、雙手在腰前
+  bump: { sh: [[-0.98, -0.14], [-0.98, -0.14]], el: [0.02, 0.02], hip: [0.92, 0.92], kn: [1.42, 1.42], hab: [0.2, 0.2], sp: 0.55, tw: 0, arm: 0, gait: 0.5 },   // 墊球：手臂打直併攏成平台、壓低
+  bumpHit: { sh: [[-1.12, -0.14], [-1.12, -0.14]], el: [0, 0], hip: [0.55, 0.55], kn: [0.8, 0.8], hab: [0.16, 0.16], sp: 0.36, tw: 0, arm: 0, gait: 0.4 },   // 墊到球：腿往上送、平台抬到胸前（手不甩）
+  setReady: { sh: [[-2.55, 0.45], [-2.55, 0.45]], el: [1.75, 1.75], hip: [0.38, 0.3], kn: [0.68, 0.55], hab: [0.08, 0.08], sp: -0.04, tw: 0, arm: 0, gait: 0.6 },   // 舉球準備：雙手在額頭前上方（手肘張開成窗戶）
+  setPush: { sh: [[-2.98, 0.16], [-2.98, 0.16]], el: [0.18, 0.18], hip: [0.1, 0.06], kn: [0.14, 0.1], hab: [0.06, 0.06], sp: -0.14, tw: 0, arm: 0, gait: 0.4 },   // 舉出去：腿、手一起伸直往上推
+  setBack: { sh: [[-3.2, 0.12], [-3.2, 0.12]], el: [0.12, 0.12], hip: [-0.05, -0.05], kn: [0.12, 0.12], sp: -0.48, tw: 0, arm: 0, gait: 0.4 },   // 背舉：上身往後仰
   hold: { sh: [[-0.85, -0.1], [-0.85, -0.1]], el: [1.0, 1.0], hip: [0.03, 0.03], kn: [0.08, 0.08], sp: 0.04, tw: 0, arm: 0 },
-  approach: { sh: [[0.7, 0.15], [0.7, 0.15]], el: [0.15, 0.15], hip: [0.7, 0.4], kn: [1.2, 0.9], sp: 0.5, tw: 0, arm: 0 },   // 助跑最後一步：雙手甩到後面、蹲低
-  airUp: { sh: [[-2.45, 0.6], [-2.8, 0.1]], el: [2.0, 0.2], hip: [0.55, 0.3], kn: [1.1, 0.7], sp: -0.3, tw: 0.3, arm: 0 },
-  spikeHit: { sh: [[-3.0, 0.15], [-1.0, 0.25]], el: [0.08, 1.2], hip: [0.4, 0.2], kn: [0.8, 0.5], sp: 0.1, tw: -0.2, arm: 0 },
-  spikeFollow: { sh: [[-0.6, -0.35], [-0.4, 0.2]], el: [0.35, 1.3], hip: [0.55, 0.4], kn: [0.9, 0.7], sp: 0.5, tw: -0.35, arm: 0 },
+  approach: { sh: [[0.95, 0.18], [0.95, 0.18]], el: [0.12, 0.12], hip: [0.8, 0.45], kn: [1.3, 0.95], hab: [0.1, 0.1], sp: 0.62, tw: 0, arm: 0, gait: 0.8 },   // 助跑最後一步：雙手甩到後面、蹲低
+  airUp: { sh: [[-2.6, 0.75], [-2.75, 0.12]], el: [2.15, 0.22], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.42, tw: 0.45, arm: 0, gait: 0 },   // 空中拉弓：身體往後彎成弓、右手肘拉高到耳後、左手指球、小腿往後收
+  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: -0.28, arm: 0, gait: 0 },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
+  spikeFollow: { sh: [[-0.4, -0.38], [-0.3, 0.28]], el: [0.4, 1.1], hip: [0.7, 0.5], kn: [1.0, 0.8], sp: 0.55, tw: -0.42, arm: 0, gait: 0.3 },   // 收手：手揮到身體另一側
   serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35, arm: 0 },
   blockReady: { sh: [[-2.15, 0.28], [-2.15, 0.28]], el: [1.7, 1.7], hip: [0.35, 0.35], kn: [0.7, 0.7], sp: 0.08, tw: 0, arm: 0 },
-  block: { sh: [[-3.0, 0.1], [-3.0, 0.1]], el: [0.08, 0.08], hip: [0.15, 0.15], kn: [0.35, 0.35], sp: 0.1, tw: 0, arm: 0 },
-  land: { sh: [[-0.6, 0.3], [-0.6, 0.3]], el: [0.8, 0.8], hip: [0.65, 0.65], kn: [1.15, 1.15], sp: 0.38, tw: 0, arm: 0 },
-  dive: { sh: [[-3.0, 0.18], [-3.0, 0.18]], el: [0.05, 0.05], hip: [-0.1, -0.1], kn: [0.15, 0.45], sp: 0, tw: 0, arm: 0 },
-  down: { sh: [[-1.7, 0.35], [-1.7, 0.35]], el: [1.3, 1.3], hip: [0.1, 0.1], kn: [0.4, 0.6], sp: 0, tw: 0, arm: 0 },
+  block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, arm: 0, gait: 0 },   // 攔網：雙手伸直往網子對面上方壓
+  land: { sh: [[-0.55, 0.35], [-0.55, 0.35]], el: [0.75, 0.75], hip: [0.9, 0.9], kn: [1.5, 1.5], hab: [0.16, 0.16], sp: 0.45, tw: 0, arm: 0, gait: 0.5 },   // 落地：雙腳張開彎膝緩衝
+  dive: { sh: [[-3.05, 0.22], [-3.05, 0.22]], el: [0.05, 0.05], hip: [-0.12, 0.05], kn: [0.25, 0.75], sp: -0.2, tw: 0, arm: 0, gait: 0 },   // 往前撲（魚躍）：雙手往前伸、抬頭挺胸、腳往後伸
+  sideDive: { sh: [[-3.0, 0.35], [-1.1, -0.25]], el: [0.05, 1.5], hip: [0.3, 0.8], kn: [0.45, 1.25], hab: [0.05, 0.2], sp: 0.12, tw: 0.25, arm: 0, gait: 0 },   // 往右邊撲（側倒）：右手往球的方向伸長、左手收在胸前、腿彎著側躺；往左撲＝左右對調
+  down: { sh: [[-1.55, 0.55], [-1.55, 0.55]], el: [1.45, 1.45], hip: [0.05, 0.15], kn: [0.25, 0.55], sp: 0, tw: 0, arm: 0, gait: 0 },   // 撲完趴在地上：雙手撐地準備起來
+  downSide: { sh: [[-2.3, 0.55], [-1.25, 0.65]], el: [0.5, 1.25], hip: [0.65, 0.95], kn: [1.05, 1.45], hab: [0.05, 0.15], sp: 0.25, tw: 0.2, arm: 0, gait: 0 },   // 側倒在地上：手撐著、腿收起來準備翻身站起
   // 球拍：準備（拍頭在前上方）、上手（拉拍→擊球→收拍）、側身抽球
   rkReady: { sh: [[-1.2, 0.6], [-0.8, 0.25]], el: [1.5, 0.9], hip: [0.55, 0.55], kn: [0.95, 0.95], sp: 0.35, tw: 0, arm: 0 },
   rkOverCock: { sh: [[-2.6, 0.75], [-2.7, 0.1]], el: [2.1, 0.2], hip: [0.2, 0.4], kn: [0.3, 0.6], sp: -0.25, tw: 0.5, arm: 0 },
@@ -7090,26 +7238,58 @@ const AVP = {
   rkSideFollow: { sh: [[-1.5, -0.6], [-0.6, 0.3]], el: [0.6, 0.9], hip: [0.5, 0.5], kn: [0.9, 0.9], sp: 0.3, tw: -0.6, arm: 0 },
 };
 function avMix(a, b, t) {
-  t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t;
-  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1) };
+  t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t, ha = a.hab || [0, 0], hb = b.hab || [0, 0];
+  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1) };
 }
-// 套用姿勢：每個關節往目標靠近（k＝這一格靠近的比例）；跑步時腿、手照步伐擺；蹲低時整個人往下，腳一直踩在地上
+// 左右對調的姿勢（往左撲＝往右撲的鏡像）
+const AVP_MIR = new Map();
+function avMirror(P) { if (AVP_MIR.has(P)) return AVP_MIR.get(P); const sw = (a) => (a ? [a[1], a[0]] : a), M = { ...P, sh: sw(P.sh), el: sw(P.el), hip: sw(P.hip), kn: sw(P.kn), hab: sw(P.hab), tw: -(P.tw || 0) }; AVP_MIR.set(P, M); return M; }
+// 撲救的姿勢：dir＝撲出去的方向（自己身體的角度：0＝正前方、−π/2＝右手邊、π/2＝左手邊）；down＝已經倒在地上
+const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
+function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, P = down ? (side ? AVP.downSide : AVP.down) : side ? AVP.sideDive : AVP.dive; return side && sn > 0 ? avMirror(P) : P; }
+// 套用姿勢：姿勢本身（接球、舉球…）每個關節平滑靠過去；走路／跑步的步伐另外疊上去（不會被平滑吃掉，步伐才有力）
+//   步伐：照速度在走路和跑步之間漸變——擺腿幅度、膝蓋在擺盪期收起來、支撐腳微彎緩衝、腳掌貼地／後腳蹬地踮腳尖
+//   手跟對側的腳一起擺（跑步手肘彎 90 度）；骨盆和肩膀反向扭轉；加速時整個人前傾、轉彎時往內倒；站著時呼吸、重心左右微移
 function avDrive(av, P, k, sp = 0, air = false) {
   if (!av.rig) return;
-  const run = air ? 0 : clamp(sp / 2.5, 0, 1), A = air ? 0 : Math.min(0.8, sp * 0.3), legSw = [Math.sin(av.phase) * A, Math.sin(av.phase + Math.PI) * A], arm = P.arm ?? 1;
-  const ext = [0, 0];
+  const now = performance.now(), dt = Math.min(0.1, Math.max(0.001, (now - (av._t || now - 16)) / 1000)); av._t = now;
+  const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
+  const L = (a, b) => a + (b - a) * k;
+  for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); }
+  B.sp = L(B.sp, P.sp); B.tw = L(B.tw, P.tw || 0); B.arm = L(B.arm, P.arm ?? 1); B.gait = L(B.gait, P.gait ?? 1);
+  // 速度、加速度、轉彎速度（都平滑過，不會一頓一頓）
+  av._v = (av._v ?? 0) + ((air ? 0 : sp) - (av._v ?? 0)) * (1 - Math.exp(-dt * 7)); const v = av._v;
+  const accRaw = (v - (av._vp ?? v)) / dt; av._vp = v; av._acc = (av._acc || 0) + (accRaw - (av._acc || 0)) * Math.min(1, dt * 5);
+  let dry = av.g.rotation.y - (av._ry ?? av.g.rotation.y); dry = Math.atan2(Math.sin(dry), Math.cos(dry)); av._ry = av.g.rotation.y; av._turn = (av._turn || 0) + (dry / dt - (av._turn || 0)) * Math.min(1, dt * 6);
+  const w = clamp((v - 1.6) / 2.4, 0, 1), on = clamp(v / 0.8, 0, 1), stride = 1.25 + 1.4 * w;   // w：0＝走、1＝跑；stride＝一個完整步伐（左右各一步）走多遠
+  av.gp = ((av.gp || 0) + (dt * Math.PI * 2 * v) / stride) % (Math.PI * 200);
+  const g2 = B.gait, A = on * (0.36 + 0.36 * w) * g2, armA = on * (0.28 + 0.6 * w) * B.arm, ext = [0, 0];
   for (let i = 0; i < 2; i++) {
-    const sx = i === 0 ? -1 : 1, hipT = P.hip[i] + legSw[i], knT = P.kn[i] + Math.max(0, -legSw[i]) * 1.5 + run * 0.2;
-    const shT = P.sh[i][0] + arm * -legSw[1 - i] * 1.1, abT = P.sh[i][1], elT = P.el[i] + arm * run * 1.0;
-    const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i];
-    a.rotation.x += (shT - a.rotation.x) * k; a.rotation.z += (sx * abT - a.rotation.z) * k;
-    e.rotation.x += (-elT - e.rotation.x) * k; h.rotation.x += (-hipT - h.rotation.x) * k; kn.rotation.x += (knT - kn.rotation.x) * k;
-    const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = (av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk);
+    const sx = i === 0 ? -1 : 1, ph = av.gp + i * Math.PI, s = Math.sin(ph), c = Math.cos(ph);
+    const hipG = A * s;   // 往前擺為正
+    const knG = on * g2 * ((0.3 + 1.15 * w) * Math.pow(Math.max(0, Math.cos(ph + 0.45)), 1.6) + (0.06 + 0.22 * w) * Math.max(0, -c));   // 擺盪期收腿、支撐期緩衝
+    const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i], armG = armA * Math.sin(ph + Math.PI);
+    a.rotation.x = B.sh[i][0] - armG; a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
+    e.rotation.x = -(B.el[i] + B.arm * on * (0.18 + 1.25 * w) + B.arm * 0.12 * w * Math.max(0, Math.sin(ph + Math.PI)));
+    h.rotation.x = -(B.hip[i] + hipG); kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
+    const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = ((av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk)) * Math.cos(B.hab[i]);
+    if (av.feet) av.feet[i].rotation.z = -h.rotation.z;
+    if (av.feet) av.feet[i].rotation.x = air ? 0.45 : -(h.rotation.x + kn.rotation.x) * 0.9 + on * (0.2 + 0.4 * w) * Math.max(0, -s) * (c > 0 ? 1 : 0.35);   // 腳掌貼地；後腳離地前踮腳尖；空中腳尖朝下
   }
-  av.spine.rotation.x += (P.sp + run * 0.18 - av.spine.rotation.x) * k; av.spine.rotation.y += ((P.tw || 0) - av.spine.rotation.y) * k;
-  av.head.rotation.x += (-P.sp * 0.6 - av.head.rotation.x) * k;   // 上身往前傾時頭抬起來看球
+  // 身體：加速前傾、轉彎內倒（以腳底為軸）、骨盆扭轉；上身反向扭、往前傾；頭保持看前方
+  const R = av.root, lean = air ? 0 : clamp(av._acc * 0.035, -0.12, 0.2) + 0.08 * w * on, bank = air ? 0 : clamp(-av._turn * v * 0.03, -0.2, 0.2), idle = 1 - on;
+  av._lean = (av._lean || 0) + (lean - (av._lean || 0)) * Math.min(1, dt * 8); av._bank = (av._bank || 0) + (bank + idle * 0.012 * Math.sin(now / 1400) - (av._bank || 0)) * Math.min(1, dt * 8);
+  // 撲救倒地（av.fall＝{a 0～1, d 方向}）：以腳為軸往 d 倒下去，腳往後滑 1.1 m（手剛好伸到球），身體離地一點不穿地板；起來時慢慢撐起
+  const F = av.fall, fT = F ? clamp(F.a, 0, 1) : 0; av._fa = (av._fa || 0) + (fT - (av._fa || 0)) * (1 - Math.exp(-dt * (fT > (av._fa || 0) ? 9 : 3.2))); if (F) av._fd = F.d;
+  const fa = av._fa, fd = av._fd || 0;
+  R.rotation.x = av._lean * (1 - fa) + fa * 1.34 * Math.cos(fd); R.rotation.z = av._bank * (1 - fa) - fa * 1.34 * Math.sin(fd);
+  R.position.x = -Math.sin(fd) * 1.1 * fa; R.position.z = -Math.cos(fd) * 1.1 * fa;
+  R.rotation.y = on * (0.08 + 0.06 * w) * Math.sin(av.gp);
+  av.spine.rotation.x = B.sp + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
+  av.spine.rotation.y = B.tw - on * (0.16 + 0.1 * w) * Math.sin(av.gp);
+  av.head.rotation.x = -B.sp * 0.6 - R.rotation.x * 0.7 - 0.1 * w * on; av.head.rotation.z = -R.rotation.z * 0.6;
   const drop = air ? 0 : Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1]));
-  av.root.position.y += (-drop - av.root.position.y) * Math.min(1, k * 1.5);
+  R.position.y += (-drop * (1 - fa) + 0.06 * fa - R.position.y) * (1 - Math.exp(-dt * 22));
 }
 // 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
 function avPoseOf(code, t = 0.5, ready = false) {
@@ -7123,7 +7303,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 7: return t < 0.4 ? avMix(AVP.rkOverCock, AVP.rkOverHit, t / 0.4) : avMix(AVP.rkOverHit, AVP.rkOverFollow, (t - 0.4) / 0.6);
     case 8: return avMix(AVP.rkSideBack, AVP.rkSideFollow, t);
     case 9: return AVP.block;
-    case 10: return AVP.dive;
+    case 10: case 11: case 12: return avDivePose(DIVE_D[code - 10], t > 1);
     default: return ready ? AVP.ready : AVP.idle;
   }
 }
@@ -7146,7 +7326,7 @@ function netDropPeer(id) {
   NET.peers.delete(id); toast(`${p2.n} 離開了`);
 }
 // 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
-function myPoseCode() { if (walk.dive || walk.down > 0) return 10; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return 3; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
+function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return 3; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'st') {
@@ -7251,8 +7431,8 @@ function netTick(dt, now) {
     else if (!p2.rk && p2.racket) { av.hands[0].remove(p2.racket); p2.racket = null; p2.racketK = null; }
     // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
     if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
+    av.fall = p2.pose >= 10 && p2.pose <= 12 ? { a: 1, d: DIVE_D[p2.pose - 10] } : null;   // 撲救：整個人往撲的方向倒
     avDrive(av, avPoseOf(p2.pose, p2.poseT / 0.45), Math.min(1, k * 1.3), sp, y > 0.08);
-    av.g.rotation.order = 'YXZ'; av.g.rotation.x += ((p2.pose === 10 ? 1.25 : 0) - av.g.rotation.x) * Math.min(1, k * 1.5);   // 撲救：整個人往前倒
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
     if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
   }
@@ -7508,8 +7688,8 @@ function updateReplay(dt) {
     av.g.position.set(X, 0, Z); av.g.rotation.y = yaw + dy * k + Math.PI; av.body.position.y = y + (q[3] - y) * k;
     av.phase += dt * Math.min(12, sp * 5.5) * RP.speed;
     if (av.poseC !== poseC) { av.poseC = poseC; av.poseT = 0; } av.poseT = (av.poseT || 0) + dt * RP.speed;
+    av.fall = poseC >= 10 && poseC <= 12 ? { a: 1, d: DIVE_D[poseC - 10] } : null;
     avDrive(av, avPoseOf(poseC, av.poseT / 0.45), 0.4, sp, av.body.position.y > 0.08);
-    av.g.rotation.order = 'YXZ'; av.g.rotation.x += ((poseC === 10 ? 1.25 : 0) - av.g.rotation.x) * 0.4;
   }
   for (const [id, av] of RP.actors) if (!seen.has(id)) av.g.visible = false;
   // 球＋軌跡（最近 2.5 秒，越舊越淡）
@@ -8271,8 +8451,8 @@ function rkAnim(P, dt) {
   } else if (P.queued) pz = RK.b && RK.b.p[1] > 1.8 ? AVP.rkOverCock : AVP.rkSideBack;
   else if (P.air) pz = AVP.rkOverCock;
   jy = Math.max(jy, rkAirY(P));
+  av.fall = (P.dive && P.dive.t > 0.06) || P.down > 0.15 ? { a: 1, d: 0 } : null;
   avDrive(av, pz, kk, sp, jy > 0.05);
-  av.g.rotation.order = 'YXZ'; av.g.rotation.x += (((P.dive && P.dive.t > 0.06) || P.down > 0.15 ? 1.2 : 0) - av.g.rotation.x) * (P.dive ? 0.35 : 0.15);
   P.jy = jy; av.body.position.y += (jy - av.body.position.y) * 0.5;
 }
 function rkVisuals(myPlan, now) {
@@ -8761,6 +8941,7 @@ function vbDive() {
   if (!staUse(0.35)) return false;
   const [fx, fz] = vbFwd(), dx = tx != null ? tx - walk.x : fx, dz = tx != null ? tz - walk.z : fz, d = Math.hypot(dx, dz) || 1, sp = clamp((tx != null ? d : 2) / 0.4, 3.5, 7.5);
   walk.dive = { t: 0, vx: (dx / d) * sp, vz: (dz / d) * sp };
+  walk.diveDir = Math.atan2(dx * -Math.cos(walk.yaw) + dz * Math.sin(walk.yaw), dx * -Math.sin(walk.yaw) + dz * -Math.cos(walk.yaw));   // 撲的方向（身體座標）：決定往前魚躍還是側倒
   walk.recv = { t0: performance.now(), prev: null, dive: true }; pose = 'bump'; hands.visible = true;
   return true;
 }
@@ -9043,11 +9224,11 @@ function vbPepStep(n, dt) {
   // 動作：面向球（沒有球就面向你）；撲出去整個人往前倒；碰球那一下照動作做
   const k = 1 - Math.exp(-dt * 12), spd = Math.hypot(n.vx, n.vz), fb = tgt ? tgt.b.m.position : null;
   av.g.position.set(n.x, 0, n.z); av.g.rotation.order = 'YXZ';
-  let ry = fb ? Math.atan2(fb.x - n.x, fb.z - n.z) : Math.atan2(walk.x - n.x, walk.z - n.z); if (n.dive) ry = Math.atan2(n.dive.vx, n.dive.vz);
+  let ry = fb ? Math.atan2(fb.x - n.x, fb.z - n.z) : Math.atan2(walk.x - n.x, walk.z - n.z); if (n.dive) ry = av.g.rotation.y;
   let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 9);
-  const lean = n.dive ? (n.dive.t < 0.5 ? Math.min(1.25, n.dive.t * 4) : Math.max(0, 1.25 - (n.dive.t - 0.75) * 4)) : 0; av.g.rotation.x += (lean - av.g.rotation.x) * Math.min(1, dt * 14);
+  const ddir = n.dive ? Math.atan2(n.dive.vx, n.dive.vz) - av.g.rotation.y : 0; av.fall = n.dive && n.dive.t > 0.05 && n.dive.t < 0.8 ? { a: 1, d: ddir } : null;
   av.phase += dt * Math.min(12, spd * 5.5); n.up = Math.max(0, n.up - dt);
-  const P = n.dive ? AVP.dive : n.up > 0 ? AVP[n.upPose] : tgt ? (tgt.act === 'set' ? AVP.setReady : tgt.act === 'hit' ? AVP.airUp : AVP.ready) : AVP.idle;
+  const P = n.dive ? (n.dive.t > 0.8 ? avMix(avDivePose(ddir, true), AVP.ready, (n.dive.t - 0.8) / 0.3) : avDivePose(ddir, n.dive.t > 0.45)) : n.up > 0 && n.upPose !== 'dive' ? AVP[n.upPose] : tgt ? (tgt.act === 'set' ? AVP.setReady : tgt.act === 'hit' ? AVP.airUp : AVP.ready) : AVP.idle;
   avDrive(av, P, n.up > 0 || n.dive ? 0.5 : k, spd);
 }
 function vbPepHit(n, b, act, C) {
@@ -9165,7 +9346,7 @@ function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 function myAvPose() {
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
-  if (walk.dive || walk.down > 0) return [walk.dive ? AVP.dive : AVP.down, fast];
+  if (walk.dive || walk.down > 0) { const dp = avDivePose(walk.diveDir || 0, !walk.dive); return [!walk.dive && walk.down < 0.3 ? avMix(dp, AVP.ready, 1 - walk.down / 0.3) : dp, fast]; }   // 撲出去→倒地→撐起來
   if (walk.air && walk.air.block) return [AVP.block, fast];
   if (walk.swing) {   // 揮臂：還沒碰到球＝拉弓；碰到之後 0.07 秒是擊球那一下、接著收到身體另一側
     const s2 = walk.swing; if (!s2.done) return [walk.air ? AVP.airUp : avMix(AVP.idle, AVP.airUp, 0.85), fast];
@@ -9197,7 +9378,7 @@ function tpBegin(dt) {
   if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
-  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = (walk.low || 0) * 1.15; av.body.position.y += (air - av.body.position.y) * 0.6;
+  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0 } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
   const v = walk.vel || [0, 0], sp = walk.air ? 0 : Math.hypot(v[0], v[1]); av.phase += dt * Math.min(12, sp * 5.5);
   avDrive(av, ...myAvPose(), sp, air > 0.05);
   // 手上的球：第一人稱掛在鏡頭上，第三人稱改畫在人的手上
@@ -9752,8 +9933,8 @@ function charThumb(id) {
   const sc2 = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, 1, 0.1, 20), rt = new THREE.WebGLRenderTarget(160, 160); rt.texture.colorSpace = THREE.SRGBColorSpace;
   sc2.add(new THREE.AmbientLight('#ffffff', 1.4)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(1.5, 3, 3); sc2.add(dl);
   const av = id ? makeAvatar('#F2B705', id) : makeAvatar('#F2B705'); for (let i = 0; i < 30; i++) avDrive(av, AVP.idle, 0.3, 0, false); sc2.add(av.g); av.g.updateMatrixWorld(true);
-  const hp = new THREE.Vector3(); (av.chibi ? av.head.children[1] : av.head).getWorldPosition(hp); if (av.chibi) hp.y -= 0.02;
-  cam.position.set(hp.x + 0.25, hp.y + 0.05, hp.z + (av.chibi ? 1.35 : 1.1)); cam.lookAt(hp.x, hp.y - 0.03, hp.z);
+  const hp = new THREE.Vector3(); (av.hc || av.head).getWorldPosition(hp); if (av.hc) hp.y -= 0.04;
+  cam.position.set(hp.x + 0.2, hp.y + 0.04, hp.z + (av.hc ? 1.05 : 1.1)); cam.lookAt(hp.x, hp.y - 0.03, hp.z);
   const prevBg = sc2.background; sc2.background = new THREE.Color('#2EC4D6');
   renderer.setRenderTarget(rt); renderer.render(sc2, cam); const px = new Uint8Array(160 * 160 * 4); renderer.readRenderTargetPixels(rt, 0, 0, 160, 160, px); renderer.setRenderTarget(null);
   const cv = document.createElement('canvas'); cv.width = cv.height = 160; const cx = cv.getContext('2d'), img = cx.createImageData(160, 160);
@@ -9762,7 +9943,7 @@ function charThumb(id) {
 }
 function openCharMenu() {
   const m = $('rk-menu'), cur = myChar();
-  m.innerHTML = `<div class="rk-box ch-box"><h3>🎭 選角色</h3><p class="rk-sub">Q 版角色（同人造型，自己玩用）。第三人稱、連線的人、回放都看得到；AI 隊友和對手會隨機分到其他角色</p>
+  m.innerHTML = `<div class="rk-box ch-box"><h3>🎭 選角色</h3><p class="rk-sub">特務造型角色（同人造型，自己玩用）。第三人稱、連線的人、回放都看得到；AI 隊友和對手會隨機分到其他角色</p>
     <div class="ch-grid">${['', ...CHAR_IDS].map((id) => `<button type="button" class="ch-tile" data-ch="${id}" aria-pressed="${(cur || '') === id}"><img alt="" src="${charThumb(id || null)}"><span>${id ? CHARS[id].name : '原本的人形'}</span></button>`).join('')}</div>
     <div class="rk-btns"><button type="button" data-chx="1">關閉</button></div></div>`;
   m.hidden = false; unlockMouse();
@@ -9868,7 +10049,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c) => makeAvatar(c), vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
