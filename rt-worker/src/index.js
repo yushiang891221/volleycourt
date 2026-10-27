@@ -26,7 +26,10 @@ export default {
     if (allow.length && !allow.includes(origin) && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return new Response('origin not allowed', { status: 403 });
     const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
     if (!id) return new Response('missing id', { status: 400 });
-    return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(new Request(`https://room/?id=${id}`, req));
+    // 房間建在第一個人連到的機房附近（預設）；要指定區域可以設 LOCATION_HINT（例如 apac）
+    // 注意：台灣有些網路業者會把 Cloudflare 免費方案的流量送到美國機房，這時指定 apac 反而要繞一大圈
+    const stub = env.LOCATION_HINT ? env.ROOMS.get(env.ROOMS.idFromName(m[1]), { locationHint: env.LOCATION_HINT }) : env.ROOMS.get(env.ROOMS.idFromName(m[1]));
+    return stub.fetch(new Request(`https://room/?id=${id}`, req));
   },
 };
 

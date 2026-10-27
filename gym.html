@@ -6932,21 +6932,25 @@ async function cfTransport(room, cid, base) {
     close: () => { closed = true; clearInterval(ping); try { ws.close(1000, 'bye'); } catch (e) { /* ignore */ } },
   };
 }
-// 房間伺服器的網址：網站的 api/rt-config 回傳（Vercel 環境變數 RT_CF_URL）；本機測試可以在網址加 &cf=ws://localhost:8787
-let RT_CF = undefined;
-async function rtCfUrl() {
-  if (RT_CF !== undefined) return RT_CF;
+// 連線設定：網站的 api/rt-config 回傳房間伺服器網址（Vercel 環境變數 RT_CF_URL）和先用哪一個（RT_PREFER：ably 預設／cf）
+// 本機測試可以在網址加 &cf=ws://localhost:8787（加了就先用 Cloudflare）
+let RT_CFG = undefined;
+async function rtConfig() {
+  if (RT_CFG !== undefined) return RT_CFG;
   const q = new URLSearchParams(location.search).get('cf');
-  if (q && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return (RT_CF = q);
-  try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CF = r.ok && (r.headers.get('content-type') || '').includes('json') ? (await r.json()).cf || null : null; } catch (e) { RT_CF = null; }
-  return RT_CF;
+  if (q && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return (RT_CFG = { cf: q, prefer: 'cf' });
+  try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CFG = r.ok && (r.headers.get('content-type') || '').includes('json') ? await r.json() : { cf: null }; } catch (e) { RT_CFG = { cf: null }; }
+  return RT_CFG;
 }
-// 選連線方式：&localnet＝同一個瀏覽器的分頁互傳；有設定 Cloudflare 房間伺服器就先用它（免費額度大、快），連不上才改用 Ably
+// 選連線方式：&localnet＝同一個瀏覽器的分頁互傳；兩種都有設定時先用 prefer 那個（預設 Ably：台灣通常比較快），
+// 連不上（例如 Ably 每月額度用完、被擋）就自動改用另一個——整個帳號額度用完時大家會一起換過去，同一間房還是看得到彼此
 async function rtTransport(room, cid) {
   if (new URLSearchParams(location.search).has('localnet')) return localTransport(room, cid);
-  const cf = await rtCfUrl();
-  if (cf) { try { return await cfTransport(room, cid, cf); } catch (e) { console.info('[即時] 房間伺服器連不上，改用 Ably', e && e.message); } }
-  const tx = await ablyTransport(room, cid); tx.kind = cf ? 'ably-backup' : 'ably'; return tx;
+  const { cf, prefer } = await rtConfig();
+  const tryCf = async () => cfTransport(room, cid, cf);
+  if (cf && prefer === 'cf') { try { return await tryCf(); } catch (e) { console.info('[即時] 房間伺服器連不上，改用 Ably', e && e.message); } const tx = await ablyTransport(room, cid); tx.kind = 'ably-backup'; return tx; }
+  try { const tx = await ablyTransport(room, cid); tx.kind = 'ably'; return tx; }
+  catch (e) { if (!cf) throw e; console.info('[即時] Ably 連不上，改用房間伺服器', e && e.message); const tx = await tryCf(); tx.kind = 'cf-backup'; return tx; }
 }
 function netStatus(msg, kind) { const el = $('mp-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
 function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
@@ -6973,7 +6977,7 @@ async function netJoin(room) {
   NET.color = color;
   await tx.enter({ n: NET.name, c: color });
   for (const m of others) netPeer(m.id, m);
-  netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' ? '・快速線路' : tx.kind === 'ably-backup' ? '・備用線路（跟用快速線路的人看不到彼此）' : ''}`, 'ok');
+  netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' || tx.kind === 'ably' ? '' : '・備用線路（跟走主線路的人看不到彼此）'}`, 'ok');
   $('mp-room').textContent = room; $('mp-in').hidden = false; $('mp-out').hidden = true;
   renderMpList();
   toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
@@ -6989,7 +6993,7 @@ function netLeave(quiet) {
 function renderMpList() {
   const ul = $('mp-list'); if (!ul) return;
   ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i>${esc(p2.n)}</li>`)].join('') : '';
-  if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人${NET.tx && NET.tx.kind === 'cf' ? '・快速線路' : NET.tx && NET.tx.kind === 'ably-backup' ? '・備用線路' : ''}`, 'ok');
+  if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人${NET.tx && /backup/.test(NET.tx.kind || '') ? '・備用線路' : ''}`, 'ok');
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
