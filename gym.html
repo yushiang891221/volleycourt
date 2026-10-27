@@ -6922,7 +6922,7 @@ function renderMpList() {
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
 // ---- 角色（同人造型，私人遊玩用）：照 Valorant 特務的造型用幾何做，卡通著色（三階明暗）
-// 身形：髖 0.98 m、大腿 0.46、小腿 0.46、腳踝到地 0.06；肩膀約 1.43 m；頭頂連頭髮約 1.84 m；舉手摸高約 2.1 m
+// 身形：髖 0.98 m、大腿 0.46、小腿 0.46、腳踝到地 0.06；肩膀約 1.43 m；頭頂連頭髮約 1.84 m；舉手摸高約 2.2 m
 // 欄位：skin 膚色、eyes 眼睛（glow＝發光）、fem＝窄肩細腰；hair [髮型, 顏色, 挑染]；top [上衣, 配色]；
 //   jk 外套 {c 顏色, c2 滾邊／袖口, len short|hip|coat, collar high|hood|fur|none, open 前面敞開, fur 毛領顏色}
 //   sleeve 長袖顏色（沒有＝短袖露手臂）、gl 手套、pants 長褲／shorts 短褲、shoe [鞋, 鞋底]、boots 靴子、belt 皮帶、pads 肩甲、wrist 手腕發光環
@@ -7071,14 +7071,14 @@ function makeChibi(C) {
     const sh = new THREE.Group(); sh.position.set(sx * (fem ? 0.178 : 0.194), 0.392, 0); spine.add(sh);
     sph(0.054 * (bio ? 1.25 : 1), bio || slvM || top, 0, -0.012, 0, sh);
     const t = slvM ? 0.008 : 0;
-    add(limbGeo(0.05 * ar + t, 0.041 * ar + t, 0.3, 0.12), bio || slvM || skin, 0, 0, 0, sh);
+    add(limbGeo(0.05 * ar + t, 0.041 * ar + t, 0.33, 0.12), bio || slvM || skin, 0, 0, 0, sh);
     if (!slvM && !bio) cyl(0.064, 0.06, 0.12, top, 0, -0.045, 0, sh);   // 短袖
     if (C.pads) sph(0.078, T(C.pads), 0, 0.035, 0, sh, [1, 0.6, 1.05]);
-    const el = new THREE.Group(); el.position.y = -0.3; sh.add(el);
-    add(limbGeo(0.042 * ar + t, 0.033 * ar + t * 1.2, 0.27, 0.14), bio || slvM || skin, 0, 0, 0, el);
-    if (slvM && J && J.c2) cyl(0.047, 0.047, 0.03, T(J.c2), 0, -0.25, 0, el);   // 袖口
-    if (C.wrist) tor(0.043 * ar, 0.011, T(C.wrist, 'glow'), 0, -0.21, 0, el);
-    const hd = new THREE.Group(); hd.position.y = -0.27; el.add(hd);
+    const el = new THREE.Group(); el.position.y = -0.33; sh.add(el);
+    add(limbGeo(0.042 * ar + t, 0.033 * ar + t * 1.2, 0.3, 0.14), bio || slvM || skin, 0, 0, 0, el);
+    if (slvM && J && J.c2) cyl(0.047, 0.047, 0.03, T(J.c2), 0, -0.28, 0, el);   // 袖口
+    if (C.wrist) tor(0.043 * ar, 0.011, T(C.wrist, 'glow'), 0, -0.24, 0, el);
+    const hd = new THREE.Group(); hd.position.y = -0.3; el.add(hd);
     sph(0.05, glM, 0, -0.048, 0.004, hd, [0.48 * ar, 1.12, 0.9]);
     sph(0.017, glM, sx * -0.004, -0.028, 0.036, hd, [0.8, 1.7, 0.85]);
     arms.push(sh); elbows.push(el); hands.push(hd);
@@ -7218,12 +7218,13 @@ const AVP = {
   setBack: { sh: [[-3.2, 0.12], [-3.2, 0.12]], el: [0.12, 0.12], hip: [-0.05, -0.05], kn: [0.12, 0.12], sp: -0.48, tw: 0, arm: 0, gait: 0.4 },   // 背舉：上身往後仰
   hold: { sh: [[-0.85, -0.1], [-0.85, -0.1]], el: [1.0, 1.0], hip: [0.03, 0.03], kn: [0.08, 0.08], sp: 0.04, tw: 0, arm: 0 },
   approach: { sh: [[0.95, 0.18], [0.95, 0.18]], el: [0.12, 0.12], hip: [0.8, 0.45], kn: [1.3, 0.95], hab: [0.1, 0.1], sp: 0.62, tw: 0, arm: 0, gait: 0.8 },   // 助跑最後一步：雙手甩到後面、蹲低
+  takeoff: { sh: [[-2.75, 0.22], [-2.75, 0.22]], el: [0.35, 0.35], hip: [0.12, 0.08], kn: [0.22, 0.18], sp: 0.02, tw: 0, arm: 0, gait: 0, shy: [0.07, 0.07] },   // 起跳：雙手從後面往上甩（帶著身體往上）、腿蹬直
   airUp: { sh: [[-2.6, 0.75], [-2.75, 0.12]], el: [2.15, 0.22], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.42, tw: 0.45, arm: 0, gait: 0 },   // 空中拉弓：身體往後彎成弓、右手肘拉高到耳後、左手指球、小腿往後收
-  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: -0.28, arm: 0, gait: 0 },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
+  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: -0.28, arm: 0, gait: 0, shy: [0.1, 0] },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
   spikeFollow: { sh: [[-0.4, -0.38], [-0.3, 0.28]], el: [0.4, 1.1], hip: [0.7, 0.5], kn: [1.0, 0.8], sp: 0.55, tw: -0.42, arm: 0, gait: 0.3 },   // 收手：手揮到身體另一側
   serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35, arm: 0 },
   blockReady: { sh: [[-2.15, 0.28], [-2.15, 0.28]], el: [1.7, 1.7], hip: [0.35, 0.35], kn: [0.7, 0.7], sp: 0.08, tw: 0, arm: 0 },
-  block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, arm: 0, gait: 0 },   // 攔網：雙手伸直往網子對面上方壓
+  block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, arm: 0, gait: 0, shy: [0.08, 0.08] },   // 攔網：雙手伸直往網子對面上方壓
   land: { sh: [[-0.55, 0.35], [-0.55, 0.35]], el: [0.75, 0.75], hip: [0.9, 0.9], kn: [1.5, 1.5], hab: [0.16, 0.16], sp: 0.45, tw: 0, arm: 0, gait: 0.5 },   // 落地：雙腳張開彎膝緩衝
   dive: { sh: [[-3.05, 0.22], [-3.05, 0.22]], el: [0.05, 0.05], hip: [-0.12, 0.05], kn: [0.25, 0.75], sp: -0.2, tw: 0, arm: 0, gait: 0 },   // 往前撲（魚躍）：雙手往前伸、抬頭挺胸、腳往後伸
   sideDive: { sh: [[-3.0, 0.35], [-1.1, -0.25]], el: [0.05, 1.5], hip: [0.3, 0.8], kn: [0.45, 1.25], hab: [0.05, 0.2], sp: 0.12, tw: 0.25, arm: 0, gait: 0 },   // 往右邊撲（側倒）：右手往球的方向伸長、左手收在胸前、腿彎著側躺；往左撲＝左右對調
@@ -7239,7 +7240,7 @@ const AVP = {
 };
 function avMix(a, b, t) {
   t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t, ha = a.hab || [0, 0], hb = b.hab || [0, 0];
-  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1) };
+  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])) };
 }
 // 左右對調的姿勢（往左撲＝往右撲的鏡像）
 const AVP_MIR = new Map();
@@ -7253,9 +7254,9 @@ function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) >
 function avDrive(av, P, k, sp = 0, air = false) {
   if (!av.rig) return;
   const now = performance.now(), dt = Math.min(0.1, Math.max(0.001, (now - (av._t || now - 16)) / 1000)); av._t = now;
-  const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
+  const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], shy: [...(P.shy || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
   const L = (a, b) => a + (b - a) * k;
-  for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); }
+  for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); B.shy[i] = L(B.shy[i], (P.shy || [0, 0])[i]); }
   B.sp = L(B.sp, P.sp); B.tw = L(B.tw, P.tw || 0); B.arm = L(B.arm, P.arm ?? 1); B.gait = L(B.gait, P.gait ?? 1);
   // 速度、加速度、轉彎速度（都平滑過，不會一頓一頓）
   av._v = (av._v ?? 0) + ((air ? 0 : sp) - (av._v ?? 0)) * (1 - Math.exp(-dt * 7)); const v = av._v;
@@ -7269,6 +7270,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     const hipG = A * s;   // 往前擺為正
     const knG = on * g2 * ((0.3 + 1.15 * w) * Math.pow(Math.max(0, Math.cos(ph + 0.45)), 1.6) + (0.06 + 0.22 * w) * Math.max(0, -c));   // 擺盪期收腿、支撐期緩衝
     const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i], armG = armA * Math.sin(ph + Math.PI);
+    if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + B.shy[i];
     a.rotation.x = B.sh[i][0] - armG; a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
     e.rotation.x = -(B.el[i] + B.arm * on * (0.18 + 1.25 * w) + B.arm * 0.12 * w * Math.max(0, Math.sin(ph + Math.PI)));
     h.rotation.x = -(B.hip[i] + hipG); kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
@@ -7298,7 +7300,8 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 2: return t < 0.15 ? AVP.setReady : AVP.setPush;
     case 3: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bump, (t - 0.3) / 0.5);
     case 4: return t < 0.18 ? avMix(AVP.airUp, AVP.spikeHit, t / 0.18) : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.18) / 0.5);
-    case 5: return AVP.airUp;
+    case 5: return t < 0.28 ? AVP.takeoff : avMix(AVP.takeoff, AVP.airUp, (t - 0.28) / 0.4);
+    case 13: return AVP.approach;
     case 6: return AVP.rkReady;
     case 7: return t < 0.4 ? avMix(AVP.rkOverCock, AVP.rkOverHit, t / 0.4) : avMix(AVP.rkOverHit, AVP.rkOverFollow, (t - 0.4) / 0.6);
     case 8: return avMix(AVP.rkSideBack, AVP.rkSideFollow, t);
@@ -7326,7 +7329,7 @@ function netDropPeer(id) {
   NET.peers.delete(id); toast(`${p2.n} 離開了`);
 }
 // 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
-function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return 3; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : 0; }
+function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return 3; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'st') {
@@ -8840,11 +8843,13 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
   }
 }
 // ---- 跳：起跳速度看助跑速度（原地約 0.52 m、全速助跑約 1 m；攔網約 0.78 m），空中保持衝勁，只能微調方向
+// 起跳速度：原地約 0.62 m，助跑越快跳越高（一般跑 2.6 m/s 約 1 m、衝刺約 1.25 m）
+function vbJumpVy(hs) { return 3.5 + 0.35 * Math.min(4.2, hs); }
 function vbJump(kind) {
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   if (walk.dive || walk.down > 0) return;
   const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', tired = staGame() && !staUse(0.06) ? 0.82 : 1;
-  walk.air = { y: 0, vy: (block ? 3.9 : 3.2 + 0.32 * hs) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0 };
+  walk.air = { y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0 };
   if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
 }
@@ -9272,7 +9277,7 @@ function vbCue() {
   // 起跳：舉過來的球，算它掉到 2.9 m 還要多久；跟你起跳到最高點的時間差不多時提示「跳！」
   const sp = VB.setSpot, sb = sp && performance.now() < sp.until && balls.includes(sp.b) ? sp.b : null;
   if (!walk.air && sb && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) {
-    const hv = walk.vel || [0, 0], vy = 3.2 + 0.32 * Math.min(4.2, Math.hypot(hv[0], hv[1])), tApex = vy / 9.8, hand = EYE + 0.75 + (vy * vy) / 19.6 - 0.15;
+    const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), tApex = vy / 9.8, hand = EYE + 0.75 + (vy * vy) / 19.6 - 0.15;
     const pr = vbPredict(sb.m.position, sb.v, hand) || vbPredict(sb.m.position, sb.v, 2.9);
     if (pr) { const d = pr.t - tApex; if (d < 0.14 && d > -0.12) cue = ['jump', touch ? '跳！' : '跳！（空白鍵）']; else if (d >= 0.14 && d < 0.9) cue = ['ready', '準備起跳…']; }
   }
@@ -9300,7 +9305,7 @@ function vbUpcoming() {
   let best = null; const now = performance.now(), cy = camera.position.y;
   const consider = (b, t, kind) => { if (t != null && t > -0.05 && t < 1.0 && (!best || t < best.t)) best = { b, t, kind }; };
   if (walk.air && !walk.air.block && !(walk.swing && walk.swing.done)) { const H = vbHand(); for (const b of balls) { if (b.rest > 0.3) continue; const d = b.m.position.distanceTo(H); if (d < 3) consider(b, (d - 0.3) / Math.max(3, b.v.length() * VB.ts), 'atk'); } }
-  const sp = VB.setSpot; if (!walk.air && sp && now < sp.until && balls.includes(sp.b) && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) { const hv = walk.vel || [0, 0], vy = 3.2 + 0.32 * Math.min(4.2, Math.hypot(hv[0], hv[1])), pr = vbPredict(sp.b.m.position, sp.b.v, EYE + 0.75 + (vy * vy) / 19.6 - 0.15) || vbPredict(sp.b.m.position, sp.b.v, 2.9); if (pr) consider(sp.b, pr.t - vy / 9.8, 'atk'); }
+  const sp = VB.setSpot; if (!walk.air && sp && now < sp.until && balls.includes(sp.b) && Math.hypot(sp.x - walk.x, sp.z - walk.z) < 4.5) { const hv = walk.vel || [0, 0], vy = vbJumpVy(Math.hypot(hv[0], hv[1])), pr = vbPredict(sp.b.m.position, sp.b.v, EYE + 0.75 + (vy * vy) / 19.6 - 0.15) || vbPredict(sp.b.m.position, sp.b.v, 2.9); if (pr) consider(sp.b, pr.t - vy / 9.8, 'atk'); }
   const P0 = VM.on && VM.host ? VM.poss[0] : null;
   if (walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1)) for (const b of balls) { if (b.rest > 0.3 || b.mine || Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) > 6) continue; const pr = vbPredict(b.m.position, b.v, cy + 0.3); if (pr) consider(b, pr.t, 'set'); }
   if (VB.target) { const pr = vbPredict(VB.target.b.m.position, VB.target.b.v, 0.8); if (pr) consider(VB.target.b, pr.t, 'recv'); }
@@ -9344,23 +9349,32 @@ function vbUpdate(dt) { VB.dt = dt; vbAimRing(); vbTurn(dt); vbParts(dt); vbSwin
 const TP = { manual: null, av: null, ball: null, saved: null };
 function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VM.on || !!VB.npc; }
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
+// 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
+function vbApproachK() {
+  const sp = VB.setSpot; if (walk.air || walk.swing || walk.hold || !sp || performance.now() > sp.until || !balls.includes(sp.b)) return 0;
+  const d = Math.hypot(sp.x - walk.x, sp.z - walk.z), v = walk.vel ? Math.hypot(walk.vel[0], walk.vel[1]) : 0;
+  return d < 4 ? clamp((4.2 - d) / 2.4, 0, 1) * clamp((v - 1.0) / 1.2, 0, 1) : 0;
+}
+// 空中：起跳前 0.12 秒雙手往上甩，接著 0.18 秒內變成拉弓躬身
+function vbAirPose() { const t = walk.air ? walk.air.t : 1; return t < 0.12 ? AVP.takeoff : t < 0.3 ? avMix(AVP.takeoff, AVP.airUp, (t - 0.12) / 0.18) : AVP.airUp; }
 function myAvPose() {
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
   if (walk.dive || walk.down > 0) { const dp = avDivePose(walk.diveDir || 0, !walk.dive); return [!walk.dive && walk.down < 0.3 ? avMix(dp, AVP.ready, 1 - walk.down / 0.3) : dp, fast]; }   // 撲出去→倒地→撐起來
   if (walk.air && walk.air.block) return [AVP.block, fast];
   if (walk.swing) {   // 揮臂：還沒碰到球＝拉弓；碰到之後 0.07 秒是擊球那一下、接著收到身體另一側
-    const s2 = walk.swing; if (!s2.done) return [walk.air ? AVP.airUp : avMix(AVP.idle, AVP.airUp, 0.85), fast];
+    const s2 = walk.swing; if (!s2.done) return [walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85), fast];
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
   if (walk.jserve && !walk.jserve.hit && !walk.air) return [AVP.serveToss, 0.5];
   if (walk.serve) { const t2 = walk.serve.t; return [t2 < 0.5 ? AVP.serveToss : t2 < 0.62 ? avMix(AVP.serveToss, AVP.spikeHit, (t2 - 0.5) / 0.12) : avMix(AVP.spikeHit, avMix(AVP.spikeFollow, AVP.idle, 0.3), (t2 - 0.62) / 0.25), 0.5]; }
-  if (walk.air) return [AVP.airUp, fast];
+  if (walk.air) return [vbAirPose(), 0.6];
   if (walk.landT && performance.now() - walk.landT < 220) return [AVP.land, 0.4];
   if (walk.flash > 0 && (pose === 'setPush' || pose === 'setBack')) return [pose === 'setBack' ? AVP.setBack : AVP.setPush, fast];
   if (walk.setQ) return [AVP.setReady, k];
   if (walk.flash > 0 && pose === 'bumpHit') return [AVP.bumpHit, fast];
   if (walk.recv) return [AVP.bump, 0.4];
   if (walk.hold) return [AVP.hold, k];
+  const ak = vbApproachK(); if (ak > 0) return [avMix(AVP.idle, AVP.approach, ak), 0.35];
   // 比賽中：在網前、對面有人要攻擊＝攔網準備；球在場上＝低重心準備姿勢
   // 比賽中：球正往你這邊來（會落在你 3.5 m 內）才壓低準備接；在網前、對面要攻擊才舉手準備攔網；其他時候自然站
   if (game && VM.phase === 'rally') {
@@ -9710,7 +9724,7 @@ function vmAiBlock(a, sd, b) {
   if (!a.blk) a.blk = { until: VM.t + 3 };
   a.tx = sd * 0.45; a.tz = clamp(th.z + (Math.random() - 0.5) * 0.1, -4.2, 4.2);
   // 攻擊手起跳後，過反應時間就跟著跳
-  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + L.react * 0.6; if (VM.t >= a.blk.jumpAt) { a.vy = 3.7; a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }
+  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + L.react * 0.6; if (VM.t >= a.blk.jumpAt) { a.vy = 4.0; a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }
   if (!th.air) a.blk.jumpAt = 0;
   return true;
 }
@@ -9775,7 +9789,7 @@ function vmAiRole(a, P, B, sd) {
     }
   } else if (P.attacker === a.id && st === 2) {   // 攻擊：跑到球會經過 2.8 m 的地方，起跳、在空中打
     const p = vmPredL(B, 2.8);
-    if (p) { a.tx = p.x + sd * 0.55; a.tz = p.z; if (a.y === 0 && p.t < 0.45 && Math.hypot(a.x - a.tx, a.z - a.tz) < 1.6) { a.vy = 3.4; a.pose = 5; } }
+    if (p) { a.tx = p.x + sd * 0.55; a.tz = p.z; a.appr = a.y === 0 && p.t < 1.1; if (a.y === 0 && p.t < 0.45 && Math.hypot(a.x - a.tx, a.z - a.tz) < 1.6) { a.vy = 4.3; a.pose = 5; a.appr = false; } }
     const H = hand();
     if (b2d(H) < 1.0 && B.y > 2.0) vmAiSpike(a, sd);
     else if (!p && B.y < 1.6 && Math.hypot(B.x - a.x, B.z - a.z) < 1.1) vmAiFree(a, sd);   // 舉得太低：推過去
@@ -9858,7 +9872,8 @@ function vmRenderAi(dt) {
     let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
     av.phase += dt * Math.min(12, sp * 5.5);
     // AI：碰球那一下照動作做（swingT 從 0.35～0.4 倒數＝動作進度）；攔網的人在網前雙手舉在肩前；球在場上時低重心準備
-    const P2 = a.swingT > 0 || a.y > 0 ? a.pose : 0, pr2 = 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
+    if (VM.host && (a.y > 0 || (VM.poss[a.team] || {}).attacker !== a.id)) a.appr = false;
+    const P2 = a.swingT > 0 || a.y > 0 ? a.pose : VM.host && a.appr ? 13 : 0, pr2 = P2 === 5 && VM.host ? clamp(1 - (a.vy - 1.5) / 3, 0, 1) : 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
     // AI：只有這一球輪到他接、球正往他那邊來才蹲
     const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team);
     let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
@@ -9869,7 +9884,7 @@ function vmRenderAi(dt) {
 }
 // ---- 連線：開局的人每 0.1 秒送比分與 AI 位置；其他人照著顯示
 function vmStatePayload() {
-  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : 0]; });
+  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0]; });
   return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined };
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
