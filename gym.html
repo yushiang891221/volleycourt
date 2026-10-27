@@ -6629,7 +6629,7 @@ function startServe(type = 'std') {
   const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; ball.visible = true; delete ball.userData.noPick; ballsGroup.add(ball);   // 第三人稱時手上的球被藏起來過，拋出去要讓它看得見
   const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
   const top = new THREE.Vector3(walk.x, EYE + 0.95, walk.z).addScaledVector(fwd, 0.45);
-  walk.serve = { t: 0, ball, from: p, top, fwd, hit: false, type, aim: vbServeAim() };   // 落點在按下去那一刻就定了（拋球時鏡頭會抬頭，不能再算）
+  walk.serve = { t: 0, ball, from: p, top, fwd, hit: false, type, aim: vbServeAim() }; staPay('serve');   // 落點在按下去那一刻就定了（拋球時鏡頭會抬頭，不能再算）
   hands.visible = true; pose = 'cock';
   toast(type === 'float' ? '拋球——（飄球）' : '拋球——');
 }
@@ -6658,7 +6658,7 @@ function updateJumpServe(dt) {
     b.position.set(s.from.x + s.v0.x * t, s.from.y + s.v0.y * t - 4.9 * t * t, s.from.z + s.v0.z * t); b.rotation.y += dt * 4;
     // 助跑兩步（0.25～0.72 秒往前約 0.9 m），0.72 秒起跳；這樣跳到最高點時球剛好掉到手的高度
     if (t > 0.25 && t < 0.72 && !walk.air) { const sp = s.appr / 0.47, [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
-    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, t: 0 }; if (staGame()) staUse(0.06); }
+    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, t: 0 }; staPay('jserve'); }
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮
     const near = walk.air && b.position.distanceTo(vbHand()) < 0.7; b.material = near ? ballHot : ballMat;
@@ -8667,9 +8667,14 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 // 不再是固定動畫：手真的碰得到球才打得到；攻擊方向＝你面向的方向（直線、斜線自己瞄），按著 S 是往下壓的短斜線、Shift＋V 吊球
 // 接球微輔助：對方打過來、球會落在你附近時，地上出現落點圈，身體會被輕輕帶過去（自己按反方向就不帶）
 // 舉球 1 前舉（4 號位）、2 中間快攻、3 後舉（2 號位）：舉出去一定會到那個攻擊點，難的是先跑到球下面
-// ---- 體力（比賽、陪練、球拍對戰時才算）：Shift 衝刺會一直耗、放開 0.6 秒後慢慢回；撲救一次耗 35%、跳一次耗 6%；
-// 用光了要等回到 30% 才能再衝。導覽時不用體力，Shift 照舊是跑步
+// ---- 體力（比賽、陪練、球拍對戰時才算）：每個動作都會耗一點，越用力耗越多，要想清楚什麼時候衝、什麼時候跳
+//   Shift 衝刺每秒 12%；起跳攻擊、跳發 8%，攔網起跳 6%，扣球揮臂 4%，站著打、發球 2%，吊球、舉球 1.5%，接球 1%，撲救 22%
+//   回復慢：球在打的時候每秒 2%（站著不動 4%），死球、等發球時每秒 5%（停下來 0.8 秒後才開始回）——正常打可以撐整場，一直衝、每球都跳就會越打越累
+//   累了效果變差（30% 以下跳得比較矮、扣得比較慢，最低八成），但接、舉、吊、站著打永遠做得到；衝刺用光要回到 25% 才能再衝。導覽時不用體力
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
+const STA_COST = { jump: 0.08, block: 0.06, jserve: 0.08, spike: 0.04, hit: 0.02, serve: 0.02, tip: 0.015, set: 0.015, bump: 0.01, dive: 0.22 };
+function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
+function staPay(kind) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - (STA_COST[kind] || 0)); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(window.__rkOn || VM.on || VB.npc); }
 function staWarn(t) { if (performance.now() - STA.warnT > 2200) { STA.warnT = performance.now(); toast(t || '沒體力了：放開 Shift 喘一下', 1400); } }
 function staUse(n) { if (!staGame()) return true; if (STA.v < n) { staWarn('體力不夠，沒辦法撲／跳那麼用力'); return false; } STA.v -= n; STA.useT = performance.now(); if (STA.v < 0.02) { STA.v = 0; STA.lock = true; } return true; }
@@ -8677,15 +8682,18 @@ function staSprint(want, dt) {
   if (!staGame()) return want;
   if (!want) return false;
   if (STA.lock) { staWarn(); return false; }
-  STA.v = Math.max(0, STA.v - 0.2 * dt); STA.useT = performance.now();
+  STA.v = Math.max(0, STA.v - 0.12 * dt); STA.useT = performance.now();
   if (STA.v <= 0) { STA.lock = true; staWarn(); return false; }
   return true;
 }
 function staTick(dt) {
   const on = staGame() && !RP.on, el = $('sta');
   if (!on) { STA.v = 1; STA.lock = false; if (el && !el.hidden) el.hidden = true; return; }
-  if (performance.now() - STA.useT > 600) STA.v = Math.min(1, STA.v + 0.15 * dt);
-  if (STA.lock && STA.v >= 0.3) STA.lock = false;
+  if (performance.now() - STA.useT > 800) {
+    const live = window.__rkOn ? RK.phase === 'rally' : VM.on ? VM.phase === 'rally' : true, still = Math.hypot(...(walk.vel || [0, 0])) < 0.5;
+    STA.v = Math.min(1, STA.v + (live ? (still ? 0.04 : 0.02) : 0.05) * dt);
+  }
+  if (STA.lock && STA.v >= 0.25) STA.lock = false;
   if (!el) return;
   el.hidden = false; el.style.setProperty('--v', STA.v.toFixed(3)); const k = STA.lock ? 'lock' : STA.v < 0.3 ? 'low' : ''; if (el.dataset.k !== k) el.dataset.k = k;
 }
@@ -8923,7 +8931,9 @@ function vbJumpVy(hs) { return 3.5 + 0.35 * Math.min(4.2, hs); }
 function vbJump(kind) {
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   if (walk.dive || walk.down > 0) return;
-  const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', tired = staGame() && !staUse(0.06) ? 0.82 : 1;
+  const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', ck = block ? 'block' : 'jump';
+  let tired = 1;   // 體力：夠就照體力跳（30% 以下開始變矮），不夠就只能小跳一下
+  if (staGame()) { if (STA.v >= STA_COST[ck]) tired = 0.4 + 0.6 * staPay(ck); else { staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
   walk.air = { y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
   if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
@@ -8977,7 +8987,8 @@ function vbHitAttack(b, d, tip) {
     const [lx] = toLocalOf(ct.c, walk.x, walk.z), [ax] = toLocalOf(ct.c, walk.x + fx, walk.z + fz), dlx = ax - lx;
     if (dlx * -Math.sign(lx) > 0.12) dist = Math.min(20, (Math.abs(lx) + depth) / Math.abs(dlx));
   }
-  let spd = tip ? 6 : air ? 16 + 12 * q : 11 + 6 * q;
+  const staF = staPay(tip ? 'tip' : air ? 'spike' : 'hit');
+  let spd = (tip ? 6 : air ? 16 + 12 * q : 11 + 6 * q) * (tip ? 1 : 0.6 + 0.4 * staF);   // 累了扣得比較慢（最低約九成）
   const pep = vbPep(), pd = pep ? Math.hypot(pep.x - p.x, pep.z - p.z) : 0;
   if (pep && ((pep.x - p.x) * fx + (pep.z - p.z) * fz) / (pd || 1) > 0.85) { dist = pd + 0.5; spd = Math.min(spd, 15); }   // 對碰：大致對著陪練打，球就打向他（他接得到的力道）
   // 吊球：往上一點的軟弧線，從攔網手上面過去
@@ -9018,7 +9029,7 @@ function vbDive() {
   if (walk.air || walk.sit || walk.dive || walk.down > 0 || walk.serve || walk.spike) return false;
   let tx = null, tz = null, bd = 9;
   for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 400)) continue; const pr = vbPredict(b.m.position, b.v, 0.3); if (!pr) continue; const d = Math.hypot(pr.x - walk.x, pr.z - walk.z); if (d < 5 && d < bd) { bd = d; tx = pr.x; tz = pr.z; } }
-  if (!staUse(0.35)) return false;
+  if (!staUse(STA_COST.dive)) return false;
   const [fx, fz] = vbFwd(), dx = tx != null ? tx - walk.x : fx, dz = tx != null ? tz - walk.z : fz, d = Math.hypot(dx, dz) || 1, sp = clamp((tx != null ? d : 2) / 0.4, 3.5, 7.5);
   walk.dive = { t: 0, vx: (dx / d) * sp, vz: (dz / d) * sp };
   walk.diveDir = Math.atan2(dx * -Math.cos(walk.yaw) + dz * Math.sin(walk.yaw), dx * -Math.sin(walk.yaw) + dz * -Math.cos(walk.yaw));   // 撲的方向（身體座標）：決定往前魚躍還是側倒
@@ -9064,7 +9075,7 @@ function vbDoReceive(o, dive) {
   if (ct && !pep) { const sg = Math.sign(ct.lx) || 1, [lx, lz] = toLocalOf(ct.c, tx, tz); if (lx * sg < 0.9) { [tx, tz] = toWorldOf(ct.c, sg * (0.9 + Math.random() * 0.8), lz); if (ty < 1.5) { ty = 1.8; T = 1.1; } } }
   const plat = new THREE.Vector3(walk.x + fx * (dive ? 0.95 : 0.42), dive ? Math.max(0.15, p.y) : 0.72 + (walk.air ? walk.air.y : 0), walk.z + fz * (dive ? 0.95 : 0.42)), cp = p.clone().lerp(plat, 0.6);   // 前臂平台
   b.spike = null; vbMine(b);
-  pose = 'bumpHit'; hands.visible = true; walk.flash = 0.45; skill.dip = 0.05;
+  pose = 'bumpHit'; hands.visible = true; walk.flash = 0.45; skill.dip = 0.05; staPay('bump');
   const over = ct && vmThird() && q >= 0.32;   // 第三球：下手把球送高高的過網（落在對面深處）
   vbLaunch(b, cp, over ? vbOverVel(cp, ct, true, 1 - q) : new THREE.Vector3((tx - cp.x) / T, (ty - cp.y) / T + 4.9 * T, (tz - cp.z) / T), 'bump', q);
   if (over) note = '第三球：下手送過網';
@@ -9094,7 +9105,7 @@ function vmFreeBall() {
   if (dh > 1.2 || p.y < 0.25 || p.y > camera.position.y + 1.1) { toast('球太遠了：靠近一點再按 E', 1200); return; }
   // 雙手在額頭前把球推平過去：剛好過網、比下手送的低又快
   const cp = p.clone().lerp(new THREE.Vector3(walk.x, Math.max(p.y, camera.position.y + 0.2), walk.z), 0.3);
-  vbMine(b); b.spike = null; pose = 'setPush'; hands.visible = true; walk.flash = 0.4;
+  vbMine(b); b.spike = null; pose = 'setPush'; hands.visible = true; walk.flash = 0.4; staPay('set');
   vbLaunch(b, cp, vbOverVel(cp, ct, false, 0.15), 'set', 0.8);
   vmOnTouch(b, vmMe(), 'set'); toast('推過網', 900);
 }
@@ -9150,7 +9161,7 @@ function vbDoSet(b, n, q = 0.9) {
   if (pep) {   // 對碰：不管按 1～4，都舉給陪練（他會打你）
     const [hx, hz] = vbFwd(), hp = new THREE.Vector3(walk.x + hx * 0.28, camera.position.y + 0.3, walk.z + hz * 0.28), cp = b.m.position.clone().lerp(hp, 0.7), D = Math.hypot(pep.x - cp.x, pep.z - cp.z), T = clamp(0.9 + D * 0.1, 1.1, 1.6), e = (1 - q) * 1.6;
     const tx = pep.x + rkGauss() * e, tz = pep.z + rkGauss() * e;
-    vbMine(b); pose = 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05; b.spike = null;
+    vbMine(b); pose = 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05; b.spike = null; staPay('set');
     vbLaunch(b, cp, new THREE.Vector3((tx - cp.x) / T, (2.6 - cp.y) / T + 4.9 * T, (tz - cp.z) / T), 'set', q);
     recHit({ x: cp.x, y: cp.y, z: cp.z, v: b.v.length(), kind: 'set' }); toast('舉給陪練：他會打過來，準備接（C）', 1300); return;
   }
@@ -9160,7 +9171,7 @@ function vbDoSet(b, n, q = 0.9) {
     [tx, tz] = toWorldOf(ct.c, sp.lx, sp.lz); T = sp.T; ty = sp.y;
   } else { const [fx, fz] = vbFwd(), k = n === 1 ? 4 : n === 2 ? 1.2 : n === 4 ? -1.5 : -3; tx = walk.x + fx * k; tz = walk.z + fz * k; T = n === 2 ? 0.7 : 1.4; }
   const [hx, hz] = vbFwd(), hp = new THREE.Vector3(walk.x + hx * 0.28, camera.position.y + 0.3, walk.z + hz * 0.28), cp = b.m.position.clone().lerp(hp, 0.7);
-  vbMine(b); pose = n === 3 ? 'setBack' : 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05;
+  vbMine(b); pose = n === 3 ? 'setBack' : 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05; staPay('set');
   if (ct) { const sg = Math.sign(ct.lx) || 1, [ax, az] = toWorldOf(ct.c, 0, 0), [bx, bz] = toWorldOf(ct.c, 0, sg); walk.turn = { yaw: Math.atan2(-(bx - ax), -(bz - az)), t: 0.4 }; }   // 面向 4 號位
   vbSendSet(b, tx, tz, ty, T, n, '', cp, q);
   vmOnTouch(b, vmMe(), 'set');
@@ -10004,6 +10015,7 @@ function vm6Menu(c, sg) {
     <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
+    <p class="rk-sub">體力（畫面上的體力條）：衝刺、起跳、扣球最耗，吊球、舉球、接球耗一點；比賽中回得慢、死球時回快一點。體力 30% 以下跳得比較矮、扣得比較慢，但接、舉、吊永遠做得到。</p>
     <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="close">取消</button></div>
     <p class="rk-sub" style="margin-top:10px">C 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
