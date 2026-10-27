@@ -6662,6 +6662,7 @@ function updateJumpServe(dt) {
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮
     const near = walk.air && b.position.distanceTo(vbHand()) < 0.7; b.material = near ? ballHot : ballMat;
+    if (s.pend && walk.air) { if (b.position.distanceTo(vbHand()) <= 1.0) { const tp = s.pend.type; s.pend = null; jumpServeHit(tp); return; } if (s.t - s.pend.t > 0.5) { s.pend = null; s.swung = true; toast('揮空了：等球發亮（掉到手邊）再按', 1500); } }
     if (b.position.y < 1.0) {   // 拋了沒打到：球掉下去，發球失誤
       b.material = ballMat; const ob = { m: b, v: new THREE.Vector3(s.v0.x, s.v0.y - 9.8 * t, s.v0.z), rest: 0 }; b.userData.ball = ob; balls.push(ob);
       walk.jserve = null; hands.visible = false; pose = 'hold'; toast('拋了沒打到：發球失誤', 1600);
@@ -6674,7 +6675,7 @@ function jumpServeHit(type) {
   const s = walk.jserve; if (!s || s.hit || s.swung || !walk.air) return;
   const H = vbHand(), d = s.ball.position.distanceTo(H);
   walk.swing = { t: 0, tip: false, done: true, doneT: 0, prev: null }; pose = 'swing';   // 揮臂動作
-  if (d > 1.1) { s.swung = true; toast('揮空了：等球發亮（掉到手邊）再按', 1500); return; }
+  if (d > 1.1) { if (!s.pend) s.pend = { type, t: s.t }; return; }   // 按早了：先不算揮空，0.5 秒內球掉到手邊就自動打
   const q = clamp(1 - (Math.max(0, d - 0.3) / 0.8) * 0.65, 0.3, 1);
   s.hit = true; s.hitT = s.t; s.ball.material = ballMat;
   serveLaunch(s.ball, s.ball.position.clone(), type === 'float' ? 'jfloat' : 'jump', q, s.aim);
@@ -9171,7 +9172,9 @@ function vbDoSet(b, n, q = 0.9) {
     recHit({ x: cp.x, y: cp.y, z: cp.z, v: b.v.length(), kind: 'set' }); toast('舉給陪練：他會打過來，準備接（C）', 1300); return;
   }
   const ct = vbCourt(); let tx, tz, ty = 2.95, T = 1.45;
-  if (ct) {
+  const mbq = VM.six && n === 2 ? VM.team[vmTeamOf(vmMe())].map((id) => VM.ai.get(id)).find((q) => q && VM.role[q.id] === 'MB' && vm6Front(q.id) && (q.y > 0.02 || q.vy > 0)) : null;
+  if (mbq) { const sd = vmSide(mbq.team); [tx, tz] = vmW(sd * clamp(Math.abs(mbq.x) - 0.1, 0.7, 1.4), mbq.z); ty = 3.05; T = 0.36; }   // 6 對 6 快攻：攔中已經跳起來了，又低又快直接送到他手上
+  else if (ct) {
     const [lx, lz] = toLocalOf(ct.c, walk.x, walk.z), sp = vbSpot(ct, n, lx, lz);
     [tx, tz] = toWorldOf(ct.c, sp.lx, sp.lz); T = sp.T; ty = sp.y;
   } else { const [fx, fz] = vbFwd(), k = n === 1 ? 4 : n === 2 ? 1.2 : n === 4 ? -1.5 : -3; tx = walk.x + fx * k; tz = walk.z + fz * k; T = n === 2 ? 0.7 : 1.4; }
@@ -10229,7 +10232,7 @@ function vm6Brain(a, sd, b, live) {
   const st = P.stage, inv = (st === 0 && P.passer === a.id) || ((st === 1 || (st === 0 && VM.touch.serve)) && P.setter === a.id && VM.touch.last !== a.id) || (st === 2 && P.attacker === a.id) || (st === 2 && !P.attacker && vm6Nearest(a.team, B) === a.id);
   if (inv) { if (VM.t >= a.reactAt) vmAiRole(a, P, B, sd); return; }
   // 沒輪到碰球：發球還在飛＝留在接發球陣型；第一球還沒碰到＝守住位置；舉出去了＝圍到攻擊手旁邊 cover（被攔回來的球要救）；其他時候準備進攻
-  if (st === 1 && VM.role[a.id] === 'MB' && vm6Front(a.id) && P.passer !== a.id && P.setter && VM.ai.has(P.setter) && vm6Quick(a, P, B, sd)) return;
+  if (st === 1 && VM.role[a.id] === 'MB' && vm6Front(a.id) && P.passer !== a.id && P.setter && P.setter !== a.id && vm6Quick(a, P, B, sd)) return;   // 舉球員是 AI 或真人都一樣：攔中先跳
   const f = st === 2 && P.attacker && P.attacker !== a.id ? vm6CoverSpot(a, P.attacker) : vm6Spot(a.team, a.id, VM.touch.serve ? 'serve' : st === 0 ? 'defense' : 'attack');
   if (f) { a.tx = f.x; a.tz = f.z; }
 }
@@ -10243,9 +10246,9 @@ function vm6OffBlock(a, th) {
 // 快攻（AI 舉球員要舉時）：這一球要不要打快攻先決定好；要打就照傳過來的球倒推——先在舉球員左前方後面等，
 //   球快到舉球員手上時衝兩步，在舉球員碰到球前一下起跳（舉球那一刻已經在空中），舉球員再把球又低又快地送到手上
 function vm6Quick(a, P, B, sd) {
-  if (P.qk === undefined) P.qk = Math.random() < 0.5 ? a.id : null;
+  if (P.qk === undefined) P.qk = Math.random() < (VM.ai.has(P.setter) ? 0.5 : 0.75) ? a.id : null;   // 真人舉球時攔中比較常先跳，讓你有快攻可以舉
   if (P.qk !== a.id) return false;
-  const pr = vmPredL(B, 2.3); if (!pr || Math.abs(pr.x) > 2.6) { P.qk = null; return false; }   // 傳得不到位：不打快攻
+  const pr = vmPredL(B, VM.ai.has(P.setter) ? 2.3 : 2.0); if (!pr || Math.abs(pr.x) > 2.6) { P.qk = null; return false; }   // 真人舉球員在額頭前碰球（比較低）   // 傳得不到位：不打快攻
   if (a.y > 0) return true;
   if (P.qkJ) return false;   // 跳過了、落地了（舉球員沒舉給他）：照平常當誘敵、準備
   const tx = sd * Math.max(0.95, Math.abs(pr.x) - 0.1), tz = clamp(pr.z + sd * 0.9, -4, 4), D = Math.hypot(a.x - tx, a.z - tz);
