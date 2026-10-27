@@ -1,0 +1,17 @@
+# 多人連線房間伺服器（Cloudflare Workers）。部署：在這個資料夾執行 npx wrangler deploy（第一次要 npx wrangler login）
+name = "volleycourt-rt"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+# 每個房間一個 Durable Object（免費方案只能用 SQLite 版的）
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+# 只讓這些網站連進來（逗號分隔）；本機 localhost 一律可以
+[vars]
+ALLOWED_ORIGINS = "https://volleycourts.vercel.app"

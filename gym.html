@@ -6826,7 +6826,8 @@ function hitWorldBall(b, kind) {
   toast(up ? (kind === 'set' ? '手打平往上舉' : '往上墊高') : kind === 'set' ? '舉球傳出去！' : '墊球傳出去！', 1200);
 }
 // ---------------------------------------------------------------- 多人連線：一間房最多 4 人，互相看得到、共用一顆球
-// 連線方式：正式站用 Ably（api/rt-token 發通行證）；網址加 &localnet 時改用同一個瀏覽器的分頁互傳（不用帳號，開發測試用）
+// 連線方式：有設定 Cloudflare 房間伺服器（rt-worker/，api/rt-config 給網址）就用它，連不上或沒設定才用 Ably（api/rt-token 發通行證）；
+// 網址加 &localnet 時改用同一個瀏覽器的分頁互傳（不用帳號，開發測試用）
 // hitN：擊球序號，只有「擊球、接球、撿球」才會加一；位置更新沿用同一個序號，不會蓋掉別人的擊球。
 // 同一個序號兩個人同時打到：代號比較大的那一下算數（每台電腦都用同一條規則，結果一致）
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null };
@@ -6876,6 +6877,63 @@ function localTransport(room, cid = NET.me) {
     close: () => { bc.postMessage({ t: '__leave', d: {}, from: cid }); bc.close(); },
   };
 }
+// Cloudflare 房間伺服器（rt-worker/）：WebSocket 直接連，伺服器只轉發；斷線自動重連（最多 8 次、約 20 秒），重連後重新報到、補上這段時間進出的人
+async function cfTransport(room, cid, base) {
+  const url = base + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(cid), members = new Map(), mainNet = cid === NET.me;
+  let ws = null, onMsg = null, onPres = null, mine = null, closed = false, tries = 0, ping = 0;
+  const open = () => new Promise((ok, bad) => {
+    const w = new WebSocket(url); let done = false;
+    const to = setTimeout(() => { if (!done) { done = true; try { w.close(); } catch (e) { /* ignore */ } bad(new Error('timeout')); } }, 6000);
+    w.onmessage = (e) => {
+      if (e.data === 'pong') return;
+      let m; try { m = JSON.parse(e.data); } catch (er) { return; }
+      if (m.k === 'm') { onMsg && onMsg(m.t, m.d, m.f); return; }
+      if (m.k === 'p') { if (m.a === 'leave') members.delete(m.id); else members.set(m.id, { id: m.id, ...(m.d || {}) }); onPres && onPres(m.a, m.id, m.d || {}); return; }
+      if (m.k === 'hello') {
+        const before = new Set(members.keys()); members.clear(); for (const x of m.members) members.set(x.id, x);
+        if (!done) { done = true; clearTimeout(to); ok(w); return; }
+        if (onPres) { for (const id of before) if (!members.has(id)) onPres('leave', id, {}); for (const x of m.members) onPres('enter', x.id, x); }   // 重連：斷線那段時間有人進出
+      }
+    };
+    w.onclose = () => { if (!done) { done = true; clearTimeout(to); bad(new Error('closed')); return; } if (w === ws && !closed) reconnect(); };
+  });
+  const reconnect = async () => {
+    clearInterval(ping);
+    if (closed) return;
+    if (tries >= 8) { if (mainNet) netStatus('連線中斷了，請重新進入房間', 'warn'); return; }
+    tries++; if (mainNet) netStatus('連線中斷，重新連線中…', 'busy');
+    await new Promise((r) => setTimeout(r, Math.min(5000, 600 * tries)));
+    if (closed) return;
+    try { ws = await open(); tries = 0; keepAlive(); if (mine) ws.send(JSON.stringify({ k: 'enter', d: mine })); if (mainNet && NET.on) renderMpList(); } catch (e) { reconnect(); }
+  };
+  const keepAlive = () => { clearInterval(ping); ping = setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 25000); };   // 25 秒一次，免得被中間的網路設備斷掉
+  ws = await open(); keepAlive();
+  return {
+    kind: 'cf',
+    publish: (t, d) => { netCount(); if (ws.readyState === 1) ws.send(JSON.stringify({ k: 'm', t, d })); },
+    subscribe: (fn) => { onMsg = fn; },
+    enter: async (info) => { mine = info; if (ws.readyState === 1) ws.send(JSON.stringify({ k: 'enter', d: info })); },
+    members: async () => [...members.values()],
+    onPresence: (fn) => { onPres = fn; },
+    close: () => { closed = true; clearInterval(ping); try { ws.close(1000, 'bye'); } catch (e) { /* ignore */ } },
+  };
+}
+// 房間伺服器的網址：網站的 api/rt-config 回傳（Vercel 環境變數 RT_CF_URL）；本機測試可以在網址加 &cf=ws://localhost:8787
+let RT_CF = undefined;
+async function rtCfUrl() {
+  if (RT_CF !== undefined) return RT_CF;
+  const q = new URLSearchParams(location.search).get('cf');
+  if (q && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return (RT_CF = q);
+  try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CF = r.ok && (r.headers.get('content-type') || '').includes('json') ? (await r.json()).cf || null : null; } catch (e) { RT_CF = null; }
+  return RT_CF;
+}
+// 選連線方式：&localnet＝同一個瀏覽器的分頁互傳；有設定 Cloudflare 房間伺服器就先用它（免費額度大、快），連不上才改用 Ably
+async function rtTransport(room, cid) {
+  if (new URLSearchParams(location.search).has('localnet')) return localTransport(room, cid);
+  const cf = await rtCfUrl();
+  if (cf) { try { return await cfTransport(room, cid, cf); } catch (e) { console.info('[即時] 房間伺服器連不上，改用 Ably', e && e.message); } }
+  const tx = await ablyTransport(room, cid); tx.kind = cf ? 'ably-backup' : 'ably'; return tx;
+}
 function netStatus(msg, kind) { const el = $('mp-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
 function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
 function inviteLink(room) { const u = new URL(location.href); u.searchParams.delete('debug'); u.searchParams.set('room', room); return u.toString(); }
@@ -6889,7 +6947,7 @@ async function netJoin(room) {
   if (typed) { try { localStorage.setItem('vb.mp.name', typed.slice(0, 12)); } catch (e) { /* ignore */ } }
   netStatus('連線中…', 'busy');
   let tx;
-  try { tx = new URLSearchParams(location.search).has('localnet') ? localTransport(room) : await ablyTransport(room); }
+  try { tx = await rtTransport(room, NET.me); }
   catch (e) { netStatus(e.message === 'noserver' ? '多人連線還沒開啟：網站管理者要先照「部署說明」設定 ABLY_API_KEY' : e.message === 'denied' ? '即時連線服務拒絕進入房間（金鑰權限不足：要有 Publish、Subscribe、Presence）' : '連不上即時連線服務，請稍後再試（公司或學校網路可能擋住）', 'warn'); return; }
   NET.tx = tx; NET.room = room; NET.on = true; NET.peers.clear();
   tx.subscribe(netOnMessage);
@@ -6901,7 +6959,7 @@ async function netJoin(room) {
   NET.color = color;
   await tx.enter({ n: NET.name, c: color });
   for (const m of others) netPeer(m.id, m);
-  netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）`, 'ok');
+  netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' ? '・快速線路' : tx.kind === 'ably-backup' ? '・備用線路（跟用快速線路的人看不到彼此）' : ''}`, 'ok');
   $('mp-room').textContent = room; $('mp-in').hidden = false; $('mp-out').hidden = true;
   renderMpList();
   toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
@@ -6917,7 +6975,7 @@ function netLeave(quiet) {
 function renderMpList() {
   const ul = $('mp-list'); if (!ul) return;
   ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i>${esc(p2.n)}</li>`)].join('') : '';
-  if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人`, 'ok');
+  if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人${NET.tx && NET.tx.kind === 'cf' ? '・快速線路' : NET.tx && NET.tx.kind === 'ably-backup' ? '・備用線路' : ''}`, 'ok');
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
@@ -7535,7 +7593,7 @@ async function coStart() {
   CO.name = CO.name || '球友' + CO.me.slice(-3);
   const room = ('EDIT-' + cloudId()).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
   let tx;
-  try { tx = new URLSearchParams(location.search).has('localnet') ? localTransport(room, CO.me) : await ablyTransport(room, CO.me); }
+  try { tx = await rtTransport(room, CO.me); }
   catch (e) { return; }   // 沒開即時服務就算了，照常用（自動存到雲端）
   CO.tx = tx; CO.on = true; CO.last = coSnap();
   tx.subscribe(coOnMessage);
