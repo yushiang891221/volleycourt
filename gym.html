@@ -9794,7 +9794,7 @@ function vmAiStep(a, dt) {
     if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && VM.t - (a.sqT || 0) > 0.5) { a.sqT = VM.t; const [wx, wz] = vmW(a.x, a.z); sfx('squeak', 0.6 + Math.random() * 0.3, new THREE.Vector3(wx, 0.05, wz)); }
     const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
   // 移動、跳
-  const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? Math.min(vmLv(a).speed, d * 5) : 0, kk = 1 - Math.exp(-dt * 9);
+  const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(vmLv(a).speed, 4.8) : Math.min(vmLv(a).speed, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
   a.x += a.vx * dt; a.z += a.vz * dt; a.x = sd * clamp(a.x * sd, 0.35, 12); a.z = clamp(a.z, -7, 7);
   if (VM.six) for (const o of VM.ai.values()) {   // 6 個人：隊友之間不要疊在一起
@@ -9821,7 +9821,7 @@ function vmAiBlock(a, sd, b) {
   if (!th) { if (a.blk && a.y <= 0) a.blk = null; return !!a.blk; }
   // 一隊只派一個人攔：離攻擊手左右比較近、而且這一球還沒碰的人
   let lane = 0;
-  if (VM.six) { if (!vm6BlockPick(a, th)) return false; lane = VM.role[a.id] === 'MB' ? 0 : clamp(vm6Spot(a.team, a.id, 'defense').z - th.z, -0.55, 0.55); }
+  if (VM.six) { if (!vm6BlockPick(a, th)) return false; lane = VM.role[a.id] === 'MB' ? 0 : (a.z >= th.z ? 0.55 : -0.55); }   // 邊上的人站在攻擊手外側一點，中間手在裡面，兩人併成一道牆
   else {
     const mates = VM.team[a.team].filter((id) => VM.ai.has(id)).map((id) => VM.ai.get(id));
     const pick = mates.sort((p, q) => Math.abs(p.z - th.z) + Math.abs(p.x) * 0.3 - (Math.abs(q.z - th.z) + Math.abs(q.x) * 0.3))[0];
@@ -9877,7 +9877,7 @@ function vmAiRole(a, P, B, sd) {
   if (st === 0 && P.passer === a.id) {           // 接球：跑到球落到 0.85 m 的地方後面
     const p = vmPredL(B, 0.85); if (p) { a.tx = p.x + sd * 0.4; a.tz = p.z; }
     const dh = Math.hypot(B.x - a.x, B.z - a.z);
-    if (dh < 1.05 && B.y < 1.5 && B.y > 0.3) {
+    if (dh < (VM.six && VM.touch.blk && VM.touch.team !== a.team ? 1.4 : 1.05) && B.y < 1.5 && B.y > 0.3) {   // 被攔回來的球：蹲在旁邊 cover 的人撲得比較遠
       const fast = Math.hypot(B.vx, B.vy, B.vz) > 15;
       if (fast && Math.random() < vmLv(a).miss) { a.reactAt = VM.t + 1.2; return; }   // 重扣沒接到
       vmAiTouch(a, sd * 1.8, VM.six ? -sd * 0.9 + (Math.random() - 0.5) * 1.2 : (Math.random() - 0.5) * 2, 2.4, 1.35, vmLv(a).passErr * (fast ? 1.6 : 1), 'bump', 3);   // 6 對 6 傳到舉球點（網前偏右）
@@ -9897,10 +9897,17 @@ function vmAiRole(a, P, B, sd) {
       else vmAiTouch(a, sd * 1.0, clamp(ap.z, -3.6, 3.6), 2.85, 1.25, vmLv(a).setErr, 'set', 2);
       if (pick && VM.poss[a.team] && VM.poss[a.team].stage === 2) VM.poss[a.team].attacker = pick.id;
     }
-  } else if (P.attacker === a.id && st === 2) {   // 攻擊：跑到球會經過 2.8 m 的地方，起跳、在空中打
+  } else if (P.attacker === a.id && st === 2) {   // 攻擊：照球掉到 2.8 m 的時間倒推——先在助跑起點等，時間到就三步衝進去，踩到起跳點剛好起跳（不會跑進去站著等）
     const p = vmPredL(B, 2.8);
-    // 後排攻擊（6 對 6）：在 3 公尺線後起跳
-    if (p) { a.tx = p.x + sd * 0.55; if (VM.six && !vm6Front(a.id)) a.tx = sd * Math.max(3.25, a.tx * sd); a.tz = p.z; a.appr = a.y === 0 && p.t < 1.1; if (a.y === 0 && p.t < 0.45 && Math.hypot(a.x - a.tx, a.z - a.tz) < 1.6) { a.vy = 4.3; a.pose = 5; a.appr = false; } }
+    if (a.runFor !== P) { a.runFor = P; a.run = false; }
+    if (p && a.y === 0) {
+      let tx = p.x + sd * 0.55; if (VM.six && !vm6Front(a.id)) tx = sd * Math.max(3.25, tx * sd);   // 後排攻擊（6 對 6）：在 3 公尺線後起跳
+      const tz = p.z, uz = clamp((a.z - tz) * 0.35, -0.6, 0.6), un = Math.hypot(1, uz), sx = tx + (sd / un) * 2.8, sz = tz + (uz / un) * 2.8;   // 助跑起點：起跳點往後（斜斜的從場內）2.8 m＝三步
+      const dT = Math.hypot(a.x - tx, a.z - tz), wait = p.t - 0.43 - dT / 4.8;   // 起跳到最高點約 0.43 秒；助跑約每秒 4.8 m
+      if (!a.run && wait > 0.04) { a.tx = sx; a.tz = sz; a.appr = false; }
+      else { a.run = true; a.tx = tx; a.tz = tz; a.appr = true; }
+      if (a.run && (dT < 0.45 || p.t < 0.45)) { a.vy = 4.3; a.pose = 5; a.appr = false; a.run = false; a.vx *= 0.25; a.vz *= 0.25; }   // 踩到起跳點就跳：衝的速度大多變成高度，空中只往前飄一點
+    }
     const H = hand();
     if (b2d(H) < 1.0 && B.y > 2.0) vmAiSpike(a, sd);
     else if (!p && B.y < 1.6 && Math.hypot(B.x - a.x, B.z - a.z) < 1.1) vmAiFree(a, sd);   // 舉得太低：推過去
@@ -10147,7 +10154,12 @@ function vm6ChooseSet(a, B) {
 // 攔網：只有前排；中間手跟著攻擊手移動，兩邊的人攔自己那一側（最多三人攔網）
 function vm6BlockPick(a, th) {
   if (!vm6Front(a.id)) return false;
-  return VM.role[a.id] === 'MB' ? Math.abs(th.z - a.z) < 4.2 : Math.abs(th.z - vm6Spot(a.team, a.id, 'defense').z) < 2.6;
+  // 前排三個人照現在站的位置：中間的人（中間手）一定上；再加攻擊手那一側的人——對面 4 號位打＝我方 2 號位＋3 號位，對面 2 號位打＝我方 4 號位＋3 號位
+  const fr = VM.rot[a.team].slice(1, 4).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q);
+  const mid = fr.find((o) => VM.role[o.id] === 'MB') || [...fr].sort((p, q) => Math.abs(p.q.z) - Math.abs(q.q.z))[0];
+  if (!mid) return false; if (mid.id === a.id) return true;
+  const side = fr.filter((o) => o.id !== mid.id).sort((p, q) => Math.abs(p.q.z - th.z) - Math.abs(q.q.z - th.z))[0];
+  return !!side && side.id === a.id && Math.abs(side.q.z - th.z) < 3.4;
 }
 // 離球最近、上一球不是他碰的 AI（舉壞了要有人救）
 function vm6Nearest(team, B) {
@@ -10161,7 +10173,9 @@ function vm6Brain(a, sd, b, live) {
   if (vmAiBlock(a, sd, b)) return;
   const B = vmBallL(b), onMine = Math.sign(B.x) === sd, land = vmPredL(B, BALL_R);
   const outgoing = VM.touch.team === a.team && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;
-  const coming = !outgoing && (Math.sign(B.vx) === sd || onMine) && !(VM.touch.team === a.team && VM.touch.n >= 3);
+  // 球在對面時，只有「會落在我們這邊」的球（攻擊、推過來、發球）才算過來了；對面在傳、在舉的球不算
+  const coming = !outgoing && (onMine || (Math.sign(B.vx) === sd && land && Math.sign(land.x) === sd)) && !(VM.touch.team === a.team && VM.touch.n >= 3);
+  if (coming && !onMine && VM.touch.team !== a.team) VM.poss[a.team] = null;   // 還沒過網：誰接每一格照最新的落點重算，過網才定
   if (!coming) {
     const f = vm6Spot(a.team, a.id, vm6Front(a.id) && vmThreat(a.team) ? 'cover' : 'defense'); a.tx = f.x; a.tz = f.z;
     a.reactAt = VM.t + vmLv(a).react; if (VM.touch.team !== a.team) VM.poss[a.team] = null; return;
@@ -10170,8 +10184,18 @@ function vm6Brain(a, sd, b, live) {
   const P = vm6Possession(a.team, B); if (!P) return;
   const st = P.stage, inv = (st === 0 && P.passer === a.id) || (st <= 1 && P.setter === a.id && VM.touch.last !== a.id) || (st === 2 && P.attacker === a.id) || (st === 2 && !P.attacker && vm6Nearest(a.team, B) === a.id);
   if (inv) { if (VM.t >= a.reactAt) vmAiRole(a, P, B, sd); return; }
-  // 沒輪到碰球：發球還在飛＝留在接發球陣型；第一球還沒碰到＝守住位置；碰到之後＝準備進攻
-  const f = vm6Spot(a.team, a.id, VM.touch.serve ? 'serve' : st === 0 ? 'defense' : 'attack'); a.tx = f.x; a.tz = f.z;
+  // 沒輪到碰球：發球還在飛＝留在接發球陣型；第一球還沒碰到＝守住位置；舉出去了＝圍到攻擊手旁邊 cover（被攔回來的球要救）；其他時候準備進攻
+  const f = st === 2 && P.attacker && P.attacker !== a.id ? vm6CoverSpot(a, P.attacker) : vm6Spot(a.team, a.id, VM.touch.serve ? 'serve' : st === 0 ? 'defense' : 'attack');
+  if (f) { a.tx = f.x; a.tz = f.z; }
+}
+// cover：攻擊手後面圍一個半圓——最近的三個人在他身後 1.5～3 m（左右各一、中間一個），另外兩個在後面 5 m 補深球
+const V6_COVER = [[1.5, -1.4], [1.5, 1.4], [3.0, 0], [5.0, -2.4], [5.0, 2.4]];
+function vm6CoverSpot(a, attId) {
+  const at = vmPos(attId); if (!at) return null;
+  const sd = vmSide(a.team), ids = VM.team[a.team].filter((id) => id !== attId).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q).sort((p, q) => Math.hypot(p.q.x - at.x, p.q.z - at.z) - Math.hypot(q.q.x - at.x, q.q.z - at.z));
+  const i = ids.findIndex((o) => o.id === a.id); if (i < 0) return null;
+  const [dd, dl] = V6_COVER[Math.min(i, V6_COVER.length - 1)];
+  return { x: sd * clamp(Math.abs(at.x) + dd, 1.2, 8.6), z: clamp(at.z + dl, -4.3, 4.3) };
 }
 // 連線的人：收到主機的輪轉表、局數
 function vm6Apply(d) {
@@ -10218,7 +10242,7 @@ function vmRenderAi(dt) {
     if (VM.host && (a.y > 0 || (VM.poss[a.team] || {}).attacker !== a.id)) a.appr = false;
     const P2 = a.swingT > 0 || a.y > 0 ? a.pose : VM.host && a.appr ? 13 : 0, pr2 = P2 === 5 && VM.host ? clamp(1 - (a.vy - 1.5) / 3, 0, 1) : 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
     // AI：只有這一球輪到他接、球正往他那邊來才蹲
-    const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team);
+    const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && ((Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team)) || (VM.six && Pa.stage === 2 && Pa.attacker && Pa.attacker !== a.id && Pa.setter !== a.id && VM.touch.team === a.team));   // 6 對 6：隊友攻擊時，cover 的人蹲低準備救球
     let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
     avDrive(av, pz, kk, sp, a.y > 0.05);
@@ -10421,7 +10445,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
