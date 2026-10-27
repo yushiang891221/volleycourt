@@ -7448,7 +7448,7 @@ function netOnMessage(t, d, from) {
     b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     if (newer || tie) { b.mine = false; if (d.w === 'set') vbMarkSet(b); }
-    if (newer) vmOnTouch(b, d.by, d.w);
+    if (newer) { b.jump0 = d.j || null; vmOnTouch(b, d.by, d.w); }
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   } else if (t === 'vm') { vmOnNet(d, from);
   } else if (t === 'rk') { rkOnNet(d, from);
@@ -7473,6 +7473,7 @@ function netBallMsg(b, kind) {
   if (b.spike && b.spike.c) m.k = { c: b.spike.c.id, sg: b.spike.sg };
   if (b.acc) m.a = b.acc.toArray().map((q) => +q.toFixed(2));
   if (b.float) m.f = [+b.float.t.toFixed(3), +b.float.w.toFixed(3), +b.float.ph.toFixed(3), +b.float.a.toFixed(2)];
+  if ((kind === 'spike' || kind === 'tip' || kind === 'hit') && walk.air && walk.air.x0 != null) m.j = [+walk.air.x0.toFixed(2), +walk.air.z0.toFixed(2)];   // 起跳點：開局的人照這個判後排攻擊（不用猜你在哪起跳）
   return m;
 }
 function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
@@ -9680,8 +9681,9 @@ function vmOnTouch(b, id, kind) {
     const k6 = vm6Idx(id), back = k6 === 0 || k6 >= 4;
     if (back && kind === 'block') { vmPoint(1 - team, `後排攔網犯規（${vmName(id)}在後排）`); return; }
     if (back && (kind === 'spike' || kind === 'tip' || kind === 'hit') && b.m.position.y > NETS[state.net].h + BALL_R * 0.5) {
-      const q = id === vmMe() && walk.air && walk.air.x0 != null ? { x: vmL(walk.air.x0, walk.air.z0)[0] } : VM.ai.has(id) ? null : vmPos(id);
-      if (q && Math.abs(q.x) < (id === vmMe() ? 3 : 2.6)) { vmPoint(1 - team, `後排攻擊犯規（${vmName(id)}在後排，要在 3 公尺線後起跳）`); return; }
+      const exact = id === vmMe() ? (walk.air && walk.air.x0 != null ? [walk.air.x0, walk.air.z0] : null) : b.jump0;   // 起跳點（自己的、或連線的人隨擊球訊息送來的）
+      const q = exact ? { x: vmL(exact[0], exact[1])[0] } : VM.ai.has(id) ? null : vmPos(id);
+      if (q && Math.abs(q.x) < (exact ? 3 : 2.6)) { vmPoint(1 - team, `後排攻擊犯規（${vmName(id)}在後排，要在 3 公尺線後起跳）`); return; }
     }
   }
   // 正式規則：同一人不能連續碰兩次（連擊）、一隊最多碰三次；攔網不算一次，攔網的人也可以再碰下一球
