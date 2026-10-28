@@ -303,6 +303,14 @@ html.phone-walk .wk-act { bottom: auto; top: 58%; }
 html.phone-walk .camview, html.phone-walk .mp { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 44px) !important; }
 html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 48px); }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
+.wk-chg { position: absolute; left: 50%; top: calc(50% + 28px); width: 132px; height: 9px; margin-left: -66px; border-radius: 5px; background: rgba(27,38,56,.6); box-shadow: 0 0 0 1.5px rgba(255,255,255,.55); overflow: hidden; pointer-events: none; }
+.wk-chg i { position: absolute; top: 0; bottom: 0; }
+.wk-chg .sw { left: 60%; width: 13.3%; background: rgba(242,183,5,.55); box-shadow: inset 0 0 0 1.5px #F2B705; }
+.wk-chg .ov { left: 83.3%; right: 0; background: rgba(220,60,50,.45); }
+.wk-chg b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,255,255,.85); }
+.wk-chg[data-z="sweet"] b { background: #F2B705; } .wk-chg[data-z="late"] b { background: #F0A040; } .wk-chg[data-z="over"] b { background: #E5483C; }
+.wk-chg[data-z="sweet"] { box-shadow: 0 0 0 2px #F2B705, 0 0 10px rgba(242,183,5,.7); }
+.walk-ui.rk .wk-chg, .walk-ui.tp .wk-chg { display: none !important; }
 .wk-cross.on { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: transparent; box-shadow: 0 0 0 2px #F2B705, 0 0 0 3.5px rgba(27,38,56,.5); }
 .wk-act { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(27,38,56,.88); color: #fff; border: 1px solid #F2B705; font-size: 14px; font-weight: 700; }
 .camview { position: absolute; top: 56px; right: max(12px, env(safe-area-inset-right, 0px)); width: min(340px, 46%); background: #1B2638; border: 1px solid #F2B705; border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
@@ -790,6 +798,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>V</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>V</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>V</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
+      <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="ov"></i><b id="wk-chg-f"></b></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
       <div class="rp" id="rp" hidden>
@@ -5569,7 +5578,7 @@ function startWalk() {
   select(null); selZoneId = null;
   walk.saved = { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov, near: camera.near, structure: VIS.structure, labels: showLabels };
   controls.enabled = false;
-  camera.fov = 70; camera.near = 0.05; camera.updateProjectionMatrix();
+  camera.fov = walkFov(); camera.near = 0.05; camera.updateProjectionMatrix();
   VIS.structure = true; applyStructure();
   showLabels = false; applyLabelVisibility(); for (const o of buildingGroup.children) if (o.isCSS2DObject) o.visible = false;
   zonesGroup.traverse((o) => { if (o.userData.isTag) o.visible = false; });
@@ -5843,7 +5852,7 @@ function updateFocus() {
   else if (walk.hold) t = '左鍵發球・F 拋給隊友・1／2／3 自己拋起來舉・C 自己墊・E 自己舉著玩';
   else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
-  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按左鍵攻擊';
+  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
@@ -6787,7 +6796,8 @@ function updateBalls(dt) {
       for (const c of netCourts) { const [a0, z0] = toLocalOf(c, before.x, before.z), [a1] = toLocalOf(c, b.m.position.x, b.m.position.z); if (b.err && Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3 && before.y < NETS[state.net].h + 0.2) { b.m.position.add(b.err); b.err = null; } }
     }
     const sp = Math.hypot(b.v.x, b.v.z);
-    if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; }
+    if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * dt); }   // 空中：照擊球時的旋轉
+    else { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 落地：滾
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
     if (VM.on && b === VM.ball) vmTrailPush(b.m.position);
     if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
@@ -7455,7 +7465,8 @@ function netOnMessage(t, d, from) {
     b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     if (newer || tie) { b.mine = false; if (d.w === 'set') vbMarkSet(b); }
-    if (newer) { b.jump0 = d.j || null; vmOnTouch(b, d.by, d.w); }
+    if (newer || tie) b.spinW = d.s ? new THREE.Vector3(d.s[0], d.s[1], d.s[2]) : null;
+    if (newer) { b.jump0 = d.j || null; b.setFault = d.sf || null; vmOnTouch(b, d.by, d.w); }
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   } else if (t === 'vm') { vmOnNet(d, from);
   } else if (t === 'rk') { rkOnNet(d, from);
@@ -7479,6 +7490,8 @@ function netBallMsg(b, kind) {
   if (kind) m.w = kind;
   if (b.spike && b.spike.c) m.k = { c: b.spike.c.id, sg: b.spike.sg };
   if (b.acc) m.a = b.acc.toArray().map((q) => +q.toFixed(2));
+  if (b.spinW) m.s = b.spinW.toArray().map((q) => +q.toFixed(1));
+  if (b.setFault) m.sf = b.setFault;
   if (b.float) m.f = [+b.float.t.toFixed(3), +b.float.w.toFixed(3), +b.float.ph.toFixed(3), +b.float.a.toFixed(2)];
   if ((kind === 'spike' || kind === 'tip' || kind === 'hit') && walk.air && walk.air.x0 != null) m.j = [+walk.air.x0.toFixed(2), +walk.air.z0.toFixed(2)];   // 起跳點：開局的人照這個判後排攻擊（不用猜你在哪起跳）
   return m;
@@ -7756,7 +7769,7 @@ function closeReplay() {
   RP.on = false; scene.remove(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); RP.hud = null; }
   ballsGroup.visible = true; for (const p2 of NET.peers.values()) p2.av.g.visible = true; hands.visible = !!walk.hold;
   rpLive(true);
-  walk.paused = false; $('rp').hidden = true; camera.fov = 70; camera.updateProjectionMatrix();
+  walk.paused = false; $('rp').hidden = true; camera.fov = walkFov(); camera.updateProjectionMatrix();
   if (ceilingGroup) ceilingGroup.visible = true; if (typeof applyOverhead === 'function') applyOverhead();
 }
 function rpSetPlay(on) { RP.playing = on; $('rp-play').textContent = on ? '⏸' : '▶'; }
@@ -7938,6 +7951,7 @@ addEventListener('keydown', (e) => {
   if (k === 'b' && !e.repeat) { e.preventDefault(); vbJump('block'); return; }
   if (k === 't' && !e.repeat) { e.preventDefault(); TP.manual = !tpActive(); toast(TP.manual ? '第三人稱：看得到自己和球（T 換回第一人稱）' : '第一人稱（T 換成第三人稱）', 1800); return; }
   if (k === 'f' && !e.repeat) { e.preventDefault(); passToFacing(); return; }
+  if (k === '[' || k === ']') { e.preventDefault(); const f = clamp(walkFov() + (k === ']' ? 5 : -5), 60, 100); try { localStorage.setItem('vb.fov', String(f)); } catch (er) { /* ignore */ } camera.fov = f; camera.updateProjectionMatrix(); toast(`視野 ${f}°（[ 變窄、] 變廣）`, 1200); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('keyup', (e) => { walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
@@ -7945,6 +7959,8 @@ addEventListener('blur', () => walk.keys.clear());
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
+// 第一人稱的視野（垂直角度）：預設 80 度比較廣、看得到旁邊的隊友和來球；[ 變窄、] 變廣，記在這台電腦
+function walkFov() { try { return clamp(+localStorage.getItem('vb.fov') || 80, 60, 100); } catch (e) { return 80; } }
 const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 function lockMouse() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
@@ -7961,7 +7977,7 @@ function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on |
 const vbClickOK = () => VM.on || !!VB.npc || !!vbCourt();
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); vbAttack(e.button === 2); return; }
+  if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); if (e.button === 0 && vbChargeStart()) return; vbAttack(e.button === 2); return; }
   if (!walk.on || e.button !== 0 || window.__rkOn) return;
   if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
   walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
@@ -7997,6 +8013,8 @@ function endLook(e) {
   walk.target = [p.x, p.z]; targetMark.position.set(p.x, 0.04, p.z); targetMark.visible = true;
 }
 renderer.domElement.addEventListener('pointerup', endLook);
+addEventListener('pointerup', (e) => { if (e.button === 0 && walk.charge) vbChargeRelease(); });
+addEventListener('blur', () => { if (walk.charge) vbChargeRelease(); });
 renderer.domElement.addEventListener('pointercancel', (e) => { if (walk.look && walk.look.id === e.pointerId) walk.look = null; });
 // 手機虛擬搖桿（左下）：往哪推就往哪走；往上推過外圈＝跑步，在跑步區放開＝鎖定自動跑步（再摸一下搖桿就停）
 (() => {
@@ -8201,7 +8219,7 @@ function rkStop(silent) {
   RK.on = false; window.__rkOn = false; RK.netOp = null;
   $('walk-ui').classList.remove('rk'); $('rk-hud').hidden = true; $('rk-pad').hidden = true; $('rk-menu').hidden = true;
   if (me) { const [x, z] = rkW(RK.c, me.x, me.z); walk.x = x; walk.z = z; walk.yaw = rkYawToNet(RK.my); walk.pitch = -0.05; }
-  camera.fov = 70; camera.updateProjectionMatrix(); updateLockHint(); walk.zoneKey = ''; updateZoneCard(true);
+  camera.fov = walkFov(); camera.updateProjectionMatrix(); updateLockHint(); walk.zoneKey = ''; updateZoneCard(true);
 }
 // 面向網子（看向對面）時的 walk.yaw
 function rkYawToNet(side) { const [ax, az] = rkW(RK.c, 0, 0), [bx, bz] = rkW(RK.c, side, 0), fx = ax - bx, fz = az - bz; return Math.atan2(-fx, -fz); }
@@ -8694,7 +8712,7 @@ const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP
 function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
 function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100; return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
-function staPay(kind) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe())); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
+function staPay(kind, mul = 1) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe()) * mul); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(window.__rkOn || VM.on || VB.npc); }
 function staWarn(t) { if (performance.now() - STA.warnT > 2200) { STA.warnT = performance.now(); toast(t || '沒體力了：放開 Shift 喘一下', 1400); } }
 function staUse(n) { if (!staGame()) return true; if (STA.v < n) { staWarn('體力不夠，沒辦法撲／跳那麼用力'); return false; } STA.v -= n; STA.useT = performance.now(); if (STA.v < 0.02) { STA.v = 0; STA.lock = true; } return true; }
@@ -8734,15 +8752,27 @@ function vbPredict(p, v, y) {
 }
 function vbMine(b) { b.mine = true; b.mineT = performance.now(); }
 // 接觸：球先在幾十毫秒內「吸」到真正碰到的位置（手掌、前臂、額頭前的雙手），從那裡才飛出去；不會隔空轉彎，也不會穿過身體
+const SPIN_AX = new THREE.Vector3();
 function vbLaunch(b, cp, v, kind, q = 1) {
   const from = b.m.position.clone(); b.acc = null; b.float = null;   // 被碰到：上旋、飄的效果就沒了
   if (from.distanceTo(cp) > 0.2) cp = from.clone().add(cp.clone().sub(from).setLength(0.2));
   for (const c of vbNetCourts()) { const [a0, z0] = toLocalOf(c, from.x, from.z), [a1] = toLocalOf(c, cp.x, cp.z); if (Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3) cp = from.clone(); }
   b.m.position.copy(cp); b.v.copy(v); b.rest = 0; b.serve = false; b.err = null; b.lk = kind; b.lkNpc = false;
+  if (kind !== 'set') b.setFault = null;
+  b.spinW = vbSpinFor(b, v, kind, q);
   if (NET.on) netBallHit(b, kind);   // 別人收到的是「碰到的位置＋出去的速度」
   const d = from.distanceTo(cp);
   if (d > 0.03) { b.m.position.copy(from); b.snap = { from, to: cp.clone(), t: 0, dur: Math.min(0.09, 0.03 + d * 0.07), kind, q }; }
   else vbImpact(b, kind, q);
+}
+// 球在空中怎麼轉（看得到）：扣球強烈上旋；好的舉球幾乎不轉（兩手同時、平均出力），沒舉好、連擊就會轉；其他照品質轉一點
+function vbSpinFor(b, v, kind, q) {
+  const h = Math.hypot(v.x, v.z) || 1, top = new THREE.Vector3(v.z / h, 0, -v.x / h);   // 水平、跟飛行方向垂直的轉軸：正轉＝上旋
+  const rnd = () => new THREE.Vector3(rkGauss(), rkGauss() * 0.5, rkGauss()).normalize();
+  if (kind === 'spike') return top.multiplyScalar(14 + 22 * q);
+  if (kind === 'set') { const r = b.setFault === 'double' ? 16 + Math.random() * 6 : q >= 0.85 ? 0 : (0.85 - q) * 22; return r ? top.multiplyScalar(0.5).add(rnd()).normalize().multiplyScalar(r) : null; }
+  if (kind === 'tip') return top.multiplyScalar(-3);
+  return top.multiplyScalar(2 + 4 * (1 - q)).add(rnd().multiplyScalar(4 * (1 - q)));
 }
 // 碰到的那一刻：粒子、球壓扁一下、擊球聲；扣球、攔網鏡頭震一下
 function vbImpact(b, kind, q = 1) {
@@ -8966,21 +8996,52 @@ function vbAirStep(dt) {
 }
 // ---- 攻擊：按 V 揮臂，0.22 秒內手（頭上前方）碰到球才算；碰到的位置決定好不好
 function vbHand() { const [fx, fz] = vbFwd(); return new THREE.Vector3(walk.x + fx * 0.35 - fz * 0.12, camera.position.y + 0.75, walk.z + fz * 0.35 + fx * 0.12); }
-function vbAttack(tip) {
+function vbAttack(tip, chg = null) {
   if (walk.jserve && !walk.jserve.hit) { jumpServeHit(tip ? 'float' : 'jump'); return; }
   if (walk.hold && !walk.air) { startServe(tip ? 'float' : 'std'); return; }
   if (walk.swing || walk.sit || walk.serve) return;
-  walk.swing = { t: 0, tip: !!tip, done: false, prev: null };
+  walk.swing = { t: 0, tip: !!tip, done: false, prev: null, chg };
   pose = 'cock'; hands.visible = true;
 }
+// ---- 扣球蓄力：空中按住左鍵蓄力、放開才揮臂（放開後 0.6 秒內球到手邊就打）
+//   不是越滿越好：按住約 0.45 秒到金色的甜蜜點＝力道最大又最準；過了甜蜜點落點開始飄，紅色＝用力過猛（亂飄、容易出界或掛網）
+//   點一下就放＝輕扣：力道約六成五、最準、最省體力（配合往下看找空檔）；重扣耗的體力是輕扣的兩倍多
+//   起跳到落地大約只有 0.9 秒：太晚按蓄不滿，按太久球就掉過手邊了
+const CHG = { full: 0.6, sw0: 0.72, sw1: 0.88, over: 1.0, max: 1.2 };   // 蓄力值＝按住秒數／0.6
+function vbChargeOf(c) {   // 蓄力值 → 力道倍數 pw、失準 err（0＝最準）、體力倍數 sta
+  if (c >= CHG.sw0 && c <= CHG.sw1) return { pw: 1, err: 0, sta: 1.5, zone: 'sweet' };
+  if (c < CHG.sw0) { const k = c / CHG.sw0; return { pw: 0.62 + 0.33 * k, err: 0.12 * k, sta: 0.6 + 0.75 * k, zone: k < 0.35 ? 'light' : 'mid' }; }
+  const k = clamp((c - CHG.sw1) / (CHG.max - CHG.sw1), 0, 1);
+  return { pw: 1 + 0.06 * k, err: c <= CHG.over ? (0.3 * (c - CHG.sw1)) / (CHG.over - CHG.sw1) : 0.55 + 1.0 * k, sta: 1.5 + 0.25 * k, zone: c <= CHG.over ? 'late' : 'over' };
+}
+function vbChargeStart() {
+  if (!walk.air || walk.air.block || walk.swing || walk.hold || walk.spike || (walk.jserve && !walk.jserve.hit) || walk.charge) return false;
+  walk.charge = { t: 0 }; pose = 'cock'; hands.visible = true; vbChgHud(); return true;
+}
+function vbChargeRelease() {
+  const c = walk.charge; if (!c) return; walk.charge = null; vbChgHud();
+  if (walk.air && walk.on) vbAttack(false, Math.min(CHG.max, c.t / CHG.full));
+}
+function vbChargeStep(dt) {
+  const c = walk.charge; if (!c) return;
+  if (!walk.air || !walk.on || walk.paused) { walk.charge = null; if (!walk.swing) { pose = 'hold'; hands.visible = !!walk.hold; } if (walk.on && !walk.paused) toast('蓄太久了：已經落地，沒打到', 1300); }
+  else c.t += dt;
+  vbChgHud();
+}
+function vbChgHud() {
+  const el = $('wk-chg'), c = walk.charge; if (!el) return;
+  el.hidden = !c; if (!c) return;
+  const v = Math.min(CHG.max, c.t / CHG.full); el.dataset.z = vbChargeOf(v).zone; $('wk-chg-f').style.width = ((v / CHG.max) * 100).toFixed(1) + '%';
+}
 function vbSwingStep(dt) {
+  vbChargeStep(dt);
   const s = walk.swing; if (!s) return;
   s.t += dt;
   if (!s.done) {
     const H = vbHand(), R = VB_REACH.atk * (VB.assist ? 1.12 : 1); let best = null;
     for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 250) || (VM.on && (b.floorHit || !vbOwnSide(b)))) continue; const d = b.m.position.distanceTo(H); if (d < R && (!best || d < best.d)) best = { b, d, dn: vbNext(b).distanceTo(H) }; }
     // 提早按也可以：0.6 秒內球進到手邊，在離手最近的那一下揮（下一格就會變遠＝現在打，不會讓球跑過手再拉回來）
-    if (best && ((s.prev != null && best.d > s.prev + 1e-3) || best.dn >= best.d - 1e-4 || s.t > 0.6)) { vbHitAttack(best.b, best.d, s.tip); s.done = true; s.doneT = s.t; pose = 'swing'; }
+    if (best && ((s.prev != null && best.d > s.prev + 1e-3) || best.dn >= best.d - 1e-4 || s.t > 0.6)) { vbHitAttack(best.b, best.d, s.tip, s.chg); s.done = true; s.doneT = s.t; pose = 'swing'; }
     else if (best) s.prev = best.d;
     else if (s.t > 0.62) { s.done = true; s.doneT = s.t; pose = 'swing'; if (balls.some((b) => b.m.position.distanceTo(H) < 2.4)) toast('揮空了：等「攻擊！」出現（球會發亮）再按左鍵', 1500); }
   }
@@ -8994,12 +9055,13 @@ function vbShotVel(p, tx, tz, spd) {
   let lo = 0.08, hi = Tmin; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (V(m).length() > spd) lo = m; else hi = m; }
   return V(hi);
 }
-function vbHitAttack(b, d, tip) {
+function vbHitAttack(b, d, tip, chg = null) {
   const pb = b.m.position.clone(), H = vbHand(), dy = pb.y - H.y, air = !!walk.air, ct = vbCourt(), p = H.clone().add(pb.clone().sub(H).setLength(Math.min(pb.distanceTo(H), 0.12)));   // 球貼在手掌前面出去
   let q = 1 - (Math.max(0, d - 0.35) / (VB_REACH.atk - 0.35)) * 0.5, note = '';   // 手離球 0.35 m 以內都算打正
   if (dy < -0.6) { q *= 0.72; note = '打晚了'; } else if (dy > 0.45) { q *= 0.85; note = '打早了'; }
-  if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air };
-  const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  const C = air && !tip ? vbChargeOf(chg == null ? 0.55 : chg) : null;   // 蓄力（沒有蓄力的手機按鈕＝中等力道）
+  if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air, chg, zone: C && C.zone, pw: C && C.pw };
+  const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
   // 深淺：平視打到網後 6.6 m，越往下看落點越近、越釘（往下看約 35 度＝網後 2 m）；按著 S 是 3.4 m 短斜線；吊球落在網後 1.5～2.5 m
   const down = clamp((-walk.pitch - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
   const depth = tip ? 1.5 + Math.random() : Math.min(walk.keys.has('s') || walk.keys.has('arrowdown') ? 3.4 : 6.6, 6.6 - 4.6 * down);
@@ -9008,19 +9070,21 @@ function vbHitAttack(b, d, tip) {
     const [lx] = toLocalOf(ct.c, walk.x, walk.z), [ax] = toLocalOf(ct.c, walk.x + fx, walk.z + fz), dlx = ax - lx;
     if (dlx * -Math.sign(lx) > 0.12) dist = Math.min(20, (Math.abs(lx) + depth) / Math.abs(dlx));
   }
-  const staF = staPay(tip ? 'tip' : air ? 'spike' : 'hit');
-  let spd = (tip ? 6 : air ? 16 + 12 * q : 11 + 6 * q) * (tip ? 1 : 0.6 + 0.4 * staF);   // 累了扣得比較慢（最低約九成）
+  if (C && C.err) dist = Math.max(1, dist + rkGauss() * C.err * 1.3);   // 越用力落點越飄（深淺）
+  const staF = staPay(tip ? 'tip' : air ? 'spike' : 'hit', C ? C.sta : 1);
+  let spd = (tip ? 6 : air ? 16 + 12 * q : 11 + 6 * q) * (tip ? 1 : 0.6 + 0.4 * staF) * (C ? C.pw : 1);   // 累了扣得比較慢（最低約九成）；輕扣約六成五的力道
   const pep = vbPep(), pd = pep ? Math.hypot(pep.x - p.x, pep.z - p.z) : 0;
   if (pep && ((pep.x - p.x) * fx + (pep.z - p.z) * fz) / (pd || 1) > 0.85) { dist = pd + 0.5; spd = Math.min(spd, 15); }   // 對碰：大致對著陪練打，球就打向他（他接得到的力道）
   // 吊球：往上一點的軟弧線，從攔網手上面過去
   let v = tip ? (() => { const tx = p.x + fx * dist, tz = p.z + fz * dist, T = 0.8 + 0.08 * dist; return new THREE.Vector3((tx - p.x) / T, (BALL_R - p.y) / T + 4.9 * T, (tz - p.z) / T); })() : vbShotVel(p, p.x + fx * dist, p.z + fz * dist, spd);
   // 過網：有打好（品質 0.6 以上）又不是刻意往下壓，就先打深一點（球速不變，跟 AI 一樣），還不夠才放慢；
   //   刻意往下壓（往下看）只幫你往後推一點點——擊球點太低、離網太遠還硬壓就會掛網；沒打好的球照樣會掛網
-  if (ct && q >= 0.6 && !pep) {
+  if (ct && q >= 0.6 && !pep && !(C && C.err > 0.5)) {   // 用力過猛：不幫你抬過網
     const netY = (vv) => { for (let t = 0.01; t < 2; t += 0.01) { const x = p.x + vv.x * t, z = p.z + vv.z * t, [l] = toLocalOf(ct.c, x, z); if (Math.sign(l) !== (Math.sign(ct.lx) || 1)) return p.y + vv.y * t - 4.9 * t * t; } return 99; };
     let sp2 = spd; const lim = steep ? 2 : 12;
     for (let i = 0; i < lim && !tip && netY(v) < NETS[state.net].h + BALL_R + 0.06; i++) { if (i < 6 || steep) dist += 0.5; else sp2 *= 0.88; v = vbShotVel(p, p.x + fx * dist, p.z + fz * dist, sp2); }
   }
+  if (C && C.err > 0.3) v.y += rkGauss() * (C.err - 0.3) * 1.2;   // 用力過猛：出手角度也亂掉（打太高出界、太低掛網）
   vbMine(b);
   b.spike = ct ? { c: ct.c, sg: Math.sign(ct.lx) || 1 } : null;
   vbLaunch(b, p, v, tip ? 'tip' : air ? 'spike' : 'hit', q);
@@ -9035,7 +9099,8 @@ function vbHitAttack(b, d, tip) {
   }
   vbFx(b, q);
   recHit({ x: p.x, y: p.y, z: p.z, v: v.length(), by: NET.me || 'me', kind: tip ? 'tip' : air ? 'spike' : 'hit' });
-  toast(tip ? '吊球！' : q >= 0.9 ? (air ? '完美扣殺！' : '漂亮的下手攻擊') : note ? `${note}，球偏了一點` : air ? '扣！' : '攻擊', 1200);
+  const zt = C ? { sweet: '完美蓄力！', over: '用力過猛，球失控了', late: '蓄過頭一點', light: '輕扣', mid: '' }[C.zone] : '';
+  toast(tip ? '吊球！' : C && C.zone === 'over' ? zt : note ? `${note}，球偏了一點` : q >= 0.9 ? (air ? (C && C.zone === 'sweet' ? '完美蓄力！重扣' : zt ? `${zt}・漂亮` : '完美扣殺！') : '漂亮的下手攻擊') : zt || (air ? '扣！' : '攻擊'), 1200);
 }
 // ---- 接球（V）：提早按，球進到手臂前面時自動接；看球在不在身體正前方、高度、來球速度、有沒有面向舉球區
 function vbReceive() {
@@ -9157,7 +9222,7 @@ function vbSetStep() {
     if (!best || cost < best.cost) best = { b, cost, cn: costOf(vbNext(b)) };
   }
   if (!best) { s.prev = null; return; }
-  if ((s.prev != null && best.cost > s.prev + 1e-3) || best.cn == null || best.cn >= best.cost - 1e-4 || best.b.m.position.y < cy - 0.4) { walk.setQ = null; const sq = clamp(1 - best.cost / 1.1, 0, 1); vbDoSet(best.b, s.n, sq); vbFx(best.b, sq); }
+  if ((s.prev != null && best.cost > s.prev + 1e-3) || best.cn == null || best.cn >= best.cost - 1e-4 || best.b.m.position.y < cy - 0.4) { walk.setQ = null; const sq = clamp(1 - best.cost / 1.1, 0, 1); vbDoSet(best.b, s.n, sq, best.b.m.position.y - cy); vbFx(best.b, sq); }
   else s.prev = best.cost;
 }
 // 三個攻擊點（球場座標）：前＝你面向的那一側（沿著網子）；面向網子正中間時，前＝左邊的 4 號位
@@ -9177,8 +9242,8 @@ function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {
   recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'set' });
   toast(`${who}${['', '舉到 4 號位', '快攻（中間）', '舉到 2 號位', '舉到後排中間', '老3（右邊後排）'][n] || ''}：跑到黃圈、起跳、按左鍵`, 1800);
 }
-function vbDoSet(b, n, q = 0.9) {
-  const pep = vbPep();
+function vbDoSet(b, n, q = 0.9, hy = 0.3) {
+  const pep = vbPep(); b.setFault = null;
   if (pep) {   // 對碰：不管按 1～4，都舉給陪練（他會打你）
     const [hx, hz] = vbFwd(), hp = new THREE.Vector3(walk.x + hx * 0.28, camera.position.y + 0.3, walk.z + hz * 0.28), cp = b.m.position.clone().lerp(hp, 0.7), D = Math.hypot(pep.x - cp.x, pep.z - cp.z), T = clamp(0.9 + D * 0.1, 1.1, 1.6), e = (1 - q) * 1.6;
     const tx = pep.x + rkGauss() * e, tz = pep.z + rkGauss() * e;
@@ -9196,7 +9261,10 @@ function vbDoSet(b, n, q = 0.9) {
   const [hx, hz] = vbFwd(), hp = new THREE.Vector3(walk.x + hx * 0.28, camera.position.y + 0.3, walk.z + hz * 0.28), cp = b.m.position.clone().lerp(hp, 0.7);
   vbMine(b); pose = n === 3 ? 'setBack' : 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05; staPay('set');
   if (ct) { const sg = Math.sign(ct.lx) || 1, [ax, az] = toWorldOf(ct.c, 0, 0), [bx, bz] = toWorldOf(ct.c, 0, sg); walk.turn = { yaw: Math.atan2(-(bx - ax), -(bz - az)), t: 0.4 }; }   // 面向 4 號位
+  // 時機沒抓好（球離額頭前上方那個點太遠）：兩手沒同時碰到＝連擊（球會轉）；球太低、在手上停太久＝持球——比賽中會被吹
+  const pf = clamp((0.5 - q) * 1.6, 0, 0.6); b.setFault = Math.random() < pf ? (hy < -0.3 ? 'held' : 'double') : null;
   vbSendSet(b, tx, tz, ty, T, n, '', cp, q);
+  if (b.setFault) toast(b.setFault === 'held' ? '持球！球太低、在手上停太久（比賽會被吹）' : '連擊！兩手沒同時碰到，球在轉（比賽會被吹）', 1800);
   vmOnTouch(b, vmMe(), 'set');
 }
 // 別人舉過來的球：算出它經過 2.95 m 的地方，標成攻擊點
@@ -9599,7 +9667,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
     <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">V 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中滑鼠左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">V 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中按住滑鼠左鍵蓄力、放開扣球（金色格最強最準）、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vmStart(c, sg, mateId, opps = []) {
@@ -9712,6 +9780,7 @@ function vmOnTouch(b, id, kind) {
     VM.touch.n++; VM.touch.last = id; VM.touch.blk = false;
     if (VM.touch.n > 3) { vmPoint(1 - team, '四次擊球（一隊最多碰三次）'); return; }
   } else { VM.touch = { team, n: block ? 0 : 1, last: id, blk: block }; if (block) VM.poss[team] = null; }
+  if (b.setFault) { const f = b.setFault; b.setFault = null; if (kind === 'set') { vmPoint(1 - team, f === 'held' ? `持球（${vmName(id)}舉球時球在手上停太久）` : `連擊（${vmName(id)}舉球兩手沒同時碰到）`); return; } }
   if (!block && VM.six) {   // 6 對 6：第一球誰接都好，舉球員（他接了就換舉對／前排的人）舉；舉出去的球照落點找攻擊手
     let P = VM.poss[team]; if (!P) P = VM.poss[team] = { stage: 0, passer: id, setter: null, attacker: null };
     if (VM.touch.n === 1) { P.passer = id; P.setter = vm6SetterFor(team, id); P.attacker = null; } else if (VM.touch.n === 2) { P.setter = id; P.attacker = vm6AttackerFor(team, b, id); }
@@ -10648,7 +10717,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), chgStart: () => vbChargeStart(), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy) => vbDoSet(b, n, q, hy), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
