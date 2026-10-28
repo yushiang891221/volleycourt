@@ -9147,16 +9147,19 @@ function vbDoReceive(o, dive) {
   if (dive) { q *= 0.8; note = note || '撲救'; }
   else if (p.y < 0.4) { q *= 0.75; note = note || '太低了'; } else if (p.y > 1.25) { q *= 0.8; note = note || '太高（胸口接的）'; }
   if (vin > 12) { q *= Math.max(0.45, 1 - (vin - 12) / 30); if (vin > 18) note = note || '球太重'; }
-  // 目標：自己這邊網前 1.1 m、偏右 1.2 m 的舉球區；沒有面向那裡，球會順著手臂平台的方向偏過去
-  const ct = vbCourt(), pep = vbPep(); let tx, tz, ty = 2.4, T = 1.25;
+  // 目標：自己這邊網前 1.1 m、偏右 1.2 m 的舉球區。身體面向球就好，手臂平台可以斜過去送向舉球區：
+  //   跟面向差 45 度以內最準，斜到 90 度左右照樣送得到、只是落點散一點；再多（背對舉球區、球往後噴）才扣分，球也會順著平台方向偏過去
+  const ct = vbCourt(), pep = vbPep(); let tx, tz, ty = 2.4, T = 1.25, tilt = 0;
   if (pep) { tx = pep.x; tz = pep.z; ty = 2.5; T = clamp(0.8 + Math.hypot(tx - walk.x, tz - walk.z) * 0.1, 1.1, 1.7); }   // 對碰：墊回給陪練（他會舉給你）
   if (pep || ct) {
     if (!pep) { const sg = Math.sign(ct.lx) || 1; [tx, tz] = toWorldOf(ct.c, sg * 1.8, -sg * 1.2); ty = 2.3; }   // 傳到網前 1.8 m、2.3 m 高（舉球員在那裡等），球再往前一點就落地，不會飄到網下
     const ddx = tx - walk.x, ddz = tz - walk.z, dd = Math.hypot(ddx, ddz) || 1, cos = (ddx * fx + ddz * fz) / dd;
-    if (cos < 0.4) { q *= 0.55 + 0.45 * Math.max(0, cos + 0.6); note = note || (pep ? '沒有面向陪練' : '沒有面向舉球區'); const mix = clamp(0.6 - cos, 0, 1) * 0.6; tx = tx * (1 - mix) + (walk.x + fx * dd) * mix; tz = tz * (1 - mix) + (walk.z + fz * dd) * mix; }
+    tilt = clamp((0.7 - cos) / 0.8, 0, 1);   // 平台斜的程度：0＝正對（45 度內）、1＝斜約 96 度
+    if (cos < -0.1) { q *= 0.55 + 0.45 * clamp((cos + 0.75) / 0.65, 0, 1); note = note || (pep ? '背對陪練，平台斜太多' : '背對舉球區，平台斜太多'); const mix = clamp(-0.1 - cos, 0, 1) * 0.6; tx = tx * (1 - mix) + (walk.x + fx * dd) * mix; tz = tz * (1 - mix) + (walk.z + fz * dd) * mix; }
   } else { tx = walk.x + fx * 6; tz = walk.z + fz * 6; ty = 1.4; }
+  if (window.__gym) window.__gym.lastRecv = { q: +q.toFixed(2), note, tilt: +tilt.toFixed(2) };
   if (q < 0.32) { const a = walk.yaw + (Math.random() - 0.5) * 2.2, L = 3 + Math.random() * 5; tx = walk.x - Math.sin(a) * L; tz = walk.z - Math.cos(a) * L; ty = 0.3; T = 0.9; }
-  else { const e = (1 - q) * 2.4; tx += rkGauss() * e; tz += rkGauss() * e; T = 1.25 + (1 - q) * 0.35 * (Math.random() - 0.3); }
+  else { const e = (1 - q) * 2.4 + 0.3 * tilt; tx += rkGauss() * e; tz += rkGauss() * e; T = 1.25 + (1 - q) * 0.35 * (Math.random() - 0.3); }
   // 接球的落點留在自己這邊（離網至少 0.9 m）：偏掉也是偏在自己場上，不會平平的從網子下面飄過去
   if (ct && !pep) { const sg = Math.sign(ct.lx) || 1, [lx, lz] = toLocalOf(ct.c, tx, tz); if (lx * sg < 0.9) { [tx, tz] = toWorldOf(ct.c, sg * (0.9 + Math.random() * 0.8), lz); if (ty < 1.5) { ty = 1.8; T = 1.1; } } }
   const plat = new THREE.Vector3(walk.x + fx * (dive ? 0.95 : 0.42), dive ? Math.max(0.15, p.y) : 0.72 + (walk.air ? walk.air.y : 0), walk.z + fz * (dive ? 0.95 : 0.42)), cp = p.clone().lerp(plat, 0.6);   // 前臂平台
