@@ -787,8 +787,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>C</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>C</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>C</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>C</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>V</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>T</kbd>第一／第三人稱</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
+      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>V</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>V</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -7909,7 +7909,7 @@ function renderUseBar(c) {
   if (rc && !walk.rkHint.has(rc.k)) { walk.rkHint.add(rc.k); toast(`這裡可以打${SPORT[rc.k]}：按上方的「${rc.k === 'bd' ? '🏸' : '🥒'} 開打${SPORT[rc.k]}」，跟 AI 或朋友對打`, 3500); }
   bar.innerHTML = (comp ? `<span>${esc(labelOf(c))}要打</span>${[def.court, ...c.extra].map((k) => `<button type="button" data-use="${k}" aria-pressed="${use === k}"><i style="background:${k === def.court ? '#fff' : EXTRA_COL[k]}"></i>${SPORT[k]}</button>`).join('')}<button type="button" data-use="none" aria-pressed="${use === 'none'}">收起來</button>` : `<span>${esc(c ? labelOf(c) : rkLabel(rc))}</span>`)
     + (racket ? `<button type="button" class="rk-go" data-rkopen="1">${rc.k === 'bd' ? '🏸' : '🥒'} 開打${SPORT[rc.k]}</button>` : '')
-    + (vbc ? (VB.npc ? `<button type="button" data-npc="off" aria-pressed="true">${VB.npc.mode === 'pepper' ? '對碰' : '陪練舉球'}收工</button>` : `<button type="button" data-npc="set" title="他站在網前，你把球拋給他（F）或接到網前（C），他舉給你攻擊">🙋 陪練舉球</button><button type="button" data-npc="pepper" title="兩個人對碰：你拋給他、他墊給你；你舉給他他就打你、你扣他他就接起來給你">🤝 陪練對碰</button>`) + `<button type="button" class="rk-go" data-vmopen="2" title="2 對 2 沙排：你＋隊友（真人或 AI）對兩個人">🏖️ 2 對 2</button><button type="button" class="rk-go" data-vmopen="6" title="6 對 6 室內：選位置、照輪轉表輪轉、正式規則">🏐 6 對 6</button>` : '');
+    + (vbc ? (VB.npc ? `<button type="button" data-npc="off" aria-pressed="true">${VB.npc.mode === 'pepper' ? '對碰' : '陪練舉球'}收工</button>` : `<button type="button" data-npc="set" title="他站在網前，你把球拋給他（F）或接到網前（V），他舉給你攻擊">🙋 陪練舉球</button><button type="button" data-npc="pepper" title="兩個人對碰：你拋給他、他墊給你；你舉給他他就打你、你扣他他就接起來給你">🤝 陪練對碰</button>`) + `<button type="button" class="rk-go" data-vmopen="2" title="2 對 2 沙排：你＋隊友（真人或 AI）對兩個人">🏖️ 2 對 2</button><button type="button" class="rk-go" data-vmopen="6" title="6 對 6 室內：選位置、照輪轉表輪轉、正式規則">🏐 6 對 6</button>` : '');
   bar.hidden = false;
 }
 function setCourtUse(c, k) {
@@ -7932,7 +7932,7 @@ addEventListener('keydown', (e) => {
   if (walk.paused) return;
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on) vmFreeBall(); else doInteract(); return; }
-  if ((k === 'c' || k === 'q') && !e.repeat) { e.preventDefault(); vbReceive(); return; }
+  if ((k === 'v' || k === 'q') && !e.repeat && !e.ctrlKey && !e.metaKey) { e.preventDefault(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
   if (['1', '2', '3', '4', '5'].includes(k) && !e.repeat) { e.preventDefault(); vbSet(Number(k)); return; }
   if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && (VM.on || vbCourt())) startJumpServe(); else vbJump('attack'); } return; }
   if (k === 'b' && !e.repeat) { e.preventDefault(); vbJump('block'); return; }
@@ -8031,7 +8031,7 @@ renderer.domElement.addEventListener('pointercancel', (e) => { if (walk.look && 
   const key = (k, type = 'keydown') => dispatchEvent(new KeyboardEvent(type, { key: k }));
   const ACT = {
     spike: () => key('v'),
-    bump: () => key('c'),
+    bump: () => key('v'),
     block: () => key('b'),
     set1: () => key('1'), set2: () => key('2'), set3: () => key('3'), set4: () => key('4'),
     pass: () => key('f'),
@@ -8675,7 +8675,7 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
   b.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-// ---------------------------------------------------------------- 排球自由操控：W 助跑、空白鍵起跳（跑越快跳越高、會往前衝）、空中按 V 攻擊、B 攔網、C 接球、1／2／3 舉球
+// ---------------------------------------------------------------- 排球自由操控：W 助跑、空白鍵起跳（跑越快跳越高、會往前衝）、空中按 V 攻擊、B 攔網、V 接球、1／2／3 舉球
 // 不再是固定動畫：手真的碰得到球才打得到；攻擊方向＝你面向的方向（直線、斜線自己瞄），按著 S 是往下壓的短斜線、Shift＋V 吊球
 // 接球微輔助：對方打過來、球會落在你附近時，地上出現落點圈，身體會被輕輕帶過去（自己按反方向就不帶）
 // 舉球 1 前舉（4 號位）、2 中間快攻、3 後舉（2 號位）：舉出去一定會到那個攻擊點，難的是先跑到球下面
@@ -9036,7 +9036,7 @@ function vbHitAttack(b, d, tip) {
   recHit({ x: p.x, y: p.y, z: p.z, v: v.length(), by: NET.me || 'me', kind: tip ? 'tip' : air ? 'spike' : 'hit' });
   toast(tip ? '吊球！' : q >= 0.9 ? (air ? '完美扣殺！' : '漂亮的下手攻擊') : note ? `${note}，球偏了一點` : air ? '扣！' : '攻擊', 1200);
 }
-// ---- 接球（C）：提早按，球進到手臂前面時自動接；看球在不在身體正前方、高度、來球速度、有沒有面向舉球區
+// ---- 接球（V）：提早按，球進到手臂前面時自動接；看球在不在身體正前方、高度、來球速度、有沒有面向舉球區
 function vbReceive() {
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   if (walk.hold || skill.mode) { skillPress('bump'); return; }
@@ -9183,7 +9183,7 @@ function vbDoSet(b, n, q = 0.9) {
     const tx = pep.x + rkGauss() * e, tz = pep.z + rkGauss() * e;
     vbMine(b); pose = 'setPush'; hands.visible = true; walk.flash = 0.5; skill.dip = 0.05; b.spike = null; staPay('set');
     vbLaunch(b, cp, new THREE.Vector3((tx - cp.x) / T, (2.6 - cp.y) / T + 4.9 * T, (tz - cp.z) / T), 'set', q);
-    recHit({ x: cp.x, y: cp.y, z: cp.z, v: b.v.length(), kind: 'set' }); toast('舉給陪練：他會打過來，準備接（C）', 1300); return;
+    recHit({ x: cp.x, y: cp.y, z: cp.z, v: b.v.length(), kind: 'set' }); toast('舉給陪練：他會打過來，準備接（V）', 1300); return;
   }
   const ct = vbCourt(); let tx, tz, ty = 2.95, T = 1.45;
   const mbq = VM.six && n === 2 ? VM.team[vmTeamOf(vmMe())].map((id) => VM.ai.get(id)).find((q) => q && VM.role[q.id] === 'MB' && vm6Front(q.id) && (q.y > 0.02 || q.vy > 0)) : null;
@@ -9279,7 +9279,7 @@ function vbNpcToggle(mode) {
   const el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = mode === 'pepper' ? '陪練對碰' : '陪練舉球'; const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
   VB.npc = { mode, av, tag, ch: npcCh, c: ct.c, sg, x: home[0], z: home[1], home, vx: 0, vz: 0, up: 0, n: 0 };
   if (mode === 'pepper') { const ax = home[0] - walk.x, az = home[1] - walk.z; walk.turn = { yaw: Math.atan2(-ax, -az), t: 0.4 }; }
-  toast(mode === 'pepper' ? '對碰：拿球面向他按 F 拋給他 → 他墊給你；你舉給他（1）他就打你、你扣他（左鍵）他就接起來給你、你墊給他（C）他就舉給你' : '陪練來了：把球拋給他（F）或接到網前（C），他會舉給你。你站左邊就前舉、靠近他就快攻、站右邊就後舉', 6000);
+  toast(mode === 'pepper' ? '對碰：拿球面向他按 F 拋給他 → 他墊給你；你舉給他（1）他就打你、你扣他（左鍵）他就接起來給你、你墊給他（V）他就舉給你' : '陪練來了：把球拋給他（F）或接到網前（V），他會舉給你。你站左邊就前舉、靠近他就快攻、站右邊就後舉', 6000);
 }
 function vbPep() { return VB.npc && VB.npc.mode === 'pepper' && !VM.on ? VB.npc : null; }
 function vbNpcStep(dt) {
@@ -9361,7 +9361,7 @@ function vbPepHit(n, b, act, C) {
   if (act === 'set') vbMarkSet(b);
   n.up = act === 'hit' ? 0.45 : 0.4; n.upPose = n.dive ? 'dive' : PEP[act].pose; n.n++;
   recHit({ x: cp.x, y: cp.y, z: cp.z, v: v.length(), kind: PEP[act].kind });
-  const say = { dig: '陪練：防起來了！', bump: '陪練墊給你', set: '陪練舉給你：起跳扣他（左鍵）', hit: '陪練打過來了：接起來（C）' }[act];
+  const say = { dig: '陪練：防起來了！', bump: '陪練墊給你', set: '陪練舉給你：起跳扣他（左鍵）', hit: '陪練打過來了：接起來（V）' }[act];
   toast(`${say}（第 ${n.n} 下）`, 1300);
 }
 function vbNpcSet(b) {
@@ -9598,7 +9598,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
     <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">C 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中滑鼠左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">V 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中滑鼠左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vmStart(c, sg, mateId, opps = []) {
@@ -10099,7 +10099,7 @@ function vm6Menu(c, sg) {
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
     <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：每個動作耗多少、做自己專長少耗多少、回多快都可以在「⚙️ 體力設定」改。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
     <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">C 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">V 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vm6Start(c, sg, asg = {}) {
