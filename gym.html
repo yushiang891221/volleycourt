@@ -7358,6 +7358,11 @@ const AVP = {
   sideLunge: { sh: [[-1.05, -0.1], [-1.05, -0.32]], el: [0.02, 0.02], hip: [1.05, 0.15], kn: [1.85, 0.05], hab: [0.75, 0.65], sp: 0.72, tw: -0.85, arm: 0, gait: 0 },
   sideFall: { sh: [[-3.0, 0.35], [-0.9, 0.65]], el: [0.05, 1.2], hip: [1.05, 0.65], kn: [1.45, 1.05], hab: [0.3, 0.3], sp: 0.22, tw: 0.3, arm: 0, gait: 0 },
   sideRoll: { sh: [[-2.4, 0.95], [-1.6, 0.95]], el: [0.3, 0.6], hip: [1.75, 1.55], kn: [1.0, 1.35], hab: [0.1, 0.25], sp: -0.1, tw: 0.1, arm: 0, gait: 0 },
+  // 照影片補的：魚躍起步的低弓箭步（右腳在前蹲很低、左腳往後伸直、右手往球伸低）；滾翻的側躺（球那側的手沿著地板往頭上伸）、腳翻過肩膀時縮成一團、最後跪著雙手撐地
+  diveLunge: { sh: [[-1.45, 0.08], [-0.85, 0.22]], el: [0.05, 0.35], hip: [1.25, -0.25], kn: [1.75, 0.18], hab: [0.06, 0.06], sp: 0.55, tw: 0, arm: 0, gait: 0 },
+  sideFlat: { sh: [[-3.05, 0.25], [-0.55, 0.55]], el: [0.05, 0.5], hip: [0.35, 0.2], kn: [0.35, 0.45], hab: [0.1, 0.15], sp: 0.1, tw: 0.2, arm: 0, gait: 0 },
+  sideTuck: { sh: [[-2.1, 0.55], [-1.7, 0.75]], el: [1.0, 1.2], hip: [2.0, 2.0], kn: [2.1, 2.1], hab: [0.12, 0.12], sp: 0.55, tw: 0, arm: 0, gait: 0 },
+  kneel: { sh: [[-1.25, 0.22], [-1.25, 0.22]], el: [0.15, 0.15], hip: [1.45, 1.45], kn: [2.3, 2.3], hab: [0.14, 0.14], sp: 0.45, tw: 0, arm: 0, gait: 0 },
   // 互動：擊掌（舉手等、拍下去）、嘲諷（挺胸、雙手掌心朝上比「來啊」）
   hi5Up: { sh: [[-2.95, 0.22], [-0.25, 0.18]], el: [0.12, 0.45], hip: [0.05, 0.05], kn: [0.1, 0.1], sp: -0.06, tw: 0.1, arm: 0, gait: 0.6 },
   hi5Two: { sh: [[-2.9, 0.2], [-2.9, 0.2]], el: [0.75, 0.75], hip: [0.08, 0.08], kn: [0.18, 0.18], sp: 0.0, tw: 0, arm: 0, gait: 0.6 },   // 雙手舉到面前上方、靠過去
@@ -7380,16 +7385,24 @@ const AVP_MIR = new Map();
 function avMirror(P) { if (AVP_MIR.has(P)) return AVP_MIR.get(P); const sw = (a) => (a ? [a[1], a[0]] : a), M = { ...P, sh: sw(P.sh), el: sw(P.el), hip: sw(P.hip), kn: sw(P.kn), hab: sw(P.hab), tw: -(P.tw || 0) }; AVP_MIR.set(P, M); return M; }
 // 撲救的姿勢：dir＝撲出去的方向（自己身體的角度：0＝正前方、−π/2＝右手邊、π/2＝左手邊）；down＝已經倒在地上
 const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
-// 撲救動作照時間換（t＝撲出去幾秒）：魚躍 0～0.3 飛、0.3～0.45 手撐地、之後胸口滑；側接 0～0.3 弓箭步、0.3～0.55 側倒坐地、之後往後滾
-function avDiveAnim(dir, t) {
-  const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, M = (p) => (side && sn > 0 ? avMirror(p) : p), ph = (a, b) => clamp((t - a) / (b - a), 0, 1);
-  if (!side) return t < 0.3 ? AVP.diveFly : t < 0.45 ? avMix(AVP.diveFly, AVP.diveCatch, ph(0.3, 0.4)) : avMix(AVP.diveCatch, AVP.diveSlide, ph(0.45, 0.65));
-  return t < 0.3 ? M(AVP.sideLunge) : t < 0.55 ? avMix(M(AVP.sideLunge), M(AVP.sideFall), ph(0.3, 0.42)) : avMix(M(AVP.sideFall), M(AVP.sideRoll), ph(0.55, 0.8));
+// 撲救動作的關鍵格（照實際影片）：[秒, 髖往撲的方向移多少, 髖多高, 往前倒（弧度）, 往撲的那側倒（弧度）, 姿勢]；中間平滑接
+//   魚躍：低弓箭步往前倒 → 貼地平飛、腳往後上翹 → 手撐地（頭比腳低、腳翹高）→ 胸口滑出去 → 趴著準備撐起來
+//   左右滾翻：側弓箭步、雙手往球那側伸到地上 → 坐到球那側屁股上、手伸長 → 側躺 → 腳從肩膀上方翻過去（整個人往球那側翻一圈）→ 跪著雙手撐地 → 站起來
+const DIVE_KF = {
+  fwd: [[0, 0, 0.98, 0, 0, 'idle'], [0.15, 0.1, 0.6, 0.75, 0, 'diveLunge'], [0.3, -0.55, 0.42, 1.45, 0, 'diveFly'], [0.45, -0.8, 0.4, 1.8, 0, 'diveCatch'], [0.7, -0.9, 0.24, 1.62, 0, 'diveSlide'], [1.0, -0.95, 0.17, 1.56, 0, 'down']],
+  side: [[0, 0, 0.98, 0, 0, 'idle'], [0.22, 0.12, 0.55, 0.35, 0.35, 'sideLunge'], [0.42, 0.2, 0.22, 0.15, 1.15, 'sideFall'], [0.6, 0.25, 0.16, -0.15, 1.55, 'sideFlat'], [0.8, 0.35, 0.5, 0.0, 3.0, 'sideTuck'], [0.98, 0.45, 0.45, 0.2, 4.6, 'sideTuck'], [1.15, 0.55, 0.5, 0.4, Math.PI * 2, 'kneel']],
+};
+function avDiveKey(dir, t) {
+  const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, K = side ? DIVE_KF.side : DIVE_KF.fwd, M = (p) => (side && sn > 0 ? avMirror(AVP[p]) : AVP[p]);
+  let i = 0; while (i < K.length - 2 && t >= K[i + 1][0]) i++;
+  const a = K[i], b = K[i + 1], u0 = clamp((t - a[0]) / (b[0] - a[0]), 0, 1), u = u0 * u0 * (3 - 2 * u0), L = (j) => a[j] + (b[j] - a[j]) * u;
+  return { side, sn, d: L(1), y: L(2), pitch: L(3), roll: L(4), pose: u >= 1 ? M(b[5]) : avMix(M(a[5]), M(b[5]), u) };
 }
 function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, P = down ? (side ? AVP.downSide : AVP.down) : side ? AVP.sideDive : AVP.dive; return side && sn > 0 ? avMirror(P) : P; }
 // 套用姿勢：姿勢本身（接球、舉球…）每個關節平滑靠過去；走路／跑步的步伐另外疊上去（不會被平滑吃掉，步伐才有力）
 //   步伐：照速度在走路和跑步之間漸變——擺腿幅度、膝蓋在擺盪期收起來、支撐腳微彎緩衝、腳掌貼地／後腳蹬地踮腳尖
 //   手跟對側的腳一起擺（跑步手肘彎 90 度）；骨盆和肩膀反向扭轉；加速時整個人前傾、轉彎時往內倒；站著時呼吸、重心左右微移
+const DIVE_HV = new THREE.Vector3();
 function avDrive(av, P, k, sp = 0, air = false) {
   if (!av.rig) return;
   const now = performance.now(), dt = Math.min(0.1, Math.max(0.001, (now - (av._t || now - 16)) / 1000)); av._t = now;
@@ -7399,7 +7412,8 @@ function avDrive(av, P, k, sp = 0, air = false) {
   av._fa = (av._fa || 0) + (fT - (av._fa || 0)) * (1 - Math.exp(-dt * (fT > (av._fa || 0) ? 9 : 3.2)));
   if (F) { av._fd = F.d; av._ft = F.t != null ? F.t : (av._ft || 0) + dt; }
   const fa = av._fa, fd = av._fd || 0, ft = av._ft || 0;
-  if (fa > 0.01) { const D = avDiveAnim(fd, ft); P = fa > 0.995 ? D : avMix(P, D, fa); k = Math.max(k, 0.35); }
+  const DK = fa > 0.01 ? avDiveKey(fd, ft) : null;
+  if (DK) { P = fa > 0.995 ? DK.pose : avMix(P, DK.pose, fa); k = Math.max(k, 0.35); }
   const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], shy: [...(P.shy || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
   const L = (a, b) => a + (b - a) * k;
   for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); B.shy[i] = L(B.shy[i], (P.shy || [0, 0])[i]); }
@@ -7427,19 +7441,22 @@ function avDrive(av, P, k, sp = 0, air = false) {
   // 身體：加速前傾、轉彎內倒（以腳底為軸）、骨盆扭轉；上身反向扭、往前傾；頭保持看前方
   const R = av.root, lean = air ? 0 : clamp(av._acc * 0.035, -0.12, 0.2) + 0.08 * w * on, bank = air ? 0 : clamp(-av._turn * v * 0.03, -0.2, 0.2), idle = 1 - on;
   av._lean = (av._lean || 0) + (lean - (av._lean || 0)) * Math.min(1, dt * 8); av._bank = (av._bank || 0) + (bank + idle * 0.012 * Math.sin(now / 1400) - (av._bank || 0)) * Math.min(1, dt * 8);
-  // 撲救的身體（以腳為軸）：魚躍＝整個人飛出去接近水平、離地一點 → 手撐地、胸口貼地滑；腳往後移 1.1 m（手剛好伸到球）
-  //   側接＝往旁邊壓低成弓箭步（腿怎麼彎就蹲多低）→ 側倒坐到地上 → 往後滾成仰躺；起來時慢慢撐起
-  const sn = Math.sin(fd), side = Math.abs(sn) > 0.6, fph = (a, b) => clamp((ft - a) / (b - a), 0, 1); let ang, back = 0, fy, off, flat;
-  if (!side) { ang = 1.5; fy = ft < 0.3 ? 0.2 + 0.18 * Math.sin((Math.PI * ft) / 0.3) : 0.2 - 0.1 * fph(0.3, 0.55); off = 1.1; flat = 1; }
-  else { const a1 = fph(0.3, 0.42), a2 = fph(0.55, 0.8); ang = 0.48 + 0.77 * a1 - 0.7 * a2; back = 1.2 * a2; fy = 0.04 * a1 + 0.08 * a2; off = 0.35 + 0.45 * a1 + 0.15 * a2; flat = a1; }
-  R.rotation.x = av._lean * (1 - fa) + fa * (ang * Math.cos(fd) - back); R.rotation.z = av._bank * (1 - fa) - fa * ang * sn;
-  R.position.x = -sn * off * fa; R.position.z = -Math.cos(fd) * off * fa;
-  R.rotation.y = on * (0.08 + 0.06 * w) * Math.sin(av.gp);
+  // 撲救的身體：照關鍵格擺好髖的位置和身體的角度（魚躍往前倒、滾翻往球那側整圈翻過去），腳底不再當軸；起來時慢慢撐起
+  let rx = av._lean, rz = av._bank;
+  if (DK) {
+    const sg = Math.sign(DK.sn) || 1, dRoll = DK.side ? Math.atan2(Math.sin(DK.roll), Math.cos(DK.roll)) : 0;
+    const dx = DK.side ? DK.pitch : DK.pitch * Math.cos(fd), dz = DK.side ? -dRoll * sg : -DK.pitch * DK.sn;
+    rx = fa > 0.9 ? dx : av._lean * (1 - fa) + dx * fa; rz = fa > 0.9 ? dz : av._bank * (1 - fa) + dz * fa;
+  }
+  R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa), rz);
   av.spine.rotation.x = B.sp + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
   av.spine.rotation.y = B.tw - on * (0.16 + 0.1 * w) * Math.sin(av.gp);
-  av.head.rotation.x = -B.sp * 0.6 - R.rotation.x * 0.7 - 0.1 * w * on; av.head.rotation.z = -R.rotation.z * 0.6;
+  av.head.rotation.x = -B.sp * 0.6 - R.rotation.x * 0.7 * (1 - 0.6 * fa) - 0.1 * w * on; av.head.rotation.z = -R.rotation.z * 0.6 * (1 - fa);
   const drop = air ? 0 : Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1]));
-  R.position.y += (-drop * (1 - fa * flat) + fy * fa - R.position.y) * (1 - Math.exp(-dt * 22));
+  if (DK) {   // 髖要在關鍵格的位置：根節點（腳底）＝髖的位置 − 轉過的「腳底到髖」
+    const hp = DIVE_HV.set(0, av.hipH || 0.9, 0).applyEuler(R.rotation), tx = Math.sin(fd) * DK.d, tz = Math.cos(fd) * DK.d;
+    R.position.x = (tx - hp.x) * fa; R.position.z = (tz - hp.z) * fa; R.position.y = -drop * (1 - fa) + (DK.y - hp.y) * fa;
+  } else { R.position.x = 0; R.position.z = 0; R.position.y += (-drop - R.position.y) * (1 - Math.exp(-dt * 22)); }
 }
 // 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
 function avPoseOf(code, t = 0.5, ready = false) {
@@ -10309,7 +10326,7 @@ function vmAiRole(a, P, B, sd) {
       if (fast && Math.random() < L.miss * (onLine ? 0.7 : 1.3)) { a.reactAt = VM.t + 1.2; return; }   // 重扣沒接到
       if (fast && !onLine) {   // 沒對到球路：撲過去撈，球高高的落在自己附近（往場中間一點），讓隊友修正
         const dz = (B.z - a.z) * sd;
-        vmAiTouch(a, sd * clamp(Math.abs(a.x) - 0.5, 2.2, 7), a.z * 0.6, 1.0, 1.5, 0.8 + L.passErr, 'bump', Math.abs(dz) < 0.35 ? 10 : dz > 0 ? 11 : 12); a.swingT = 1.0; return;
+        vmAiTouch(a, sd * clamp(Math.abs(a.x) - 0.5, 2.2, 7), a.z * 0.6, 1.0, 1.5, 0.8 + L.passErr, 'bump', Math.abs(dz) < 0.35 ? 10 : dz > 0 ? 11 : 12); a.swingT = 1.25; return;
       }
       let tlx = sd * 1.8, tlz = VM.six ? -sd * 0.9 + (Math.random() - 0.5) * 1.2 : (Math.random() - 0.5) * 2, ty = 2.4, T = 1.35;   // 6 對 6 傳到舉球點（網前偏右）
       const d = vbHardDefl(vin, 1 - L.passErr * 0.5, onLine, B.vz, 0.6 + 0.6 * L.passErr);   // 重球被推走（站到位也會，程度越高越會卸力）
@@ -10756,7 +10773,7 @@ function vmRenderAi(dt) {
     const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && ((Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team)) || (VM.six && Pa.stage === 2 && Pa.attacker && Pa.attacker !== a.id && Pa.setter !== a.id && VM.touch.team === a.team));   // 6 對 6：隊友攻擊時，cover 的人蹲低準備救球
     let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
-    av.fall = P2 >= 10 && P2 <= 12 ? { a: 1, d: DIVE_D[P2 - 10], t: VM.host ? 1.0 - a.swingT : null } : null;   // 撲救：整個人往撲的方向倒
+    av.fall = P2 >= 10 && P2 <= 12 ? { a: 1, d: DIVE_D[P2 - 10], t: VM.host ? 1.25 - a.swingT : null } : null;   // 撲救：整個人往撲的方向倒
     avDrive(av, pz, kk, sp, a.y > 0.05);
   }
   vmStaRings();
