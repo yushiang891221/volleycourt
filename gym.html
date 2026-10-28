@@ -8686,9 +8686,9 @@ const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
 // 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
 const JUMP_G = 8.4;
 // 體力設定（百分比，比賽選單「⚙️ 體力設定」可以改，存在這台電腦；連線時大家照開局的人的設定）
-const STA_DEF = { sprint: 16, jump: 12, jserve: 12, block: 9, spike: 6, hit: 3, serve: 3, tip: 2, set: 2, bump: 1.5, dive: 30, spec: 30, regMove: 5, regStill: 8, regDead: 10 };
+const STA_DEF = { sprint: 21, jump: 15.5, jserve: 15.5, block: 11.5, spike: 8, hit: 4, serve: 4, tip: 2.6, set: 2.6, bump: 2, dive: 39, spec: 30, regMove: 5, regStill: 8, regDead: 10 };   // 每個動作比上一版多耗三成
 const STA_LBL = { sprint: '衝刺（每秒）', jump: '起跳攻擊', jserve: '跳發', block: '攔網起跳', spike: '扣球', hit: '站著打', serve: '發球', tip: '吊球', set: '舉球', bump: '接球', dive: '撲救', spec: '專職少耗', regMove: '比賽中跑動（每秒回）', regStill: '比賽中站著（每秒回）', regDead: '死球、等發球（每秒回）' };
-let STA_CFG = { ...STA_DEF }; try { Object.assign(STA_CFG, JSON.parse(localStorage.getItem('vb.stacfg') || '{}')); } catch (e) { /* ignore */ }
+let STA_CFG = { ...STA_DEF }; try { Object.assign(STA_CFG, JSON.parse(localStorage.getItem('vb.stacfg2') || '{}')); } catch (e) { /* ignore */ }
 // 6 對 6 專職：做自己位置專長的動作少耗（spec %）——舉球：舉球、二次球吊；大砲：扣、起跳、接球、撲救；舉對：扣、起跳、攔網；攔中：攔網、起跳（快攻）、扣
 const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP: ['spike', 'jump', 'block'], MB: ['block', 'jump', 'spike'] };
 function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
@@ -9000,8 +9000,9 @@ function vbHitAttack(b, d, tip) {
   if (dy < -0.6) { q *= 0.72; note = '打晚了'; } else if (dy > 0.45) { q *= 0.85; note = '打早了'; }
   if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air };
   const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-  // 深淺：預設打到網後 6.6 m；按著 S 往下壓（3.4 m 短斜線）；吊球落在網後 1.5～2.5 m
-  const depth = tip ? 1.5 + Math.random() : walk.keys.has('s') || walk.keys.has('arrowdown') ? 3.4 : 6.6;
+  // 深淺：平視打到網後 6.6 m，越往下看落點越近、越釘（往下看約 35 度＝網後 2 m）；按著 S 是 3.4 m 短斜線；吊球落在網後 1.5～2.5 m
+  const down = clamp((-walk.pitch - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
+  const depth = tip ? 1.5 + Math.random() : Math.min(walk.keys.has('s') || walk.keys.has('arrowdown') ? 3.4 : 6.6, 6.6 - 4.6 * down);
   let dist = depth;
   if (ct) {
     const [lx] = toLocalOf(ct.c, walk.x, walk.z), [ax] = toLocalOf(ct.c, walk.x + fx, walk.z + fz), dlx = ax - lx;
@@ -9013,12 +9014,12 @@ function vbHitAttack(b, d, tip) {
   if (pep && ((pep.x - p.x) * fx + (pep.z - p.z) * fz) / (pd || 1) > 0.85) { dist = pd + 0.5; spd = Math.min(spd, 15); }   // 對碰：大致對著陪練打，球就打向他（他接得到的力道）
   // 吊球：往上一點的軟弧線，從攔網手上面過去
   let v = tip ? (() => { const tx = p.x + fx * dist, tz = p.z + fz * dist, T = 0.8 + 0.08 * dist; return new THREE.Vector3((tx - p.x) / T, (BALL_R - p.y) / T + 4.9 * T, (tz - p.z) / T); })() : vbShotVel(p, p.x + fx * dist, p.z + fz * dist, spd);
-  // 有打好（品質 0.6 以上）就自動拉高一點、打深一點讓球過網；沒打好的球才會掛網
+  // 過網：有打好（品質 0.6 以上）又不是刻意往下壓，就先打深一點（球速不變，跟 AI 一樣），還不夠才放慢；
+  //   刻意往下壓（往下看）只幫你往後推一點點——擊球點太低、離網太遠還硬壓就會掛網；沒打好的球照樣會掛網
   if (ct && q >= 0.6 && !pep) {
     const netY = (vv) => { for (let t = 0.01; t < 2; t += 0.01) { const x = p.x + vv.x * t, z = p.z + vv.z * t, [l] = toLocalOf(ct.c, x, z); if (Math.sign(l) !== (Math.sign(ct.lx) || 1)) return p.y + vv.y * t - 4.9 * t * t; } return 99; };
-    // 先放慢（弧線拉高）讓球過網，還不夠才打深一點；這樣低點擊球不會被推到底線外
-    let sp2 = spd;
-    for (let i = 0; i < 12 && !tip && netY(v) < NETS[state.net].h + BALL_R + 0.06; i++) { if (i < 5) sp2 *= 0.86; else dist += 0.5; v = vbShotVel(p, p.x + fx * dist, p.z + fz * dist, sp2); }
+    let sp2 = spd; const lim = steep ? 2 : 12;
+    for (let i = 0; i < lim && !tip && netY(v) < NETS[state.net].h + BALL_R + 0.06; i++) { if (i < 6 || steep) dist += 0.5; else sp2 *= 0.88; v = vbShotVel(p, p.x + fx * dist, p.z + fz * dist, sp2); }
   }
   vbMine(b);
   b.spike = ct ? { c: ct.c, sg: Math.sign(ct.lx) || 1 } : null;
@@ -9938,7 +9939,8 @@ function vmBlockTest(b, h) {
     const off = Math.abs(lz - a.z), top = a.y + 2.85, netH = NETS[state.net].h;
     if (off > 0.75 + BALL_R || p.y > top + BALL_R || p.y < netH - 0.05) continue;
     const L = vmLv(a), spd = b.v.length(), pow = clamp((spd - 8) / 18, 0, 1), centered = off < 0.4, r = Math.random();
-    const pStuff = L.blockSkill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow), pOut = (centered ? 0.06 : 0.38) * (0.3 + 0.7 * pow), pThrough = 0.32 * pow * (1.2 - L.blockSkill);
+    const low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);   // 球過網的位置在攔網手裡面多深：越低（越釘）越容易被攔死，擦著手上緣過去比較會打手出界
+    const pStuff = L.blockSkill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (centered ? 0.06 : 0.38) * (0.3 + 0.7 * pow) * (1.4 - 0.8 * low), pThrough = 0.32 * pow * (1.2 - L.blockSkill);
     const rr = (VM.c.rot * Math.PI) / 180, nx = Math.cos(rr), nz = -Math.sin(rr), vl = b.v.x * nx + b.v.z * nz;
     let word;
     if (r < pStuff) {   // 攔死：壓回去
@@ -10499,7 +10501,7 @@ function vmStaMenu() {
 $('rk-menu').addEventListener('change', (e) => {
   const k = e.target.dataset && e.target.dataset.stak; if (!k) return;
   const v = clamp(Number(e.target.value) || 0, 0, k === 'spec' ? 90 : 100); STA_CFG[k] = v; e.target.value = v;
-  try { localStorage.setItem('vb.stacfg', JSON.stringify(STA_CFG)); } catch (er) { /* ignore */ }
+  try { localStorage.setItem('vb.stacfg2', JSON.stringify(STA_CFG)); } catch (er) { /* ignore */ }
 });
 $('rk-menu').addEventListener('click', (e) => {
   const t = e.target.closest('[data-vm],[data-vmto],[data-vmlv],[data-vmmate],[data-vmmode],[data-vmrole],[data-vmsets],[data-vmto6],[data-vmpt],[data-vmpr]'); if (!t) return;
@@ -10513,7 +10515,7 @@ $('rk-menu').addEventListener('click', (e) => {
   if (a === 'close') { $('rk-menu').hidden = true; return; }
   if (a === 'sta') { vmStaMenu(); return; }
   if (a === 'staback') { vmOpenMenu(VM.menu.c); return; }
-  if (a === 'stareset') { STA_CFG = { ...STA_DEF }; try { localStorage.removeItem('vb.stacfg'); } catch (er) { /* ignore */ } vmStaMenu(); return; }
+  if (a === 'stareset') { STA_CFG = { ...STA_DEF }; try { localStorage.removeItem('vb.stacfg2'); } catch (er) { /* ignore */ } vmStaMenu(); return; }
   if (a === 'opt') { const k = t.dataset.vmto ? 'to' : t.dataset.vmlv ? 'lv' : 'mate'; VM_OPT[k] = +(t.dataset.vmto || t.dataset.vmlv || t.dataset.vmmate); try { localStorage.setItem('vb.vmopt', JSON.stringify(VM_OPT)); } catch (er) { /* ignore */ } vmOpenMenu(VM.menu.c); return; }
   if (a === 'quit') { $('rk-menu').hidden = true; vmStop(); return; }
   if (a === 'again' && VM.six) { $('rk-menu').hidden = true; vm6Start(VM.c, VM.sg0, VM.asg0); return; }
