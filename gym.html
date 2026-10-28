@@ -5768,6 +5768,7 @@ function updateWalk(dt) {
     const [nx, nz] = collide(walk.x + vx * dt, walk.z + vz * dt);
     if (walk.target && Math.hypot(nx - walk.x, nz - walk.z) < Math.hypot(vx, vz) * dt * 0.2) { walk.target = null; targetMark.visible = false; }
     walk.x = nx; walk.z = nz;
+    vbBodyPush();
   }
   vbServeZone();
   const bob = mag > 0.01 || walk.target ? Math.sin(performance.now() / 160) * 0.015 : 0;
@@ -9208,7 +9209,7 @@ function vbBlockTest(b, h) {
   const off = Math.abs(lz - ct.lz), cy = camera.position.y;
   if (off > 0.62 + BALL_R || p.y > cy + 0.95 + BALL_R || p.y < cy + 0.2) return;
   const r = (ct.c.rot * Math.PI) / 180, nx = Math.cos(r), nz = -Math.sin(r), vl = b.v.x * nx + b.v.z * nz;
-  vbFx(b, off < 0.42 ? 1 : 0.7); vbImpact(b, 'block', off < 0.42 ? 1 : 0.7); if (off >= 0.42) vbTouchFx(p.clone(), 'touch');
+  vbFx(b, off < 0.42 ? 1 : 0.7); vbImpact(b, 'block', off < 0.42 ? 1 : 0.7); vbBlockFx(p.clone(), off < 0.42 ? 'stuff' : 'soft');
   if (off < 0.42) { b.v.x -= 1.55 * vl * nx; b.v.z -= 1.55 * vl * nz; b.v.y = -Math.abs(b.v.y) * 0.3 - 1.5; const back = plane - sg * (BALL_R + 0.02) - lx; p.x += nx * back; p.z += nz * back; toast('攔網成功！🧱', 1500); }
   else { b.v.multiplyScalar(0.35); b.v.y = 3.2; toast('撐到球了（球留在你這邊，快接起來）', 1500); }
   b.spike = null; vbMine(b);
@@ -9557,10 +9558,10 @@ const VM = { on: false, host: false, c: null, sg: 1, to: 7, sc: [0, 0], phase: '
 // AI 程度：對手（team 1）好打一點、會失誤；AI 隊友（team 0）比較穩
 // AI 強度：跑速、反應、接／舉的誤差、扣球速度、失誤率、重扣漏接率；block＝會上來攔網的機率、blockSkill＝攔得好不好
 const VM_LEVELS = {
-  1: { name: '新手', speed: 3.4, react: 0.45, passErr: 1.1, setErr: 0.6, spike: [10, 14], out: 0.18, net: 0.1, tip: 0.3, miss: 0.4, block: 0.15, blockSkill: 0.3 },
-  2: { name: '球友', speed: 3.9, react: 0.33, passErr: 0.75, setErr: 0.42, spike: [13, 17], out: 0.11, net: 0.07, tip: 0.25, miss: 0.25, block: 0.55, blockSkill: 0.5 },
-  3: { name: '高手', speed: 4.5, react: 0.23, passErr: 0.45, setErr: 0.26, spike: [16, 21], out: 0.06, net: 0.04, tip: 0.2, miss: 0.13, block: 0.85, blockSkill: 0.72 },
-  4: { name: '校隊', speed: 5.1, react: 0.15, passErr: 0.28, setErr: 0.16, spike: [19, 25], out: 0.03, net: 0.02, tip: 0.18, miss: 0.06, block: 1, blockSkill: 0.9 },
+  1: { name: '新手', speed: 3.8, react: 0.34, passErr: 0.8, setErr: 0.45, spike: [12, 16], out: 0.12, net: 0.07, tip: 0.28, miss: 0.28, block: 0.4, blockSkill: 0.42 },
+  2: { name: '球友', speed: 4.3, react: 0.25, passErr: 0.55, setErr: 0.3, spike: [15, 19], out: 0.075, net: 0.05, tip: 0.24, miss: 0.17, block: 0.7, blockSkill: 0.6 },
+  3: { name: '高手', speed: 4.9, react: 0.17, passErr: 0.33, setErr: 0.19, spike: [18, 23], out: 0.04, net: 0.025, tip: 0.2, miss: 0.09, block: 0.95, blockSkill: 0.8 },
+  4: { name: '校隊', speed: 5.4, react: 0.11, passErr: 0.2, setErr: 0.11, spike: [21, 27], out: 0.02, net: 0.012, tip: 0.18, miss: 0.04, block: 1, blockSkill: 0.95 },
 };
 const VM_OPT = { to: 7, lv: 2, mate: 3, mode: '2', role: 'OH', sets: 3, to6: 25 };
 try { Object.assign(VM_OPT, JSON.parse(localStorage.getItem('vb.vmopt') || '{}')); } catch (e) { /* ignore */ }
@@ -9773,6 +9774,55 @@ function vbTouchFx(pos, word) {
   vbBurst(pos, '#FFFFFF', 10, 1.2);
   const t0 = performance.now(); (function anim() { const k = (performance.now() - t0) / 900; if (k >= 1 || !g.parent) { scene.remove(g); return; } ring.scale.setScalar(1 + k * 2.2); ring.material.opacity = 0.95 * (1 - k); sp.position.y = 0.45 + k * 0.35; requestAnimationFrame(anim); })();
 }
+// 攔網碰到球的動畫：衝擊光圈（兩圈往外擴）、火花、彈出來的大字；攔死時鏡頭震一下
+//   stuff＝攔死、out＝打手出界、soft＝撐起來、through＝打穿、touch＝碰到
+const BLOCK_FX = { stuff: ['攔死！BLOCK', '#F2B705', 30, 1.15], out: ['TOUCH OUT', '#E5484D', 22, 1.0], soft: ['撐起來', '#FFFFFF', 14, 0.85], through: ['打穿！', '#9AA4B2', 16, 0.9], touch: ['TOUCH', '#FFFFFF', 12, 0.8] };
+function vbBlockFx(pos, type) {
+  const [txt, col, n, big] = BLOCK_FX[type] || BLOCK_FX.touch, g = new THREE.Group(); g.position.copy(pos);
+  const M = (o) => new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: o, depthWrite: false, depthTest: false, side: THREE.DoubleSide, toneMapped: false });
+  const r1 = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.24, 36), M(0.95)), r2 = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.14, 36), M(0.8)), flash = new THREE.Mesh(new THREE.CircleGeometry(0.22, 24), M(0.9));
+  for (const m of [r1, r2, flash]) { m.renderOrder = 22; g.add(m); }
+  const sp = labelSprite(txt, col, big); sp.position.y = 0.5; sp.renderOrder = 23; g.add(sp); scene.add(g);
+  vbBurst(pos, col, n, type === 'stuff' ? 3.6 : 2.4); if (type === 'stuff' || type === 'out') vbBurst(pos, '#FFFFFF', 10, 1.6);
+  if (type === 'stuff' && pos.distanceTo(camera.position) < 10) VB.shake = Math.max(VB.shake || 0, 0.26);
+  const base = sp.scale.clone(), t0 = performance.now();
+  (function anim() {
+    const k = (performance.now() - t0) / 1100; if (k >= 1 || !g.parent) { scene.remove(g); return; }
+    for (const m of [r1, r2, flash]) m.quaternion.copy(camera.quaternion);   // 光圈一直正對鏡頭
+    r1.scale.setScalar(1 + k * 5); r1.material.opacity = 0.95 * (1 - k); r2.scale.setScalar(1 + Math.max(0, k - 0.12) * 7); r2.material.opacity = 0.8 * Math.max(0, 1 - k * 1.3);
+    flash.scale.setScalar(1 + k * 2); flash.material.opacity = Math.max(0, 0.9 - k * 3);
+    const pop = k < 0.12 ? 0.4 + (k / 0.12) * 0.8 : k < 0.22 ? 1.2 - ((k - 0.12) / 0.1) * 0.2 : 1;   // 字彈出來：先放大再縮回
+    sp.scale.copy(base).multiplyScalar(pop); sp.position.y = 0.5 + k * 0.5; sp.material.opacity = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+    requestAnimationFrame(anim);
+  })();
+}
+// 攔網併好了（兩個或三個人一起跳、手之間沒有空隙＝沒有中洞）：網子上方亮起一面半透明的牆
+function vbWallFx() {
+  if (!VM.on || !VM.c) return;
+  for (const t of [0, 1]) {
+    const L = [];   // 這一隊現在在空中攔網的人：在網前 1 m 內、跳起來 0.4 m 以上
+    for (const a of VM.ai.values()) if (a.team === t && a.pose === 9 && a.y > 0.4) { const [lx, lz] = vmL(a.av.g.position.x, a.av.g.position.z); if (Math.abs(lx) < 1.1) L.push(lz); }
+    if (vmTeamOf(vmMe()) === t && walk.air && walk.air.block && walk.air.y > 0.3) { const [lx, lz] = vmL(walk.x, walk.z); if (Math.abs(lx) < 1.1) L.push(lz); }
+    for (const p2 of NET.peers.values()) if (VM.team[t].includes(p2.id) && p2.pose === 9 && (p2.y || 0) > 0.4) { const [lx, lz] = vmL(p2.x, p2.z); if (Math.abs(lx) < 1.1) L.push(lz); }
+    if (L.length < 2) { if (VM.wallT && VM.wallT[t]) VM.wallT[t] = 0; continue; }
+    L.sort((x, y) => x - y); let ok = true; for (let i = 1; i < L.length; i++) if (L[i] - L[i - 1] > 0.95) ok = false;   // 兩人中心隔 0.95 m 以內＝手碰得到手，沒有中洞
+    VM.wallT = VM.wallT || [0, 0]; if (!ok || VM.wallT[t]) continue; VM.wallT[t] = 1;
+    const sd = vmSide(t), z0 = L[0] - 0.45, z1 = L[L.length - 1] + 0.45, netH = NETS[state.net].h, w = z1 - z0, [wx, wz] = vmW(sd * 0.28, (z0 + z1) / 2), col = t === Math.max(0, vmTeamOf(vmMe())) ? '#3E9BFF' : '#E5484D';
+    const g = new THREE.Group(); g.position.set(wx, netH + 0.48, wz); g.rotation.y = (VM.c.rot * Math.PI) / 180 - Math.PI / 2;
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.9), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.05), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); edge.position.y = 0.45;
+    const sp = labelSprite(L.length >= 3 ? '三人攔網・一面牆' : '雙人攔網！', col, 1.05); sp.position.y = 0.85; g.add(wall, edge, sp); scene.add(g);
+    const t0 = performance.now(), base = sp.scale.clone();
+    (function anim() { const k = (performance.now() - t0) / 1000; if (k >= 1 || !g.parent) { scene.remove(g); return; } wall.material.opacity = 0.32 * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); edge.material.opacity = 0.9 * (1 - k); sp.scale.copy(base).multiplyScalar(k < 0.12 ? 0.5 + k * 4.2 : 1); sp.material.opacity = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1; requestAnimationFrame(anim); })();
+  }
+}
+// 人跟人不能重疊：每個人身體半徑約 0.3 m，兩個人中心至少隔 0.6 m——被擋住就停在旁邊，不會穿過去、疊在一起搶同一顆球
+function vbBodyPush() {
+  const others = []; if (VM.on) for (const a of VM.ai.values()) others.push(a.av.g.position);
+  for (const p2 of NET.peers.values()) if (p2.av && p2.av.g.visible !== false) others.push(p2.av.g.position);
+  if (VB.npc) others.push(VB.npc.av.g.position);
+  for (const o of others) { const dx = walk.x - o.x, dz = walk.z - o.z, d = Math.hypot(dx, dz); if (d > 0.001 && d < 0.6) { walk.x = o.x + (dx / d) * 0.6; walk.z = o.z + (dz / d) * 0.6; } }
+}
 // 落點：場內綠圈 IN、場外紅圈 OUT，停 2.5 秒
 function vmMark(x, z, inside) {
   const g = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.28, 32), new THREE.MeshBasicMaterial({ color: inside ? '#30A46C' : '#E5484D', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
@@ -9835,9 +9885,10 @@ function vmAiStep(a, dt) {
   const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
   a.x += a.vx * dt; a.z += a.vz * dt; a.x = sd * clamp(a.x * sd, 0.35, 12); a.z = clamp(a.z, -7, 7);
-  if (VM.six) for (const o of VM.ai.values()) {   // 6 個人：隊友之間不要疊在一起
-    if (o === a || o.team !== a.team) continue; const ex = a.x - o.x, ez = a.z - o.z, e = Math.hypot(ex, ez);
-    if (e > 0.01 && e < 0.7) { a.x += (ex / e) * (0.7 - e) * 0.5; a.z += (ez / e) * (0.7 - e) * 0.5; }
+  {   // 人跟人不能重疊：AI 跟其他 AI、真人至少隔 0.6 m（互相撞到就被推開，不會兩個人疊著接同一顆球）
+    const bodies = []; for (const o of VM.ai.values()) if (o !== a) bodies.push([o.x, o.z]);
+    for (const id of [...VM.team[0], ...VM.team[1]]) if (!VM.ai.has(id)) { const q = vmPos(id); if (q) bodies.push([q.x, q.z]); }
+    for (const [ox, oz] of bodies) { const ex = a.x - ox, ez = a.z - oz, e = Math.hypot(ex, ez); if (e > 0.001 && e < 0.62) { a.x += (ex / e) * (0.62 - e) * 0.6; a.z += (ez / e) * (0.62 - e) * 0.6; } }
   }
   if (a.y > 0 || a.vy > 0) { a.vy -= JUMP_G * dt; a.y += a.vy * dt; if (a.y <= 0) { a.y = 0; a.vy = 0; } }
 }
@@ -9906,7 +9957,7 @@ function vmBlockTest(b, h) {
       b.v.multiplyScalar(0.25); b.v.y = 3 + Math.random() * 1.5; word = '撐起來了';
     }
     b.blkDone = true;
-    vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbTouchFx(p.clone(), word);
+    vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '被攔死了！' ? 'stuff' : word === '撐起來了' ? 'soft' : word === '打穿攔網！' ? 'through' : /出界/.test(word) ? 'out' : 'touch');
     vmOnTouch(b, a.id, 'block');
     if (NET.on) netBallHit(b, 'block');
     const mine = a.team !== 0; vmSay(word, word === '撐起來了' ? '' : (mine ? word !== '被攔死了！' : word === '被攔死了！') ? 'gold' : 'warn', 1400);
@@ -10286,17 +10337,25 @@ function vm6Quick(a, P, B, sd) {
   if (a.run && (pr.t < 0.28 || D < 0.4)) { a.vy = aiJump(a, 4.3, 'jump'); a.pose = 5; a.run = false; a.appr = false; a.vx *= 0.25; a.vz *= 0.25; P.qkJ = true; }
   return true;
 }
-// cover：攻擊手後面圍一個半圓——最近的三個人在他身後 1.5～3 m（左右各一、中間一個），另外兩個在後面 5 m 補深球
-const V6_COVER = [[1.4, -1.6], [1.4, 1.6], [3.2, -2.2], [3.2, 2.2], [5.6, 0]];   // 前排攻擊：都站在助跑路線兩側（攻擊手正後方 4 m 內不站人），最後一個在很後面補深球
-const V6_COVER_BACK = [[1.4, -1.6], [1.4, 1.6], [2.0, 0], [6.8, -2.6], [6.8, 2.6]];   // 後排攻擊：被攔回來的球掉在網前——三個人在攻擊手前面（網前左右、3 公尺線），兩個在後面補深球（[離網, 往左]）
-function vm6CoverSpot(a, attId) {
+// cover：照攻擊手的位置排出 5 個區域——兩側近身各一（左右，不站助跑走廊）、往場中間的斜後方中段一個、後場兩角各一；
+//   每個人分到離自己最近、還沒人去的那一區（不會全部擠到前面擋住攻擊手）；後排攻擊時近身的兩個站在 3 公尺線前、攻擊手左右兩側
+function vm6CoverPlan(team, attId) {
+  const P = VM.poss[team]; if (P && P.cover && P.cover.att === attId) return P.cover.map;
   const at = vmPos(attId); if (!at) return null;
-  const sd = vmSide(a.team), ids = VM.team[a.team].filter((id) => id !== attId).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q).sort((p, q) => Math.hypot(p.q.x - at.x, p.q.z - at.z) - Math.hypot(q.q.x - at.x, q.q.z - at.z));
-  const i = ids.findIndex((o) => o.id === a.id); if (i < 0) return null;
-  if (!vm6Front(attId) || Math.abs(at.x) >= 3) { const [d, dl] = V6_COVER_BACK[Math.min(i, V6_COVER_BACK.length - 1)]; return { x: sd * d, z: clamp(at.z + dl, -4.3, 4.3) }; }
-  const [dd, dl] = V6_COVER[Math.min(i, V6_COVER.length - 1)];
-  return { x: sd * clamp(Math.abs(at.x) + dd, 1.2, 8.6), z: clamp(at.z + dl, -4.3, 4.3) };
+  const sd = vmSide(team), d0 = Math.abs(at.x), L0 = at.z / sd, back = !vm6Front(attId) || d0 >= 3, mid = L0 >= 0 ? -1 : 1;
+  const spots = back ? [[2.0, L0 + 2.1], [2.0, L0 - 2.1], [5.2, L0 + mid * 2.6], [7.3, 2.6], [7.3, -2.6]]
+    : [[d0 + 1.3, L0 + 1.9], [d0 + 1.3, L0 - 1.9], [d0 + 3.4, L0 + mid * 2.4], [7.2, 2.6], [7.2, -2.6]];
+  const pts = spots.map(([d, L]) => vm6P(team, clamp(d, 1.0, 8.4), clamp(L, -4.2, 4.2)));
+  const pos = {}; for (const id of VM.team[team]) if (id !== attId) { const q = vmPos(id); if (q) pos[id] = q; }
+  const map = {}, free = pts.map((_, i) => i); let rest = Object.keys(pos);
+  while (rest.length && free.length) {   // 每次挑「人到那一區」最近的一組配對
+    let best = null; for (const id of rest) for (const i of free) { const d = Math.hypot(pos[id].x - pts[i].x, pos[id].z - pts[i].z); if (!best || d < best.d) best = { id, i, d }; }
+    map[best.id] = pts[best.i]; rest = rest.filter((x) => x !== best.id); free.splice(free.indexOf(best.i), 1);
+  }
+  if (P) P.cover = { att: attId, map };
+  return map;
 }
+function vm6CoverSpot(a, attId) { const m = vm6CoverPlan(a.team, attId); return m && m[a.id] ? m[a.id] : null; }
 // 連線的人：收到主機的輪轉表、局數
 function vm6Apply(d) {
   const before = vm6Idx(vmMe());
@@ -10325,6 +10384,7 @@ function vmUpdate(dt) {
     for (const a of VM.ai.values()) vmAiStep(a, dt);
   }
   vmRenderAi(dt);
+  vbWallFx();
 }
 function vmRenderAi(dt) {
   const k = 1 - Math.exp(-dt * 12);
