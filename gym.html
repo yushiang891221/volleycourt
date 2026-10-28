@@ -303,15 +303,15 @@ html.phone-walk .wk-act { bottom: auto; top: 58%; }
 html.phone-walk .camview, html.phone-walk .mp { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 44px) !important; }
 html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 48px); }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
-.wk-chg { position: absolute; left: 50%; top: calc(50% + 28px); width: 132px; height: 9px; margin-left: -66px; border-radius: 5px; background: rgba(27,38,56,.6); box-shadow: 0 0 0 1.5px rgba(255,255,255,.55); overflow: hidden; pointer-events: none; }
-.wk-chg i { position: absolute; top: 0; bottom: 0; }
-.wk-chg .sw { left: 60%; width: 13.3%; background: rgba(242,183,5,.55); box-shadow: inset 0 0 0 1.5px #F2B705; }
-.wk-chg .ov { left: 83.3%; right: 0; background: rgba(220,60,50,.45); }
-.wk-chg b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,255,255,.85); }
+/* 扣球蓄力條：直的，跟著拉弓那隻手（第三人稱＝手肘旁邊、第一人稱＝畫面上的右手旁邊），由下往上漲 */
+.wk-chg { position: absolute; left: 0; top: 0; width: 13px; height: 124px; border-radius: 7px; background: rgba(27,38,56,.65); box-shadow: 0 0 0 1.5px rgba(255,255,255,.6); overflow: hidden; pointer-events: none; }
+.wk-chg i { position: absolute; left: 0; right: 0; }
+.wk-chg .sw { bottom: 60%; height: 13.3%; background: rgba(242,183,5,.55); box-shadow: inset 0 0 0 1.5px #F2B705; }
+.wk-chg .ov { top: 0; height: 16.7%; background: rgba(220,60,50,.45); }
+.wk-chg b { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(255,255,255,.85); }
 .wk-chg[data-z="sweet"] b { background: #F2B705; } .wk-chg[data-z="late"] b { background: #F0A040; } .wk-chg[data-z="over"] b { background: #E5483C; }
 .wk-chg[data-z="sweet"] { box-shadow: 0 0 0 2px #F2B705, 0 0 10px rgba(242,183,5,.7); }
 .walk-ui.rk .wk-chg { display: none !important; }
-.walk-ui.tp .wk-chg { top: 66%; width: 180px; height: 11px; margin-left: -90px; }   /* 第三人稱（比賽預設）：沒有準星，蓄力條放在畫面中間偏下、大一點 */
 .emo-menu { position: absolute; left: 50%; top: calc(50% - 96px); transform: translateX(-50%); display: flex; align-items: center; gap: 70px; z-index: 12; }
 .emo-menu[hidden] { display: none !important; }
 .emo-menu button { min-height: 0; padding: 9px 16px; border-radius: 14px; border: 2px solid rgba(255,255,255,.35); background: rgba(15,23,36,.82); color: #fff; font-weight: 800; font-size: 15px; }
@@ -9154,10 +9154,20 @@ function vbChargeStep(dt) {
   else c.t += dt;
   vbChgHud();
 }
+const CHG_V = new THREE.Vector3();
 function vbChgHud() {
   const el = $('wk-chg'), c = walk.charge; if (!el) return;
   el.hidden = !c; if (!c) return;
-  const v = Math.min(CHG.max, c.t / CHG.full); el.dataset.z = vbChargeOf(v).zone; $('wk-chg-f').style.width = ((v / CHG.max) * 100).toFixed(1) + '%';
+  const v = Math.min(CHG.max, c.t / CHG.full); el.dataset.z = vbChargeOf(v).zone; $('wk-chg-f').style.height = ((v / CHG.max) * 100).toFixed(1) + '%';
+}
+// 蓄力條放在拉弓那隻手旁邊：第三人稱＝自己人物的拉弓手肘；第一人稱＝畫面上的右手（拉到畫面外時放右下）
+//   要在畫面用的鏡頭擺好之後算（第三人稱的鏡頭只在畫這一格時移過去）
+function vbChgPlace() {
+  const el = $('wk-chg'); if (!el || !walk.charge) return;
+  const o = TP.saved && TP.av ? TP.av.elbows[0] : armR.hand, R = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
+  camera.updateMatrixWorld(true); o.getWorldPosition(CHG_V); CHG_V.project(camera);
+  const ok = CHG_V.z < 1 && Math.abs(CHG_V.x) < 1.2 && Math.abs(CHG_V.y) < 1.2, x = ok ? (CHG_V.x * 0.5 + 0.5) * R.width + 30 : R.width * 0.7, y = ok ? (-CHG_V.y * 0.5 + 0.5) * R.height - 62 : R.height * 0.56;   // 第一人稱拉弓時右手在畫面外：放在右下（右手那一側）
+  el.style.transform = `translate(${clamp(x, 8, R.width - 24).toFixed(0)}px, ${clamp(y, 8, R.height - 132).toFixed(0)}px)`;
 }
 function vbSwingStep(dt) {
   vbChargeStep(dt);
@@ -10885,6 +10895,7 @@ function drawFrame(force) {
   if (walk.on) { staTick(dt); stowSync(); recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   const tp = walk.on && tpBegin(dt);
+  if (walk.on) vbChgPlace();
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   renderScene();
   labelRenderer.render(scene, camera);
