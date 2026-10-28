@@ -459,6 +459,11 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .vm-rot .rt i.sv u::after { content: ' 🏐'; }
 .vm-rot .rt i u { text-decoration: none; opacity: .7; font-size: 9px; }
 .vm-rot .rt i em { font-style: normal; font-weight: 700; }
+.sta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.sta-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.sta-row span { flex: 1; color: #DDE3EA; }
+.sta-row input { width: 64px; padding: 4px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font: inherit; text-align: right; }
+.sta-row i { font-style: normal; opacity: .6; }
 .vm6-peer { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 6px 0; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.05); }
 .vm6-peer > span { font-weight: 700; font-size: 13px; }
 html.phone-walk .vm-rot { transform: scale(.85); transform-origin: left top; }
@@ -8674,16 +8679,21 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 // 接球微輔助：對方打過來、球會落在你附近時，地上出現落點圈，身體會被輕輕帶過去（自己按反方向就不帶）
 // 舉球 1 前舉（4 號位）、2 中間快攻、3 後舉（2 號位）：舉出去一定會到那個攻擊點，難的是先跑到球下面
 // ---- 體力（比賽、陪練、球拍對戰時才算）：每個動作都會耗一點，越用力耗越多，要想清楚什麼時候衝、什麼時候跳
-//   Shift 衝刺每秒 16%；起跳攻擊、跳發 12%，攔網起跳 9%，扣球揮臂 6%，站著打、發球 3%，吊球、舉球 2%，接球 1.5%，撲救 30%
-//   回復：球在打的時候每秒 8%（站著不動 10%），死球、等發球時每秒 10%（停下來 0.8 秒後才開始回）——正常打可以撐整場，一直衝、每球都跳就會越打越累
+//   每個動作耗幾 %、回多快都在 STA_DEF（可以在比賽選單改）；6 對 6 做自己專長的動作少耗
 //   累了效果變差（30% 以下跳得比較矮、扣得比較慢，最低八成），但接、舉、吊、站著打永遠做得到；衝刺用光要回到 25% 才能再衝。導覽時不用體力
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
-const STA_REGEN = { move: 0.08, still: 0.1, dead: 0.1 };   // 每秒回多少：球在打的時候跑動／站著、死球和等發球
 // 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
 const JUMP_G = 8.4;
-const STA_COST = { jump: 0.12, block: 0.09, jserve: 0.12, spike: 0.06, hit: 0.03, serve: 0.03, tip: 0.02, set: 0.02, bump: 0.015, dive: 0.3 };
+// 體力設定（百分比，比賽選單「⚙️ 體力設定」可以改，存在這台電腦；連線時大家照開局的人的設定）
+const STA_DEF = { sprint: 16, jump: 12, jserve: 12, block: 9, spike: 6, hit: 3, serve: 3, tip: 2, set: 2, bump: 1.5, dive: 30, spec: 30, regMove: 5, regStill: 8, regDead: 10 };
+const STA_LBL = { sprint: '衝刺（每秒）', jump: '起跳攻擊', jserve: '跳發', block: '攔網起跳', spike: '扣球', hit: '站著打', serve: '發球', tip: '吊球', set: '舉球', bump: '接球', dive: '撲救', spec: '專職少耗', regMove: '比賽中跑動（每秒回）', regStill: '比賽中站著（每秒回）', regDead: '死球、等發球（每秒回）' };
+let STA_CFG = { ...STA_DEF }; try { Object.assign(STA_CFG, JSON.parse(localStorage.getItem('vb.stacfg') || '{}')); } catch (e) { /* ignore */ }
+// 6 對 6 專職：做自己位置專長的動作少耗（spec %）——舉球：舉球、二次球吊；大砲：扣、起跳、接球、撲救；舉對：扣、起跳、攔網；攔中：攔網、起跳（快攻）、扣
+const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP: ['spike', 'jump', 'block'], MB: ['block', 'jump', 'spike'] };
+function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
+function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100; return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
-function staPay(kind) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - (STA_COST[kind] || 0)); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
+function staPay(kind) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe())); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(window.__rkOn || VM.on || VB.npc); }
 function staWarn(t) { if (performance.now() - STA.warnT > 2200) { STA.warnT = performance.now(); toast(t || '沒體力了：放開 Shift 喘一下', 1400); } }
 function staUse(n) { if (!staGame()) return true; if (STA.v < n) { staWarn('體力不夠，沒辦法撲／跳那麼用力'); return false; } STA.v -= n; STA.useT = performance.now(); if (STA.v < 0.02) { STA.v = 0; STA.lock = true; } return true; }
@@ -8691,7 +8701,7 @@ function staSprint(want, dt) {
   if (!staGame()) return want;
   if (!want) return false;
   if (STA.lock) { staWarn(); return false; }
-  STA.v = Math.max(0, STA.v - 0.16 * dt); STA.useT = performance.now();
+  STA.v = Math.max(0, STA.v - (staCfg().sprint / 100) * dt); STA.useT = performance.now();
   if (STA.v <= 0) { STA.lock = true; staWarn(); return false; }
   return true;
 }
@@ -8700,7 +8710,7 @@ function staTick(dt) {
   if (!on) { STA.v = 1; STA.lock = false; if (el && !el.hidden) el.hidden = true; return; }
   if (performance.now() - STA.useT > 800) {
     const live = window.__rkOn ? RK.phase === 'rally' : VM.on ? VM.phase === 'rally' : true, still = Math.hypot(...(walk.vel || [0, 0])) < 0.5;
-    STA.v = Math.min(1, STA.v + (live ? (still ? STA_REGEN.still : STA_REGEN.move) : STA_REGEN.dead) * dt);
+    const c = staCfg(); STA.v = Math.min(1, STA.v + ((live ? (still ? c.regStill : c.regMove) : c.regDead) / 100) * dt);
   }
   if (STA.lock && STA.v >= 0.25) STA.lock = false;
   if (!el) return;
@@ -8942,7 +8952,7 @@ function vbJump(kind) {
   if (walk.dive || walk.down > 0) return;
   const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', ck = block ? 'block' : 'jump';
   let tired = 1;   // 體力：夠就照體力跳（30% 以下開始變矮），不夠就只能小跳一下
-  if (staGame()) { if (STA.v >= STA_COST[ck]) tired = 0.4 + 0.6 * staPay(ck); else { staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
+  if (staGame()) { if (STA.v >= staCost(ck, vmMe())) tired = 0.4 + 0.6 * staPay(ck); else { staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
   walk.air = { y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
   if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
@@ -9038,7 +9048,7 @@ function vbDive() {
   if (walk.air || walk.sit || walk.dive || walk.down > 0 || walk.serve || walk.spike) return false;
   let tx = null, tz = null, bd = 9;
   for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 400)) continue; const pr = vbPredict(b.m.position, b.v, 0.3); if (!pr) continue; const d = Math.hypot(pr.x - walk.x, pr.z - walk.z); if (d < 5 && d < bd) { bd = d; tx = pr.x; tz = pr.z; } }
-  if (!staUse(STA_COST.dive)) return false;
+  if (!staUse(staCost('dive', vmMe()))) return false;
   const [fx, fz] = vbFwd(), dx = tx != null ? tx - walk.x : fx, dz = tx != null ? tz - walk.z : fz, d = Math.hypot(dx, dz) || 1, sp = clamp((tx != null ? d : 2) / 0.4, 3.5, 7.5);
   walk.dive = { t: 0, vx: (dx / d) * sp, vz: (dz / d) * sp };
   walk.diveDir = Math.atan2(dx * -Math.cos(walk.yaw) + dz * Math.sin(walk.yaw), dx * -Math.sin(walk.yaw) + dz * -Math.cos(walk.yaw));   // 撲的方向（身體座標）：決定往前魚躍還是側倒
@@ -9586,7 +9596,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
-    <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="close">取消</button></div>
+    <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
     <p class="rk-sub" style="margin-top:10px">C 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中滑鼠左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
@@ -9601,7 +9611,7 @@ function vmStart(c, sg, mateId, opps = []) {
   if (!mateId) vmMkAi('aiT', 0, `AI 隊友・${CHARS[VM.chars.aiT].name}`, '#30A46C', VM.chars.aiT);
   if (!opps[0]) vmMkAi('ai1', 1, `AI・${CHARS[VM.chars.ai1].name}`, '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, `AI・${CHARS[VM.chars.ai2].name}`, '#F76B15', VM.chars.ai2);
   for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
-  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot] });
+  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG });
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
   vmSetupServe();
   toast(`2 對 2 開始！先到 ${VM.to} 分・對手：${opps.length ? VM.team[1].map(vmName).join('＋') : 'AI（' + VM_LEVELS[VM_OPT.lv].name + '）'}`, 2400);
@@ -9798,7 +9808,7 @@ function vmAiStep(a, dt) {
   else if (live && vmAiBlock(a, sd, b)) { /* 正在攔網 */ }
   else if (live) {
     // 自己隊友剛打向對面、還在我這邊飛的球（扣球、推過去）不要去碰
-    const B = vmBallL(b), onMine = Math.sign(B.x) === sd, land = vmPredL(B, BALL_R), outgoing = VM.touch.team === a.team && VM.touch.last !== a.id && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;   // 隊友打出去、會落在對面的球才不碰（傳給我的球要接）
+    const B = vmBallL(b), onMine = Math.sign(B.x) === sd, land = vmPredL(B, BALL_R), outgoing = VM.touch.team === a.team && VM.touch.last !== a.id && (VM.touch.n >= 3 || ['spike', 'tip', 'hit'].includes(b.lk)) && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;   // 隊友打出去、會落在對面的球才不碰（傳給我的球要接）
     const coming = !outgoing && (Math.sign(B.vx) === sd || onMine);
     const myTurn = VM.touch.team !== a.team || VM.touch.n < 3;
     if (coming && myTurn && !(VM.touch.team === a.team && VM.touch.n >= 3)) {
@@ -9820,7 +9830,7 @@ function vmAiStep(a, dt) {
     if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && VM.t - (a.sqT || 0) > 0.5) { a.sqT = VM.t; const [wx, wz] = vmW(a.x, a.z); sfx('squeak', 0.6 + Math.random() * 0.3, new THREE.Vector3(wx, 0.05, wz)); }
     const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
   // 移動、跳
-  { const v0 = Math.hypot(a.vx, a.vz); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - 0.1 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + (VM.phase === 'rally' ? (v0 < 0.5 ? STA_REGEN.still : STA_REGEN.move) : STA_REGEN.dead) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
+  { const v0 = Math.hypot(a.vx, a.vz); const c = staCfg(); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - (c.sprint / 100) * 0.6 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + ((VM.phase === 'rally' ? (v0 < 0.5 ? c.regStill : c.regMove) : c.regDead) / 100) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
   const spMax = vmLv(a).speed * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1));   // 累了跑比較慢
   const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
@@ -9921,9 +9931,11 @@ function vmAiRole(a, P, B, sd) {
     const pHi = vmPredL(B, 2.2), pLo = pHi ? null : vmPredL(B, 1.0), p = pHi || pLo; if (p) { a.tx = p.x + sd * 0.25; a.tz = p.z; }
     const dh = Math.hypot(B.x - a.x, B.z - a.z);
     if (!pHi && dh < 1.2 && B.y < 1.5 && B.y > 0.35 && B.vy < 0) { const ap = vmPos(P.attacker) || { z: 0 }; vmAiTouch(a, sd * 1.2, clamp(ap.z, -3.6, 3.6), 2.9, 1.3, vmLv(a).setErr * 1.5, 'set', 3); return; }   // 傳得太低：低手墊舉
-    if (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5) {
+    const qmb = VM.six ? vm6AirMB(a.team, a.id) : null, early = !!qmb && dh < 1.45 && B.y < 3.8 && B.y > 1.8;   // 攔中已經跳起來了：不等球掉到最低，在比較高的位置就推出去
+    if (early && B.y > 2.9 && a.y <= 0 && a.vy <= 0) { a.vy = aiJump(a, 2.6, 'set'); }   // 球還很高：舉球員跳起來舉
+    if (early || (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5)) {
       let ap = vmPos(P.attacker) || { z: 0 }, call = a.team === 0 && VM.call && VM.t - VM.call.t < 8 ? VM.call.n : 0, pick = null;
-      if (VM.six) { pick = vm6ChooseSet(a, B); call = pick.n; ap = vmPos(pick.id) || ap; } else if (call) VM.call = null;
+      if (VM.six) { pick = early ? { n: 2, id: qmb.id } : vm6ChooseSet(a, B); call = pick.n; ap = vmPos(pick.id) || ap; if (early && VM.call) VM.call = null; } else if (call) VM.call = null;
       // 有喊球就照喊的舉：快攻＝在舉球員旁邊、又低又快；4 號位／2 號位＝高球到兩邊；沒喊就舉到攻擊手那邊
       if (call === 2 && VM.six) vmAiTouch(a, sd * clamp(Math.abs(ap.x ?? 1) - 0.1, 0.7, 1.4), clamp(ap.z, a.z - 1.6, a.z + 1.6), 3.05, 0.26, vmLv(a).setErr * 0.4, 'set', 2);   // 6 對 6 快攻：又低又快直接送到已經跳起來的中間手手上
       else if (call === 2) vmAiTouch(a, sd * 0.75, clamp(ap.z, a.z - 1.5, a.z + 1.5), 2.95, 0.45, vmLv(a).setErr * 0.6, 'set', 2);
@@ -9957,7 +9969,7 @@ function vmAiRole(a, P, B, sd) {
 function vmAiOwnSide(a) { const [lx] = vmL(VM.ball.m.position.x, VM.ball.m.position.z); return lx * vmSide(a.team) > -0.02; }
 // AI 的體力（跟玩家同一套扣法）：累了跳得矮、跑得慢、扣得慢；連線時跟著狀態送給大家（隊友腳下的圓環）
 function aiEff(a) { return 0.8 + 0.2 * clamp((a.sta ?? 1) / 0.3, 0, 1); }
-function aiPay(a, kind) { const f = aiEff(a); a.sta = Math.max(0, (a.sta ?? 1) - (STA_COST[kind] || 0)); return f; }
+function aiPay(a, kind) { const f = aiEff(a); a.sta = Math.max(0, (a.sta ?? 1) - staCost(kind, a.id)); return f; }
 function aiJump(a, vy, kind) { return vy * (0.4 + 0.6 * aiPay(a, kind)); }
 function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose) {
   if (!vmAiOwnSide(a)) return;
@@ -10034,8 +10046,8 @@ function vm6Menu(c, sg) {
     <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
-    <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：衝刺、起跳、扣球最耗，吊球、舉球、接球耗一點；比賽中回得很慢、死球時回快一點。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
-    <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="close">取消</button></div>
+    <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：每個動作耗多少、做自己專長少耗多少、回多快都可以在「⚙️ 體力設定」改。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
+    <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
     <p class="rk-sub" style="margin-top:10px">C 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
@@ -10065,7 +10077,7 @@ function vm6Start(c, sg, asg = {}) {
   VM.team = VM.rot.map((r) => r.slice()); VM.rot0 = VM.rot.map((r) => r.slice());
   VM.srvTeam = Math.random() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
   for (const a of VM.ai.values()) { const f = vm6Spot(a.team, a.id, 'defense'); a.x = a.tx = f.x; a.z = a.tz = f.z; }
-  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } });
+  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } });
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
   toast(`6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三局兩勝・' : '五局三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
@@ -10227,7 +10239,8 @@ function vm6Brain(a, sd, b, live) {
   if (!live) return;
   if (vmAiBlock(a, sd, b)) return;
   const B = vmBallL(b), onMine = Math.sign(B.x) === sd, land = vmPredL(B, BALL_R);
-  const outgoing = VM.touch.team === a.team && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;
+  const sent = VM.touch.n >= 3 || b.lk === 'spike' || b.lk === 'tip' || b.lk === 'hit';   // 已經打過去了（第三下、攻擊）；舉球再快也還是自己的球
+  const outgoing = VM.touch.team === a.team && sent && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;
   // 球在對面時，只有「會落在我們這邊」的球（攻擊、推過來、發球）才算過來了；對面在傳、在舉的球不算
   const coming = !outgoing && (onMine || (Math.sign(B.vx) === sd && land && Math.sign(land.x) === sd)) && !(VM.touch.team === a.team && VM.touch.n >= 3);
   if (coming && !onMine && VM.touch.team !== a.team) VM.poss[a.team] = null;   // 還沒過網：誰接每一格照最新的落點重算，過網才定
@@ -10251,6 +10264,13 @@ function vm6OffBlock(a, th) {
   if (r === 'MB') return vm6P(a.team, 1.6, clamp(th.z / sd, -1.5, 1.5));
   const L = Math.sign(a.z / sd || vm6Spot(a.team, a.id, 'defense').z / sd || 1) * 3.0;
   return vm6P(a.team, 3.0, L);
+}
+// 前排攔中（真人或 AI）現在是不是已經跳在空中（舉球員看到就提早出手舉快攻）
+function vm6AirMB(team, setterId) {
+  const id = VM.team[team].find((x) => x !== setterId && VM.role[x] === 'MB' && vm6Front(x) && VM.touch.last !== x); if (!id) return null;
+  const left = (y, vy) => (vy + Math.sqrt(Math.max(0, vy * vy + 2 * JUMP_G * y))) / JUMP_G;   // 還要多久落地：至少 0.35 秒才來得及（快要落地的不算）
+  const a = VM.ai.get(id), air = a ? (a.y > 0.02 || a.vy > 0) && left(a.y, a.vy) > 0.35 : id === vmMe() ? !!(walk.air && !walk.air.block) && left(walk.air.y, walk.air.vy) > 0.35 : ((NET.peers.get(id) || {}).y || 0) > 0.5;
+  return air ? { id } : null;
 }
 // 快攻（AI 舉球員要舉時）：這一球要不要打快攻先決定好；要打就照傳過來的球倒推——先在舉球員左前方後面等，
 //   球快到舉球員手上時衝兩步，在舉球員碰到球前一下起跳（舉球那一刻已經在空中），舉球員再把球又低又快地送到手上
@@ -10367,7 +10387,7 @@ function vmOnNet(d, from) {
     if (VM.on && VM.host) return;
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
-    Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1] });
+    Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
     if (d.ts) VB.ts = d.ts;
     const colors = { aiT: '#30A46C', ai1: '#E5484D', ai2: '#F76B15', ...(d.six ? d.six.colors : {}) };
     for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D', d.chars && d.chars[id]); a.wx = null; }
@@ -10405,6 +10425,22 @@ function vmHud() {
   const na = vmTeamLabel(0), nb = vmTeamLabel(1); if ($('vm-a').textContent !== na) $('vm-a').textContent = na; if ($('vm-b').textContent !== nb) $('vm-b').textContent = nb;
 }
 $('vm-x').addEventListener('click', () => { vmStop(); toast('離開 2 對 2 了'); });
+// 體力設定：每個動作耗幾 %、專職少耗幾 %、每秒回幾 %
+function vmStaMenu() {
+  const row = (k) => `<label class="sta-row"><span>${STA_LBL[k]}</span><input type="number" min="0" max="${k === 'spec' ? 90 : 100}" step="0.5" data-stak="${k}" value="${STA_CFG[k]}"><i>%</i></label>`;
+  $('rk-menu').innerHTML = `<div class="rk-box"><h3>⚙️ 體力設定</h3>
+    <p class="rk-sub">每個動作耗掉多少體力（%）</p><div class="sta-grid">${['sprint', 'jump', 'jserve', 'block', 'spike', 'hit', 'serve', 'tip', 'set', 'bump', 'dive'].map(row).join('')}</div>
+    <p class="rk-sub">6 對 6 專職：做自己位置專長的動作少耗（舉球：舉球、二次球；大砲：扣、起跳、接球、撲救；舉對：扣、起跳、攔網；攔中：攔網、起跳、扣）</p><div class="sta-grid">${row('spec')}</div>
+    <p class="rk-sub">回復（停下來 0.8 秒後開始回）</p><div class="sta-grid">${['regMove', 'regStill', 'regDead'].map(row).join('')}</div>
+    <p class="rk-sub">存在這台電腦；連線比賽時大家照開局的人的設定。AI 也照這套扣。</p>
+    <div class="rk-btns"><button type="button" class="primary" data-vm="staback">好了</button><button type="button" data-vm="stareset">恢復預設</button></div></div>`;
+  $('rk-menu').hidden = false; unlockMouse();
+}
+$('rk-menu').addEventListener('change', (e) => {
+  const k = e.target.dataset && e.target.dataset.stak; if (!k) return;
+  const v = clamp(Number(e.target.value) || 0, 0, k === 'spec' ? 90 : 100); STA_CFG[k] = v; e.target.value = v;
+  try { localStorage.setItem('vb.stacfg', JSON.stringify(STA_CFG)); } catch (er) { /* ignore */ }
+});
 $('rk-menu').addEventListener('click', (e) => {
   const t = e.target.closest('[data-vm],[data-vmto],[data-vmlv],[data-vmmate],[data-vmmode],[data-vmrole],[data-vmsets],[data-vmto6],[data-vmpt],[data-vmpr]'); if (!t) return;
   const save = () => { try { localStorage.setItem('vb.vmopt', JSON.stringify(VM_OPT)); } catch (er) { /* ignore */ } };
@@ -10415,6 +10451,9 @@ $('rk-menu').addEventListener('click', (e) => {
   if (t.dataset.vmpt || t.dataset.vmpr) { const [pid, v] = (t.dataset.vmpt || t.dataset.vmpr).split('|'), q = VM.menu.asg && VM.menu.asg[pid]; if (q) { if (t.dataset.vmpt) q.team = +v; else q.role = v; } vmOpenMenu(VM.menu.c); return; }
   const a = t.dataset.vm || 'opt';
   if (a === 'close') { $('rk-menu').hidden = true; return; }
+  if (a === 'sta') { vmStaMenu(); return; }
+  if (a === 'staback') { vmOpenMenu(VM.menu.c); return; }
+  if (a === 'stareset') { STA_CFG = { ...STA_DEF }; try { localStorage.removeItem('vb.stacfg'); } catch (er) { /* ignore */ } vmStaMenu(); return; }
   if (a === 'opt') { const k = t.dataset.vmto ? 'to' : t.dataset.vmlv ? 'lv' : 'mate'; VM_OPT[k] = +(t.dataset.vmto || t.dataset.vmlv || t.dataset.vmmate); try { localStorage.setItem('vb.vmopt', JSON.stringify(VM_OPT)); } catch (er) { /* ignore */ } vmOpenMenu(VM.menu.c); return; }
   if (a === 'quit') { $('rk-menu').hidden = true; vmStop(); return; }
   if (a === 'again' && VM.six) { $('rk-menu').hidden = true; vm6Start(VM.c, VM.sg0, VM.asg0); return; }
@@ -10547,7 +10586,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t) => vbAttack(t), npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
