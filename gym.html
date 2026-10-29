@@ -8198,7 +8198,7 @@ renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.prev
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (EMO.menu) { e.preventDefault(); emoMenuClose(true); return; }   // 互動選單：點一下確定
   if (SETM.m) { e.preventDefault(); setMenuClose(true); return; }   // 舉球轉盤：點一下＝選亮著的（沒亮＝預設）
-  if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); const ck = e.button === 2 ? 'float' : 'jump'; if (vbChargeStart(ck)) return; if (walk.jserve && !walk.jserve.jumped && !walk.jserve.hit) { walk.chargeArm = ck; return; } vbAttack(e.button === 2); return; }   // 跳發還沒起跳就按住：起跳那一刻開始蓄力
+  if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); const ck = e.button === 2 ? 'float' : 'jump'; if (vbChargeStart(ck)) return; if (walk.jserve && !walk.jserve.jumped && !walk.jserve.hit) { walk.chargeArm = ck; return; } if (e.button === 0 && !walk.air && !walk.hold && !walk.serve && !walk.jserve) { walk.chargeArm = 'jump'; walk.chargeArmGround = true; return; } vbAttack(e.button === 2); return; }   // 地上按住：起跳那一刻開始蓄力（放開前沒跳＝站著打）   // 跳發還沒起跳就按住：起跳那一刻開始蓄力
   if (!walk.on || e.button !== 0 || window.__rkOn) return;
   if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
   walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
@@ -8234,7 +8234,7 @@ function endLook(e) {
   walk.target = [p.x, p.z]; targetMark.position.set(p.x, 0.04, p.z); targetMark.visible = true;
 }
 renderer.domElement.addEventListener('pointerup', endLook);
-addEventListener('pointerup', (e) => { if (e.button === 0 || e.button === 2) { walk.chargeArm = null; if (walk.charge) vbChargeRelease(); } });
+addEventListener('pointerup', (e) => { if (e.button === 0 || e.button === 2) { const g = walk.chargeArmGround && walk.chargeArm && !walk.air; walk.chargeArm = null; walk.chargeArmGround = false; if (walk.charge) vbChargeRelease(); else if (g) vbAttack(false); } });   // 地上按、地上放＝站著打
 for (const el of document.querySelectorAll('#emo-menu [data-emo]')) {   // 沒鎖定滑鼠時：直接指、點選單
   el.addEventListener('pointerenter', () => { if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuDraw(); } });
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuClose(true); } });
@@ -9215,6 +9215,8 @@ function vbJump(kind) {
   walk.air = { y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired, vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
   if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
+  if (SETM.m) setMenuClose(false);   // 起跳了：舉球轉盤收掉（不會搶走攻擊的點擊）
+  if (!block && walk.chargeArm && walk.chargeArmGround) { walk.chargeArm = null; walk.chargeArmGround = false; vbChargeStart('jump'); }   // 起跳前就按住左鍵：起跳那一刻開始蓄力
 }
 function vbAirStep(dt) {
   const a = walk.air; if (!a) return 0;
@@ -9227,7 +9229,7 @@ function vbHand() { const [fx, fz] = vbFwd(); return new THREE.Vector3(walk.x + 
 function vbAttack(tip, chg = null) {
   if (walk.jserve && !walk.jserve.hit) { jumpServeHit(tip ? 'float' : 'jump'); return; }
   if (walk.hold && !walk.air) { startServe(tip ? 'float' : 'std'); return; }
-  if (walk.swing || walk.sit || walk.serve) return;
+  if ((walk.swing && !walk.swing.done) || walk.sit || walk.serve) return;   // 上一下揮完了（收手中）可以馬上再揮
   walk.swing = { t: 0, tip: !!tip, done: false, prev: null, chg };
   pose = 'cock'; hands.visible = true;
 }
@@ -9245,7 +9247,7 @@ function vbChargeOf(c) {   // 蓄力值 → 力道倍數 pw、失準 err（0＝�
 function vbChargeStart(kind = 'jump') {   // kind：jump＝左鍵（扣球、跳發），float＝右鍵（只有跳飄能蓄力，平常右鍵是吊球）
   const js = walk.jserve && !walk.jserve.hit; if (js && walk.jserve.swung) return false;
   if (kind === 'float' && !js) return false;
-  if (!walk.air || walk.air.block || walk.swing || walk.hold || walk.spike || walk.charge) return false;
+  if (!walk.air || walk.air.block || (walk.swing && !walk.swing.done) || walk.hold || walk.spike || walk.charge) return false;
   walk.charge = { t: 0, kind }; pose = 'cock'; hands.visible = true; vbChgHud(); return true;
 }
 function vbChargeRelease() {
