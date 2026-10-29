@@ -453,6 +453,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .vb-cue[data-k="jump"] { background: #30A46C; animation: cuePop .25s ease-out; }
 .vb-cue[data-k="hit"] { background: #F2B705; color: #1B2638; animation: cuePop .2s ease-out; }
 .vb-cue[data-k="block"] { background: #3E63DD; animation: cuePop .25s ease-out; }
+.vb-cue[data-k="set"] { background: #8E4EC6; animation: cuePop .2s ease-out; }
 @keyframes cuePop { from { transform: translate(-50%, -50%) scale(1.4); } to { transform: translate(-50%, -50%) scale(1); } }
 .walk-ui.rk .vb-cue { display: none !important; }
 /* 底部按鍵提示列 */
@@ -9527,15 +9528,17 @@ function vbSet(n, v = null) {
       VM.call = { n, t: VM.t, v }; toast(`你喊：${v === 'flat' ? ['', '4 號位（平球）', '', '背（平球）'][n] : v === 'high3' ? '3 號位（高球）' : ['', '4 號位（高球）', '快攻！', '2 號位', '後排中間', '老3（右邊後排）'][n]}`, 1300); vmShout(['', '4 號！', '快！', '2 號！', '後排！', '老3！'][n]); return;
     }
   }
+  const self = !!(walk.hold || skill.mode);   // 自己拋起來舉（練習）：球要飛一下才回來，窗口長一點
   if (walk.hold || skill.mode) {   // 手上的球：先往上拋一點再舉（自己練習）
     if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
     const [fx, fz] = vbFwd(); releaseBall(new THREE.Vector3(fx * 0.25, 3.4, fz * 0.25)); vbMine(balls[balls.length - 1]); balls[balls.length - 1].mineT = 0;
   }
-  walk.setQ = { n, v, t0: performance.now(), prev: null }; pose = 'set'; hands.visible = true;
+  // 舉球要抓時機：按下（轉盤選定）後 0.5 秒內球要到額頭前上方才舉得出去；太早按＝落空，要再按一次
+  walk.setQ = { n, v, t0: performance.now(), prev: null, win: self ? 1600 : 500 }; pose = 'set'; hands.visible = true;
 }
 function vbSetStep() {
   const s = walk.setQ; if (!s) return;
-  if (performance.now() - s.t0 > 1600) { walk.setQ = null; if (!walk.hold && !(walk.flash > 0)) { hands.visible = false; pose = 'hold'; } return; }
+  if (performance.now() - s.t0 > (s.win || 1600)) { walk.setQ = null; if (!walk.hold && !(walk.flash > 0)) { hands.visible = false; pose = 'hold'; } if (s.win < 1000) toast('舉早了：球還沒到（球快到額頭前上方才按）', 1300); return; }
   const cy = camera.position.y, R = VB_REACH.set * (VB.assist ? 1.2 : 1); let best = null;
   const costOf = (q) => { const dh = Math.hypot(q.x - walk.x, q.z - walk.z); return dh > R || q.y < cy - 0.6 || q.y > cy + 1.1 ? null : Math.abs(dh - 0.3) + Math.abs(q.y - (cy + 0.3)) * 0.5; };
   for (const b of balls) {
@@ -9810,6 +9813,11 @@ function vbCue() {
   }
   if (VB.glow && VB.glow !== glow) VB.glow.m.material = ballMat;
   if (glow) glow.m.material = ballHot; VB.glow = glow;
+  // 舉球：球快（0.45 秒內）掉到你額頭前上方、在你 1 m 內：現在按舉球鍵（或在轉盤選球路）剛好
+  if (!cue && !walk.air && !walk.hold && !walk.setQ && (VM.on || VB.npc)) {
+    const cy = camera.position.y;
+    for (const b of balls) { if (b.rest > 0.3 || b.mine || b.v.y > 2) continue; const pr = vbPredict(b.m.position, b.v, cy + 0.3); if (pr && pr.t < 0.45 && Math.hypot(pr.x - walk.x, pr.z - walk.z) < 1.0) { cue = ['set', touch ? '舉球！' : '舉球！（1～5）']; break; } }
+  }
   // 攔網：你在網前、對面有人起跳攻擊、在你左右 2.2 m 內
   if (!cue && !walk.air && VM.on) {
     const ct = vbCourt();
