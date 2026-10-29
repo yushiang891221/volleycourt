@@ -10993,9 +10993,9 @@ function vmStaRings() {
     if (!g || v == null) continue;
     let r = STA_RING.get(id);
     if (!r) {
-      r = new THREE.Group(); const M = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide });
+      r = new THREE.Group(); const M = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });   // 深度往前推：遠處也不會跟地板打架
       const bg = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.64, 48), M('#1B2638', 0.55)), fg = new THREE.Mesh(staArc(40), M('#30A46C', 0.95));
-      bg.rotation.x = fg.rotation.x = -Math.PI / 2; fg.position.y = 0.003; fg.renderOrder = 2; r.add(bg, fg); r.fg = fg; r.n = -1; scene.add(r); STA_RING.set(id, r);
+      bg.rotation.x = fg.rotation.x = -Math.PI / 2; fg.position.y = 0.003; bg.renderOrder = 20; fg.renderOrder = 21; r.add(bg, fg); r.fg = fg; r.n = -1; scene.add(r); STA_RING.set(id, r);   // 排在所有地板貼圖（球場線、標誌）之後才畫：不會被半透明的地板貼圖蓋掉
     }
     seen.add(id); r.visible = true; r.position.set(g.position.x, 0.07, g.position.z);   // 抬高一點：球場地板比地面高幾公分，不然會被蓋住
     const n = Math.round(clamp(v, 0, 1) * 40);
