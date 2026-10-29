@@ -313,7 +313,13 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .wk-chg[data-z="sweet"] { box-shadow: 0 0 0 2px #F2B705, 0 0 10px rgba(242,183,5,.7); }
 .walk-ui.rk .wk-chg { display: none !important; }
 .emo-menu { position: absolute; left: 50%; top: calc(50% - 96px); transform: translateX(-50%); display: flex; align-items: center; gap: 70px; z-index: 12; }
-.emo-menu[hidden] { display: none !important; }
+.emo-menu[hidden], .set-wheel[hidden] { display: none !important; }
+/* 舉球轉盤：選項平均分在一圈 360 度上，滑鼠往哪個方向拖就選哪個 */
+.set-wheel { position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; margin: -115px 0 0 -115px; border-radius: 50%; z-index: 12; box-shadow: 0 0 0 2px rgba(255,255,255,.35), 0 6px 24px rgba(0,0,0,.35); }
+.set-wheel i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(27,38,56,.6); pointer-events: none; z-index: 2; }
+.set-wheel .sw-opt { position: absolute; transform: translate(-50%, -50%); max-width: 104px; padding: 6px 9px; border-radius: 10px; background: rgba(15,23,36,.85); color: #fff; font-weight: 800; font-size: 14px; text-align: center; line-height: 1.2; cursor: pointer; border: 2px solid transparent; }
+.set-wheel .sw-opt.on { background: #F2B705; color: #1B2638; border-color: #fff; }
+.walk-ui.rk .set-wheel { display: none !important; }
 .emo-menu button { min-height: 0; padding: 9px 16px; border-radius: 14px; border: 2px solid rgba(255,255,255,.35); background: rgba(15,23,36,.82); color: #fff; font-weight: 800; font-size: 15px; }
 .emo-menu button.on { background: #F2B705; border-color: #F2B705; color: #1B2638; transform: scale(1.08); }
 .emo-menu i { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(27,38,56,.6); pointer-events: none; }
@@ -811,7 +817,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>V</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>P</kbd>第一／第三人稱</span><span>按住<kbd>T</kbd>往左擊掌／往右嘲諷</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>V</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>V</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
-      <div class="emo-menu" id="set-menu" hidden><button type="button" data-sv="0"></button><i id="set-cur"></i><button type="button" data-sv="1"></button></div>
+      <div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div>
       <div class="emo-menu" id="emo-menu" hidden><button type="button" data-emo="hi5">🙌 擊掌</button><i id="emo-cur"></i><button type="button" data-emo="taunt">😜 嘲諷</button></div>
       <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="ov"></i><b id="wk-chg-f"></b></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
@@ -8174,7 +8180,7 @@ function unlockMouse() { if (locked()) document.exitPointerLock(); }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
   if (EMO.menu) { emoMenuMove(e.movementX); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
-  if (SETM.m) { setMenuMove(e.movementX); return; }   // 舉球選單：往左／右拖一下就舉
+  if (SETM.m) { setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
   if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
   walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1);
 });
@@ -8224,7 +8230,6 @@ function endLook(e) {
 }
 renderer.domElement.addEventListener('pointerup', endLook);
 addEventListener('pointerup', (e) => { if (e.button === 0 || e.button === 2) { walk.chargeArm = null; if (walk.charge) vbChargeRelease(); } });
-for (const el of document.querySelectorAll('#set-menu [data-sv]')) el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); setMenuPick(+el.dataset.sv); });   // 沒鎖定滑鼠時：直接點
 for (const el of document.querySelectorAll('#emo-menu [data-emo]')) {   // 沒鎖定滑鼠時：直接指、點選單
   el.addEventListener('pointerenter', () => { if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuDraw(); } });
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuClose(true); } });
@@ -9474,21 +9479,40 @@ function vmFreeBall() {
   vbLaunch(b, cp, vbOverVel(cp, ct, false, 0.15), 'set', 0.8);
   vmOnTouch(b, vmMe(), 'set'); toast('推過網', 900);
 }
-// 舉球的選項：1＝平的長攻／高的長攻、2＝高的 3 號位／快攻、3＝平的背／高的背（左、右）；只按一下不拖＝右邊那個（原本的舉法）
+// 舉球的選項：1＝平的長攻／高的長攻、2＝高的 3 號位／快攻、3＝平的背／高的背（轉盤上第一個在左邊，其他照順序平分一圈）；只按一下不拖＝最後一個（原本的舉法）
 const SET_OPT = { 1: [['flat', '平的長攻'], ['high', '高的長攻']], 2: [['high3', '高的 3 號位'], ['quick', '快攻']], 3: [['flat', '平的背'], ['high', '高的背']] };
 const SETM = { m: null };
+// 轉盤：第 i 個選項放在 180°−i×(360°／選項數)（兩個選項＝左、右）；扇形之間畫分隔線
+const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n;
 function setMenuOpen(n) {
   if (SETM.m) setMenuClose(true);
-  SETM.m = { n, dx: 0 }; const el = $('set-menu'), bs = el.querySelectorAll('[data-sv]');
-  SET_OPT[n].forEach(([, label], i) => { bs[i].textContent = `${i ? '' : '◀ '}${label}${i ? ' ▶' : ''}`; bs[i].classList.remove('on'); });
-  $('set-cur').style.transform = 'translateX(0px)'; el.hidden = false;
+  const opts = SET_OPT[n], N = opts.length, el = $('set-menu'); SETM.m = { n, dx: 0, dy: 0, hov: -1 };
+  for (const o of el.querySelectorAll('.sw-opt')) o.remove();
+  opts.forEach(([, label], i) => {
+    const o = document.createElement('div'), a = setAng(i, N); o.className = 'sw-opt'; o.dataset.sv = i; o.textContent = label;
+    o.style.left = `${50 + Math.cos(a) * 34}%`; o.style.top = `${50 - Math.sin(a) * 34}%`;
+    o.addEventListener('pointerenter', () => setMenuHover(i)); o.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); setMenuPick(i); });   // 沒鎖定滑鼠時：直接點
+    el.appendChild(o);
+  });
+  const degs = opts.map((_, i) => ((((90 - ((setAng(i, N) + Math.PI / N) * 180) / Math.PI) % 360) + 360) % 360)).sort((x, y) => x - y);   // 扇形分界（CSS 角度：從上面順時針）
+  const lines = degs.map((d) => `transparent ${Math.max(0, d - 0.8)}deg, rgba(255,255,255,.4) ${Math.max(0, d - 0.8)}deg ${d + 0.8}deg, transparent ${d + 0.8}deg`);
+  el.style.background = `conic-gradient(from 0deg, ${lines.join(', ')}), rgba(15,23,36,.55)`;
+  $('set-cur').style.transform = 'translate(0px, 0px)'; el.hidden = false;
 }
-function setMenuMove(dx) {
-  const m = SETM.m; if (!m) return; m.dx = clamp(m.dx + dx, -60, 60); $('set-cur').style.transform = `translateX(${m.dx}px)`;
-  if (Math.abs(m.dx) >= 30) setMenuPick(m.dx < 0 ? 0 : 1);   // 往左／右拖一下就舉
+function setMenuHover(i) { const m = SETM.m; if (!m || m.hov === i) return; m.hov = i; for (const o of $('set-menu').querySelectorAll('.sw-opt')) o.classList.toggle('on', +o.dataset.sv === i); }
+// 滑鼠移動：游標在轉盤裡跟著動（不轉頭）；方向最接近哪個選項就亮哪個，拖出去夠遠（45 px）就舉
+function setMenuMove(dx, dy) {
+  const m = SETM.m; if (!m) return; m.dx += dx; m.dy += dy;
+  const r = Math.hypot(m.dx, m.dy), N = SET_OPT[m.n].length; if (r > 60) { m.dx *= 60 / r; m.dy *= 60 / r; }
+  $('set-cur').style.transform = `translate(${m.dx.toFixed(0)}px, ${m.dy.toFixed(0)}px)`;
+  if (r < 12) return;
+  const phi = Math.atan2(-m.dy, m.dx); let best = 0, bd = 9;
+  for (let i = 0; i < N; i++) { const d = Math.abs(Math.atan2(Math.sin(phi - setAng(i, N)), Math.cos(phi - setAng(i, N)))); if (d < bd) { bd = d; best = i; } }
+  setMenuHover(best); if (r >= 45) setMenuPick(best);
 }
 function setMenuPick(i) { const m = SETM.m; if (!m) return; SETM.m = null; $('set-menu').hidden = true; vbSet(m.n, SET_OPT[m.n][i][0]); }
-function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(1); else { SETM.m = null; $('set-menu').hidden = true; } }
+// 放開數字鍵：有亮著的選項就用它，沒有＝最後一個（原本的舉法）
+function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : SET_OPT[m.n].length - 1); else { SETM.m = null; $('set-menu').hidden = true; } }
 function vbSet(n, v = null) {
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   // 2 對 2：這一球是 AI 隊友舉（你接的、或球還在對面），按 1／2／3＝喊球
@@ -11148,7 +11172,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
