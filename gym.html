@@ -9482,7 +9482,7 @@ function vbSetStep() {
 function vbSpot(ct, n, fromLx, fromLz) {
   const sg = Math.sign(ct.lx) || 1, sp = n === 2 ? { lx: sg * 0.7, lz: 0, y: 2.85 } : n === 1 ? { lx: sg * 1.0, lz: sg * 3.3, y: 2.95 } : n === 4 ? { lx: sg * 3.6, lz: 0, y: 3.0 } : n === 5 ? { lx: sg * 3.6, lz: -sg * 3.0, y: 3.0 } : { lx: sg * 1.0, lz: -sg * 3.3, y: 2.95 };   // 5＝老3：右邊後排攻擊
   const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
-  sp.T = n === 2 ? clamp(0.32 + d * 0.06, 0.36, 0.55) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；兩邊高球最高點約 4～4.5 m
+  sp.T = n === 2 ? clamp(0.22 + d * 0.05, 0.24, 0.4) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；兩邊高球最高點約 4～4.5 m
   return sp;
 }
 function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {
@@ -9504,7 +9504,7 @@ function vbDoSet(b, n, q = 0.9, hy = 0.3) {
   }
   const ct = vbCourt(); let tx, tz, ty = 2.95, T = 1.45;
   const mbq = VM.six && n === 2 ? VM.team[vmTeamOf(vmMe())].map((id) => VM.ai.get(id)).find((q) => q && VM.role[q.id] === 'MB' && vm6Front(q.id) && (q.y > 0.02 || q.vy > 0)) : null;
-  if (mbq) { const sd = vmSide(mbq.team); [tx, tz] = vmW(sd * clamp(Math.abs(mbq.x) - 0.1, 0.7, 1.4), mbq.z); ty = 3.05; T = 0.26; }   // 6 對 6 快攻：攔中已經跳起來了，又低又快直接送到他手上
+  if (mbq) { const sd = vmSide(mbq.team); [tx, tz] = vmW(sd * clamp(Math.abs(mbq.x) - 0.1, 0.7, 1.4), mbq.z); ty = 3.05; T = 0.19; }   // 6 對 6 快攻：攔中已經跳起來了，又低又快直接送到他手上
   let who = '';
   if (mbq) { /* 快攻已經處理 */ }
   else if (ct) {
@@ -9527,10 +9527,10 @@ function vbDoSet(b, n, q = 0.9, hy = 0.3) {
 // 別人舉過來的球：算出它經過 2.95 m 的地方，標成攻擊點
 function vbMarkSet(b) { b.setT = performance.now(); const pr = vbPredict(b.m.position, b.v, 2.9); if (pr) VB.setSpot = { x: pr.x, z: pr.z, until: performance.now() + pr.t * 1000 + 1500, b }; }
 // ---- 攔網（B 起跳）：手在網子上方往前伸，球穿過手的位置就攔下來；只擦到邊＝撐球，球留在自己這邊
-// 攔網的雙手跟著滑鼠往左右移，但有速度上限（每秒 1 m）：一次跳起來大概只來得及往一邊移一次，不能左右來回掃
+// 攔網的雙手跟著滑鼠往左右移，但有速度上限（每秒 1.6 m）：一次跳起來大概只來得及往一邊移一次，不能左右來回掃
 function vbBlockHands(dt) {
   if (!(walk.air && walk.air.block)) return;
-  const d = (walk.blkAim || 0) - (walk.blkShift || 0), m = 1.0 * dt;
+  const d = (walk.blkAim || 0) - (walk.blkShift || 0), m = 1.6 * dt;
   walk.blkShift = (walk.blkShift || 0) + clamp(d, -m, m);
 }
 function vbBlockTest(b, h) {
@@ -10411,8 +10411,8 @@ function vmAiRole(a, P, B, sd) {
         return;
       }
       // 有喊球就照喊的舉：快攻＝在舉球員旁邊、又低又快；4 號位／2 號位＝高球到兩邊；沒喊就舉到攻擊手那邊
-      if (call === 2 && VM.six) vmAiTouch(a, sd * clamp(Math.abs(ap.x ?? 1) - 0.1, 0.7, 1.4), clamp(ap.z, a.z - 1.6, a.z + 1.6), 3.05, 0.26, vmLv(a).setErr * 0.4, 'set', 2);   // 6 對 6 快攻：又低又快直接送到已經跳起來的中間手手上
-      else if (call === 2) vmAiTouch(a, sd * 0.75, clamp(ap.z, a.z - 1.5, a.z + 1.5), 2.95, 0.45, vmLv(a).setErr * 0.6, 'set', 2);
+      if (call === 2 && VM.six) vmAiTouch(a, sd * clamp(Math.abs(ap.x ?? 1) - 0.1, 0.7, 1.4), clamp(ap.z, a.z - 1.6, a.z + 1.6), 3.05, 0.19, vmLv(a).setErr * 0.4, 'set', 2);   // 6 對 6 快攻：又低又快直接送到已經跳起來的中間手手上
+      else if (call === 2) vmAiTouch(a, sd * 0.75, clamp(ap.z, a.z - 1.5, a.z + 1.5), 2.95, 0.32, vmLv(a).setErr * 0.6, 'set', 2);
       else if (call === 1 || call === 3) vmAiTouch(a, sd * 1.0, (call === 1 ? sd : -sd) * 3.3, 2.95, 1.2, vmLv(a).setErr, 'set', 2);
       else if (call === 4) vmAiTouch(a, sd * 3.6, 0, 3.0, 1.2, vmLv(a).setErr, 'set', 2);
       else if (call === 5) vmAiTouch(a, sd * 3.6, -sd * 3.0, 3.0, 1.3, vmLv(a).setErr, 'set', 2);   // 右邊後排攻擊（舉對在後排時）
