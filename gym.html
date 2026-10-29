@@ -10773,7 +10773,7 @@ function vm6GoSpot(sp) {
 //   左右：同一排由右到左照號位——前排 2 在 3 的右邊、3 在 4 的右邊；後排 1 在 6 的右邊、6 在 5 的右邊
 //   發球的人（1 號位）在底線外，不算；兩個都是 AI 就不用查（AI 一定站對）
 function vm6Overlap() {
-  for (const t of [0, 1]) {   // 兩隊都判（發球員本人不算，見 skip）
+  for (const t of [1 - VM.srvTeam]) {   // 發球方整隊不判越位，只判接發球那一隊
     const rot = VM.rot[t], sd = vmSide(t), at = (id) => { const a = VM.ai.get(id); if (a) return { d: Math.abs(a.tx), L: a.tz / sd }; const q = vmPos(id); return q ? { d: Math.abs(q.x), L: q.z / sd } : null; };
     const skip = (k) => t === VM.srvTeam && k === 0, both = (i, j) => VM.ai.has(rot[i]) && VM.ai.has(rot[j]);
     for (const [b, f] of [[0, 1], [5, 2], [4, 3]]) {
