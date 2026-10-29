@@ -9606,8 +9606,10 @@ function vbDoSet(b, n, q = 0.9, hy = 0.3, v = null) {
   // 時機沒抓好（球離額頭前上方那個點太遠）：兩手沒同時碰到＝連擊（球會轉）；球太低、在手上停太久＝持球——比賽中會被吹
   const pf = clamp((0.5 - q) * 1.6, 0, 0.6); b.setFault = Math.random() < pf ? (hy < -0.3 ? 'held' : 'double') : null;
   vbSendSet(b, tx, tz, ty, T, n, who, cp, q);
+  VB.setN = mbq ? 2 : n;   // 舉到哪個號位（決定誰打）
   if (b.setFault) toast(b.setFault === 'held' ? '持球！球太低、在手上停太久（比賽會被吹）' : '連擊！兩手沒同時碰到，球在轉（比賽會被吹）', 1800);
   vmOnTouch(b, vmMe(), 'set');
+  if (VM.on && VM.host && VM.six) { const t = vmTeamOf(vmMe()), P2 = VM.poss[t], id = P2 && P2.stage === 2 ? vm6AttackerByCall(t, VB.setN, vmMe()) : null; if (id) P2.attacker = id; }   // 舉給誰就是誰打
 }
 // 別人舉過來的球：算出它經過 2.95 m 的地方，標成攻擊點
 function vbMarkSet(b) { b.setT = performance.now(); const pr = vbPredict(b.m.position, b.v, 2.9); if (pr) VB.setSpot = { x: pr.x, z: pr.z, until: performance.now() + pr.t * 1000 + 1500, b }; }
@@ -10610,7 +10612,7 @@ function vmAiSpike(a, sd) {
   vbLaunch(b, p, v, tip ? 'tip' : 'spike', 0.85);
   vmOnTouch(b, a.id, tip ? 'tip' : 'spike');
 }
-// 這顆球 AI 要不要放掉：會落在界外（照程度判斷，越強越準）而且不是自己隊友傳壞的；被自己攔網碰出去的大多放掉（偶爾追）
+// 這顆球 AI 要不要放掉：會落在界外（照程度判斷，越強越準）而且是對面碰的；自己隊碰過的（傳壞、攔網碰出去）都去救
 //   一隊一起決定（同一顆、同一次觸球只算一次），不會有人放有人追
 function vmLetGo(team, b) {
   if (!b) return false;
@@ -10619,9 +10621,9 @@ function vmLetGo(team, b) {
   if (Math.sign(lx) !== vmSide(team)) return false;
   const key = VM.srvSeq * 1000 + VM.touch.n * 10 + (VM.touch.team + 1) + (VM.touch.blk ? 500 : 0);
   const C = VM.letGo || (VM.letGo = [{}, {}]);
-  if (C[team].key !== key) { const ids = VM.team[team].filter((id) => VM.ai.has(id)), L = ids.length ? vmLv(VM.ai.get(ids[0])) : VM_LEVELS[2]; C[team] = { key, noise: rkGauss() * (L.judge ?? 0.3) * 0.5, chase: Math.random() < 0.15 * L.blockSkill, v: false }; }
+  if (C[team].key !== key) { const ids = VM.team[team].filter((id) => VM.ai.has(id)), L = ids.length ? vmLv(VM.ai.get(ids[0])) : VM_LEVELS[2]; C[team] = { key, noise: rkGauss() * (L.judge ?? 0.3) * 0.5, v: false }; }
   const c = C[team], outBy = Math.max(Math.abs(lx) - 9, Math.abs(lz) - 4.5) - BALL_R + c.noise - (b.float ? 0.6 : 0);   // 飄球不好預測：靠近邊線的保守接
-  c.v = outBy > 0 && (VM.touch.team !== team || (VM.touch.blk && !c.chase));   // 對面打的／發球：放掉；自己攔網碰出去：大多放掉（偶爾追）
+  c.v = outBy > 0 && VM.touch.team !== team;   // 對面打的／發球（含被對方攔網碰回來的）：放掉；自己隊碰過的（含自己攔網碰出去的 touch out）：去追救
   return c.v;
 }
 // 對面有沒有人在攻擊手前面攔網（AI 在攔、你或連線的人站在網前）：回傳那個人的位置（球場座標）
@@ -10727,7 +10729,7 @@ function vm6Spot(team, id, mode) {
   }
   if (mode === 'attack') {   // 舉球員到舉球點；前排攻擊手退到助跑起點（主攻左、中間手在舉球員旁、舉對右）；後排主攻準備後排攻擊；其他人補位
     if (r === 'S') return vm6P(team, 0.9, -1.0);
-    if (front) return r === 'MB' ? vm6P(team, 1.8, -0.2) : r === 'OH' ? vm6P(team, 3.8, 3.2) : vm6P(team, 3.8, -3.2);   // 中間手貼近舉球員準備快攻
+    if (front) return r === 'MB' ? vm6P(team, 2.6, 0.6) : r === 'OH' ? vm6P(team, 3.8, 3.2) : vm6P(team, 3.8, -3.2);   // 中間手在舉球員左後方準備快攻（不擋舉球員跑位）
     if (r === 'OH') return vm6P(team, 6.4, 0);
     return r === 'MB' ? vm6P(team, 5.4, 2.4) : vm6P(team, 5.4, -2.4);
   }
@@ -10819,6 +10821,16 @@ function vm6AttackerFor(team, b, setterId) {
     if (!best || cost < best.cost) best = { id, cost };
   }
   return best ? best.id : null;
+}
+// 舉到哪個號位就是誰打：1＝前排大砲、2／6（快攻、高 3）＝前排攔中、3＝前排舉對（不在前排就前排右邊的人）、4＝後排大砲、5＝後排舉對；找不到才照離球近的
+function vm6AttackerByCall(team, n, setterId) {
+  const ids = VM.team[team].filter((id) => id !== setterId), at = (role, front) => ids.find((id) => VM.role[id] === role && vm6Front(id) === front);
+  if (n === 1) return at('OH', true) || null;
+  if (n === 2 || n === 6) return at('MB', true) || null;
+  if (n === 3) return at('OPP', true) || ids.find((id) => vm6Idx(id) === 1) || null;   // 2 號位（右前）
+  if (n === 4) return at('OH', false) || null;
+  if (n === 5) return at('OPP', false) || null;
+  return null;
 }
 // AI 舉球員要舉給誰：前排主攻（4 號位）、前排中間手（快攻，傳得到位才打）、前排舉對（2 號位）、後排主攻（後排攻擊）；隊上真人喊球照喊的，沒喊也常常舉給他
 function vm6ChooseSet(a, B) {
