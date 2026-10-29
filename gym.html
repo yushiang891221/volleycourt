@@ -10166,6 +10166,11 @@ function vmOnTouch(b, id, kind) {
       if (q && Math.abs(q.x) < (exact ? 3 : 2.6)) { vmPoint(1 - team, `後排攻擊犯規（${vmName(id)}在後排，要在 3 公尺線後起跳）`); return; }
     }
   }
+  // 正式規則：發球不能攔網；也不能在前區（3 公尺線內）把整顆高過網子的發球直接打回去
+  if (VM.touch.serve && team !== VM.touch.team) {
+    if (kind === 'block') { vmPoint(1 - team, `攔網發球犯規（${vmName(id)}攔了發球）`); return; }
+    if ((kind === 'spike' || kind === 'tip' || kind === 'hit') && b.m.position.y > NETS[state.net].h + BALL_R) { const [blx] = vmL(b.m.position.x, b.m.position.z); if (Math.abs(blx) < 3) { vmPoint(1 - team, `攻擊發球犯規（${vmName(id)}在前區把高過網的發球直接打回去）`); return; } }
+  }
   // 正式規則：同一人不能連續碰兩次（連擊）、一隊最多碰三次；攔網不算一次，攔網的人也可以再碰下一球
   const block = kind === 'block';
   if (team === VM.touch.team) {
