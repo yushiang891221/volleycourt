@@ -9539,11 +9539,13 @@ function vbBlockTest(b, h) {
   const sg = Math.sign(ct.lx) || 1, p = b.m.position, [lx, lz] = toLocalOf(ct.c, p.x, p.z), [l0] = toLocalOf(ct.c, p.x - b.v.x * h, p.z - b.v.z * h), plane = sg * 0.12;
   if (!((l0 - plane) * (lx - plane) <= 0 && (lx - l0) * sg > 0)) return;
   const sh = walk.blkShift || 0, [, hz] = toLocalOf(ct.c, walk.x + Math.cos(walk.yaw) * sh, walk.z - Math.sin(walk.yaw) * sh), off = Math.abs(lz - hz), cy = camera.position.y;   // 雙手的中心：跟著滑鼠往左右移
-  if (off > 0.62 + BALL_R || p.y > cy + 0.95 + BALL_R || p.y < cy + 0.2) return;
-  const r = (ct.c.rot * Math.PI) / 180, nx = Math.cos(r), nz = -Math.sin(r), vl = b.v.x * nx + b.v.z * nz;
-  vbFx(b, off < 0.42 ? 1 : 0.7); vbImpact(b, 'block', off < 0.42 ? 1 : 0.7); vbBlockFx(p.clone(), off < 0.42 ? 'stuff' : 'soft');
-  if (off < 0.42) { b.v.x -= 1.55 * vl * nx; b.v.z -= 1.55 * vl * nz; b.v.y = -Math.abs(b.v.y) * 0.3 - 1.5; const back = plane - sg * (BALL_R + 0.02) - lx; p.x += nx * back; p.z += nz * back; toast('攔網成功！🧱', 1500); }
-  else { b.v.multiplyScalar(0.35); b.v.y = 3.2; toast('撐到球了（球留在你這邊，快接起來）', 1500); }
+  const top = cy + 0.95, netH = NETS[state.net].h;
+  if (off > 0.62 + BALL_R || p.y > top + BALL_R || p.y < cy + 0.2) return;   // 從手上面過去＝被打過手（攻擊手跳得比你高、或你跳早跳晚了）
+  const r = (ct.c.rot * Math.PI) / 180, pow = clamp((b.v.length() - 8) / 18, 0, 1), low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);
+  const kind = vbBlockOutcome(off * 1.2, low, pow, 0.8);   // 你的手寬 0.62 m：換算成 0.75 m 的比例
+  const word = vbBlockApply(b, kind, lx, lz, hz, plane, sg, Math.sin(r), Math.cos(r), Math.cos(r), -Math.sin(r), pow);
+  vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', kind === 'stuff' ? 1 : 0.7); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
+  toast({ stuff: '攔網成功！🧱', soft: '撐到球了（球留在你這邊，快接起來）', through: '被打穿了', top: '球擦過指尖彈大了' }[kind] || (word === '打手出界！' ? '被打手出界了' : '碰到手了（球留在你這邊）'), 1500);
   b.spike = null; vbMine(b);
   if (NET.on) netBallHit(b, 'block');
   vmOnTouch(b, vmMe(), 'block');
@@ -10319,45 +10321,53 @@ function vmAiBlock(a, sd, b) {
   if (!a.blk) a.blk = { until: VM.t + 3 };
   a.tx = sd * 0.45; a.tz = clamp(th.z + lane + (Math.random() - 0.5) * 0.1, -4.2, 4.2);
   // 攻擊手起跳後，過反應時間就跟著跳
-  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + L.react * 0.6; if (VM.t >= a.blk.jumpAt) { a.vy = aiJump(a, 4.0, 'block'); a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }
+  if (th.air && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || VM.t + Math.max(0, L.react * 0.6 + rkGauss() * (0.16 - 0.12 * L.blockSkill)); if (VM.t >= a.blk.jumpAt) { a.vy = aiJump(a, 4.0, 'block'); a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = VM.t + 1.2; } }   // 起跳時機有誤差：程度低的常常跳早或跳晚
   if (!th.air) a.blk.jumpAt = 0;
   return true;
 }
-// 球穿過攔網的人手的位置：看扣球的力道、打的位置、攔網的人程度決定結果
-//   攔死（球直接壓回攻擊方）／撐起（球彈高留在攔網這邊，可以再組織）／打手出界（碰到手飛出場外，攻擊方得分）／打穿（力道大，球帶著手過去）
+// 攔網的結果（你攔、AI 攔都用這一套）：off＝球離雙手中心多遠（左右，以 0.75 m 的手寬算）、low＝球在手裡多深（0＝擦過指尖，1＝很低很釘）、pow＝扣球力道、skill＝攔網程度
+//   正中又低＝容易攔死；打外側那隻手＝越用力越容易打手出界；擦過指尖＝彈大（彈高往攔網這邊後場飛，常常出界）；力道大＝可能打穿；其他＝撐起來
+function vbBlockOutcome(off, low, pow, skill) {
+  const centered = off < 0.4, edge = off > 0.42;
+  if (low < 0.18 && Math.random() < 0.45 + 0.35 * pow) return 'top';
+  const pStuff = skill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (edge ? 0.1 + 0.6 * pow : 0.05) * (1.3 - 0.7 * low), pThrough = 0.32 * pow * (1.2 - skill), r = Math.random();
+  return r < pStuff ? 'stuff' : r < pStuff + pOut ? 'out' : r < pStuff + pOut + pThrough ? 'through' : 'soft';
+}
+// 照結果改球：plane＝攔網那一側的網面（球場座標 lx）、sd＝攔網那一隊在哪一側、hz＝雙手中心（lz）、e＝沿著網子的方向、n＝網子的法線；回傳那一下叫什麼
+function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
+  const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
+  if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
+  if (kind === 'out') {   // 打手出界：球擦到外側那隻手，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m
+    const side = Math.sign(lz - hz) || (Math.random() < 0.5 ? 1 : -1);
+    b.v.multiplyScalar(0.3);
+    const vy = 1.2 + Math.random() * 1.6, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
+    const vlat = clamp((4.5 + BALL_R + 0.6 + Math.random() * 1.2 - side * lz) / t, 1.5, 4.5 + 2 * pow);
+    b.v.x += ex * side * vlat; b.v.z += ez * side * vlat; b.v.y = vy;
+    const lz2 = lz + (b.v.x * ex + b.v.z * ez) * t, lx2 = lx + (b.v.x * nx + b.v.z * nz) * t;
+    return Math.abs(lz2) > 4.5 + BALL_R || Math.abs(lx2) > 9 + BALL_R ? '打手出界！' : '碰手了！';
+  }
+  if (kind === 'top') { b.v.multiplyScalar(0.5); b.v.y = 3.2 + Math.random() * 2.2; return '擦手彈大！'; }   // 擦過指尖：彈高，繼續往攔網這邊的後場飛
+  if (kind === 'through') { b.v.multiplyScalar(0.82); b.v.y -= 0.8; return '打穿攔網！'; }
+  b.v.multiplyScalar(0.25); b.v.y = 3 + Math.random() * 1.5; return '撐起來了';
+}
+const BLK_FX = { stuff: 'stuff', soft: 'soft', through: 'through', out: 'out', top: 'touch' };
+// AI 攔網：球穿過 AI 雙手的位置才算；手頂＝站著 2.7 m＋跳起來的高度（最高點約 3.65 m，比完美助跑、在最高點扣的擊球點低一點：攻擊手跳得好就能打過手）
 function vmBlockTest(b, h) {
   if (!VM.on || !VM.host || VM.phase !== 'rally' || b !== VM.ball || b.blkDone) return;
   for (const a of VM.ai.values()) {
     if (!a.blk || !a.blk.jumped || a.y < 0.05 || VM.touch.last === a.id) continue;
     const sd = vmSide(a.team), p = b.m.position, [lx, lz] = vmL(p.x, p.z), [l0] = vmL(p.x - b.v.x * h, p.z - b.v.z * h), plane = sd * 0.1;
     if (!((l0 - plane) * (lx - plane) <= 0 && (lx - l0) * sd > 0)) continue;
-    const off = Math.abs(lz - a.z), top = a.y + 2.85, netH = NETS[state.net].h;
-    if (off > 0.75 + BALL_R || p.y > top + BALL_R || p.y < netH - 0.05) continue;
-    const L = vmLv(a), spd = b.v.length(), pow = clamp((spd - 8) / 18, 0, 1), centered = off < 0.4, r = Math.random();
-    const low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);   // 球過網的位置在攔網手裡面多深：越低（越釘）越容易被攔死，擦著手上緣過去比較會打手出界
-    const pStuff = L.blockSkill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (centered ? 0.06 : 0.38) * (0.3 + 0.7 * pow) * (1.4 - 0.8 * low), pThrough = 0.32 * pow * (1.2 - L.blockSkill);
-    const rr = (VM.c.rot * Math.PI) / 180, nx = Math.cos(rr), nz = -Math.sin(rr), vl = b.v.x * nx + b.v.z * nz;
-    let word;
-    if (r < pStuff) {   // 攔死：壓回去
-      b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; word = '被攔死了！';
-    } else if (r < pStuff + pOut) {   // 打手出界：球擦到手的邊緣，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m（不會飛到老遠）
-      const side = Math.sign(lz - a.z) || (Math.random() < 0.5 ? 1 : -1), [ex, ez] = [Math.sin(rr), Math.cos(rr)];
-      b.v.multiplyScalar(0.3);
-      const vy = 1.2 + Math.random() * 1.6, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;   // 落地前在空中多久
-      const vlat = clamp((4.5 + BALL_R + 0.6 + Math.random() * 1.2 - side * lz) / t, 1.5, 4.5 + 2 * pow);
-      b.v.x += ex * side * vlat; b.v.z += ez * side * vlat; b.v.y = vy;
-      const lz2 = lz + (b.v.x * ex + b.v.z * ez) * t, lx2 = lx + (b.v.x * nx + b.v.z * nz) * t;
-      word = Math.abs(lz2) > 4.5 + BALL_R || Math.abs(lx2) > 9 + BALL_R ? '打手出界！' : '碰手了！';
-    } else if (r < pStuff + pOut + pThrough) {   // 打穿
-      b.v.multiplyScalar(0.82); b.v.y -= 0.8; word = '打穿攔網！';
-    } else {   // 撐起來：球彈高留在攔網這邊
-      b.v.multiplyScalar(0.25); b.v.y = 3 + Math.random() * 1.5; word = '撐起來了';
-    }
+    const off = Math.abs(lz - a.z), top = a.y + 2.7, netH = NETS[state.net].h;
+    if (off > 0.75 + BALL_R || p.y > top + BALL_R || p.y < netH - 0.05) continue;   // 從手上面過去＝打過手；從旁邊過去＝繞過攔網
+    const L = vmLv(a), pow = clamp((b.v.length() - 8) / 18, 0, 1), low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);
+    const rr = (VM.c.rot * Math.PI) / 180, kind = vbBlockOutcome(off, low, pow, L.blockSkill);
+    const word = vbBlockApply(b, kind, lx, lz, a.z, plane, sd, Math.sin(rr), Math.cos(rr), Math.cos(rr), -Math.sin(rr), pow);
     b.blkDone = true;
-    vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '被攔死了！' ? 'stuff' : word === '撐起來了' ? 'soft' : word === '打穿攔網！' ? 'through' : /出界/.test(word) ? 'out' : 'touch');
+    vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
     vmOnTouch(b, a.id, 'block');
     if (NET.on) netBallHit(b, 'block');
-    const mine = a.team !== 0; vmSay(word, word === '撐起來了' ? '' : (mine ? word !== '被攔死了！' : word === '被攔死了！') ? 'gold' : 'warn', 1400);
+    const mine = a.team !== 0; vmSay(word, kind === 'soft' ? '' : (mine ? kind !== 'stuff' : kind === 'stuff') ? 'gold' : 'warn', 1400);
     recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'block' });
     return;
   }
@@ -10415,10 +10425,10 @@ function vmAiRole(a, P, B, sd) {
     if (p && a.y === 0) {
       let tx = p.x + sd * 0.55; if (VM.six && !vm6Front(a.id)) tx = sd * Math.max(3.25, tx * sd);   // 後排攻擊（6 對 6）：在 3 公尺線後起跳
       const tz = p.z, uz = clamp((a.z - tz) * 0.35, -0.6, 0.6), un = Math.hypot(1, uz), sx = tx + (sd / un) * 2.8, sz = tz + (uz / un) * 2.8;   // 助跑起點：起跳點往後（斜斜的從場內）2.8 m＝三步
-      const dT = Math.hypot(a.x - tx, a.z - tz), tUp = 4.3 / JUMP_G, wait = p.t - tUp - dT / 4.8;   // 起跳到最高點的時間（約 0.5 秒）；助跑約每秒 4.8 m
+      const dT = Math.hypot(a.x - tx, a.z - tz), tUp = 4.7 / JUMP_G, wait = p.t - tUp - dT / 4.8;   // 起跳到最高點的時間（約 0.5 秒）；助跑約每秒 4.8 m
       if (!a.run && wait > 0.04) { a.tx = sx; a.tz = sz; a.appr = false; }
       else { a.run = true; a.tx = tx; a.tz = tz; a.appr = true; }
-      if (a.run && (dT < 0.45 || p.t < tUp)) { a.vy = aiJump(a, 4.3, 'jump'); a.pose = 5; a.appr = false; a.run = false; a.vx *= 0.25; a.vz *= 0.25; }   // 踩到起跳點就跳：衝的速度大多變成高度，空中只往前飄一點
+      if (a.run && (dT < 0.45 || p.t < tUp)) { a.vy = aiJump(a, 4.7, 'jump'); a.pose = 5; a.appr = false; a.run = false; a.vx *= 0.25; a.vz *= 0.25; }   // 踩到起跳點就跳：衝的速度大多變成高度，空中只往前飄一點
     }
     const H = hand();
     if (b2d(H) < 1.0 && B.y > 2.0) vmAiSpike(a, sd);
@@ -10466,6 +10476,14 @@ function vmAiSpike(a, sd) {
   let tx = gap.tx, tz = gap.tz, spd = (L.spike[0] + Math.random() * (L.spike[1] - L.spike[0])) * (0.6 + 0.4 * aiEff(a)) * (fixB ? 0.85 : 1), tip = false;
   if (r < Lo) { if (Math.random() < 0.5) tx = -sd * (9.5 + Math.random() * 1.8); else tz = Math.sign(tz || 1) * (4.8 + Math.random() * 1.2); }
   else if (!netGuard && r < Lo + Lt) { tip = true; tx = -sd * (1.5 + Math.random() * 1.5); }   // 網前沒人才吊，吊在網後
+  if (!tip && r >= Lo) {
+    const bl = vmBlockerFacing(a);
+    if (bl) {
+      const rc = Math.random(), side = Math.sign(bl.z) || (Math.random() < 0.5 ? 1 : -1), f = Math.max(0.15, Math.abs(a.x) / (Math.abs(a.x) + Math.abs(tx)));
+      if (rc < 0.15 + 0.35 * L.blockSkill) { tz = clamp(a.z + (bl.z + side * 0.55 - a.z) / f, -6, 6); spd = Math.max(spd, L.spike[1] * 0.95); }   // 打手出界：瞄外側那隻手，用力
+      else if (rc < 0.45 + 0.35 * L.blockSkill) tz = clamp(a.z + (bl.z - side * 1.0 - a.z) / f, -4.2, 4.2);   // 繞手：打攔網沒封到的裡面那邊
+    }
+  }
   const [wx, wz] = vmW(tx, tz);
   let v;
   if (tip) { const T = 0.85; v = new THREE.Vector3((wx - p.x) / T, (BALL_R - p.y) / T + 4.9 * T, (wz - p.z) / T); }
@@ -10478,6 +10496,14 @@ function vmAiSpike(a, sd) {
   b.mine = false; a.pose = 4; a.swingT = 0.35; aiPay(a, tip ? 'tip' : 'spike');
   vbLaunch(b, p, v, tip ? 'tip' : 'spike', 0.85);
   vmOnTouch(b, a.id, tip ? 'tip' : 'spike');
+}
+// 對面有沒有人在攻擊手前面攔網（AI 在攔、你或連線的人站在網前）：回傳那個人的位置（球場座標）
+function vmBlockerFacing(a) {
+  for (const id of VM.team[1 - a.team]) {
+    const o = VM.ai.get(id), q = o ? { x: o.x, z: o.z } : vmPos(id); if (!q || Math.abs(q.x) > 1.5 || Math.abs(q.z - a.z) > 1.4) continue;
+    if (o ? o.blk || o.y > 0.05 : id === vmMe() ? !!(walk.air && walk.air.block) || Math.abs(q.x) < 1.2 : true) return q;
+  }
+  return null;
 }
 // 救球／推過去：高高的往對面深處
 function vmAiFree(a, sd) { const g = vmPickGap(a, sd, 5.5, 8.2, 3.6); vmAiTouch(a, Math.abs(g.tx) * -sd, g.tz, BALL_R, 1.45, 0.8, 'bump', 3); }
