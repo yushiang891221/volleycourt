@@ -8158,7 +8158,7 @@ addEventListener('keydown', (e) => {
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on) vmFreeBall(); else doInteract(); return; }
   if ((k === 'v' || k === 'q') && !e.repeat && !e.ctrlKey && !e.metaKey) { e.preventDefault(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
-  if (['1', '2', '3', '4', '5'].includes(k) && !e.repeat) { e.preventDefault(); const n = Number(k); if (n <= 3 && !walk.hold && !skill.mode && !coarse()) setMenuOpen(n); else vbSet(n); return; }   // 1～3：按住出現左右選項
+  if (['1', '2', '3', '4', '5'].includes(k) && !e.repeat) { e.preventDefault(); const n = Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse()) setMenuOpen(n); else vbSet(n); return; }   // 1～3：按住出現左右選項
   if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && (VM.on || vbCourt())) startJumpServe(); else vbJump('attack'); } return; }
   if (k === 'b' && !e.repeat) { e.preventDefault(); vbJump('block'); return; }
   if (k === 't') { e.preventDefault(); if (!e.repeat) emoMenuOpen(); return; }   // 互動選單：按住 T，游標往左擊掌、往右嘲諷，放開確定
@@ -8167,7 +8167,7 @@ addEventListener('keydown', (e) => {
   if (k === '[' || k === ']') { e.preventDefault(); const f = clamp(walkFov() + (k === ']' ? 5 : -5), 60, 100); try { localStorage.setItem('vb.fov', String(f)); } catch (er) { /* ignore */ } camera.fov = f; camera.updateProjectionMatrix(); toast(`視野 ${f}°（[ 變窄、] 變廣）`, 1200); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
-addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 't') emoMenuClose(true); if (SETM.m && e.key === String(SETM.m.n)) setMenuClose(true); walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
+addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 't') emoMenuClose(true); if (SETM.m && e.key === String(SETM.m.n) && performance.now() - SETM.m.t0 > 300) setMenuClose(true); walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
 addEventListener('blur', () => walk.keys.clear());
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
@@ -8181,7 +8181,7 @@ function unlockMouse() { if (locked()) document.exitPointerLock(); }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
   if (EMO.menu) { emoMenuMove(e.movementX); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
-  if (SETM.m) { setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
+  if (setMenuHolds()) { if (SETM.m) setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
   if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
   walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1);
 });
@@ -8194,6 +8194,7 @@ const vbClickOK = () => VM.on || !!VB.npc || !!vbCourt();
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (EMO.menu) { e.preventDefault(); emoMenuClose(true); return; }   // 互動選單：點一下確定
+  if (SETM.m) { e.preventDefault(); setMenuClose(true); return; }   // 舉球轉盤：點一下＝選亮著的（沒亮＝預設）
   if (walk.on && !window.__rkOn && (e.button === 0 || e.button === 2) && locked() && vbClickOK() && !walk.paused && !walk.sit) { e.preventDefault(); const ck = e.button === 2 ? 'float' : 'jump'; if (vbChargeStart(ck)) return; if (walk.jserve && !walk.jserve.jumped && !walk.jserve.hit) { walk.chargeArm = ck; return; } vbAttack(e.button === 2); return; }   // 跳發還沒起跳就按住：起跳那一刻開始蓄力
   if (!walk.on || e.button !== 0 || window.__rkOn) return;
   if (locked()) { walk.look = { id: e.pointerId, locked: true, t: performance.now() }; return; }
@@ -8201,7 +8202,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
-  const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId || (walk.spike && walk.spike.t > 0.98) || SETM.m || EMO.menu) return;   // 轉盤開著：只選球路，視角不轉
+  const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId || (walk.spike && walk.spike.t > 0.98) || setMenuHolds() || EMO.menu) return;   // 轉盤開著：只選球路，視角不轉
   const dx = e.clientX - l.x, dy = e.clientY - l.y; l.x = e.clientX; l.y = e.clientY;
   if (Math.hypot(e.clientX - l.sx, e.clientY - l.sy) > 5) l.moved = true;
   const sens = e.pointerType === 'touch' ? 0.006 : 0.0042;
@@ -9487,7 +9488,8 @@ const SETM = { m: null };
 const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n;
 function setMenuOpen(n) {
   if (SETM.m) setMenuClose(true);
-  const opts = SET_OPT[n], N = opts.length, el = $('set-menu'); SETM.m = { n, dx: 0, dy: 0, hov: -1 };
+  const opts = SET_OPT[n], N = opts.length, el = $('set-menu'), m = SETM.m = { n, dx: 0, dy: 0, hov: -1, t0: performance.now() };
+  clearTimeout(SETM.to); SETM.to = setTimeout(() => { if (SETM.m === m) setMenuClose(true); }, 2500);   // 點一下就放開：轉盤留著等你拖，2.5 秒沒動作＝預設
   for (const o of el.querySelectorAll('.sw-opt')) o.remove();
   opts.forEach(([, label], i) => {
     const o = document.createElement('div'), a = setAng(i, N); o.className = 'sw-opt'; o.dataset.sv = i; o.textContent = label;
@@ -9511,9 +9513,10 @@ function setMenuMove(dx, dy) {
   for (let i = 0; i < N; i++) { const d = Math.abs(Math.atan2(Math.sin(phi - setAng(i, N)), Math.cos(phi - setAng(i, N)))); if (d < bd) { bd = d; best = i; } }
   setMenuHover(best); if (r >= 45) setMenuPick(best);
 }
-function setMenuPick(i) { const m = SETM.m; if (!m) return; SETM.m = null; $('set-menu').hidden = true; vbSet(m.n, SET_OPT[m.n][i][0]); }
+function setMenuPick(i) { const m = SETM.m; if (!m) return; SETM.m = null; SETM.until = performance.now() + 350; clearTimeout(SETM.to); $('set-menu').hidden = true; vbSet(m.n, SET_OPT[m.n][i][0]); }   // 選完 0.35 秒內滑鼠還在滑也不轉視角
+const setMenuHolds = () => !!SETM.m || performance.now() < (SETM.until || 0);
 // 放開數字鍵：有亮著的選項就用它，沒有＝最後一個（原本的舉法）
-function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : SET_OPT[m.n].length - 1); else { SETM.m = null; $('set-menu').hidden = true; } }
+function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : SET_OPT[m.n].length - 1); else { SETM.m = null; clearTimeout(SETM.to); $('set-menu').hidden = true; } }
 function vbSet(n, v = null) {
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   // 2 對 2：這一球是 AI 隊友舉（你接的、或球還在對面），按 1／2／3＝喊球
