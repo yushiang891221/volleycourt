@@ -6707,6 +6707,7 @@ function updateJumpServe(dt) {
       b.material = ballMat; const ob = { m: b, v: new THREE.Vector3(s.v0.x, s.v0.y - 9.8 * t, s.v0.z), rest: 0 }; b.userData.ball = ob; balls.push(ob);
       walk.jserve = null; hands.visible = false; pose = 'hold'; toast('拋了沒打到：發球失誤', 1600);
       if (VM.on && VM.host && VM.phase === 'serve') { const team = vmTeamOf(vmMe()); VM.phase = 'rally'; VM.ball = ob; VM.touch = { team, n: 3, last: vmMe(), serve: true }; vmPoint(1 - team, '發球失誤（拋了沒打到）'); }
+      else if (VM.on && !VM.host && NET.on) NET.tx.publish('vm', { e: 'srvMiss', id: NET.me });
     }
   } else if (t > s.hitT + 0.5 && !walk.air) { walk.jserve = null; hands.visible = false; pose = 'hold'; }
 }
@@ -7617,7 +7618,8 @@ function netOnMessage(t, d, from) {
       if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
     }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
-    if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } p2.ballT = d.b; p2.ball.visible = true; }
+    p2.tossing = !!d.ts;
+    if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
     // 擊球序號：比我新的＝別人打到了；一樣的序號而且是現在負責的人＝一般位置更新；一樣的序號但不同人＝同時打到，代號大的算
@@ -7681,12 +7683,14 @@ function netTick(dt, now) {
   if (!NET.on) return;
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
-  let bp = null; if (walk.hold) { const v = new THREE.Vector3(); walk.hold.getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
+  const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
+  let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
   const st = { sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || 'none', b: bp, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
-  const gap = (document.hidden ? 10000 : moved ? 330 : 2000) * NETQ.slow;
+  if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
+  const gap = toss ? 80 : (document.hidden ? 10000 : moved ? 330 : 2000) * NETQ.slow;
   if (NET.forceSt || (poseChanged && now - NET.lastSt > 120) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = NET.ownBall && balls.find((q) => q.room);
@@ -9988,7 +9992,7 @@ function vmServeClock() {
   const now = performance.now(), srv = vmServer();
   if (!VM.whDone && now >= VM.whT) { VM.whDone = true; vmWhistle(); if (NET.on) NET.tx.publish('vm', { e: 'whistle', seq: VM.srvSeq }); }
   if (!VM.whDone || VM.ai.has(srv)) return;
-  const busy = srv === vmMe() && (walk.serve || walk.jserve);   // 已經拋球了
+  const p2 = NET.peers.get(srv), busy = srv === vmMe() ? !!(walk.serve || walk.jserve) : !!(p2 && p2.tossing);   // 已經拋球了（自己、或連線的人正在拋）
   if (!busy && now > VM.srvDl + (srv === vmMe() ? 0 : 1500)) { const team = vmTeamOf(srv); VM.phase = 'rally'; VM.touch = { team, n: 3, last: srv, serve: true }; vmDropHeld(); vmPoint(1 - team, `發球超過 8 秒（${vmName(srv)}）`); }
 }
 function vmWhistle() {
@@ -10864,7 +10868,12 @@ function vmOnNet(d, from) {
     toast(d.team[0].includes(NET.me) ? `${host} 開了 ${mode}，你們一隊！${d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : d.team[1].includes(NET.me) ? `${host} 開了 ${mode}，你在對面那一隊！${d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : `旁邊開打 ${mode} 了（你在旁邊看）`, 3000);
     return;
   }
+  if (VM.on && VM.host && d.e === 'srvMiss') {   // 加入的人跳發拋了沒打到
+    if (VM.phase === 'serve' && from === vmServer()) { const team = vmTeamOf(from); VM.phase = 'rally'; VM.touch = { team, n: 3, last: from, serve: true }; vmPoint(1 - team, `發球失誤（${vmName(from)}拋了沒打到）`); }
+    return;
+  }
   if (!VM.on || VM.host || from !== VM.hostId) return;
+  if (d.e === 'st') VM.lastStT = performance.now();
   if (d.e === 'st') {
     // 新的一球：清掉場上的球；但自己剛發出去（或正在發）的球不清——狀態比「輪到你發球」晚到時，會把剛跳發出去的球清掉（球不見）
     const mySrv = d.srv === NET.me && (walk.jserve || walk.serve || balls.some((q) => q.serve && q.room && NET.hitBy === NET.me));
@@ -10888,6 +10897,7 @@ function vmSay(t, kind = '', ms = 1600) { const m = $('vm-msg'); m.textContent =
 function vmHud() {
   if ($('vm-hud').hidden) return;
   vmServeHint();
+  if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
   const t = `${VM.sc[0]}：${VM.sc[1]}`; if ($('vm-sc').textContent !== t) $('vm-sc').textContent = t;
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
