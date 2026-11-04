@@ -8140,7 +8140,7 @@ addEventListener('keydown', (e) => {
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('blur', () => { walk.crouch = false; });
-addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === String(SETM.m.n)) setMenuClose(true);   // 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個（不再留著轉盤等 2.5 秒） walk.keys.delete(k); });
+addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === String(SETM.m.n)) setMenuClose(true); /* 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個 */ walk.keys.delete(k); });
 addEventListener('blur', () => walk.keys.clear());
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
