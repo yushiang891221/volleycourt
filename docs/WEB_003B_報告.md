@@ -57,4 +57,4 @@ WebSocket 檢查使用本機 Wrangler `--local --port 8787 --inspector-port 9231
 
 ## 提交結果
 
-待執行本機暫存及提交；實際結果將更新於此。
+程式與測試已成功提交：`2141207` — `Add equal-area formations and match flow for small teams`。本輪沒有遇到 commit 權限錯誤；Git 僅提示使用者全域 ignore 檔不可讀，未阻擋暫存或提交。此提交結果另以報告更新提交保存。
