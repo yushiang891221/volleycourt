@@ -85,7 +85,7 @@
       setCount(n){if(!settled||host()!==id||flow.phase!=='waiting'||!Number.isInteger(n)||n<1||n>6)return false;count=n;flow.ready=flow.ready.slice(0,2*n);commit();return true;},
       toggleReady(){return command({e:'ready'});},pick(slot){return command({e:'pick',slot});},
       begin(){
-        if(!settled||host()!==id||flow.phase!=='waiting'||![2,6].includes(count))return false;
+        if(!settled||host()!==id||flow.phase!=='waiting')return false;
         flow.ready=flow.ready.filter(x=>courtOf(x)===flow.court);
         if(!flow.ready.length){flow.court=null;commit();return false;}
         flow.phase='pick';flow.picks=Array(count*2).fill(null);flow.deadline=Date.now()+15000;flow.round++;commit();return true;

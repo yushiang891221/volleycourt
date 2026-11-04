@@ -92,6 +92,12 @@ await check('physics, movement, hit calculations and AI remain unchanged',()=>{
  for(const [a,b] of [['function standUp()','const NET ='],['function vbJump(','const SETM ='],['function vbSet(','function vbAssist('],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['function vmJudge(','function vm6Start('],['// 輪轉：2 號位','function vmStaRings()']]){
   let current=segment(gym,a,b),previous=segment(old,a,b);
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
+  // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
+  // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
+  current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');
+  current=current.replace('function vm6RotToast() {\n ', 'function vm6RotToast() { ').replace('function vm6CoverSpot(a, attId) {\n ', 'function vm6CoverSpot(a, attId) { ');
+  current=current.replace('return vmSmallCount() ? (vmSmallCount() === 1 || !!CourtFormations.get(vmSmallCount())[k]?.front) : k >= 1 && k <= 3;', 'return k >= 1 && k <= 3;');
+  current=current.replace('back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;', 'back = k6 === 0 || k6 >= 4;');
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));

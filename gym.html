@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="settings.css">
 <script src="settings.js"></script>
 <script src="room-settings.js"></script>
+<script src="court-formations.js"></script>
 <script src="room-flow-ui.js"></script>
 <link rel="stylesheet" href="room-flow.css">
 <script src="lobby-client.js"></script>
@@ -6824,7 +6825,7 @@ function roomReady() {
   if (!ROOM.snapshot.flow.ready.includes(vmMe()) && !roomCourtOf(vmMe())) { toast('走到球場上再按準備'); return; }
   ROOM.toggleReady();
 }
-function roomStart() { if (!ROOM?.begin()) toast('由房主開始；至少一人站在球場上準備，A 段開放 2 對 2、6 對 6'); }
+function roomStart() { if (!ROOM?.begin()) toast('由房主開始；至少一人站在球場上準備'); }
 function roomRulesChanged(rules) {
   VB.ts = rules.speed; renderRoomRules(); ROOM_UI?.render(); peerTagsAll();
   const f = rules.flow;
@@ -6835,7 +6836,7 @@ function roomRulesChanged(rules) {
   const slot = f.picks.indexOf(vmMe());
   if (slot >= 0 && roomPlaced !== f.round) {
     roomPlaced = f.round; const team = Math.floor(slot / rules.count), k = slot % rules.count, sd = team === 0 ? -1 : 1;
-    const [depth,left] = rules.count === 6 ? V6_BASE[k] : [6,k === 0 ? 2.1 : -2.1];
+    const [depth,left] = rules.count === 6 ? V6_BASE[k] : rules.count === 2 ? [6,k === 0 ? 2.1 : -2.1] : CourtFormations.home(rules.count,k);
     [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
   }
   if (rules.isHost && roomLaunched !== f.round) {
@@ -6845,7 +6846,7 @@ function roomRulesChanged(rules) {
     // Flip only internal team indices/sign; the selected physical left/right stays unchanged.
     const right = seats[1].includes(vmMe()), sg = right ? 1 : -1;
     if (right) seats.reverse();
-    if (rules.count === 6) vm6Start(c,sg,{},seats); else vmStart(c,sg,null,[],seats);
+    if (rules.count !== 2) vm6Start(c,sg,{},seats); else vmStart(c,sg,null,[],seats);
   }
   if (!rules.isHost && !VM.on && NET.tx) NET.tx.publish('room-match-sync', {});
 }
@@ -10139,7 +10140,7 @@ function vmOnTouch(b, id, kind) {
   if (VM.phase !== 'rally') return;
   // 6 對 6：後排的人不能攔網；後排的人在 3 公尺線前起跳、球整顆在網子上緣以上就打過去＝後排攻擊犯規
   if (VM.six) {
-    const k6 = vm6Idx(id), back = k6 === 0 || k6 >= 4;
+    const k6 = vm6Idx(id), back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;
     if (back && kind === 'block') { vmPoint(1 - team, `後排攔網犯規（${vmName(id)}在後排）`); return; }
     if (back && (kind === 'spike' || kind === 'tip' || kind === 'hit') && b.m.position.y > NETS[state.net].h + BALL_R * 0.5) {
       const exact = id === vmMe() ? (walk.air && walk.air.x0 != null ? [walk.air.x0, walk.air.z0] : null) : b.jump0;   // 起跳點（自己的、或連線的人隨擊球訊息送來的）
@@ -10625,7 +10626,7 @@ const V6_NAME = { S: '舉球', OPP: '舉對', OH: '大砲', MB: '中間手' }, V
 const V6_COLORS = [['#30A46C', '#12A594', '#46A758', '#29A383', '#3D9A50', '#5BB98B'], ['#E5484D', '#F76B15', '#D6409F', '#E54666', '#C2410C', '#DC3E42']];
 const V6_BASE = [[6.8, -3], [2.2, -3], [2.2, 0], [2.2, 3], [6.8, 3], [7.4, 0]];   // 各號位的基本站位：[離網, 往左]（從自己面向網子看）
 const vm6Idx = (id) => { for (const t of [0, 1]) { const k = VM.rot && VM.rot[t] ? VM.rot[t].indexOf(id) : -1; if (k >= 0) return k; } return -1; };
-const vm6Front = (id) => { const k = vm6Idx(id); return k >= 1 && k <= 3; };
+const vm6Front = (id) => { const k = vm6Idx(id); return vmSmallCount() ? (vmSmallCount() === 1 || !!CourtFormations.get(vmSmallCount())[k]?.front) : k >= 1 && k <= 3; };
 const vm6P = (team, d, L) => { const sd = vmSide(team); return { x: sd * d, z: sd * L }; };
 // 開局選單
 function vm6Menu(c, sg) {
@@ -10651,6 +10652,7 @@ function vm6Menu(c, sg) {
   m.hidden = false; unlockMouse();
 }
 function vm6Start(c, sg, asg = {}, seats = null) {
+  const count = seats ? seats[0].length : 6;
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
@@ -10666,9 +10668,9 @@ function vm6Start(c, sg, asg = {}, seats = null) {
       if (k < 0) { k = slot.findIndex((x) => !x); clash.push(`${h.id === vmMe() ? '你' : (NET.peers.get(h.id) || {}).n || '球友'}→${V6_NAME[V6_ROLES[k]]}`); }
       slot[k] = h.id;
     }
-    for (let k = 0; k < 6; k++) {
-      if (!slot[k]) { const id = `ai${t}${k}`, ch = vmPickChar(used); VM.chars[id] = ch; slot[k] = id; vmMkAi(id, t, `AI・${V6_TAG[V6_ROLES[k]]}`, V6_COLORS[t][k], ch); }
-      VM.role[slot[k]] = V6_ROLES[k];
+    for (let k = 0; k < count; k++) {
+      if (!slot[k]) { const id = `ai${t}${k}`, ch = vmPickChar(used); VM.chars[id] = ch; slot[k] = id; vmMkAi(id, t, count === 6 ? `AI・${V6_TAG[V6_ROLES[k]]}` : `AI・${k+1}`, V6_COLORS[t][k], ch); }
+      if (count === 6) VM.role[slot[k]] = V6_ROLES[k];
     }
     VM.rot[t] = slot;
   }
@@ -10680,15 +10682,20 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
+  if (count !== 6) { toast(`${count} 對 ${count} 開始${roomSpectator() ? ' · 你是觀眾' : ' · '+vmSmallLabel(vmMe())}`,3600); return; }
   toast(roomSpectator() ? '6 對 6 開始 · 你是觀眾' : `6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三局兩勝・' : '五局三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
 }
 // 輪轉：2 號位的人轉到 1 號位發球，其他人順時針跟著轉
 function vm6Rotate(t) {
+  if (vmSmallCount()) { VM.rot[t] = CourtFormations.rotate(VM.rot[t]); VM.rotN[t] = VM.rotN[t] % vmSmallCount() + 1; VM.formC = {}; if (VM.rot[t].includes(vmMe())) vm6RotToast(); return; } // WEB003B
+
   const meK = vm6Idx(vmMe()), mine = VM.rot[t].includes(vmMe());
   VM.rot[t] = VM.rot[t].slice(1).concat(VM.rot[t][0]); VM.rotN[t] = (VM.rotN[t] % 6) + 1; VM.formC = {};
   if (mine && meK >= 0) vm6RotToast();
 }
-function vm6RotToast() { const k = vm6Idx(vmMe()); if (k >= 0) toast(`輪轉：你到 ${k + 1} 號位（${k >= 1 && k <= 3 ? '前排' : '後排'}）`, 2200); }
+function vm6RotToast() {
+  if (vmSmallCount()) { toast(`輪轉：${vmSmallLabel(vmMe())}`,2200); return; } // WEB003B
+ const k = vm6Idx(vmMe()); if (k >= 0) toast(`輪轉：你到 ${k + 1} 號位（${k >= 1 && k <= 3 ? '前排' : '後排'}）`, 2200); }
 // 新的一局：比分歸零、換場、照開局的輪轉表；上一局先接發球的那隊先發（決勝局重新擲硬幣）
 function vm6NextSet() {
   VM.setNo++; VM.sc = [0, 0]; VM.swap8 = false;
@@ -10701,6 +10708,8 @@ function vm6NextSet() {
 function vm6Swap() { VM.sg = -VM.sg; for (const a of VM.ai.values()) { a.x = -a.x; a.tx = -a.tx; a.vx = -a.vx; } VM.formC = {}; }
 // 站位（球場座標）：serve＝發球前（發球隊照號位、接發球隊排陣型）、defense＝球在對面、cover＝對面要攻擊時前排沒攔網的人退後接吊球、attack＝我們在組織進攻
 function vm6Spot(team, id, mode) {
+  if (vmSmallCount()) { const k = vm6Idx(id); return mode === "serve" && team === VM.srvTeam && k === 0 ? vm6P(team,9.8,vmSmallCount() === 1 ? 0 : CourtFormations.get(vmSmallCount())[0].L) : vm6P(team,...CourtFormations.home(vmSmallCount(),Math.max(0,k))); } // WEB003B
+
   const k = vm6Idx(id), r = VM.role[id], front = k >= 1 && k <= 3;
   if (k < 0) return vm6P(team, 6, 0);
   if (mode === 'serve') {
@@ -10748,6 +10757,7 @@ function vm6GoSpot(sp) {
   if (!sp || !VM.on) return;
   const [x, z] = vmW(sp[0], sp[1]), [ax, az] = vmW(0, sp[1]); walk.x = x; walk.z = z; walk.air = null; walk.vel = [0, 0];
   walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
+  if (vmSmallCount()) { toast(vmSmallLabel(vmMe()),1600); return; } // WEB003B
   const k = vm6Idx(vmMe()); if (k >= 0) toast(`你在 ${k + 1} 號位（${k >= 1 && k <= 3 ? '前排' : '後排'}・${V6_NAME[VM.role[vmMe()]]}）`, 1600);
 }
 // 發球那一下的位置檢查（完整越位規則）：
@@ -10755,6 +10765,8 @@ function vm6GoSpot(sp) {
 //   左右：同一排由右到左照號位——前排 2 在 3 的右邊、3 在 4 的右邊；後排 1 在 6 的右邊、6 在 5 的右邊
 //   發球的人（1 號位）在底線外，不算；兩個都是 AI 就不用查（AI 一定站對）
 function vm6Overlap() {
+  if (vmSmallCount()) return vmSmallOverlap(); // WEB003B
+
   for (const t of [1 - VM.srvTeam]) {   // 發球方整隊不判越位，只判接發球那一隊
     const rot = VM.rot[t], sd = vmSide(t), at = (id) => { const a = VM.ai.get(id); if (a) return { d: Math.abs(a.tx), L: a.tz / sd }; const q = vmPos(id); return q ? { d: Math.abs(q.x), L: q.z / sd } : null; };
     const skip = (k) => t === VM.srvTeam && k === 0, both = (i, j) => VM.ai.has(rot[i]) && VM.ai.has(rot[j]);
@@ -10773,6 +10785,8 @@ function vm6Overlap() {
 }
 // 誰接第一球：離落點近的人（舉球員、前排的中間手和舉對盡量不接；正在攔網的人不接）
 function vm6Possession(team, B) {
+  if (vmSmallCount()) return vmSmallPossession(team,B); // WEB003B
+
   if (VM.poss[team]) return VM.poss[team];
   const p = vmPredL(B, 0.9); if (!p) return null;
   let best = null;
@@ -10814,6 +10828,8 @@ function vm6AttackerByCall(team, n, setterId) {
 }
 // AI 舉球員要舉給誰：前排主攻（4 號位）、前排中間手（快攻，傳得到位才打）、前排舉對（2 號位）、後排主攻（後排攻擊）；隊上真人喊球照喊的，沒喊也常常舉給他
 function vm6ChooseSet(a, B) {
+  if (vmSmallCount()) return vmSmallChooseSet(a,B); // WEB003B
+
   const ids = VM.team[a.team].filter((id) => id !== a.id), at = (role, front) => ids.find((id) => VM.role[id] === role && vm6Front(id) === front);
   const Pg = VM.poss[a.team] || {}, oh = at('OH', true), mb = at('MB', true), opp = at('OPP', true), pipe = at('OH', false), good = Math.abs(B.x) < 2.6 && (!Pg.grade || Pg.grade === 'A'), opt = [];   // 快攻、後排攻擊只有到位球
   const oppB = opp ? null : at('OPP', false);   // 舉對在後排：右邊後排攻擊（3 公尺線後起跳）
@@ -10831,6 +10847,8 @@ function vm6ChooseSet(a, B) {
 }
 // 攔網：只有前排；中間手跟著攻擊手移動，兩邊的人攔自己那一側（最多三人攔網）
 function vm6BlockPick(a, th) {
+  if (vmSmallCount()) return vm6Front(a.id) && Math.abs(a.z-th.z)<3.4; // WEB003B
+
   if (!vm6Front(a.id)) return false;
   // 前排三個人照現在站的位置：中間的人（中間手）一定上；再加攻擊手那一側的人——對面 4 號位打＝我方 2 號位＋3 號位，對面 2 號位打＝我方 4 號位＋3 號位
   const fr = VM.rot[a.team].slice(1, 4).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q);
@@ -10847,6 +10865,8 @@ function vm6Nearest(team, B) {
 }
 // AI 每一格：攔網 → 球在對面就守位置 → 球過來了：輪到自己接／舉／打才去碰，其他人照情況站位
 function vm6Brain(a, sd, b, live) {
+  if (vmSmallCount() === 1) { vmSoloBrain(a,sd,b,live); return; } // WEB003B
+
   if (!live) return;
   if (vmAiBlock(a, sd, b)) return;
   const B = vmBallL(b), onMine = Math.sign(B.x) === sd, land = vmPredL(B, BALL_R);
@@ -10871,6 +10891,8 @@ function vm6Brain(a, sd, b, live) {
 }
 // 對面要攻擊、前排沒上去攔網的人：中間手留在中間準備；兩邊的人（攻擊方向的斜對角）退到自己那一邊的 3 公尺線，接吊球和小斜線
 function vm6OffBlock(a, th) {
+  if (vmSmallCount()) return vm6Spot(a.team,a.id,"defense"); // WEB003B
+
   const sd = vmSide(a.team), r = VM.role[a.id];
   if (r === 'MB') return vm6P(a.team, 1.6, clamp(th.z / sd, -1.5, 1.5));
   const L = Math.sign(a.z / sd || vm6Spot(a.team, a.id, 'defense').z / sd || 1) * 3.0;
@@ -10916,7 +10938,9 @@ function vm6CoverPlan(team, attId) {
   if (P) P.cover = { att: attId, map };
   return map;
 }
-function vm6CoverSpot(a, attId) { const m = vm6CoverPlan(a.team, attId); return m && m[a.id] ? m[a.id] : null; }
+function vm6CoverSpot(a, attId) {
+  if (vmSmallCount()) return vm6Spot(a.team,a.id,"defense"); // WEB003B
+ const m = vm6CoverPlan(a.team, attId); return m && m[a.id] ? m[a.id] : null; }
 // 連線的人：收到主機的輪轉表、局數
 function vm6Apply(d) {
   const before = vm6Idx(vmMe());
@@ -10925,6 +10949,8 @@ function vm6Apply(d) {
 }
 // 輪轉表（左上角）：我方、對方各一張；上面是網子，前排（藍）4 3 2、後排 5 6 1；金框＝你、🏐＝發球的人
 function vm6Chart() {
+  if (vmSmallCount()) { vmSmallChart(); return; } // WEB003B
+
   const el = $('vm-rot'); if (!VM.six || !VM.rot) { if (!el.hidden) el.hidden = true; return; }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, my = Math.max(0, vmTeamOf(vmMe()));
   const key = JSON.stringify([VM.rot, srv, my, VM.rotN]); if (el.dataset.k === key) return; el.dataset.k = key; el.hidden = false;
@@ -11022,8 +11048,8 @@ function vmOnNet(d, from) {
     const colors = { aiT: '#30A46C', ai1: '#E5484D', ai2: '#F76B15', ...(d.six ? d.six.colors : {}) };
     for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D', d.chars && d.chars[id]); a.wx = null; }
     $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); vmClearBalls(); vmDropHeld(); peerTagsAll();
-    const mode = d.six ? '6 對 6' : '2 對 2', host = (NET.peers.get(from) || {}).n || '房主';
-    toast(d.team[0].includes(NET.me) ? `${host} 開了 ${mode}，你們一隊！${d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : d.team[1].includes(NET.me) ? `${host} 開了 ${mode}，你在對面那一隊！${d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : `旁邊開打 ${mode} 了（你在旁邊看）`, 3000);
+    const mode = `${d.team[0].length} 對 ${d.team[0].length}`, host = (NET.peers.get(from) || {}).n || '房主';
+    toast(d.team[0].includes(NET.me) ? `${host} 開了 ${mode}，你們一隊！${vmSmallCount() ? vmSmallLabel(NET.me) : d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : d.team[1].includes(NET.me) ? `${host} 開了 ${mode}，你在對面那一隊！${vmSmallCount() ? vmSmallLabel(NET.me) : d.six ? `你是${V6_NAME[VM.role[NET.me]]}` : ''}` : `旁邊開打 ${mode} 了（你在旁邊看）`, 3000);
     return;
   }
   if (VM.on && VM.host && d.e === 'srvMiss') {   // 加入的人跳發拋了沒打到
@@ -11063,7 +11089,7 @@ function vmHud() {
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
   const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
   const tct = tc && tc[1] > 0 ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : VM.six ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
-  const ttl = VM.six ? '🏐 6 對 6' : '🏖️ 2 對 2'; if ($('vm-title').textContent !== ttl) $('vm-title').textContent = ttl;
+  const ttl = vmSmallCount() ? `🏐 ${vmSmallCount()} 對 ${vmSmallCount()}` : VM.six ? '🏐 6 對 6' : '🏖️ 2 對 2'; if ($('vm-title').textContent !== ttl) $('vm-title').textContent = ttl;
   vm6Chart();
   const na = vmTeamLabel(0), nb = vmTeamLabel(1); if ($('vm-a').textContent !== na) $('vm-a').textContent = na; if ($('vm-b').textContent !== nb) $('vm-b').textContent = nb;
 }
@@ -11251,6 +11277,43 @@ async function loadVenue(id, fresh) {
   else if (share.mode === 'off') shareStatus('💾 存在這台裝置（雲端共用還沒開啟）', '');
   else if (mine) { share.known = rec ? rec.savedAt : null; queueShared(cid); }
   else { share.known = null; shareStatus('☁️ 共用中：改動會自動存到網路上，大家看到同一份', 'ok'); }
+}
+
+// WEB-003B: small teams share the existing indoor scoring and ball/AI actions.
+// The six-player and beach paths never enter these adapters.
+function vmSmallCount() { const n = VM.six && VM.team?.[0]?.length; return n === 1 || n === 3 || n === 4 || n === 5 ? n : 0; }
+function vmSmallLabel(id) { const k = vm6Idx(id); return k < 0 ? '觀眾' : `${k+1} 號位 · ${CourtFormations.get(vmSmallCount())[k].name}`; }
+function vmSmallOverlap() {
+  const t = 1-VM.srvTeam, sd = vmSide(t);
+  const positions = VM.rot[t].map(id=>{const q=vmPos(id);return q?{d:q.x*sd,L:q.z/sd}:null;});
+  const fault = CourtFormations.overlap(vmSmallCount(),positions);
+  return fault ? {team:t,why:`位置錯誤（${fault.axis==='d'?'前後':'左右'}越位：${fault.low+1} 與 ${fault.high+1} 號位）`} : null;
+}
+function vmSmallPossession(team,B) {
+  if(VM.poss[team])return VM.poss[team];
+  const p=vmPredL(B,BALL_R)||vmPredL(B,0.9);if(!p)return null;
+  const sd=vmSide(team),k=CourtFormations.owner(vmSmallCount(),p.x*sd,p.z/sd),passer=VM.rot[team][k];
+  return VM.poss[team]={stage:0,passer,setter:vm6SetterFor(team,passer),attacker:null};
+}
+function vmSmallChooseSet(a,B) {
+  // No fixed specialities: pick an available player by the existing front/back options.
+  const ids=VM.team[a.team].filter(id=>id!==a.id),id=ids.find(id=>vm6Front(id))||ids[0];
+  const q=vmPos(id),sd=vmSide(a.team);
+  return {id,n:vm6Front(id)?(q&&q.z/sd<0?3:1):4};
+}
+function vmSoloBrain(a,sd,b,live) {
+  if(!live)return;
+  const B=vmBallL(b),land=vmPredL(B,BALL_R);
+  const coming=VM.touch.team!==a.team&&(Math.sign(B.x)===sd||(Math.sign(B.vx)===sd&&land&&Math.sign(land.x)===sd))&&!vmLetGo(a.team,b);
+  if(!coming){const f=vm6Spot(a.team,a.id,'defense');a.tx=f.x;a.tz=f.z;a.reactAt=VM.t+vmLv(a).react;return;}
+  // With no teammate, reuse the existing rescue/free-ball action for a one-touch return.
+  if(VM.t>=a.reactAt)vmAiRole(a,{stage:2,passer:a.id,setter:null,attacker:null},B,sd);
+}
+function vmSmallChart() {
+  const el=$('vm-rot'),n=vmSmallCount(),zones=CourtFormations.get(n),my=Math.max(0,vmTeamOf(vmMe()));
+  const srv=VM.host?vmServer():VM.srvId;
+  const key=JSON.stringify([VM.rot,srv,my,VM.rotN]);if(el.dataset.k===key)return;el.dataset.k=key;el.hidden=false;
+  el.innerHTML=[my,1-my].map(t=>`<div class="rt" style="grid-template-columns:repeat(${Math.min(n,3)},1fr)"><b>${t===my?'我方':'對方'} · ${n} 人</b><span class="net"></span>${zones.map((z,k)=>({z,k})).sort((a,b)=>Number(b.z.front)-Number(a.z.front)||b.z.L-a.z.L).map(({z,k})=>{const id=VM.rot[t][k];return `<i class="${z.front?'fr':''}${id===vmMe()?' me':''}${id===srv?' sv':''}" title="${esc(vmName(id))}"><u>${k+1}</u><em>${z.name} · ${esc(id===vmMe()?'你':VM.ai.has(id)?'AI':vmName(id))}</em></i>`;}).join('')}</div>`).join('');
 }
 
 const SITE_ID = 'bs-shenjing';

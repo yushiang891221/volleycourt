@@ -17,14 +17,15 @@ function engine(){
  const VM={ai:new Map()},messages=[];let serves=0;
  const c={VM,VB:{ts:.7},STA:{},STA_CFG:{},ROOM:null,VM_OPT:{to:7,to6:25,sets:1,role:'S',lv:1,mate:1},VM_LEVELS:{1:{name:'standard'}},NET:{on:true,name:'房主',peers:new Map([['guest',{n:'球友'}]]),tx:{publish:(t,d)=>messages.push(structuredClone(d))}},scene:{remove(){}},myChar:()=>null,vmMe:()=> 'host',vmStop(){VM.ai.clear();VM.on=false;},vmPickChar:()=>null,
  vmMkAi(id,team,name,color){const a={id,team,name,color,av:{g:{}},tag:{element:{remove(){}}}};VM.ai.set(id,a);VM.names[id]=name;return a;},$:()=>({classList:{add(){}},hidden:false}),vmSetupServe(){serves++;},toast(){},vmName:id=>id,peerTagsAll(){},vm6Spot:()=>({x:1,z:2}),vm6Idx:()=>0,vm6Front:()=>false,roomSpectator:()=>!VM.team.flat().includes('host')};
- vm.createContext(c);vm.runInContext(block('const V6_ROLES =','// 開局選單'),c);
+ vm.createContext(c);vm.runInContext(read('court-formations.js')+block('function vmSmallCount()',"const SITE_ID ="),c);vm.runInContext(block('const V6_ROLES =','// 開局選單'),c);
  vm.runInContext(block('function vmStart(','function vmPickChar(')+block('function vm6Start(','// 輪轉：2 號位'),c);
  return {c,VM,messages,get serves(){return serves;}};
 }
-(async()=>{
- await check('only host changes count; all 1-6 values sync to existing and late members; A gate',()=>{
+module.exports={engine,network,block,read};
+if(require.main===module)(async()=>{
+ await check('only host changes count; all 1-6 values sync to existing and late members; all modes open',()=>{
   const n=network(),a=n.add('host',true);n.tick(1300);const b=n.add('guest');n.tick(300);
-  assert(!b.setCount(6));assert(!a.begin());for(let k=1;k<=6;k++){assert(a.setCount(k));n.flush();assert.equal(b.count,k);a.toggleReady();n.flush();assert.equal(a.begin(),[2,6].includes(k));if([2,6].includes(k))assert(!a.setCount(2));a.end();n.flush();}
+  assert(!b.setCount(6));assert(!a.begin());for(let k=1;k<=6;k++){assert(a.setCount(k));n.flush();assert.equal(b.count,k);a.toggleReady();n.flush();assert.equal(a.begin(),true);assert(!a.setCount(2));a.end();n.flush();}
   a.setCount(6);n.flush();const late=n.add('late');n.tick(300);assert.equal(late.count,6);
   b.receive({e:'state',order:['late','guest','host'],speed:1,count:1,revision:999},'late');assert.equal(b.count,6);
  });

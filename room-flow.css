@@ -11,3 +11,5 @@ body:has(#room-panel:not([hidden])) #room-flow{display:none}
 
 /* 頭像裡的「人形＋」不換行、不蓋到下面的號位文字 */
 .pick-avatar{white-space:nowrap;font-size:15px;line-height:1;overflow:hidden}
+
+.pick-zone{position:absolute;box-sizing:border-box;border:1px dashed #fff7;pointer-events:none}.pick-slot{z-index:1}
