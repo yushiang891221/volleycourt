@@ -10040,7 +10040,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   STA.v = 1; STA.lock = false;
   Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
-  const used = new Set([myChar()]); VM.chars = {};
+  const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
   if (!mateId) vmMkAi('aiT', 0, 'AI 隊友', '#30A46C', VM.chars.aiT);
   if (!opps[0]) vmMkAi('ai1', 1, 'AI 對手', '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, 'AI 對手', '#F76B15', VM.chars.ai2);
@@ -10553,7 +10553,7 @@ function vmAiRole(a, P, B, sd) {
       if (pick && VM.poss[a.team] && VM.poss[a.team].stage === 2) VM.poss[a.team].attacker = pick.id;
     }
   } else if (P.attacker === a.id && st === 2) {
-    if (P.td && !P.tdDone && VM.role[a.id] === 'MB' && a.y <= 0 && a.vy <= 0) { P.tdDone = true; a.vy = aiJump(a, 2.0, 'jump'); a.pose = 5; a.tdFake = true; return; }   // 時間差：先小跳假裝打快攻（騙攔網），落地再照高球的時間助跑起跳   // 攻擊：照球掉到 2.8 m 的時間倒推——先在助跑起點等，時間到就三步衝進去，踩到起跳點剛好起跳（不會跑進去站著等）
+    if (P.td && !P.tdDone && (VM.role || {})[a.id] === 'MB' && a.y <= 0 && a.vy <= 0) { P.tdDone = true; a.vy = aiJump(a, 2.0, 'jump'); a.pose = 5; a.tdFake = true; return; }   // 時間差：先小跳假裝打快攻（騙攔網），落地再照高球的時間助跑起跳   // 攻擊：照球掉到 2.8 m 的時間倒推——先在助跑起點等，時間到就三步衝進去，踩到起跳點剛好起跳（不會跑進去站著等）
     const p = vmPredL(B, 2.8);
     if (a.runFor !== P) { a.runFor = P; a.run = false; }
     if (p && a.y === 0) {
