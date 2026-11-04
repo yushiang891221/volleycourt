@@ -1,29 +1,9 @@
-# 新竹排球館企劃網站：部署到 Vercel
+# 排球遊戲
 
-這個資料夾就是整個網站（純靜態檔案，不需要 build）。
+電腦版瀏覽器排球遊戲。從 index.html 輸入暱稱，開啟房間、用代碼加入或進入練習模式。每房最多 20 人，固定使用 bs-shenjing 球館。
 
-## 流程
-1. 首頁：中間一顆排球，按「開始企劃」→ 火柴人扣球動畫 → 台灣地圖飛到新竹。
-2. 地圖：候選場地是大圖釘，點了看挑高、坪數、租金、現在用途，按「進入球館」。
-3. 球館規劃（gym.html）：左邊是候選場地資料、目前規劃的面積表與估價；右邊是可編輯的建築平面圖，先畫休息區、接待、更衣淋浴、器材室、暖身區等區域，再切到 3D 加設備（點物件看評估，點攝影機看比賽辨識 Demo），最後按「進入導覽」用 WASD／搖桿自由走進去，走到哪一區左下角就顯示那一區的說明。
+大廳目前僅有本機功能；房間列表、在線玩家與公共聊天待 WEB-002。index.html?demo=1 可預覽六張示範房間卡片。底部系統功能尚未開放。
 
-## 方法 A：GitHub＋Vercel（建議，之後每天自動更新候選場地）
-1. 在 GitHub 建一個空的 repo（例如 `hsinchu-volleyball`），把這個資料夾的內容上傳（或請 Claude 幫你推上去）。
-2. 到 https://vercel.com/new → Import 那個 repo → Framework 選「Other」→ 直接按 Deploy。
-3. 之後 repo 裡的 `data/sites.json` 一更新，Vercel 會自動重新上線。
+本機可使用靜態 HTTP 伺服器開啟此資料夾；即時連線 API 需要既有伺服器設定。場景載入依賴 data/sites.json，請保持其格式。
 
-## 方法 B：Vercel CLI（不用 GitHub）
-在這個資料夾打開終端機：
-```
-npx vercel --prod
-```
-第一次會要你登入 Vercel，照提示按 Enter 就好。
-
-## 資料檔
-- `data/sites.json`：候選場地（每天自動更新的就是這個檔）。
-- `data/criteria.json`：自動搜尋的條件（地區、最小坪數、最小挑高、月租上限）。
-- `data/map.json`：縣市界、現有球館位置。
-- `data/venues.json`：新竹現有球館的 3D 示意（`gym.html?venue=<id>`，地圖上點現有球館的「走進去看」）。只放公開查得到的資訊，查不到的留空。
-- `img/tex/`：3D 材質貼圖，來自 Poly Haven（https://polyhaven.com，CC0，可自由使用），來源列在 `img/tex/credits.json`。
-- `models/gym-kit.glb`、`models/gym-kit-ao.jpg`：3D 元件素材庫（置物櫃一格、沙發座墊、網柱、裁判椅、販賣機、植栽、馬桶、面盆、淋浴、防撞墊、層架、櫃台段、冷氣、滅火器、LED 條燈…），每個元件自己的陰影（AO）已烘焙。網站依長度重複擺這些模組，不拉伸。
-  - 重做素材庫：用 Blender 5.2（免安裝版即可）在網站資料夾執行 `blender -b --factory-startup -P tools/blender/build_assets.py -- . 160`，約 1～2 分鐘（有 NVIDIA 顯卡會用 OptiX）。`tools/` 不會部署（`.vercelignore`）。
+通用外觀工具保留供後續評估，所有玩家與 AI 一律使用內建人形。

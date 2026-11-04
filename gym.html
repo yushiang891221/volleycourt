@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
+<script>if (!location.search) location.replace("index.html");</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>球館規劃｜新竹排球館企劃</title>
+<title>排球遊戲｜球館</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -681,7 +682,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
   .joy { width: 104px; height: 104px; bottom: 14px; }
 }
 </style>
-<header class="sitebar"><a class="brand" href="index.html#intro" title="回首頁"><span class="dot"></span>新竹排球館企劃</a><nav aria-label="流程"><a href="index.html#map" class="" data-nav="map">1 選場地</a><span>→</span><a href="gym.html" class="on" data-nav="gym">2 球館規劃</a><span>→</span><a href="demo.html" class="" data-nav="demo">3 智慧球場</a></nav><span class="grow"></span><a class="back" href="index.html#intro" title="回到開場，可以再按一次「開始企劃」">⌂ 回首頁</a><a class="back" href="#" id="goback">← 上一頁</a></header>
+<style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
+<header class="sitebar"><a id="goback" href="index.html">回大廳</a></header>
 <div id="app" class="app" data-mode="plan">
   <aside class="rail" id="rail">
     <header class="rail-head">
@@ -813,7 +815,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-char" title="選一個角色（第三人稱、連線的人、回放都看得到）">🎭 角色</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
+      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
       <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>V</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>P</kbd>第一／第三人稱</span><span>按住<kbd>T</kbd>往左擊掌／往右嘲諷</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
       <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；雙擊物件看資訊報表<br>排球：<kbd>V</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>V</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開導覽：按右上角「離開導覽」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
@@ -5553,7 +5555,7 @@ addEventListener('keydown', (e) => {
 let mode = 'plan', walkReturn = 'plan', firstOrbit = true;
 function setMode(m) {
   if (m === mode) return;
-  if (mode === 'walk') stopWalk();
+  if (mode === 'walk' && m !== 'walk') { location.href = 'index.html'; return; }
   const prev = mode; mode = m;
   $('app').dataset.mode = m;
   for (const [id, k] of [['m-plan', 'plan'], ['m-3d', '3d'], ['m-walk', 'walk']]) $(id).setAttribute('aria-selected', String(k === m));
@@ -5570,7 +5572,8 @@ function setMode(m) {
 $('m-plan').addEventListener('click', () => setMode('plan'));
 $('m-3d').addEventListener('click', () => setMode('3d'));
 $('m-walk').addEventListener('click', () => setMode('walk'));
-$('w-exit').addEventListener('click', () => setMode(walkReturn === 'walk' ? '3d' : walkReturn));
+$('w-exit').textContent = '回大廳';
+$('w-exit').addEventListener('click', () => { netLeave(true); location.href = 'index.html'; });
 $('w-plan').addEventListener('click', () => setMode('plan'));
 
 // ---------------------------------------------------------------- free walk: WASD / arrows + drag to look, joystick on phones, click the floor to walk there
@@ -5645,7 +5648,7 @@ function startWalk() {
     $('mp-new').addEventListener('click', () => netJoin(roomCode()));
     $('mp-go').addEventListener('click', () => netJoin($('mp-code').value));
     $('mp-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') netJoin($('mp-code').value); });
-    $('mp-leave').addEventListener('click', () => netLeave());
+    $('mp-leave').addEventListener('click', () => { netLeave(true); location.href = 'index.html'; });
     $('mp-copy').addEventListener('click', async () => { const u = inviteLink(NET.room); try { await navigator.clipboard.writeText(u); toast('邀請連結複製好了，傳給朋友'); } catch (e) { prompt('複製這個邀請連結：', u); } });
     $('cv-big').addEventListener('click', () => { const b = $('camview').classList.toggle('big'); $('cv-big').textContent = b ? '縮小' : '放大'; });
   }
@@ -6905,7 +6908,7 @@ function hitWorldBall(b, kind) {
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null, lat: new Map(), pingT: 0 };
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
-const NET_MAX = 12;
+const NET_MAX = 20;
 const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C', '#8E4EC6', '#F76B15', '#12A594', '#D6409F', '#0090FF', '#978365', '#E54666', '#46A758'];
 function loadScript(src) { return new Promise((ok, bad) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = ok; s2.onerror = bad; document.head.appendChild(s2); }); }
 // 流量：每個人自己最多每分鐘約 240 則；超過就把位置更新放慢一倍（球和比分照常送）
@@ -7057,42 +7060,8 @@ function renderMpList() {
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
-// ---- 角色（同人造型，私人遊玩用）：照 Valorant 特務的造型用幾何做，卡通著色（三階明暗）
-// 身形：髖 0.98 m、大腿 0.46、小腿 0.46、腳踝到地 0.06；肩膀約 1.43 m；頭頂連頭髮約 1.84 m；舉手摸高約 2.2 m
-// 欄位：skin 膚色、eyes 眼睛（glow＝發光）、fem＝窄肩細腰；hair [髮型, 顏色, 挑染]；top [上衣, 配色]；
-//   jk 外套 {c 顏色, c2 滾邊／袖口, len short|hip|coat, collar high|hood|fur|none, open 前面敞開, fur 毛領顏色}
-//   sleeve 長袖顏色（沒有＝短袖露手臂）、gl 手套、pants 長褲／shorts 短褲、shoe [鞋, 鞋底]、boots 靴子、belt 皮帶、pads 肩甲、wrist 手腕發光環
-//   bionic 機械手臂顏色、metal 機器人、faceless 臉被遮住、brow 眉毛角度、acc 配件 [[種類, 顏色]]
-const CHARS = {
-  jett: { name: 'Jett', fem: true, skin: '#F3D2B8', eyes: '#5B7FB5', hair: ['jett', '#EEF2F6'], top: ['#2B3A5C', '#7CC6F0'], jk: { c: '#E9EEF3', c2: '#7CC6F0', len: 'short', collar: 'high', open: true }, gl: '#2A3550', pants: '#2A3550', shoe: ['#E9EEF3', '#2A3550'], boots: true, belt: '#7CC6F0', acc: [] },
-  sage: { name: 'Sage', fem: true, skin: '#E8C3A0', eyes: '#3C2F2A', hair: ['pony', '#141518'], top: ['#20323A', '#2FB7A7'], jk: { c: '#F1F3F2', c2: '#2FB7A7', len: 'coat', collar: 'high', open: false }, pants: '#22313A', shoe: ['#EDEFEF', '#22313A'], boots: true, belt: '#2FB7A7', acc: [['orb', '#3FE0C8']] },
-  reyna: { name: 'Reyna', fem: true, skin: '#A87452', eyes: '#C35BFF', glow: true, hair: ['long', '#1A1420', '#A24DFF'], top: ['#2A1F3D', '#B14DFF'], sleeve: '#2A1F3D', gl: '#1B1426', pants: '#1B1426', shoe: ['#2A1F3D', '#140F1C'], boots: true, belt: '#B14DFF', collarTop: true, acc: [] },
-  phoenix: { name: 'Phoenix', skin: '#6E4530', eyes: '#2B1D14', hair: ['twists', '#1A1412'], top: ['#2B2B2B', '#FF7A2F'], jk: { c: '#F2F2F0', c2: '#FF7A2F', len: 'hip', collar: 'high', open: true }, pants: '#3A3A44', shoe: ['#F2F2F0', '#FF7A2F'], wrist: '#FF8A3A', acc: [] },
-  raze: { name: 'Raze', fem: true, skin: '#8A5A3C', eyes: '#2B1D14', hair: ['braids', '#2A1A12'], top: ['#3F7F6E', '#FF8C2A'], shorts: '#4A4A3E', pants: '#4A4A3E', shoe: ['#FF8C2A', '#2B2B2B'], gl: '#FF8C2A', belt: '#2B2B2B', acc: [['cap', '#FF8C2A'], ['goggles', '#2B2B2B']] },
-  killjoy: { name: 'Killjoy', fem: true, skin: '#E9BE98', eyes: '#3A2C22', hair: ['bun', '#2B241F'], top: ['#2B2B2B', '#F5C518'], jk: { c: '#F5C518', c2: '#2B2B2B', len: 'hip', collar: 'high', open: true }, pants: '#2E3238', shoe: ['#F5C518', '#2B2B2B'], acc: [['beanie', '#4E8C3A'], ['glassesRound', '#222222']] },
-  omen: { name: 'Omen', skin: '#1A2140', eyes: '#7FE3FF', glow: true, faceless: true, hair: null, top: ['#232A4A', '#59C8FF'], jk: { c: '#2A3158', c2: '#59C8FF', len: 'coat', collar: 'none', open: true }, gl: '#141A33', pants: '#1A1F36', shoe: ['#1A1F36', '#10142A'], boots: true, acc: [['hoodUp', '#2A3158'], ['omenMarks', '#7FE3FF']] },
-  skye: { name: 'Skye', fem: true, skin: '#F1C6A3', eyes: '#3C6B3A', hair: ['long', '#C2462A'], top: ['#3E7B3A', '#B8E07A'], gl: '#6B4A2A', pants: '#5A4632', shoe: ['#6B4A2A', '#3A2A1A'], boots: true, belt: '#6B4A2A', pads: '#6B4A2A', acc: [['headband', '#3E9B4A']] },
-  neon: { name: 'Neon', fem: true, skin: '#B88560', eyes: '#2B1D14', hair: ['pigtails', '#2F6BFF'], top: ['#1C2C5A', '#59E0FF'], jk: { c: '#22356B', c2: '#59E0FF', len: 'short', collar: 'high', open: true }, shorts: '#1C2C5A', shoe: ['#F2F2F0', '#59E0FF'], wrist: '#59E0FF', acc: [['bolt', '#59E0FF']] },
-  viper: { name: 'Viper', fem: true, skin: '#E2C2A6', eyes: '#3A3A3A', hair: ['long', '#141414'], top: ['#1E2A20', '#4CC66A'], jk: { c: '#26362A', c2: '#4CC66A', len: 'coat', collar: 'high', open: true }, gl: '#4CC66A', pants: '#151B16', shoe: ['#151B16', '#0C100D'], boots: true, acc: [['gasMask', '#2E7D3E']] },
-  sova: { name: 'Sova', skin: '#EBC7A8', eyes: '#3D6BB0', hair: ['short', '#E3D6A8'], top: ['#1E2D47', '#E3D6A8'], jk: { c: '#2E4B78', c2: '#E3D6A8', len: 'coat', collar: 'fur', fur: '#E3E0D6', open: true }, gl: '#3B2B20', pants: '#22324F', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', acc: [['bionicEye', '#59C8FF']] },
-  brimstone: { name: 'Brimstone', skin: '#E2B08E', eyes: '#3A2C22', hair: null, top: ['#3E5A3A', '#FF8C2A'], jk: { c: '#4A5E3E', c2: '#2E3A28', len: 'hip', collar: 'none', open: false }, pants: '#3A4632', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', wrist: '#FF8C2A', acc: [['beret', '#C8402B'], ['beard', '#D8D2C8']] },
-  cypher: { name: 'Cypher', skin: '#C9A07E', eyes: '#7FE3FF', glow: true, faceless: true, hair: null, top: ['#2B2B2B', '#7FE3FF'], jk: { c: '#E8E4D8', c2: '#2B2B2B', len: 'coat', collar: 'high', open: true }, gl: '#2B2B2B', pants: '#2B2B2B', shoe: ['#2B2B2B', '#141414'], boots: true, acc: [['faceMask', '#F2F0EA'], ['hat', '#2B2B2B']] },
-  yoru: { name: 'Yoru', skin: '#EBC7A8', eyes: '#2B2B2B', hair: ['spiky', '#1E3FA8'], top: ['#15204A', '#F2F2F0'], jk: { c: '#1E3FA8', c2: '#F2F2F0', len: 'hip', collar: 'high', open: true }, pants: '#15204A', shoe: ['#F2F2F0', '#15204A'], gl: '#15204A', brow: -0.25, acc: [] },
-  kayo: { name: 'KAY/O', skin: '#8E98A3', eyes: '#59A8FF', glow: true, faceless: true, metal: true, hair: null, top: ['#3A4048', '#59A8FF'], sleeve: '#4A525C', gl: '#3A4048', pants: '#2A2F36', shoe: ['#2A2F36', '#1A1E22'], boots: true, pads: '#59636E', acc: [['robotHead', '#59A8FF']] },
-  chamber: { name: 'Chamber', skin: '#C9946E', eyes: '#2B1D14', hair: ['slick', '#1A1412'], top: ['#2B2B2B', '#C9A24A'], jk: { c: '#F2EEE6', c2: '#C9A24A', len: 'hip', collar: 'none', open: true }, gl: '#2B2B2B', pants: '#3A3A3A', shoe: ['#5A3A22', '#2B1D14'], acc: [['glassesRect', '#1A1A1A'], ['goatee', '#1A1412']] },
-  gekko: { name: 'Gekko', skin: '#B57E5A', eyes: '#2B1D14', hair: ['messy', '#2A1E14', '#8EE36A'], top: ['#E9E2CF', '#8EE36A'], jk: { c: '#E86A2A', c2: '#8EE36A', len: 'hip', collar: 'hood', open: true }, pants: '#3A3D52', shoe: ['#8EE36A', '#F2F2F0'], acc: [] },
-  fade: { name: 'Fade', fem: true, skin: '#C99C78', eyes: '#3A2C22', hair: ['wavy', '#18161A'], top: ['#3A2A33', '#B0A0C8'], jk: { c: '#2B2B33', c2: '#5A4A60', len: 'coat', collar: 'high', open: true }, gl: '#2B2B33', pants: '#2A2830', shoe: ['#2B2B33', '#141418'], boots: true, acc: [['earrings', '#D9C38A']] },
-  harbor: { name: 'Harbor', skin: '#9B6A47', eyes: '#2B1D14', hair: ['wavy', '#1A1412'], top: ['#E9E2CF', '#3FB8C4'], jk: { c: '#2B6E6A', c2: '#3FB8C4', len: 'hip', collar: 'none', open: true }, pants: '#3A3A44', shoe: ['#5A3A22', '#2B1D14'], wrist: '#3FD8E4', acc: [['beardShort', '#1A1412']] },
-  iso: { name: 'Iso', skin: '#D9B08C', eyes: '#2B2B2B', hair: ['short', '#1A1A22'], top: ['#22202E', '#B07CFF'], jk: { c: '#2A2440', c2: '#B07CFF', len: 'hip', collar: 'high', open: false }, gl: '#22202E', pants: '#22202E', shoe: ['#2A2440', '#B07CFF'], wrist: '#B07CFF', brow: -0.2, acc: [] },
-  breach: { name: 'Breach', skin: '#E0A982', eyes: '#3A2C22', hair: ['short', '#C2602E'], top: ['#3A3F46', '#FF9A3A'], bionic: '#5A5F66', gl: '#4A4F56', pants: '#3A3A30', shoe: ['#3B2B20', '#24190F'], boots: true, belt: '#3B2B20', wrist: '#FF9A3A', acc: [['beardShort', '#B0582A']] },
-  astra: { name: 'Astra', fem: true, skin: '#6E4530', eyes: '#2B1D14', hair: ['afro', '#1A1412', '#E8C35A'], top: ['#3A2A5A', '#E8C35A'], jk: { c: '#4A2E6E', c2: '#E8C35A', len: 'coat', collar: 'none', open: true }, pants: '#2A2140', shoe: ['#E8C35A', '#2A2140'], wrist: '#E8C35A', acc: [['earrings', '#E8C35A']] },
-  deadlock: { name: 'Deadlock', fem: true, skin: '#F0D5C2', eyes: '#5A7A9A', hair: ['bob', '#EDEDEA'], top: ['#5A6066', '#E9EDF0'], jk: { c: '#D9DCDF', c2: '#5A6066', len: 'hip', collar: 'high', open: false }, gl: '#4A5056', pants: '#4A5056', shoe: ['#2B2F33', '#1A1D20'], boots: true, acc: [] },
-  clove: { name: 'Clove', skin: '#EBC7A8', eyes: '#6A3A6A', hair: ['bob', '#3A2A4A', '#E07AD0'], top: ['#2A2A33', '#E07AD0'], jk: { c: '#3A3A44', c2: '#E07AD0', len: 'short', collar: 'none', open: true }, pants: '#2A2A33', shoe: ['#E9E2EC', '#2A2A33'], acc: [['butterfly', '#F08ADF']] },
-};
-const CHAR_IDS = Object.keys(CHARS);
-// 沒選過角色的人：照代號固定分到一個角色（每次都一樣）；選了「原本的人形」才用原本的
-const autoChar = (id) => { let h = 0; for (const ch of String(id || 'me')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CHAR_IDS[h % CHAR_IDS.length]; };
-const myChar = () => { let c = null; try { c = localStorage.getItem('vb.char'); } catch (e) { /* ignore */ } if (c === 'none') return null; return CHARS[c] ? c : autoChar(NET.me || 'me'); };
+// 所有玩家與 AI 統一使用內建人形；通用造型工具保留給後續外觀系統。
+const myChar = () => null;
 // 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
 const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toonCache = new Map();
@@ -7133,7 +7102,6 @@ function chMerge(top) {
 const HRX = 0.118, HRY = 0.13, HRZ = 0.122;
 // 頭髮：頭頂、後腦兩片髮殼＋一束一束的髮絲（瀏海、側邊、後面）＋各髮型的馬尾、雙馬尾、包頭、捲髮、辮子、刺刺
 const HAIR = {
-  jett: { bangs: 7, bang: 0.075, sweep: 0.55, side: 0.12, back: 0.12, n: 9, pony: 0.16, ponyEl: 0.25 },
   pony: { bangs: 7, bang: 0.06, side: 0.15, back: 0.09, n: 9, pony: 0.46, ponyEl: 0.95 },
   long: { bangs: 6, bang: 0.065, sweep: 0.15, side: 0.3, back: 0.4, n: 11 },
   twists: { cap: 1.2, curls: 46, curlR: 0.024, side: 0.02 },
@@ -7298,7 +7266,6 @@ function makeChibi(C) {
       box(0.24, 0.03, 0.2, md, 0, 0.12, 0, hc);
     }
     if (kind === 'hoodUp') { add(cg('hoodUp', () => new THREE.SphereGeometry(1, 26, 18, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5, 0, 2.25)), T(col, 'ds'), 0, 0.012, -0.012, hc, [0.165, 0.175, 0.17]); add(cg('hoodTip', () => new THREE.ConeGeometry(0.12, 0.2, 14)), am, 0, 0.13, -0.09, hc).rotation.x = -0.75; }
-    if (kind === 'omenMarks') for (const i of [-1, 0, 1]) { const o = box(0.012, 0.045, 0.006, gm, i * 0.032, 0.0 + (i === 0 ? 0.012 : 0), 0.122, hc); o.rotation.z = i * 0.25; }
     if (kind === 'bionicEye') { tor(0.022, 0.006, T('#2B2B2B'), -0.043, -0.004, 0.122, hc, undefined, 0); sph(0.012, gm, -0.043, -0.004, 0.124, hc); }
     if (kind === 'earrings') for (const sx of [-1, 1]) sph(0.011, am, sx * HRX * 0.98, -0.055, 0.0, hc);
     if (kind === 'butterfly') for (const sx of [-1, 1]) { const o = sph(0.03, gm, 0.075 + sx * 0.022, 0.1, 0.06, hc, [1, 0.7, 0.25]); o.rotation.z = sx * 0.5; }
@@ -7309,7 +7276,7 @@ function makeChibi(C) {
   return { g, body, root, spine, head, hc, arms, elbows, hands, legs, knees, feet, phase: 0, rig: true, L1: 0.46, L2: 0.52, hipH: 0.98, chibi: true };
 }
 function makeAvatar(color, ch) {
-  if (ch && CHARS[ch]) return makeChibi(CHARS[ch]);
+  // 舊版傳入的外觀代碼一律忽略，維持內建人形與原有判定。
   // 人形骨架：body（跳的時候整個往上）→ root（蹲低時往下）→ 大腿／膝蓋／小腿、腰（上身前傾、轉身）→ 肩膀／手肘／手掌、頭
   // 面向 +z；[0] 是右手／右腳（打球、拿拍的那隻）
   const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
@@ -7647,7 +7614,7 @@ function netOnMessage(t, d, from) {
     p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
     if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) { const L = netLat(from); p2.jump = d.jp.vy ? { vy: d.jp.vy - JUMP_G * L, y: d.jp.vy * L - 0.5 * JUMP_G * L * L } : { h: d.jp.h, T: d.jp.T, t: L }; } }   // 照延遲往前推
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
-    const dch = d.ch === undefined ? autoChar(from) : d.ch === 'none' ? null : CHARS[d.ch] ? d.ch : null;
+    const dch = null;
     if (dch !== (p2.ch || null)) {   // 換角色：重做人形，名牌、球拍搬過去
       p2.ch = dch; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
       if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
@@ -10047,15 +10014,15 @@ function vmStart(c, sg, mateId, opps = []) {
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
-  if (!mateId) vmMkAi('aiT', 0, `AI 隊友・${CHARS[VM.chars.aiT].name}`, '#30A46C', VM.chars.aiT);
-  if (!opps[0]) vmMkAi('ai1', 1, `AI・${CHARS[VM.chars.ai1].name}`, '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, `AI・${CHARS[VM.chars.ai2].name}`, '#F76B15', VM.chars.ai2);
+  if (!mateId) vmMkAi('aiT', 0, 'AI 隊友', '#30A46C', VM.chars.aiT);
+  if (!opps[0]) vmMkAi('ai1', 1, 'AI 對手', '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, 'AI 對手', '#F76B15', VM.chars.ai2);
   for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
   if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG });
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
   vmSetupServe();
   toast(`2 對 2 開始！先到 ${VM.to} 分・對手：${opps.length ? VM.team[1].map(vmName).join('＋') : 'AI（' + VM_LEVELS[VM_OPT.lv].name + '）'}`, 2400);
 }
-function vmPickChar(used) { const pool = CHAR_IDS.filter((c) => !used.has(c)); const c = pool[Math.floor(Math.random() * pool.length)] || CHAR_IDS[0]; used.add(c); return c; }
+function vmPickChar(used) { return null; }
 function vmMkAi(id, team, name, color, ch) {
   const av = makeAvatar(color, ch), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
   const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
@@ -10700,7 +10667,7 @@ function vm6Start(c, sg, asg = {}) {
       slot[k] = h.id;
     }
     for (let k = 0; k < 6; k++) {
-      if (!slot[k]) { const id = `ai${t}${k}`, ch = vmPickChar(used); VM.chars[id] = ch; slot[k] = id; vmMkAi(id, t, `${V6_TAG[V6_ROLES[k]]}・${CHARS[ch].name}`, V6_COLORS[t][k], ch); }
+      if (!slot[k]) { const id = `ai${t}${k}`, ch = vmPickChar(used); VM.chars[id] = ch; slot[k] = id; vmMkAi(id, t, `AI・${V6_TAG[V6_ROLES[k]]}`, V6_COLORS[t][k], ch); }
       VM.role[slot[k]] = V6_ROLES[k];
     }
     VM.rot[t] = slot;
@@ -10960,7 +10927,7 @@ function vm6Chart() {
   const el = $('vm-rot'); if (!VM.six || !VM.rot) { if (!el.hidden) el.hidden = true; return; }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, my = Math.max(0, vmTeamOf(vmMe()));
   const key = JSON.stringify([VM.rot, srv, my, VM.rotN]); if (el.dataset.k === key) return; el.dataset.k = key; el.hidden = false;
-  const nm = (id) => id === vmMe() ? '你' : VM.ai.has(id) ? ((CHARS[(VM.chars || {})[id]] || {}).name || 'AI') : vmName(id);
+  const nm = (id) => id === vmMe() ? '你' : VM.ai.has(id) ? 'AI' : vmName(id);
   const cell = (t, k) => { const id = VM.rot[t][k], r = VM.role[id]; return `<i class="${k >= 1 && k <= 3 ? 'fr' : ''}${id === vmMe() ? ' me' : ''}${id === srv ? ' sv' : ''}" title="${esc(vmName(id))}・${V6_NAME[r]}"><u>${k + 1}</u><em>${V6_TAG[r]}・${esc(nm(id).slice(0, 6))}</em></i>`; };
   const team = (t) => `<div class="rt"><b>${t === my ? '我方' : '對方'}・第 ${(VM.rotN || [1, 1])[t]} 輪</b><span class="net"></span>${[3, 2, 1].map((k) => cell(t, k)).join('')}${[4, 5, 0].map((k) => cell(t, k)).join('')}</div>`;
   el.innerHTML = team(my) + team(1 - my);
@@ -11136,37 +11103,6 @@ $('rk-menu').addEventListener('click', (e) => {
   if (a === 'goai') vmStart(VM.menu.c, VM.menu.sg, null);
 });
 
-// ---------------------------------------------------------------- 選角色：方格頭像（用 3D 人形拍一張頭像），點一下就換
-const CHAR_THUMB = new Map();
-function charThumb(id) {
-  if (CHAR_THUMB.has(id)) return CHAR_THUMB.get(id);
-  const sc2 = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, 1, 0.1, 20), rt = new THREE.WebGLRenderTarget(160, 160); rt.texture.colorSpace = THREE.SRGBColorSpace;
-  sc2.add(new THREE.AmbientLight('#ffffff', 1.4)); const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(1.5, 3, 3); sc2.add(dl);
-  const av = id ? makeAvatar('#F2B705', id) : makeAvatar('#F2B705'); for (let i = 0; i < 30; i++) avDrive(av, AVP.idle, 0.3, 0, false); sc2.add(av.g); av.g.updateMatrixWorld(true);
-  const hp = new THREE.Vector3(); (av.hc || av.head).getWorldPosition(hp); if (av.hc) hp.y -= 0.04;
-  cam.position.set(hp.x + 0.2, hp.y + 0.04, hp.z + (av.hc ? 1.05 : 1.1)); cam.lookAt(hp.x, hp.y - 0.03, hp.z);
-  const prevBg = sc2.background; sc2.background = new THREE.Color('#2EC4D6');
-  renderer.setRenderTarget(rt); renderer.render(sc2, cam); const px = new Uint8Array(160 * 160 * 4); renderer.readRenderTargetPixels(rt, 0, 0, 160, 160, px); renderer.setRenderTarget(null);
-  const cv = document.createElement('canvas'); cv.width = cv.height = 160; const cx = cv.getContext('2d'), img = cx.createImageData(160, 160);
-  for (let y = 0; y < 160; y++) img.data.set(px.subarray((159 - y) * 640, (160 - y) * 640), y * 640);
-  cx.putImageData(img, 0, 0); const url = cv.toDataURL('image/png'); rt.dispose(); void prevBg; CHAR_THUMB.set(id, url); return url;
-}
-function openCharMenu() {
-  const m = $('rk-menu'), cur = myChar();
-  m.innerHTML = `<div class="rk-box ch-box"><h3>🎭 選角色</h3><p class="rk-sub">特務造型角色（同人造型，自己玩用）。第三人稱、連線的人、回放都看得到；AI 隊友和對手會隨機分到其他角色</p>
-    <div class="ch-grid">${['', ...CHAR_IDS].map((id) => `<button type="button" class="ch-tile" data-ch="${id}" aria-pressed="${(cur || '') === id}"><img alt="" src="${charThumb(id || null)}"><span>${id ? CHARS[id].name : '原本的人形'}</span></button>`).join('')}</div>
-    <div class="rk-btns"><button type="button" data-chx="1">關閉</button></div></div>`;
-  m.hidden = false; unlockMouse();
-}
-$('w-char').addEventListener('click', openCharMenu);
-$('rk-menu').addEventListener('click', (e) => {
-  if (e.target.closest('[data-chx]')) { $('rk-menu').hidden = true; return; }
-  const t = e.target.closest('[data-ch]'); if (!t) return;
-  try { localStorage.setItem('vb.char', t.dataset.ch || 'none'); } catch (er) { /* ignore */ }
-  for (const b of $('rk-menu').querySelectorAll('[data-ch]')) b.setAttribute('aria-pressed', String(b === t));
-  if (NET.on) NET.forceSt = true;
-  toast(t.dataset.ch ? `換成 ${CHARS[t.dataset.ch].name}（按 P 切第三人稱看得到自己）` : '換回原本的人形', 1800);
-});
 // ---------------------------------------------------------------- loop
 function resize() {
   const w = host.clientWidth || 1, h = host.clientHeight || 1;
@@ -11260,7 +11196,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), get CHARS() { return CHARS; }, vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
@@ -11310,18 +11246,22 @@ async function loadVenue(id, fresh) {
   else { share.known = null; shareStatus('☁️ 共用中：改動會自動存到網路上，大家看到同一份', 'ok'); }
 }
 
-const SITE_ID = new URLSearchParams(location.search).get('site');
+const SITE_ID = 'bs-shenjing';
 const VENUE_ID = SITE_ID ? null : new URLSearchParams(location.search).get('venue');
 window.__siteId = SITE_ID;
 window.__venueId = VENUE_ID;
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
-if (SITE_ID) generateFromSite(SITE_ID);
+if (SITE_ID && location.search) {
+  const requestedMode = new URLSearchParams(location.search).get('mode');
+  VM_OPT.mode = requestedMode === '6v6' ? '6' : '2';
+  generateFromSite(SITE_ID).then(() => setMode('walk')).catch((e) => { console.error(e); toast('球館載入失敗，請重新整理'); });
+}
 if (VENUE_ID) loadVenue(VENUE_ID);
 
 </script>
-<script src="allnav.js" defer></script>
+
 <script>
-document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); location.href = 'index.html'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
 </script>
 </body>

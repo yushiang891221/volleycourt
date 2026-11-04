@@ -293,7 +293,7 @@ html, body { height: auto; } body { display: block; margin: 0; }
   <section class="block">
     <h3>回合判讀表</h3>
     <div class="tblwrap"><table class="tbl"><thead><tr><th>回合</th><th>發球方／發球者</th><th>死球原因</th><th>落點</th><th>得分</th><th>比分（近:遠）</th><th>依據</th><th>信心</th></tr></thead><tbody id="demo-tbody"></tbody></table></div>
-    <p class="fine"><a href="video/rally-demo.mp4" download>下載影片（MP4）</a>　<a href="files/回合判讀表.csv" download>下載判讀表（CSV）</a></p>
+    <p class="fine"><a href="video/rally-demo.mp4" download>下載影片（MP4）</a>　</p>
   </section>
 </div>
 </section></main>
@@ -396,7 +396,7 @@ html, body { height: auto; } body { display: block; margin: 0; }
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-go]'); if (a && a.dataset.go !== 'demo' && !v.paused) v.pause(); });
 })();
 </script>
-<script src="allnav.js" defer></script>
+
 <script>
 document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.href = 'index.html#map'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
