@@ -8124,7 +8124,7 @@ addEventListener('keydown', (e) => {
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on && !roomSpectator()) vmFreeBall(); else if (!VM.on || walk.sit || (walk.focus && walk.focus.kind !== 'ball')) doInteract(); return; }
   if ((k === 'v' || k === 'q') && !e.repeat && !e.metaKey) { e.preventDefault(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
-  if (['1', '2', '3', '4', '5', '6'].includes(k) && !e.repeat) { e.preventDefault(); const n = k === '6' ? 7 : Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse()) setMenuOpen(n); else vbSet(n); return; }   // 1～3：按住出現左右選項
+  if (['1', '2', '3', '4', '5', '6'].includes(k) && !e.repeat) { e.preventDefault(); const n = k === '6' ? 7 : Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse() && locked()) setMenuOpen(n); else vbSet(n); return; }   // 滑鼠沒鎖成準心時拖不動轉盤：直接照預設舉，不會卡住等 2.5 秒   // 1～3：按住出現左右選項
   if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && (VM.on || vbCourt())) startJumpServe(); else vbJump('attack'); } return; }
   if (k === 'b' && !e.repeat) { e.preventDefault(); vbJump('block'); return; }
   if (k === 't') { e.preventDefault(); if (!e.repeat) emoMenuOpen(); return; }   // 互動選單：按住 T，游標往左擊掌、往右嘲諷，放開確定
