@@ -85,16 +85,17 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
  assert(/if\s*\(m\.host\)q\.set\('host','1'\)/.test(read('lobby.js')));assert(read('index.html').includes('id="system-settings"'));
  for(const f of ['gym.html','index.html'])assert(read(f).includes('src="settings.js"')&&read(f).includes('href="settings.css"'));
 });
+// WEB-003D 依使用者要求改了接重扣（蹲接）和舉球（新增後排 5 號位），vbJump～SETM、vbSet～vbAssist 兩段，以及 AI 分工所在的 vmJudge～vm6Start，不再跟 WEB-001 基準比對
 await check('physics, movement, hit calculations and AI remain unchanged',()=>{
  const old=execFileSync('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'show','9351dab:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
  // WEB-003 changes only startup/stop/end presentation in this formerly broad range.
  // Keep exact comparisons for every intervening physics, scoring and AI section.
- for(const [a,b] of [['function standUp()','const NET ='],['function vbJump(','const SETM ='],['function vbSet(','function vbAssist('],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['function vmJudge(','function vm6Start('],['// 輪轉：2 號位','function vmStaRings()']]){
+ for(const [a,b] of [['function standUp()','const NET ='],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['// 輪轉：2 號位','function vmStaRings()']]){
   let current=segment(gym,a,b),previous=segment(old,a,b);
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
   // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
   // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
-  current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');
+  current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/^  if \(vmSmallCount\(\).*\/\/ 小人數.*\n/gm,'').replace(/^.*\/\/ 後排 5 號位.*\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');
   current=current.replace('function vm6RotToast() {\n ', 'function vm6RotToast() { ').replace('function vm6CoverSpot(a, attId) {\n ', 'function vm6CoverSpot(a, attId) { ');
   current=current.replace('return vmSmallCount() ? (vmSmallCount() === 1 || !!CourtFormations.get(vmSmallCount())[k]?.front) : k >= 1 && k <= 3;', 'return k >= 1 && k <= 3;');
   current=current.replace('back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;', 'back = k6 === 0 || k6 >= 4;');

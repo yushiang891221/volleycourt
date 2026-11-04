@@ -4,9 +4,9 @@
   const bindings = [
     ['w','前進','KeyW'],['s','後退／打短','KeyS'],['a','左移','KeyA'],['d','右移','KeyD'],
     ['arrowup','前進（別名）','ArrowUp'],['arrowdown','後退（別名）','ArrowDown'],['arrowleft','左移（別名）','ArrowLeft'],['arrowright','右移（別名）','ArrowRight'],
-    ['shift','衝刺／撲救修飾鍵','Shift'],['e','互動／拿球','KeyE'],['v','接球','KeyV'],['q','接球（別名）','KeyQ'],
+    ['shift','衝刺／撲救修飾鍵','Shift'],['crouch','蹲下（按住；接重扣比較穩）','Control'],['e','互動／拿球','KeyE'],['v','接球','KeyV'],['q','接球（別名）','KeyQ'],
     [' ','跳／跳發','Space'],['b','攔網','KeyB'],['t','擊掌／嘲諷選單','KeyT'],['p','切換視角','KeyP'],['f','拋給隊友','KeyF'],
-    ['1','舉球：4 號位','Digit1'],['2','舉球：快攻','Digit2'],['3','舉球：2 號位','Digit3'],['4','舉球：後排中間','Digit4'],['5','舉球：老三','Digit5'],
+    ['1','舉球：4 號位','Digit1'],['2','舉球：快攻','Digit2'],['3','舉球：2 號位','Digit3'],['4','舉球：後排中間','Digit4'],['5','舉球：老三','Digit5'],['6','舉球：後排 5 號位（左後）','Digit6'],
     ['[','視野變窄','BracketLeft'],[']','視野變廣','BracketRight'],
     ['j','羽球／匹克球：軟球','KeyJ'],['k','羽球／匹克球：抽球','KeyK'],['l','羽球／匹克球：挑球','KeyL']
     ,['ready','準備／取消準備','KeyR'],['start','房主開始遊戲','Enter']
@@ -33,7 +33,7 @@
     }
     return v;
   }
-  function validCode(c) { return typeof c==='string' && /^(Key[A-Z]|Digit[0-9]|Arrow(Up|Down|Left|Right)|Shift|Space|Bracket(Left|Right)|Backquote|Minus|Equal|Backslash|Semicolon|Quote|Comma|Period|Slash|Tab|Enter|Backspace|Delete|Home|End|PageUp|PageDown|Numpad[0-9])$/.test(c); }
+  function validCode(c) { return typeof c==='string' && /^(Key[A-Z]|Digit[0-9]|Arrow(Up|Down|Left|Right)|Shift|Control|Space|Bracket(Left|Right)|Backquote|Minus|Equal|Backslash|Semicolon|Quote|Comma|Period|Slash|Tab|Enter|Backspace|Delete|Home|End|PageUp|PageDown|Numpad[0-9])$/.test(c); }
   function nicknameError(n) { return /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(n) ? '暱稱不能包含控制字元' : [...n.trim()].length<2 || [...n.trim()].length>12 ? '暱稱需要 2～12 字' : ''; }
   let raw; try { raw=JSON.parse(read('vb.settings')); } catch (_) {}
   if (!raw || typeof raw!=='object' || Array.isArray(raw)) raw={ quality:read('vb.quality'), fov:Number(read('vb.fov'))||80, mute:read('vb.sfx')==='0' };
@@ -41,7 +41,7 @@
   let values=clean(raw), dialog, capture='', previousFocus;
   function save() { try { localStorage.setItem('vb.settings',JSON.stringify(values)); localStorage.setItem('vb.mp.name',values.nickname); return true; } catch (_) { return false; } }
   function update(patch) { values=clean({...values,...patch}); const saved=save(); dispatchEvent(new CustomEvent('vb-settings-change',{detail:values})); if(dialog) dialog.querySelector('.settings-note').textContent=saved?'已儲存，立即生效':'已套用；瀏覽器無法儲存設定'; return saved; }
-  const code = e => /^Shift/.test(e.code) ? 'Shift' : e.code || bindings.find(([a])=>a===e.key.toLowerCase())?.[2];
+  const code = e => /^Shift/.test(e.code) ? 'Shift' : /^Control/.test(e.code) ? 'Control' : e.code || bindings.find(([a])=>a===e.key.toLowerCase())?.[2];
   const key = e => e.key==='Escape' ? 'escape' : bindings.find(([a])=>values.keys[a]===code(e))?.[0] || '';
   const keyName = c => ({Space:'空白鍵',Shift:'Shift',BracketLeft:'[',BracketRight:']',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'}[c] || c.replace(/^Key|^Digit/,''));
   function bind(action,c) { if (!validCode(c) || !Object.hasOwn(values.keys,action)) return false; const keys={...values.keys}, other=bindings.find(([a])=>a!==action && keys[a]===c)?.[0]; if(other) keys[other]=keys[action]; keys[action]=c; update({keys}); return true; }
