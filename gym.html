@@ -10454,7 +10454,7 @@ function vbBlockOutcome(off, low, pow, skill) {
 }
 // 照結果改球：plane＝攔網那一側的網面（球場座標 lx）、sd＝攔網那一隊在哪一側、hz＝雙手中心（lz）、e＝沿著網子的方向、n＝網子的法線；回傳那一下叫什麼
 // 碰手後球還剩多少力道（使用者 2026-11-04：touch out 彈太遠救不到 → 縮小；扣得越大力（pow 越大）保留越多，大力或打點好還是常救不到，但偶爾救得到）
-const TOUCH_OUT = { outKeep: 0.16, outKeepPow: 0.12, outPast: [0.25, 1.0], topKeep: 0.24, topKeepPow: 0.2, topVy: [2.4, 1.6] };
+const TOUCH_OUT = { outKeep: 0.09, outKeepPow: 0.08, outPast: [0.15, 0.7], outLatMax: [2.6, 1.2], topKeep: 0.14, topKeepPow: 0.14, topVy: [2.0, 1.4] };   // 2026-11-04 第二次調小
 function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
   const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
   if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
@@ -10462,7 +10462,7 @@ function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
     const side = Math.sign(lz - hz) || (Math.random() < 0.5 ? 1 : -1);
     b.v.multiplyScalar(TOUCH_OUT.outKeep + TOUCH_OUT.outKeepPow * pow);
     const vy = 1.2 + Math.random() * 1.6, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
-    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + Math.random() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.2, 3.5 + 1.5 * pow);
+    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + Math.random() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.0, TOUCH_OUT.outLatMax[0] + TOUCH_OUT.outLatMax[1] * pow);
     b.v.x += ex * side * vlat; b.v.z += ez * side * vlat; b.v.y = vy;
     const lz2 = lz + (b.v.x * ex + b.v.z * ez) * t, lx2 = lx + (b.v.x * nx + b.v.z * nz) * t;
     return Math.abs(lz2) > 4.5 + BALL_R || Math.abs(lx2) > 9 + BALL_R ? '打手出界！' : '碰手了！';
