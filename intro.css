@@ -1,5 +1,7 @@
 #lobby-shell { display: contents; }
 body.intro-active { overflow: hidden; }
+/* 開場還沒結束前大廳完全不畫出來（腳本載入前也一樣） */
+body.intro-active:not(.intro-skip) #lobby-shell { visibility: hidden; }
 #intro {
   position: fixed; inset: 0; width: 100vw; height: 100dvh;
   max-width: none; max-height: none; margin: 0; padding: 0;

@@ -10,6 +10,7 @@
     stage = 'leaving'; clearTimeout(deadline); cancelAnimationFrame(spinFrame);
     stopSpike?.(); stopSpike = null;
     intro.classList.add('leaving');
+    document.body.classList.add('intro-skip'); // 淡出時讓大廳跟著出現
     // Keep the modal and inert guard until the fade has completely finished.
     const finish = () => {
       intro.close(); intro.hidden = true;
@@ -62,7 +63,7 @@
     else if (stage === 'loading' || stage === 'playing') enterLobby(true);
   });
   if (location.hash === '#lobby') { enterLobby(true); return; }
-  intro.showModal();
+  if (!intro.open) intro.showModal();
   $('start').focus({ preventScroll: true });
 
   // The original canvas ball is restored below; it needs no external assets.

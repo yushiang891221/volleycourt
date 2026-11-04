@@ -31,6 +31,10 @@
   <div id="phase" hidden role="status"><b></b><span></span></div>
   <button id="skip-playing" class="intro-skip" type="button" hidden>跳過 · Esc</button>
 </dialog>
+<script>
+  // 第一次畫面就蓋上開場，避免大廳先閃一下；從遊戲回大廳（#lobby）就不蓋
+  if (location.hash === '#lobby') document.body.classList.add('intro-skip'); else document.getElementById('intro').showModal();
+</script>
 <div id="lobby-shell" inert>
 <header class="top panel">
   <div class="brand"><span class="logo" data-icon="ball"></span><div><div class="brand-line"><h1>排球遊戲</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
