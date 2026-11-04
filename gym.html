@@ -5987,7 +5987,8 @@ function toggleBag(it, point) {
 const scoreCv = document.createElement('canvas'); scoreCv.width = 512; scoreCv.height = 256;
 const scoreTex = new THREE.CanvasTexture(scoreCv); scoreTex.colorSpace = THREE.SRGBColorSpace;
 function drawScore() {
-  const live = typeof VM !== 'undefined' && VM.on && VM.sc, [a, b] = live ? VM.sc : walk.score, sets = live ? (VM.sets || [0, 0]) : walk.sets;
+  let live = null; try { live = VM.on && VM.sc; } catch (e) { /* 頁面剛載入時 VM 還沒宣告 */ }
+  const [a, b] = live ? VM.sc : walk.score, sets = live ? (VM.sets || [0, 0]) : walk.sets;
   const key = `${a}:${b}:${sets[0]}:${sets[1]}`; if (drawScore.k === key) return; drawScore.k = key;
   const c = scoreCv.getContext('2d');
   c.fillStyle = '#F4F4F2'; c.fillRect(0, 0, 512, 256);
