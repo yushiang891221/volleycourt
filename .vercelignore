@@ -1,2 +1,10 @@
 tools/
 rt-worker/
+docs/
+.dbg/
+README.md
+部署說明.md
+# Legacy reference datasets are not needed by the fixed game venue.
+data/criteria.json
+data/map.json
+data/venues.json
