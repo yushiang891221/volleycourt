@@ -13,3 +13,13 @@ body:has(#room-panel:not([hidden])) #room-flow{display:none}
 .pick-avatar{white-space:nowrap;font-size:15px;line-height:1;overflow:hidden}
 
 .pick-zone{position:absolute;box-sizing:border-box;border:1px dashed #fff7;pointer-events:none}.pick-slot{z-index:1}
+
+/* 右上角三個按鈕、準備框放大（使用者 2026-11-04） */
+.walk-top{gap:8px}
+.walk-top button{font-size:16px;padding:10px 18px;min-height:44px;border-radius:9px}
+#room-flow{top:74px;min-width:260px;font-size:15px;padding:16px 18px}
+#room-flow p{margin:7px 0}
+#room-flow button{font-size:16px;padding:11px 20px;min-height:44px}
+#room-panel{top:74px;font-size:15px}
+/* 操作說明欄排在準備框下面，不被蓋住 */
+.walk-help{top:var(--help-top,200px)!important}
