@@ -7999,13 +7999,15 @@ function zoneAt(x, z) {
   for (const c of courts) if (pip(x, z, footprint(c))) return { kind: 'court', c };
   return null;
 }
+// 站在哪一面球場上（不管上面有沒有畫區域）：球場的按鈕列（陪練、2 對 2、6 對 6）看這個
+function courtHere(x, z) { return state.items.find((c) => CAT[c.type].court && c.mode !== 'lines' && pip(x, z, footprint(c))) || null; }
 function itemsIn(test) { return state.items.filter((it) => !CAT[it.type].court && !CAT[it.type].wall && test(it.x, it.z)); }
 function updateZoneCard(force) {
-  const hit = zoneAt(walk.x, walk.z), key = hit ? (hit.kind === 'zone' ? hit.z.id : hit.c.id) : '', rk = rkCourtNear(walk.x, walk.z), rkKey = rk ? rk.key : '';
+  const hit = zoneAt(walk.x, walk.z), here = courtHere(walk.x, walk.z), key = (hit ? (hit.kind === 'zone' ? hit.z.id : hit.c.id) : '') + '|' + (here ? here.id : ''), rk = rkCourtNear(walk.x, walk.z), rkKey = rk ? rk.key : '';
   if (!force && key === walk.zoneKey && rkKey === walk.rkKey) return;
   walk.zoneKey = key; walk.rkKey = rkKey;
   const card = $('zcard');
-  if (!hit) { card.classList.add('out'); renderUseBar(null); return; }
+  if (!hit) { card.classList.add('out'); renderUseBar(here); return; }
   const dl = [];
   if (hit.kind === 'zone') {
     const q = hit.z, Z = ZONES[q.type], inside = itemsIn((x, z) => inZone(q, x, z));
@@ -8025,7 +8027,7 @@ function updateZoneCard(force) {
   }
   $('zc-dl').innerHTML = dl.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('');
   card.classList.remove('out');
-  renderUseBar(hit.kind !== 'zone' ? hit.c : null);
+  renderUseBar(here);
 }
 // 走進複合球場：上方出現「這面場地要打」的按鈕，按了就換網子（排球網、羽球柱、匹克球網架、收起來）
 function renderUseBar(c) {
