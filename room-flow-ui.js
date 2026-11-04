@@ -7,7 +7,9 @@
     panel.innerHTML='<header><h2 id="pick-title">選擇隊伍與位置</h2><strong id="pick-clock"></strong></header><p>彼此之間必須<strong class="pick-rule">維持正確的前後左右相對位置</strong>，不能隨意變更位置！</p><div class="pick-court"><div class="pick-half" data-team="0"><b>左隊</b></div><div class="pick-half" data-team="1"><b>右隊</b></div></div><p class="pick-foot">先選先鎖定，可以換到空位。倒數結束自動分配，空位由 AI 補上。</p>';
     document.body.append(panel);
     panel.addEventListener('cancel',e=>e.preventDefault());
-    panel.addEventListener('click',e=>{const b=e.target.closest('[data-slot]');if(b)getRoom()?.pick(Number(b.dataset.slot));});
+    // 面板每秒會重畫（倒數），按下去就算選，不等放開，避免 click 因為重畫而丟失
+    panel.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-slot]');if(b&&!b.disabled&&e.button===0){e.preventDefault();getRoom()?.pick(Number(b.dataset.slot));}});
+    panel.addEventListener('keydown',e=>{const b=e.target.closest?.('[data-slot]');if(b&&!b.disabled&&(e.key==='Enter'||e.key===' ')){e.preventDefault();getRoom()?.pick(Number(b.dataset.slot));}});
     $('room-ready').addEventListener('click',ready);$('room-start').addEventListener('click',start);
     $('room-size').addEventListener('input',e=>{getRoom()?.setCount(Number(e.target.value));render();});
     function render(){
