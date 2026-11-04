@@ -323,13 +323,13 @@ html.phone-walk .camview, html.phone-walk .mp { top: calc(max(8px, env(safe-area
 html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 48px); }
 .wk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1.5px rgba(27,38,56,.55); pointer-events: none !important; }
 /* 扣球蓄力條：直的，跟著拉弓那隻手（第三人稱＝手肘旁邊、第一人稱＝畫面上的右手旁邊），由下往上漲 */
-.wk-chg { position: absolute; left: 0; top: 0; width: 14px; height: 96px; border-radius: 7px; background: rgba(27,38,56,.65); box-shadow: 0 0 0 1.5px rgba(255,255,255,.6); overflow: hidden; pointer-events: none; }
+.wk-chg { position: absolute; left: 0; top: 0; width: 24px; height: 124px; box-sizing: border-box; border: 2px solid rgba(255,255,255,.7); border-radius: 6px; background: rgba(27,38,56,.7); overflow: hidden; pointer-events: none; }
 .wk-chg i { position: absolute; left: 0; right: 0; z-index: 1; box-sizing: border-box; }
-.wk-chg .sw { bottom: 60%; height: 13.3%; background: rgba(242,183,5,.28); border: 2px solid #F2B705; border-radius: 2px; }
+.wk-chg .sw { display: block; width: auto; margin: 0; vertical-align: baseline; border-left: 0; border-right: 0; bottom: 60%; height: 13.3%; background: rgba(242,183,5,.32); border-top: 2px solid #F2B705; border-bottom: 2px solid #F2B705; }
 .wk-chg .ov { top: 0; height: 16.7%; background: rgba(229,72,60,.4); border-bottom: 2px solid #E5483C; }
 .wk-chg b { position: absolute; left: 0; right: 0; bottom: 0; height: 0; z-index: 0; background: rgba(255,255,255,.85); }
 .wk-chg[data-z="sweet"] b { background: #F2B705; } .wk-chg[data-z="late"] b { background: #F0A040; } .wk-chg[data-z="over"] b { background: #E5483C; }
-.wk-chg[data-z="sweet"] { box-shadow: 0 0 0 2px #F2B705, 0 0 10px rgba(242,183,5,.7); }
+.wk-chg[data-z="sweet"] { border-color: #F2B705; box-shadow: 0 0 12px rgba(242,183,5,.75); }
 .walk-ui.rk .wk-chg { display: none !important; }
 .emo-menu { position: absolute; left: 50%; top: calc(50% - 96px); transform: translateX(-50%); display: flex; align-items: center; gap: 70px; z-index: 12; }
 .emo-menu[hidden], .set-wheel[hidden] { display: none !important; }
@@ -8138,16 +8138,17 @@ const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 // Ctrl＋W 在瀏覽器是「關分頁」：全螢幕時把整個鍵盤交給遊戲（蹲下＝Ctrl、前進＝W 才不會關掉網頁）
 // 所以點畫面開始玩時順便進全螢幕；按住 Esc 才會離開全螢幕
-function gameFullscreen() {
+function gameFullscreen() {   // 回傳 Promise：全螢幕切好之後才鎖滑鼠（同時要求的話，切全螢幕會把滑鼠鎖定取消）
   const de = document.documentElement;
-  if (coarse() || document.fullscreenElement || !de.requestFullscreen) return;
-  de.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  if (coarse() || document.fullscreenElement || !de.requestFullscreen) return Promise.resolve();
+  return de.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
 }
 document.addEventListener('fullscreenchange', () => { const kb = navigator.keyboard; if (!kb || !kb.lock) return; if (document.fullscreenElement) kb.lock().catch(() => {}); else kb.unlock(); });
 // 沒有全螢幕時：在房間或比賽中按到 Ctrl＋W，先問一次要不要離開
 document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('a[href^=index]')) window.__leavingOk = true; }, true);   // 自己按「回大廳」不用再確認
 addEventListener('beforeunload', (e) => { if (location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
-function lockMouse() { gameFullscreen(); if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
+function lockMouse() { if (!document.fullscreenElement && !coarse()) { gameFullscreen().then(() => setTimeout(lockMouseNow, 60)); return; } lockMouseNow(); }
+function lockMouseNow() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
 function unlockMouse() { if (locked()) { walk.programmaticUnlock = true; document.exitPointerLock(); } }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
@@ -9249,7 +9250,7 @@ function vbChgPlace() {
   const el = $('wk-chg'); if (!el || !walk.charge) return;
   const o = TP.saved && TP.av ? TP.av.elbows[0] : armR.hand, R = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
   camera.updateMatrixWorld(true); o.getWorldPosition(CHG_V); CHG_V.project(camera);
-  const ok = CHG_V.z < 1 && Math.abs(CHG_V.x) < 1.2 && Math.abs(CHG_V.y) < 1.2, x = ok ? (CHG_V.x * 0.5 + 0.5) * R.width + 30 : R.width * 0.7, y = ok ? (-CHG_V.y * 0.5 + 0.5) * R.height - 48 : R.height * 0.56;   // 第一人稱拉弓時右手在畫面外：放在右下（右手那一側）
+  const ok = CHG_V.z < 1 && Math.abs(CHG_V.x) < 1.2 && Math.abs(CHG_V.y) < 1.2, x = ok ? (CHG_V.x * 0.5 + 0.5) * R.width + 30 : R.width * 0.7, y = ok ? (-CHG_V.y * 0.5 + 0.5) * R.height - 62 : R.height * 0.56;   // 第一人稱拉弓時右手在畫面外：放在右下（右手那一側）
   el.style.transform = `translate(${clamp(x, 8, R.width - 24).toFixed(0)}px, ${clamp(y, 8, R.height - 104).toFixed(0)}px)`;
 }
 function vbSwingStep(dt) {
