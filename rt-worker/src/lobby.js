@@ -103,7 +103,7 @@ export class Lobby extends DurableObject {
         if(now-p.createAt<3000)return fail('開房太頻繁，請稍後再試');
         if(p.no)return fail('你已經加入房間');
         const name=clean(m.name);
-        if(!name || [...name].length>30 || !['2v2','6v6'].includes(m.mode))return fail('請確認房名與模式');
+        if(!name || [...name].length>30 || !/^([1-6])v\1$/.test(m.mode))return fail('請確認房名與模式');
         if(m.password!=null && (typeof m.password!=='string' || [...m.password].length>30))return fail('密碼最多 30 字');
         p.createAt=now;ws.serializeAttachment(p);
         const salt=random(), passwordHash=m.password ? await hash(salt,m.password) : '';
@@ -121,7 +121,8 @@ export class Lobby extends DurableObject {
         if(!r || p.no!==r.no || !member(r))return fail('你不是這個房間的成員');
         if((r.host!==p.id || r.hostToken!==p.token) && this.ownerOnline(r))return fail('只有房主可以更新房間');
         if(!Number.isInteger(m.count) || m.count<1 || m.count>20 || !['waiting','playing'].includes(m.status) || (m.latency!==null && (!Number.isFinite(m.latency) || m.latency<0 || m.latency>60000)))return fail('房間資料不正確');
-        Object.assign(r,{host:p.id,hostToken:p.token,hostName:p.name,count:m.count,status:m.status,latency:m.latency,lastBeat:now,hidden:false});
+        if(m.mode!==undefined && (!/^([1-6])v\1$/.test(m.mode) || (r.status==='playing' && m.status==='playing' && m.mode!==r.mode)))return fail('比賽模式不正確或比賽尚未結束');
+        Object.assign(r,{host:p.id,hostToken:p.token,hostName:p.name,count:m.count,status:m.status,latency:m.latency,lastBeat:now,hidden:false,...(m.mode?{mode:m.mode}:{})});
       } else if(m.k==='room-close') {
         const r=room();if(!r || r.host!==p.id || r.hostToken!==p.token || p.no!==r.no)return fail('只有房主可以關閉房間');
         // Close the owner's membership, retain a private tombstone for takeover.

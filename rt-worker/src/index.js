@@ -13,7 +13,8 @@ export { Lobby } from './lobby.js';
 // Lobby JSON protocol: /lobby?id=<tab id>&token=<private reconnect token>.
 // Client: hello {name,status,code?}, status {status,no?,code?}, chat {text},
 // create {name,mode,password?}, join {no,password?}, quick {mode?}, refresh,
-// room-update {no,count,status:'waiting'|'playing',latency}, room-close {no}.
+// room-update {no,count,status:'waiting'|'playing',latency,mode?}, room-close {no}.
+// create / room-update mode accepts symmetric 1v1 through 6v6.
 // Server: state {players,rooms,chats}, players {players}, rooms {rooms},
 // chat {chat:{id,name,text,at}}, joined {no,code,mode,host}, error {reason}.
 // Public room fields: no,name,mode,locked,count,max,status,hostName,latency,lastBeat.

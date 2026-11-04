@@ -9,6 +9,7 @@
     ['1','舉球：4 號位','Digit1'],['2','舉球：快攻','Digit2'],['3','舉球：2 號位','Digit3'],['4','舉球：後排中間','Digit4'],['5','舉球：老三','Digit5'],
     ['[','視野變窄','BracketLeft'],[']','視野變廣','BracketRight'],
     ['j','羽球／匹克球：軟球','KeyJ'],['k','羽球／匹克球：抽球','KeyK'],['l','羽球／匹克球：挑球','KeyL']
+    ,['ready','準備／取消準備','KeyR'],['start','房主開始遊戲','Enter']
   ];
   const defaultKeys = () => Object.fromEntries(bindings.map(([a,,k]) => [a,k]));
   const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true,
@@ -22,7 +23,14 @@
     if (['high','low'].includes(raw.quality)) v.quality=raw.quality;
     if (typeof raw.nickname==='string' && !nicknameError(raw.nickname)) v.nickname=raw.nickname.trim();
     if (Array.isArray(raw.swap)) v.swap=v.swap.map((_,i)=>raw.swap[i]===true);
-    if (raw.keys && bindings.every(([a])=>validCode(raw.keys[a])) && new Set(Object.values(raw.keys)).size===bindings.length) v.keys=Object.fromEntries(bindings.map(([a])=>[a,raw.keys[a]]));
+    if (raw.keys) {
+      const known=bindings.filter(([a])=>Object.hasOwn(raw.keys,a));
+      if(known.every(([a])=>validCode(raw.keys[a])) && new Set(known.map(([a])=>raw.keys[a])).size===known.length){
+        const keys=Object.fromEntries(known.map(([a])=>[a,raw.keys[a]]));
+        for(const [a,,fallback] of bindings)if(!keys[a])keys[a]=[fallback,...bindings.map(x=>x[2]),'KeyZ','KeyX','KeyC','KeyG','KeyH','KeyU','KeyI','KeyO'].find(k=>!Object.values(keys).includes(k));
+        v.keys=keys;
+      }
+    }
     return v;
   }
   function validCode(c) { return typeof c==='string' && /^(Key[A-Z]|Digit[0-9]|Arrow(Up|Down|Left|Right)|Shift|Space|Bracket(Left|Right)|Backquote|Minus|Equal|Backslash|Semicolon|Quote|Comma|Period|Slash|Tab|Enter|Backspace|Delete|Home|End|PageUp|PageDown|Numpad[0-9])$/.test(c); }

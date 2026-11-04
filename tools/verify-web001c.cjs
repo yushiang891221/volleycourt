@@ -87,7 +87,9 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
 });
 await check('physics, movement, hit calculations and AI remain unchanged',()=>{
  const old=execFileSync('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'show','9351dab:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
- for(const [a,b] of [['function standUp()','const NET ='],['function vbJump(','const SETM ='],['function vbSet(','function vbAssist('],['function vmStart(','function vmStaRings()']]){
+ // WEB-003 changes only startup/stop/end presentation in this formerly broad range.
+ // Keep exact comparisons for every intervening physics, scoring and AI section.
+ for(const [a,b] of [['function standUp()','const NET ='],['function vbJump(','const SETM ='],['function vbSet(','function vbAssist('],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['function vmJudge(','function vm6Start('],['// 輪轉：2 號位','function vmStaRings()']]){
   let current=segment(gym,a,b),previous=segment(old,a,b);
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
   assert.equal(current,previous,a);

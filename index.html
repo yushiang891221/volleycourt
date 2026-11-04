@@ -44,7 +44,7 @@
     <button class="orange" id="create"><span data-icon="plus"></span>開啟房間</button>
     <button class="green" id="practice"><span data-icon="court"></span>練習模式</button>
     <button class="quick" id="quick"><span data-icon="bolt"></span>快速加入</button>
-    <select id="filter" aria-label="模式篩選"><option value="all">所有競賽模式</option><option>2v2</option><option>6v6</option></select>
+    <select id="filter" aria-label="模式篩選"><option value="all" selected>所有競賽模式</option><option>1v1</option><option>2v2</option><option>3v3</option><option>4v4</option><option>5v5</option><option>6v6</option></select>
     <button id="refresh" class="icon-button" aria-label="重新整理" title="重新整理"><span data-icon="refresh"></span></button>
   </div>
 </header>
@@ -52,7 +52,7 @@
   <section class="rooms panel" aria-labelledby="rooms-title">
     <div class="panel-head"><h2 id="rooms-title"><span data-icon="game"></span>對戰大廳房間列表 <span id="room-count" class="count">（0 / —）</span></h2><span class="muted" id="list-note">公開房間 · 每房最多 20 人</span></div>
     <div class="room-grid" id="rooms"></div>
-    <div class="room-footer"><span class="muted mode-help">模式說明：2v2 雙人配合 · 6v6 團隊對戰</span><div class="pager"><button id="rooms-prev" disabled aria-label="房間上一頁">‹ 上一頁</button><span id="rooms-page">1 / 1</span><button id="rooms-next" disabled aria-label="房間下一頁">下一頁 ›</button></div></div>
+    <div class="room-footer"><span class="muted mode-help">每隊 1～6 人 · A 段開放 2v2、6v6</span><div class="pager"><button id="rooms-prev" disabled aria-label="房間上一頁">‹ 上一頁</button><span id="rooms-page">1 / 1</span><button id="rooms-next" disabled aria-label="房間下一頁">下一頁 ›</button></div></div>
 
   </section>
   <aside class="players panel" aria-labelledby="players-title">
@@ -69,7 +69,7 @@
 </main>
 <footer class="panel"><nav aria-label="系統功能"><button data-soon><span data-icon="user"></span>角色資訊</button><button data-soon><span data-icon="trophy"></span>成就系統</button><button data-soon><span data-icon="rank"></span>天梯排行榜</button><button data-soon><span data-icon="shirt"></span>球衣與裝備</button><button id="system-settings"><span data-icon="settings"></span>系統設定</button></nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>
-<dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>2v2</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
+<dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>1v1</option><option selected>2v2</option><option>3v3</option><option>4v4</option><option>5v5</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
 <div id="toast" role="status" hidden></div>
 </div>

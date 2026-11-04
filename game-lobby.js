@@ -5,14 +5,14 @@
   function sync(force=false){
     const s=snapshot();if(!s || closed)return;
     const status=s.practice?'練習中':s.active?(s.playing?'比賽中':'房間中'):'大廳中';
-    const next=JSON.stringify([s.name,status,s.code,s.count,s.isHost]);
+    const next=JSON.stringify([s.name,status,s.code,s.count,s.isHost,s.mode]);
     const changed=next!==last;
     if(force || changed){
       socket.send({k:'hello',name:s.name,status,...(s.active&&!s.practice?{code:s.code}:{})});
       last=next;wasHost=s.isHost;
     }
     if(s.active && !s.practice && s.isHost && no && (force || changed || Date.now()-lastBeat>=10000)) {
-      if(socket.send({k:'room-update',no,count:s.count,status:s.playing?'playing':'waiting',latency:s.latency}))lastBeat=Date.now();
+      if(socket.send({k:'room-update',no,count:s.count,status:s.playing?'playing':'waiting',latency:s.latency,mode:s.mode}))lastBeat=Date.now();
     }
   }
   window.VBGameLobby={start(getState){

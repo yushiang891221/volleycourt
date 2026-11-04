@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="settings.css">
 <script src="settings.js"></script>
 <script src="room-settings.js"></script>
+<script src="room-flow-ui.js"></script>
+<link rel="stylesheet" href="room-flow.css">
 <script src="lobby-client.js"></script>
 <script src="game-lobby.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -835,7 +837,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="walk-ui" id="walk-ui" hidden>
       <div class="walk-top"><button type="button" id="w-host" hidden>房主設定</button><button type="button" id="w-settings">⚙ 設定</button><button type="button" id="w-exit">回大廳</button></div>
       <div class="room-info"><strong id="room-title">練習模式</strong><p id="room-status">單人練習 · 你是房主</p><details><summary id="room-count">1 / 20 人 · 名單</summary><ul id="room-list"></ul></details></div>
-      <div id="room-panel" hidden><label>全房間球速 <select id="room-speed"><option value="0.55">很慢（55%）</option><option value="0.7">慢（70%）</option><option value="1">正常（100%）</option></select></label><p>人跑、跳的速度不變</p><button id="room-close" type="button">完成</button></div>
+      <div id="room-panel" hidden><label>全房間球速 <select id="room-speed"><option value="0.55">很慢（55%）</option><option value="0.7">慢（70%）</option><option value="1">正常（100%）</option></select></label><p>人跑、跳的速度不變</p><label class="room-size">每隊人數 <output id="room-size-value">2 對 2</output><input id="room-size" type="range" min="1" max="6" step="1" value="2"><span id="room-size-note"></span></label><button id="room-close" type="button">完成</button></div>
+      <div id="room-flow"><button id="room-ready" type="button">準備</button> <button id="room-start" type="button" hidden>開始遊戲</button><p id="room-flow-note">走到球場上按準備</p><p id="room-ready-list"></p></div>
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd data-key="shift">Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd data-key="e">E</kbd>互動／拿球</span><span><kbd data-key=" ">空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd data-key=" ">空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd data-key="s">S</kbd>按著打短</span><span><kbd data-key="v">V</kbd>接球</span><span><kbd data-key="shift">Shift</kbd>＋<kbd data-key="v">V</kbd>撲救</span><span><kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd data-key="p">P</kbd>第一／第三人稱</span><span>按住<kbd data-key="t">T</kbd>往左擊掌／往右嘲諷</span><span><kbd data-key="b">B</kbd>攔網</span><span><kbd data-key="f">F</kbd>拋給隊友</span><span><kbd>Esc</kbd>開啟個人設定</span></div>
       <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 或方向鍵走路，按住 <kbd data-key="shift">Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭；按 <kbd>Esc</kbd> 開啟設定・準星對著地板點一下就走過去<br>看著物件按 <kbd data-key="e">E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd data-key="v">V</kbd> 接球、<kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd data-key="p">P</kbd> 切換第一／第三人稱、<kbd data-key="w">W</kbd> 助跑＋<kbd data-key=" ">空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd data-key="s">S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd data-key="b">B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd data-key=" ">空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd data-key="f">F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd data-key="v">V</kbd> 下手送高球過網、<kbd data-key="e">E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只開啟個人設定，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
@@ -5719,7 +5722,7 @@ function updateWalk(dt) {
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
-  updateSkill(dt); vbUpdate(dt); applyPose(dt); placeHeld();
+  updateSkill(dt); if (!roomSpectator()) vbUpdate(dt); applyPose(dt); placeHeld();
 }
 // ---------------------------------------------------------------- 導覽互動：看著物件（畫面中間的準星）按 E，手機點下方的按鈕，或直接點物件；雙擊物件看資訊報表
 const SIT_EYE = { sofa: 1.12, bench: 1.12, foldchair: 1.18, campchair: 1.05, referee: 2.55 };
@@ -6810,6 +6813,48 @@ function hitWorldBall(b, kind) {
 // hitN：擊球序號，只有「擊球、接球、撿球」才會加一；位置更新沿用同一個序號，不會蓋掉別人的擊球。
 // 同一個序號兩個人同時打到：代號比較大的那一下算數（每台電腦都用同一條規則，結果一致）
 let ROOM = null;
+let ROOM_UI = null, roomLaunched = -1, roomPlaced = -1;
+const roomDefaultCount = () => { const m = new URLSearchParams(location.search).get('mode'); return /^[1-6]v[1-6]$/.test(m || '') && m[0] === m[2] ? Number(m[0]) : 2; };
+function roomCourtOf(id) {
+  const p = id === vmMe() ? walk : NET.peers.get(id); if (!p) return null;
+  const ct = courtAt(p.x, p.z, true); return ct && Math.abs(ct.lx) <= 9 && Math.abs(ct.lz) <= 4.5 ? ct.c.id : null;
+}
+function roomReady() {
+  if (!ROOM) { toast('正在確認房間連線'); return; }
+  if (!ROOM.snapshot.flow.ready.includes(vmMe()) && !roomCourtOf(vmMe())) { toast('走到球場上再按準備'); return; }
+  ROOM.toggleReady();
+}
+function roomStart() { if (!ROOM?.begin()) toast('由房主開始；至少一人站在球場上準備，A 段開放 2 對 2、6 對 6'); }
+function roomRulesChanged(rules) {
+  VB.ts = rules.speed; renderRoomRules(); ROOM_UI?.render(); peerTagsAll();
+  const f = rules.flow;
+  if (f.phase === 'waiting') { if (VM.on) vmStop(true); roomLaunched = -1; roomPlaced = -1; return; }
+  if (f.phase !== 'playing') return;
+  const c = state.items.find(i => i.id === f.court); if (!c) return;
+  // Place each participant once, before the engine distributes service positions.
+  const slot = f.picks.indexOf(vmMe());
+  if (slot >= 0 && roomPlaced !== f.round) {
+    roomPlaced = f.round; const team = Math.floor(slot / rules.count), k = slot % rules.count, sd = team === 0 ? -1 : 1;
+    const [depth,left] = rules.count === 6 ? V6_BASE[k] : [6,k === 0 ? 2.1 : -2.1];
+    [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
+  }
+  if (rules.isHost && roomLaunched !== f.round) {
+    roomLaunched = f.round;
+    const seats = [f.picks.slice(0,rules.count),f.picks.slice(rules.count)];
+    // Existing host-side assistance expects the host's team at engine index 0.
+    // Flip only internal team indices/sign; the selected physical left/right stays unchanged.
+    const right = seats[1].includes(vmMe()), sg = right ? 1 : -1;
+    if (right) seats.reverse();
+    if (rules.count === 6) vm6Start(c,sg,{},seats); else vmStart(c,sg,null,[],seats);
+  }
+  if (!rules.isHost && !VM.on && NET.tx) NET.tx.publish('room-match-sync', {});
+}
+function roomSpectator() { return VM.on && vmTeamOf(vmMe()) < 0; }
+function roomKeepSpectatorOut() {
+  if (!roomSpectator() || !VM.c) return;
+  const [x,z] = vmL(walk.x,walk.z);
+  if (Math.abs(x)<10.7 && Math.abs(z)<5.4) [walk.x,walk.z] = vmW(x,Math.sign(z || 1)*5.7);
+}
 function isRoomHost() { return new URLSearchParams(location.search).has('practice') || !!(ROOM && ROOM.isHost); }
 function renderRoomRules() {
   const host = isRoomHost(); $('w-host').hidden = !host; $('room-speed').value = String(VB.ts); $('room-speed').disabled = !host;
@@ -6826,7 +6871,7 @@ window.VBGameLobby?.start(() => ({
   name: VBSettings.values.nickname || '球友',
   practice: new URLSearchParams(location.search).has('practice'),
   active: NET.on, code: NET.room, isHost: !!ROOM?.isHost,
-  playing: VM.on, count: NET.peers.size + 1,
+  playing: ROOM?.snapshot.flow.phase === 'playing', count: NET.peers.size + 1, mode: `${ROOM?.count || roomDefaultCount()}v${ROOM?.count || roomDefaultCount()}`,
   latency: NET.lat.size ? Math.round([...NET.lat.values()].reduce((a,b) => a+b,0)/NET.lat.size) : null,
 }));
 const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C', '#8E4EC6', '#F76B15', '#12A594', '#D6409F', '#0090FF', '#978365', '#E54666', '#46A758'];
@@ -6958,7 +7003,7 @@ async function netJoin(room) {
   if (others.length >= NET_MAX) { tx.close(); NET.on = false; NET.tx = null; netStatus(`房間 ${room} 已經滿了（最多 ${NET_MAX} 人）`, 'warn'); return; }
   const used = new Set(others.map((m) => m.c)), color = NET_COLORS.find((c) => !used.has(c)) || NET_COLORS[0];
   NET.color = color;
-  ROOM = createRoomSettings({ id: NET.me, creator: new URLSearchParams(location.search).get('host') === '1', send: d => { if (NET.on && NET.tx) NET.tx.publish('room-settings', d); }, changed: rules => { VB.ts = rules.speed; renderRoomRules(rules); } });
+  ROOM = createRoomSettings({ id: NET.me, creator: new URLSearchParams(location.search).get('host') === '1', count: roomDefaultCount(), courtOf: roomCourtOf, send: d => { if (NET.on && NET.tx) NET.tx.publish('room-settings', d); }, changed: roomRulesChanged });
   await tx.enter({ n: NET.name, c: color });
   for (const m of others) netPeer(m.id, m);
   netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' || tx.kind === 'ably' ? '' : '・備用線路（跟走主線路的人看不到彼此）'}`, 'ok');
@@ -7410,7 +7455,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
   }
 }
 // 名條：6 對 6 時前面加位置簡稱（S、OP、OH、M）
-function peerTag(p2) { return VM.on && VM.six && VM.role && VM.role[p2.id] ? `${V6_TAG[VM.role[p2.id]]}・${p2.n}` : p2.n; }
+function peerTag(p2) { const tag = VM.on && VM.six && VM.role && VM.role[p2.id] ? `${V6_TAG[VM.role[p2.id]]}・${p2.n}` : p2.n; return tag + (ROOM?.snapshot.flow.ready.includes(p2.id) && ROOM.snapshot.flow.phase !== 'playing' ? ' · 準備' : ''); }
 function peerTagsAll() { for (const p2 of NET.peers.values()) if (p2.tag) p2.tag.element.textContent = peerTag(p2); }
 function netPeer(id, d) {
   let p2 = NET.peers.get(id);
@@ -7531,6 +7576,7 @@ function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(wa
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
+  if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t }); return; }   // 量延遲
   if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); } return; }
   if (t === 'st') {
@@ -7551,6 +7597,7 @@ function netOnMessage(t, d, from) {
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
+    if (VM.on && vmTeamOf(from) < 0 && from !== VM.hostId) return;
     // 擊球序號：比我新的＝別人打到了；一樣的序號而且是現在負責的人＝一般位置更新；一樣的序號但不同人＝同時打到，代號大的算
     if (VM.on && d.w === 'throw') return;   // 比賽中有人把手上的球丟出來：不理，不會取代比賽球
     // 比賽中輪到的人發出去的那一下：不管序號一定收（序號剛好被別的事件超過時，主機會整個忽略發球＝球不見、不判分）
@@ -8055,12 +8102,15 @@ addEventListener('keydown', (e) => {
   if (!walk.on || VBSettings.isOpen) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = VBSettings.key(e);
+  if ((k === 'ready' || k === 'start') && !e.repeat && !walk.paused) { e.preventDefault(); if (k === 'ready') roomReady(); else roomStart(); return; }
+  if (typeof ROOM_UI !== 'undefined' && ROOM_UI?.picking) return;
+  if (VM.on && roomSpectator() && ['v','q','1','2','3','4','5','b','f'].includes(k)) { e.preventDefault(); return; }
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn && VM.phase !== 'over') { e.preventDefault(); $('rk-menu').hidden = true; return; }
   if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } openPersonalSettings(); return; }
   if (walk.paused) return;
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
-  if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on) vmFreeBall(); else doInteract(); return; }
+  if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on && !roomSpectator()) vmFreeBall(); else if (!VM.on || walk.sit || (walk.focus && walk.focus.kind !== 'ball')) doInteract(); return; }
   if ((k === 'v' || k === 'q') && !e.repeat && !e.ctrlKey && !e.metaKey) { e.preventDefault(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
   if (['1', '2', '3', '4', '5'].includes(k) && !e.repeat) { e.preventDefault(); const n = Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse()) setMenuOpen(n); else vbSet(n); return; }   // 1～3：按住出現左右選項
   if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && (VM.on || vbCourt())) startJumpServe(); else vbJump('attack'); } return; }
@@ -8101,7 +8151,7 @@ document.addEventListener('pointerlockchange', () => {
 document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
 function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; }
 // 排球（比賽、陪練、站在排球場上）而且滑鼠已鎖定（轉頭模式）：左鍵＝攻擊（拿著球＝發球）、右鍵＝吊球
-const vbClickOK = () => VM.on || !!VB.npc || !!vbCourt();
+const vbClickOK = () => !roomSpectator() && (VM.on || !!VB.npc || !!vbCourt());
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (EMO.menu) { e.preventDefault(); emoMenuClose(true); return; }   // 互動選單：點一下確定
@@ -9926,6 +9976,7 @@ function vmPos(id) {
 const vmName = (id) => (id === vmMe() ? '你' : VM.names[id] || (NET.peers.get(id) || {}).n || '隊友');
 // ---- 開局
 function vmOpenMenu(c) {
+  if (ROOM) { roomReady(); return; }
   const ct = courtAt(walk.x, walk.z, true); if (!ct || ct.c.id !== c.id) { toast('站到排球場上再開打'); return; }
   if (VM_OPT.mode === '6') { vm6Menu(c, Math.sign(ct.lx) || 1); return; }
   const sg = Math.sign(ct.lx) || 1, onSide = (s2) => [...NET.peers.values()].filter((p2) => { const [lx, lz] = toLocalOf(c, p2.x, p2.z); return Math.sign(lx) === s2 && Math.abs(lx) < 12 && Math.abs(lz) < 7; });
@@ -9943,7 +9994,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub" style="margin-top:10px">V 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中按住滑鼠左鍵蓄力、放開扣球（金色格最強最準）、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
-function vmStart(c, sg, mateId, opps = []) {
+function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
@@ -9954,7 +10005,17 @@ function vmStart(c, sg, mateId, opps = []) {
   if (!mateId) vmMkAi('aiT', 0, 'AI 隊友', '#30A46C', VM.chars.aiT);
   if (!opps[0]) vmMkAi('ai1', 1, 'AI 對手', '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, 'AI 對手', '#F76B15', VM.chars.ai2);
   for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
-  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG });
+  if (seats) {
+    for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); } VM.ai.clear(); VM.names = {};
+    VM.team = seats.map((row,t) => row.map((id,k) => id || `ai${t}${k}`));
+    for (const t of [0,1]) for (const [k,id] of VM.team[t].entries()) {
+      if (/^ai/.test(id)) vmMkAi(id,t,'AI',t===0?'#30A46C':'#E5484D',null);
+      else VM.names[id] = id === vmMe() ? NET.name : NET.peers.get(id)?.n || '球友';
+      const a = VM.ai.get(id); if (a) { a.x = sg*(t===0?1:-1)*6; a.z = k===0?2.1:-2.1; }
+    }
+  }
+  VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG };
+  if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
   vmSetupServe();
   toast(`2 對 2 開始！先到 ${VM.to} 分・對手：${opps.length ? VM.team[1].map(vmName).join('＋') : 'AI（' + VM_LEVELS[VM_OPT.lv].name + '）'}`, 2400);
@@ -9967,6 +10028,7 @@ function vmMkAi(id, team, name, color, ch) {
   VM.ai.set(id, a); VM.names[id] = name; return a;
 }
 function vmStop(silent) {
+  if (!silent && ROOM) { if (ROOM.isHost) ROOM.end(); return; }
   if (!VM.on) return;
   if (VM.trail) { scene.remove(VM.trail); VM.trail = null; }
   if (VM.host && NET.on && !silent) NET.tx.publish('vm', { e: 'end' });
@@ -10157,6 +10219,7 @@ function vmPoint(win, why) {
 function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => !/^ai/.test(id)); return ids.includes(vmMe()) ? '你們' : !hs.length ? 'AI 隊' : hs.map(vmName).join('＋') + (hs.length < ids.length ? '＋AI' : ''); }
 function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
 function vmOver() {
+  if (ROOM) { if (ROOM.isHost) { toast(`比賽結束 ${VM.sc[0]}：${VM.sc[1]}，請重新準備`,4000); ROOM.end(); } return; }
   VM.phase = 'over'; vmBroadcast(true);
   const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
   m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${VM.six ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${VM.six ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
@@ -10587,17 +10650,17 @@ function vm6Menu(c, sg) {
     <p class="rk-sub" style="margin-top:10px">V 接球、1～5 舉球（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
-function vm6Start(c, sg, asg = {}) {
+function vm6Start(c, sg, asg = {}, seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
   Object.assign(VM, { on: true, host: true, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
   // 每隊 6 個號位的角色固定（輪轉表）；真人坐進自己選的角色，重複的就往後排到空的位置，其他 AI 補
-  const humans = [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
+  const humans = seats ? [[],[]] : [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
   for (const [id, q] of Object.entries(asg)) if (q && q.team >= 0 && NET.peers.has(id)) humans[q.team].push({ id, role: q.role });
   const used = new Set([myChar()]); VM.chars = {}; VM.role = {}; VM.rot = [[], []];
   for (const t of [0, 1]) {
-    const slot = Array(6).fill(null);
+    const slot = seats ? seats[t].slice() : Array(6).fill(null);
     for (const h of humans[t].slice(0, 6)) {
       let k = V6_ROLES.findIndex((r, i) => r === h.role && !slot[i]);
       if (k < 0) { k = slot.findIndex((x) => !x); clash.push(`${h.id === vmMe() ? '你' : (NET.peers.get(h.id) || {}).n || '球友'}→${V6_NAME[V6_ROLES[k]]}`); }
@@ -10613,10 +10676,11 @@ function vm6Start(c, sg, asg = {}) {
   VM.team = VM.rot.map((r) => r.slice()); VM.rot0 = VM.rot.map((r) => r.slice());
   VM.srvTeam = Math.random() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
   for (const a of VM.ai.values()) { const f = vm6Spot(a.team, a.id, 'defense'); a.x = a.tx = f.x; a.z = a.tz = f.z; }
-  if (NET.on) NET.tx.publish('vm', { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } });
+  VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } };
+  if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
-  toast(`6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三局兩勝・' : '五局三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
+  toast(roomSpectator() ? '6 對 6 開始 · 你是觀眾' : `6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三局兩勝・' : '五局三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
 }
 // 輪轉：2 號位的人轉到 1 號位發球，其他人順時針跟著轉
 function vm6Rotate(t) {
@@ -10948,8 +11012,9 @@ function vmBroadcast(force, msg, pt) {
   if (force) NET.forceSt = true;
 }
 function vmOnNet(d, from) {
+  if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host) return;
   if (d.e === 'start') {
-    if (VM.on && VM.host) return;
+    if (VM.on) return;
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
@@ -10990,6 +11055,7 @@ function vmOnNet(d, from) {
 function vmSay(t, kind = '', ms = 1600) { const m = $('vm-msg'); m.textContent = t; m.dataset.k = kind; m.hidden = false; clearTimeout(VM.sayT); VM.sayT = setTimeout(() => { m.hidden = true; }, ms); }
 function vmHud() {
   if ($('vm-hud').hidden) return;
+  if (ROOM) { $('vm-x').hidden = !ROOM.isHost; $('vm-x').textContent = '結束比賽'; }
   vmServeHint();
   if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
@@ -11041,6 +11107,10 @@ $('rk-menu').addEventListener('click', (e) => {
 });
 
 // ---------------------------------------------------------------- loop
+ROOM_UI = createRoomFlowUI({getRoom:()=>ROOM,me:vmMe,name:id=>id===vmMe()?(NET.name || VBSettings.values.nickname || '你'):NET.peers.get(id)?.n || '球友',release:()=>{unlockMouse();walk.keys.clear();},ready:roomReady,start:roomStart});
+if (new URLSearchParams(location.search).has('practice')) {
+  ROOM = createRoomSettings({id:'me',creator:true,count:roomDefaultCount(),courtOf:roomCourtOf,send:()=>{},changed:roomRulesChanged}); ROOM.start();
+}
 function resize() {
   const w = host.clientWidth || 1, h = host.clientHeight || 1;
   renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
@@ -11072,7 +11142,7 @@ function drawFrame(force) {
   for (const r of zoneRoofs) r.visible = walk.on && !RP.on;
   if (ceilingGroup && RP.on) ceilingGroup.visible = cp.y < H + 0.5;
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
-  if (walk.on) { staTick(dt); stowSync(); recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
+  if (walk.on) { roomKeepSpectatorOut(); staTick(dt); stowSync(); recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   const tp = walk.on && tpBegin(dt);
   if (walk.on) vbChgPlace();
