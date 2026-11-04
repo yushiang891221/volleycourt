@@ -93,6 +93,8 @@ await check('physics, movement, hit calculations and AI remain unchanged',()=>{
  for(const [a,b] of [['function standUp()','const NET ='],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['// 輪轉：2 號位','function vmStaRings()']]){
   let current=segment(gym,a,b),previous=segment(old,a,b);
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
+  // 球館計分板跟著比賽比分（只是顯示），不算物理／玩法：兩邊都拿掉 drawScore 這段再比
+  const noScore=t=>{const i=t.indexOf('function drawScore() {'),j=t.indexOf('function addPoint(');return i>=0&&j>i?t.slice(0,i)+t.slice(j):t;};current=noScore(current);previous=noScore(previous);
   // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
   // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
   current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/^  if \(vmSmallCount\(\).*\/\/ 小人數.*\n/gm,'').replace(/^.*\/\/ 後排 5 號位.*\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');

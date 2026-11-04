@@ -864,7 +864,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
         <div class="pc-bar"><span class="pc-start">🏐 Let's Play</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
       </div></div></div>
       <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
-      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：移動滑鼠轉頭；Esc：設定</div>
+      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：全螢幕；再點一下：滑鼠變準心　Esc：放開滑鼠，再按一次離開全螢幕</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="wk-use" id="wk-use" hidden></div>
@@ -5987,11 +5987,13 @@ function toggleBag(it, point) {
 const scoreCv = document.createElement('canvas'); scoreCv.width = 512; scoreCv.height = 256;
 const scoreTex = new THREE.CanvasTexture(scoreCv); scoreTex.colorSpace = THREE.SRGBColorSpace;
 function drawScore() {
-  const c = scoreCv.getContext('2d'), [a, b] = walk.score;
+  const live = typeof VM !== 'undefined' && VM.on && VM.sc, [a, b] = live ? VM.sc : walk.score, sets = live ? (VM.sets || [0, 0]) : walk.sets;
+  const key = `${a}:${b}:${sets[0]}:${sets[1]}`; if (drawScore.k === key) return; drawScore.k = key;
+  const c = scoreCv.getContext('2d');
   c.fillStyle = '#F4F4F2'; c.fillRect(0, 0, 512, 256);
   c.fillStyle = '#B8322B'; c.fillRect(0, 0, 252, 46); c.fillStyle = '#2F5FA8'; c.fillRect(260, 0, 252, 46);
   c.fillStyle = '#fff'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText(`主隊  ${walk.sets[0]}`, 126, 24); c.fillText(`${walk.sets[1]}  客隊`, 386, 24);
+  c.fillText(`主隊  ${sets[0]}`, 126, 24); c.fillText(`${sets[1]}  客隊`, 386, 24);
   c.fillStyle = '#1B2638'; c.font = 'bold 170px sans-serif'; c.fillText(String(a), 126, 160); c.fillText(String(b), 386, 160);
   c.fillRect(254, 60, 4, 190);
   scoreTex.needsUpdate = true;
@@ -8112,7 +8114,7 @@ addEventListener('keydown', (e) => {
   if (VM.on && roomSpectator() && ['v','q','1','2','3','4','5','6','b','f'].includes(k)) { e.preventDefault(); return; }
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn && VM.phase !== 'over') { e.preventDefault(); $('rk-menu').hidden = true; return; }
-  if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } openPersonalSettings(); return; }
+  if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (document.pointerLockElement) { document.exitPointerLock(); return; } if (performance.now() - pointerLockOffT < 400) return; if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; } openPersonalSettings(); return; }   // Esc：先放開滑鼠，再按一次離開全螢幕
   if (walk.paused) return;
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on && !roomSpectator()) vmFreeBall(); else if (!VM.on || walk.sit || (walk.focus && walk.focus.kind !== 'ball')) doInteract(); return; }
@@ -8147,7 +8149,8 @@ document.addEventListener('fullscreenchange', () => { const kb = navigator.keybo
 // 沒有全螢幕時：在房間或比賽中按到 Ctrl＋W，先問一次要不要離開
 document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('a[href^=index]')) window.__leavingOk = true; }, true);   // 自己按「回大廳」不用再確認
 addEventListener('beforeunload', (e) => { if (location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
-function lockMouse() { if (!document.fullscreenElement && !coarse()) { gameFullscreen().then(() => setTimeout(lockMouseNow, 60)); return; } lockMouseNow(); }
+function lockMouse() { if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
+let pointerLockOffT = 0; document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) pointerLockOffT = performance.now(); });
 function lockMouseNow() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
 function unlockMouse() { if (locked()) { walk.programmaticUnlock = true; document.exitPointerLock(); } }
 document.addEventListener('mousemove', (e) => {
@@ -8167,7 +8170,8 @@ document.addEventListener('pointerlockchange', () => {
 });
 // 瀏覽器不讓鎖定滑鼠（有些內嵌視窗、舊瀏覽器）：改用按住拖曳轉頭，點一下照樣互動
 document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
-function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; }
+function updateLockHint() { const h = $('wk-lock'); if (!h) return; h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; const t = document.fullscreenElement || !document.documentElement.requestFullscreen ? '再點一下畫面：滑鼠變準心　Esc：放開滑鼠，再按一次離開全螢幕' : '點一下畫面：進入全螢幕（再點一下滑鼠變準心）'; if (h.textContent !== t) h.textContent = t; }
+document.addEventListener('fullscreenchange', () => updateLockHint());
 // 排球（比賽、陪練、站在排球場上）而且滑鼠已鎖定（轉頭模式）：左鍵＝攻擊（拿著球＝發球）、右鍵＝吊球
 const vbClickOK = () => !roomSpectator() && (VM.on || !!VB.npc || !!vbCourt());
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
@@ -9470,7 +9474,8 @@ function vmFreeBall() {
   vmOnTouch(b, vmMe(), 'set'); toast('推過網', 900);
 }
 // 舉球的選項：1＝平的長攻／高的長攻、2＝高的 3 號位／快攻、3＝平的背／高的背（轉盤上第一個在左邊，其他照順序平分一圈）；只按一下不拖＝最後一個（原本的舉法）
-const SET_OPT = { 1: [['flat', '平的長攻'], ['high', '高的長攻']], 2: [['high3', '高的 3 號位'], ['quick', '快攻']], 3: [['flat', '平的背'], ['high', '高的背']] };
+const SET_OPT = { 1: [['high', '高的長攻'], ['flat', '平的長攻']], 2: [['high3', '高的 3 號位'], ['quick', '快攻']], 3: [['high', '高的背'], ['flat', '平的背']] };   // 左＝慢（高球）、右＝快（平球、快攻）
+const SET_DEF = { 1: 'high', 2: 'quick', 3: 'high' };   // 圓盤沒選就用這個（跟以前一樣）
 const SETM = { m: null };
 // 轉盤：第 i 個選項放在 180°−i×(360°／選項數)（兩個選項＝左、右）；扇形之間畫分隔線
 const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n + (SETM.m && VBSettings.values.swap[SETM.m.n - 1] ? Math.PI : 0);
@@ -9504,7 +9509,7 @@ function setMenuMove(dx, dy) {
 function setMenuPick(i) { const m = SETM.m; if (!m) return; SETM.m = null; SETM.until = performance.now() + 350; clearTimeout(SETM.to); $('set-menu').hidden = true; vbSet(m.n, SET_OPT[m.n][i][0]); }   // 選完 0.35 秒內滑鼠還在滑也不轉視角
 const setMenuHolds = () => !!SETM.m || performance.now() < (SETM.until || 0);
 // 放開數字鍵：有亮著的選項就用它，沒有＝最後一個（原本的舉法）
-function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : SET_OPT[m.n].length - 1); else { SETM.m = null; clearTimeout(SETM.to); $('set-menu').hidden = true; } }
+function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : Math.max(0, SET_OPT[m.n].findIndex(([v]) => v === SET_DEF[m.n]))); else { SETM.m = null; clearTimeout(SETM.to); $('set-menu').hidden = true; } }
 function vbSet(n, v = null) {
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   // 2 對 2：這一球是 AI 隊友舉（你接的、或球還在對面），按 1／2／3＝喊球
@@ -11114,6 +11119,7 @@ function vmHud() {
   if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
   const t = `${VM.sc[0]}：${VM.sc[1]}`; if ($('vm-sc').textContent !== t) $('vm-sc').textContent = t;
+  drawScore();   // 球館裡的計分板跟著比賽比分
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
   const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
   const tct = tc && tc[1] > 0 ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : VM.six ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
