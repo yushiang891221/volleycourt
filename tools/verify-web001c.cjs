@@ -82,7 +82,7 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
  assert(gym.indexOf("drawFrame(true);\n    entryProgress(100")<gym.indexOf("cover.classList.add('done')"));
  for(const id of ['w-mp','w-quality','w-sfx','w-bspeed','w-assist','w-full','w-plan','mp','mp-name','mp-new','mp-code'])assert(!gym.includes(`id="${id}"`),id);
  assert.equal((segment(gym,'<div class="walk-top">','<div class="room-info">').match(/<button/g)||[]).length,3);
- assert(read('lobby.js').includes("query.set('host', '1')"));assert(read('index.html').includes('id="system-settings"'));
+ assert(/if\s*\(m\.host\)q\.set\('host','1'\)/.test(read('lobby.js')));assert(read('index.html').includes('id="system-settings"'));
  for(const f of ['gym.html','index.html'])assert(read(f).includes('src="settings.js"')&&read(f).includes('href="settings.css"'));
 });
 await check('physics, movement, hit calculations and AI remain unchanged',()=>{

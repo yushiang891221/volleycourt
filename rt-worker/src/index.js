@@ -9,6 +9,16 @@
 //                 {k:'p', a:'enter'|'leave', id, d}（有人進來／離開）
 //                 {k:'m', t, d, f:送的人}、'pong'
 import { DurableObject } from 'cloudflare:workers';
+export { Lobby } from './lobby.js';
+// Lobby JSON protocol: /lobby?id=<tab id>&token=<private reconnect token>.
+// Client: hello {name,status,code?}, status {status,no?,code?}, chat {text},
+// create {name,mode,password?}, join {no,password?}, quick {mode?}, refresh,
+// room-update {no,count,status:'waiting'|'playing',latency}, room-close {no}.
+// Server: state {players,rooms,chats}, players {players}, rooms {rooms},
+// chat {chat:{id,name,text,at}}, joined {no,code,mode,host}, error {reason}.
+// Public room fields: no,name,mode,locked,count,max,status,hostName,latency,lastBeat.
+// code is a bearer invitation: only joined replies contain it. No passwords/tokens
+// or membership credentials are ever included in public snapshots.
 
 const MAX_PEOPLE = 32;   // 一間房最多幾條連線（遊戲本身限 12 人）
 const MAX_BYTES = 16384;   // 一則訊息最大 16 KB（遊戲的訊息約 0.1～1 KB）
@@ -18,7 +28,8 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     const m = url.pathname.match(/^\/room\/([A-Za-z0-9_-]{1,64})$/);
-    if (!m) return new Response('volleycourt rt', { status: 404 });
+    const lobby = url.pathname === '/lobby';
+    if (!m && !lobby) return new Response('volleycourt rt', { status: 404 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
     // 只讓自己的網站連（ALLOWED_ORIGINS，逗號分隔）；本機開發（localhost）一律可以
     const origin = req.headers.get('Origin') || '';
@@ -26,6 +37,7 @@ export default {
     if (allow.length && !allow.includes(origin) && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return new Response('origin not allowed', { status: 403 });
     const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
     if (!id) return new Response('missing id', { status: 400 });
+    if (lobby) return env.LOBBY.get(env.LOBBY.idFromName('main')).fetch(req);
     // 房間建在第一個人連到的機房附近（預設）；要指定區域可以設 LOCATION_HINT（例如 apac）
     // 注意：台灣有些網路業者會把 Cloudflare 免費方案的流量送到美國機房，這時指定 apac 反而要繞一大圈
     const stub = env.LOCATION_HINT ? env.ROOMS.get(env.ROOMS.idFromName(m[1]), { locationHint: env.LOCATION_HINT }) : env.ROOMS.get(env.ROOMS.idFromName(m[1]));

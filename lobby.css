@@ -58,6 +58,11 @@ h2 .icon, .count { color: #f3a24b; }
 .state { color: #5bd7a2; font-size: 10px; white-space: nowrap; }
 .state.busy { color: #f5848d; }
 .state.practice { color: #edcb63; }
+.state.in-room { color: #77c9f5; }
+.dot[data-state="connecting"] { background: #edcb63; }
+.dot[data-state="offline"] { background: #f5848d; }
+.room-card.full { opacity: .6; }
+.form-error { color: #f5848d; }
 .room-name { margin: auto 0; padding: 8px 0; text-align: center; font-size: clamp(14px, 1.05vw, 20px); font-weight: 700; white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .card-bottom { justify-content: space-between; border-top: 1px solid #ffffff05; padding-top: 7px; color: #adbed0; font-family: monospace; }
 .card-bottom span { display: inline-flex; gap: 4px; align-items: center; }

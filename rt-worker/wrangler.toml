@@ -12,6 +12,14 @@ class_name = "Room"
 tag = "v1"
 new_sqlite_classes = ["Room"]
 
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Lobby"]
+
 # 只讓這些網站連進來（逗號分隔）；本機 localhost 一律可以
 [vars]
 ALLOWED_ORIGINS = "https://volleycourts.vercel.app"

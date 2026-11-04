@@ -25,113 +25,87 @@ const paths = {
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.user}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); });
-let nickname = VBSettings.values.nickname;
-$('system-settings').addEventListener('click', () => VBSettings.open());
-addEventListener('vb-settings-change', () => { nickname = VBSettings.values.nickname; renderPlayers(); });
-const demo = new URLSearchParams(location.search).get('demo') === '1';
-// Preview-only fixtures. Normal visits show no fabricated rooms, players, levels or latency.
-const samples = [
-  { no: 101, mode: '2v2', name: '午後輕鬆打・一起暖身', count: 3, latency: 16 },
-  { no: 102, mode: '6v6', name: '六人默契團，缺你一位', count: 8, latency: 23 },
-  { no: 103, mode: '2v2', name: '週末友誼局', count: 4, latency: 32, locked: true, busy: true },
-  { no: 104, mode: '6v6', name: '新手歡迎！慢慢練配合', count: 2, latency: 18 },
-  { no: 105, mode: '6v6', name: '夜間練球・攻防練習室', count: 12, latency: 45, locked: true, busy: true },
-  { no: 106, mode: '2v2', name: '下一球，我們接起來', count: 3, latency: 26 },
-];
-function notify(message) {
-  $('toast').textContent = message; $('toast').hidden = false;
-  clearTimeout(notify.timer); notify.timer = setTimeout(() => { $('toast').hidden = true; }, 3000);
+﻿let nickname=VBSettings.values.nickname, rooms=[], players=[], roomPage=0, playerPage=0, connected=false, selectedRoom=null;
+let sound=false, audioContext;
+const demo=new URLSearchParams(location.search).get('demo')==='1';
+const samples=Array.from({length:8},(_,i)=>({no:101+i,name:`開發示範練球室 ${i+1}`,mode:i%2?'6v6':'2v2',count:i+1,max:20,status:i%3?'waiting':'playing',locked:i===2,latency:20+i}));
+function notify(message){
+ $('toast').textContent=message;$('toast').hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('toast').hidden=true,4000);
+ // Native dialogs occupy the top layer; display errors inside them too.
+ for(const dialog of document.querySelectorAll('dialog[open]')){
+  let error=dialog.querySelector('.form-error');
+  if(!error){error=document.createElement('p');error.className='form-error';error.setAttribute('role','alert');dialog.querySelector('form').append(error);}
+  error.textContent=message;
+ }
 }
-function renderPlayers() {
-  const list = $('players'); list.replaceChildren();
-  const players = [{ name: nickname || '球友', self: true, state: '大廳中', level: '等級尚未開放' }];
-  if (demo) players.push(...[
-    ['海風接球員', 28, '比賽中'], ['週三練球', 16, '大廳中'], ['橘色護膝', 32, '練習中'],
-    ['一傳到位', 21, '大廳中'], ['星夜舉球手', 45, '比賽中'], ['球不落地', 12, '大廳中'], ['跳躍的節拍', 37, '練習中'],
-  ].map(([name, level, state]) => ({ name, level: `Lv.${level} · 示範`, state })));
-  for (const player of players) {
-    const row = document.createElement('div'); row.className = `player${player.self ? ' self' : ''}`;
-    row.innerHTML = `<span class="avatar">${icon('user')}</span><div class="player-identity"><strong></strong><div class="player-level"></div></div><span class="state"></span>`;
-    const label = player.name + (player.self ? '（你）' : '');
-    row.querySelector('strong').textContent = label; row.querySelector('strong').title = label;
-    row.querySelector('.player-level').textContent = player.level;
-    const state = row.querySelector('.state'); state.textContent = player.state;
-    if (player.state === '比賽中') state.classList.add('busy');
-    if (player.state === '練習中') state.classList.add('practice');
-    list.append(row);
-  }
-  $('player-count').textContent = demo ? '8 人 · 示範' : '1 人 · 本機';
-  $('player-note').textContent = demo ? '開發預覽 · 其餘玩家與等級均為示範資料' : '目前只顯示你自己 · 在線名單即將開放';
+function page(prefix,index,total,size){
+ const pages=Math.max(1,Math.ceil(total/size)), current=Math.min(index,pages-1);
+ $(prefix+'-page').textContent=`${current+1} / ${pages}`;
+ $(prefix+'-prev').disabled=current===0;$(prefix+'-next').disabled=current===pages-1;return current;
 }
-renderPlayers();
-if (!nickname) $('nickname').showModal();
-$('nickname').addEventListener('cancel', e => e.preventDefault());
-$('name-form').addEventListener('submit', e => {
-  e.preventDefault(); nickname = $('name').value.trim();
-  const error = VBSettings.nicknameError(nickname);
-  if (error) { $('name').setCustomValidity(error); $('name').reportValidity(); return; }
-  if (!VBSettings.update({ nickname })) notify('瀏覽器無法儲存暱稱，下次進入需重新輸入');
-  renderPlayers(); $('nickname').close();
-});
-$('name').addEventListener('input', () => $('name').setCustomValidity(''));
-function enter(code, mode, host = false) {
-  const query = new URLSearchParams({ site: 'bs-shenjing', room: code, mode });
-  if (host) query.set('host', '1');
-  location.href = `gym.html?${query}`;
+function renderPlayers(){
+ const list=$('players');list.replaceChildren();
+ const all=[...players].sort((a,b)=>Number(b.id===VBLobby.id)-Number(a.id===VBLobby.id)||a.name.localeCompare(b.name));
+ playerPage=page('players',playerPage,all.length,8);
+ for(const p of all.slice(playerPage*8,playerPage*8+8)){
+  const row=document.createElement('div');row.className='player'+(p.id===VBLobby.id?' self':'');
+  row.innerHTML=`<span class="avatar">${icon('user')}</span><div class="player-identity"><strong></strong><div class="player-level"></div></div><span class="state"></span>`;
+  const label=p.name+(p.id===VBLobby.id?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title=label;
+  row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
+  const state=row.querySelector('.state');state.textContent=p.status;
+  state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
+ }
+ $('player-count').textContent=`${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
 }
-function renderRooms() {
-  const rooms = $('rooms'); rooms.replaceChildren();
-  const list = demo ? samples.filter(r => $('filter').value === 'all' || r.mode === $('filter').value) : [];
-  $('room-count').textContent = `（${list.length} / ${demo ? '24 · 示範' : '—'}）`;
-  $('list-note').textContent = demo ? '開發預覽 · 卡片僅供樣式展示' : '用房間代碼與朋友一起上場';
-  if (!list.length) {
-    rooms.innerHTML = `<div class="empty">${icon('ball')}<strong>球場準備好了，等你開局</strong><span>先開啟房間，再把代碼分享給朋友。</span><span class="muted">公開房間列表即將開放</span></div>`;
-    return;
-  }
-  for (const r of list) {
-    const card = document.createElement('button'); card.className = `room-card${r.busy ? ' busy' : ''}`;
-    card.innerHTML = `<span class="card-top"><b class="card-number">NO.${r.no}</b><span class="badge">${r.mode}</span><span class="muted">[室內球場]</span>${r.locked ? `<span class="lock" aria-label="密碼房">${icon('lock')}</span>` : ''}<span class="state${r.busy ? ' busy' : ''}">${r.busy ? '比賽中' : '等待中'}</span></span><span class="room-name"></span><span class="card-bottom"><span>${icon('users')}${r.count} / 20</span><span class="latency">${icon('signal')}${r.latency}ms</span></span>`;
-    card.querySelector('.room-name').textContent = r.name;
-    card.addEventListener('click', () => notify('這是示範房間，請開啟房間或用代碼加入'));
-    rooms.append(card);
-  }
+function renderRooms(){
+ const target=$('rooms');target.replaceChildren();
+ const all=(demo&&!connected?samples:rooms).filter(r=>$('filter').value==='all'||r.mode===$('filter').value);
+ roomPage=page('rooms',roomPage,all.length,6);$('room-count').textContent=`（${all.length} / —）`;
+ $('list-note').textContent=demo&&!connected?'開發示範 · 非真實房間':connected?'公開房間 · 每房最多 20 人':'尚未連線，房間清單可能已過期';
+ if(!all.length){target.innerHTML=`<div class="empty">${icon('ball')}<strong>球場準備好了，等你開局</strong><span>開啟房間，邀請球友一起打球。</span></div>`;return;}
+ for(const r of all.slice(roomPage*6,roomPage*6+6)){
+  const busy=r.status==='playing',full=r.count>=r.max;
+  const card=document.createElement('button');card.className=`room-card${busy?' busy':''}${full?' full':''}`;card.disabled=full;
+  // Only fixed template markup; every field received from the server uses textContent.
+  card.innerHTML=`<span class="card-top"><b class="card-number"></b><span class="badge"></span><span class="muted">[室內球場]</span>${r.locked?`<span class="lock" aria-label="密碼房">${icon('lock')}</span>`:''}<span class="state${busy?' busy':''}"></span></span><span class="room-name"></span><span class="card-bottom"><span class="occupancy"></span><span class="latency"></span></span>`;
+  card.querySelector('.card-number').textContent=`NO.${r.no}`;card.querySelector('.badge').textContent=r.mode;
+  card.querySelector('.state').textContent=full?'已滿':busy?'比賽中 · 可觀戰':'等待中';card.querySelector('.room-name').textContent=r.name;
+  card.querySelector('.occupancy').textContent=`${r.count} / ${r.max}`;card.querySelector('.latency').textContent=r.latency===null?'延遲待測':`${r.latency}ms`;
+  card.title=`房主：${r.hostName||'示範'}${busy?' · 可加入觀戰':''}`;
+  card.addEventListener('click',()=>{if(demo&&!connected)return notify('這是示範房間');if(r.locked){selectedRoom=r.no;$('join-password').value='';$('password-dialog').showModal();}else send({k:'join',no:r.no});});target.append(card);
+ }
 }
-renderRooms();
-$('filter').addEventListener('change', renderRooms);
-$('refresh').addEventListener('click', () => { renderRooms(); notify('已重新整理本機大廳'); });
-$('create').addEventListener('click', () => $('room-dialog').showModal());
-$('cancel').addEventListener('click', () => $('room-dialog').close());
-$('room-form').addEventListener('submit', e => {
-  e.preventDefault();
-  const name = $('room-name').value.trim();
-  if (!name) { $('room-name').setCustomValidity('請輸入房間名稱'); $('room-name').reportValidity(); return; }
-  const bytes = crypto.getRandomValues(new Uint8Array(6)), alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const code = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
-  // Keep the local room label for WEB-002; passwords are deliberately not persisted.
-  try { sessionStorage.setItem('vb.room.draft', JSON.stringify({ code, name, mode: $('mode').value })); } catch (_) {}
-  enter(code, $('mode').value, true);
-});
-$('room-name').addEventListener('input', () => $('room-name').setCustomValidity(''));
-$('join').addEventListener('submit', e => { e.preventDefault(); enter($('code').value.toUpperCase(), $('join-mode').value); });
-$('practice').addEventListener('click', () => { location.href = 'gym.html?site=bs-shenjing&practice=1'; });
-$('quick').addEventListener('click', () => notify('快速加入即將開放，現在可用代碼加入'));
-document.querySelectorAll('[data-soon]').forEach(b => b.addEventListener('click', () => notify(`${b.textContent.trim()}：即將開放`)));
-let sound = false, audioContext;
-$('sound').addEventListener('click', () => {
-  sound = !sound; const button = $('sound');
-  button.setAttribute('aria-pressed', String(sound)); button.innerHTML = icon(sound ? 'sound' : 'mute');
-  button.title = sound ? '關閉留言音效' : '開啟留言音效'; button.setAttribute('aria-label', button.title);
-});
-$('chat').addEventListener('submit', e => {
-  e.preventDefault(); const message = $('message').value.trim(); if (!message) return;
-  const p = document.createElement('p'); p.textContent = `[大廳] ${nickname}：${message}`;
-  $('messages').append(p);
-  while ($('messages').children.length > 102) $('messages').children[2].remove();
-  $('messages').scrollTop = $('messages').scrollHeight; $('message').value = '';
-  if (sound && !VBSettings.values.mute && VBSettings.values.volume > 0) try {
-    audioContext ||= new AudioContext(); audioContext.resume();
-    const osc = audioContext.createOscillator(), gain = audioContext.createGain();
-    gain.gain.setValueAtTime(.035 * VBSettings.values.volume / 100, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + .12);
-    osc.frequency.value = 640; osc.connect(gain).connect(audioContext.destination); osc.start(); osc.stop(audioContext.currentTime + .12);
-  } catch (_) {}
-});
+function appendChat(c,play=false){
+ const p=document.createElement('p');p.className='chat-line';p.textContent=`[大廳] ${c.name}：${c.text}`;$('messages').append(p);
+ const lines=$('messages').querySelectorAll('.chat-line');if(lines.length>50)lines[0].remove();$('messages').scrollTop=$('messages').scrollHeight;
+ if(play&&sound&&!VBSettings.values.mute&&VBSettings.values.volume>0)try{
+  audioContext||=new AudioContext();audioContext.resume();const osc=audioContext.createOscillator(),gain=audioContext.createGain();
+  gain.gain.setValueAtTime(.035*VBSettings.values.volume/100,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+.12);osc.frequency.value=640;osc.connect(gain).connect(audioContext.destination);osc.start();osc.stop(audioContext.currentTime+.12);
+ }catch(_){}
+}
+function enter(m){const q=new URLSearchParams({site:'bs-shenjing',room:m.code,mode:m.mode});if(m.host)q.set('host','1');VBLobby.carry(q);location.href=`gym.html?${q}`;}
+const client=VBLobby.connect({hello:()=>({name:nickname||'球友',status:'大廳中'}),onstate:state=>{
+ connected=state==='online';$('connection-status').textContent=({online:'已連線',connecting:'連線中…',offline:'連不上 · 自動重試中'})[state];$('connection-dot').dataset.state=state;renderRooms();renderPlayers();
+},onmessage:m=>{
+ if(m.k==='state'){rooms=m.rooms;players=m.players;$('messages').querySelectorAll('.chat-line').forEach(p=>p.remove());m.chats.forEach(c=>appendChat(c));renderRooms();renderPlayers();}
+ if(m.k==='rooms'){rooms=m.rooms;renderRooms();}if(m.k==='players'){players=m.players;renderPlayers();}
+ if(m.k==='chat')appendChat(m.chat,true);if(m.k==='error')notify(m.reason);if(m.k==='joined')enter(m);
+}});
+function send(m){if(!client.send(m))notify('大廳尚未連線，請稍後再試');}
+$('system-settings').addEventListener('click',()=>VBSettings.open());
+addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
+if(!nickname)$('nickname').showModal();
+$('nickname').addEventListener('cancel',e=>e.preventDefault());
+$('name-form').addEventListener('submit',e=>{e.preventDefault();nickname=$('name').value.trim();const error=VBSettings.nicknameError(nickname);if(error){$('name').setCustomValidity(error);$('name').reportValidity();return;}if(!VBSettings.update({nickname}))notify('瀏覽器無法儲存暱稱');send({k:'hello',name:nickname,status:'大廳中'});$('nickname').close();});
+$('name').addEventListener('input',()=>$('name').setCustomValidity(''));
+$('filter').addEventListener('change',()=>{roomPage=0;renderRooms();});$('refresh').addEventListener('click',()=>send({k:'refresh'}));
+for(const [prefix,render] of [['rooms',renderRooms],['players',renderPlayers]])for(const [direction,step] of [['prev',-1],['next',1]])$(prefix+'-'+direction).addEventListener('click',()=>{if(prefix==='rooms')roomPage+=step;else playerPage+=step;render();});
+$('create').addEventListener('click',()=>$('room-dialog').showModal());$('cancel').addEventListener('click',()=>$('room-dialog').close());
+$('room-form').addEventListener('submit',e=>{e.preventDefault();send({k:'create',name:$('room-name').value.trim(),mode:$('mode').value,password:$('password').value});$('password').value='';});
+$('password-form').addEventListener('submit',e=>{e.preventDefault();send({k:'join',no:selectedRoom,password:$('join-password').value});$('join-password').value='';});$('password-cancel').addEventListener('click',()=>$('password-dialog').close());
+$('practice').addEventListener('click',()=>{const q=new URLSearchParams({site:'bs-shenjing',practice:'1'});VBLobby.carry(q);location.href=`gym.html?${q}`;});
+$('quick').addEventListener('click',()=>send({k:'quick',mode:$('filter').value}));
+document.querySelectorAll('[data-soon]').forEach(b=>b.addEventListener('click',()=>notify(`${b.textContent.trim()}：即將開放`)));
+$('sound').addEventListener('click',()=>{sound=!sound;const b=$('sound');b.setAttribute('aria-pressed',String(sound));b.innerHTML=icon(sound?'sound':'mute');b.title=sound?'關閉留言音效':'開啟留言音效';b.setAttribute('aria-label',b.title);});
+$('chat').addEventListener('submit',e=>{e.preventDefault();const text=$('message').value.trim();if(text&&client.send({k:'chat',text}))$('message').value='';else if(text)notify('大廳尚未連線，請稍後再試');});
+addEventListener('pagehide',()=>client.close());renderRooms();renderPlayers();

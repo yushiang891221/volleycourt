@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="lobby.css">
   <link rel="stylesheet" href="settings.css">
   <script src="settings.js" defer></script>
+  <script src="lobby-client.js" defer></script>
   <script src="lobby.js" defer></script>
 </head>
 <body>
 <header class="top panel">
-  <div class="brand"><span class="logo" data-icon="ball"></span><div><div class="brand-line"><h1>排球遊戲</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot"></i><span>本機大廳</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
+  <div class="brand"><span class="logo" data-icon="ball"></span><div><div class="brand-line"><h1>排球遊戲</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
   <div class="actions">
     <button class="orange" id="create"><span data-icon="plus"></span>開啟房間</button>
     <button class="green" id="practice"><span data-icon="court"></span>練習模式</button>
@@ -26,26 +27,27 @@
 </header>
 <main>
   <section class="rooms panel" aria-labelledby="rooms-title">
-    <div class="panel-head"><h2 id="rooms-title"><span data-icon="game"></span>對戰大廳房間列表 <span id="room-count" class="count">（0 / —）</span></h2><span class="muted" id="list-note">用房間代碼與朋友一起上場</span></div>
+    <div class="panel-head"><h2 id="rooms-title"><span data-icon="game"></span>對戰大廳房間列表 <span id="room-count" class="count">（0 / —）</span></h2><span class="muted" id="list-note">公開房間 · 每房最多 20 人</span></div>
     <div class="room-grid" id="rooms"></div>
-    <div class="room-footer"><span class="muted mode-help">模式說明：2v2 雙人配合 · 6v6 團隊對戰</span><div class="pager"><button disabled aria-label="房間上一頁">‹ 上一頁</button><span>1 / 1</span><button disabled aria-label="房間下一頁">下一頁 ›</button></div></div>
-    <form id="join" class="join"><span class="join-label"><span data-icon="link"></span>有朋友的邀請代碼？</span><input id="code" aria-label="房間代碼" placeholder="輸入房間代碼" pattern="[A-Za-z0-9]{1,8}" maxlength="8" required><select id="join-mode" aria-label="加入模式"><option>2v2</option><option>6v6</option></select><button type="submit">用代碼加入 <span aria-hidden="true">→</span></button><small>每房最多 20 人</small></form>
+    <div class="room-footer"><span class="muted mode-help">模式說明：2v2 雙人配合 · 6v6 團隊對戰</span><div class="pager"><button id="rooms-prev" disabled aria-label="房間上一頁">‹ 上一頁</button><span id="rooms-page">1 / 1</span><button id="rooms-next" disabled aria-label="房間下一頁">下一頁 ›</button></div></div>
+
   </section>
   <aside class="players panel" aria-labelledby="players-title">
-    <div class="panel-head"><h2 id="players-title"><span data-icon="users"></span>大廳在線玩家</h2><span class="online-count" id="player-count">1 人 · 本機</span></div>
+    <div class="panel-head"><h2 id="players-title"><span data-icon="users"></span>大廳在線玩家</h2><span class="online-count" id="player-count">0 人</span></div>
     <div class="player-list" id="players"></div>
-    <div class="player-note muted" id="player-note">目前只顯示你自己 · 在線名單即將開放</div>
-    <div class="pager players-pager"><button disabled aria-label="玩家上一頁">‹</button><span>1 / 1 頁</span><button disabled aria-label="玩家下一頁">›</button></div>
+    <div class="player-note muted" id="player-note">正在取得在線名單</div>
+    <div class="pager players-pager"><button id="players-prev" disabled aria-label="玩家上一頁">‹</button><span id="players-page">1 / 1 頁</span><button id="players-next" disabled aria-label="玩家下一頁">›</button></div>
   </aside>
   <section class="chat panel" aria-labelledby="chat-title">
-    <div class="chat-heading"><h2 id="chat-title"><span data-icon="chat"></span>大廳留言板</h2><span>本機訊息</span></div>
-    <div id="messages" class="messages" role="log" aria-live="polite"><p class="notice"><span data-icon="megaphone"></span><b>[全服公告]</b> 歡迎來到排球遊戲，準備好一起上場！</p><p class="system"><span data-icon="info"></span><b>[系統訊息]</b> 留言只顯示在自己的畫面，切換頁面後不保留。</p></div>
+    <div class="chat-heading"><h2 id="chat-title"><span data-icon="chat"></span>大廳留言板</h2><span>全服聊天</span></div>
+    <div id="messages" class="messages" role="log" aria-live="polite"><p class="notice"><span data-icon="megaphone"></span><b>[全服公告]</b> 歡迎來到排球遊戲，準備好一起上場！</p><p class="system"><span data-icon="info"></span><b>[系統訊息]</b> 大廳共享最近 50 則留言，每秒最多發送一則。</p></div>
     <form id="chat"><select aria-label="聊天頻道"><option>大廳頻道</option></select><input id="message" aria-label="留言" maxlength="200" placeholder="輸入留言訊息（按 Enter 發送）…" required><button class="orange"><span data-icon="send"></span>發送</button><button type="button" id="sound" class="icon-button" aria-label="開啟留言音效" aria-pressed="false" title="開啟留言音效"><span data-icon="mute"></span></button></form>
   </section>
 </main>
 <footer class="panel"><nav aria-label="系統功能"><button data-soon><span data-icon="user"></span>角色資訊</button><button data-soon><span data-icon="trophy"></span>成就系統</button><button data-soon><span data-icon="rank"></span>天梯排行榜</button><button data-soon><span data-icon="shirt"></span>球衣與裝備</button><button id="system-settings"><span data-icon="settings"></span>系統設定</button></nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>
-<dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>邀請朋友加入同一個代碼，一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>2v2</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">房名公告與密碼保護尚未開放，目前持有代碼即可加入。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
+<dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>2v2</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
+<dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
 <div id="toast" role="status" hidden></div>
 </body>
 </html>
