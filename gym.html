@@ -26,7 +26,7 @@ html{background:#0b1220}#plan-host{display:none!important}
 #game-loading.done{opacity:0;pointer-events:none}#game-loading[hidden]{display:none}#game-loading .entry-box{width:min(420px,80vw)}#game-loading h1{font-size:28px;color:#f5a268}#game-loading small{color:#61cdb8;letter-spacing:3px}#game-loading progress{width:100%;height:8px;accent-color:#ed9458}#game-loading p{color:#a3b4ca}#game-loading a{color:#f5a268}
 .room-info{position:absolute;left:14px;top:12px;max-width:390px;padding:10px 14px;background:#111c2deb;border:1px solid #516078;border-radius:9px;pointer-events:auto;color:#e7edf6;font-size:12px}.room-info summary{cursor:pointer;color:#66d2bc}.room-info ul{margin:8px 0 0;padding-left:20px;max-height:160px;overflow:auto}.room-info p{margin:4px 0}.room-info details{margin-top:5px}
 #room-panel{position:absolute;right:14px;top:56px;padding:16px;background:#111c2d;border:1px solid #ed9458;border-radius:9px;pointer-events:auto;color:#eee}#room-panel[hidden],#w-host[hidden]{display:none!important}.walk-top{z-index:20}html.phone-walk .walk-top{display:flex!important}html.phone-walk .wk-fs{display:none!important}
-#walk-ui.vm .room-info{display:none}#walk-ui.settings-no-cues #wk-keys,#walk-ui.settings-no-cues #walk-help,#walk-ui.settings-no-cues #vb-cue,#walk-ui.settings-no-cues #wk-lock{display:none!important}
+#walk-ui.settings-no-cues #wk-keys,#walk-ui.settings-no-cues #walk-help,#walk-ui.settings-no-cues #vb-cue,#walk-ui.settings-no-cues #wk-lock{display:none!important}
 </style>
 <style id="app-style">
 /* 操作介面：深藍底、米白字、金黃重點（和「全部功能」選單同一套）；平面圖紙、3D 標籤與導覽說明卡維持圖紙色 */
@@ -482,7 +482,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .walk-ui.rk .wk-keys, .walk-ui:has(.rp:not([hidden])) .wk-keys, .walk-ui:has(.pcwin:not([hidden])) .wk-keys { display: none; }
 @media (pointer: fine) { .walk-ui .zcard { bottom: 52px; } .walk-ui .wk-act { bottom: 118px; } }
 /* 2 對 2 沙排：左上角計分板 */
-.vm-hud { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); top: 58px; z-index: 11; pointer-events: none !important; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.vm-hud { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); top: 104px; /* 排在房間資訊框（練習模式／房間名稱）下面，不要擋到它 */ z-index: 11; pointer-events: none !important; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .vm-hud[hidden], .vm-msg[hidden] { display: none !important; }
 .vm-sb { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 12px; background: rgba(15,23,36,.86); color: #fff; pointer-events: auto; white-space: nowrap; font-size: 13px; }
 .vm-sb em { font: 800 22px var(--font-mono); font-style: normal; min-width: 64px; text-align: center; }
