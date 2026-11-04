@@ -8178,7 +8178,7 @@ document.addEventListener('pointerlockerror', () => { walk.noLock = true; update
 function updateLockHint() { const h = $('wk-lock'); if (!h) return; h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; const t = document.fullscreenElement || !document.documentElement.requestFullscreen ? '再點一下畫面：滑鼠變準心　Esc：放開滑鼠，再按一次離開全螢幕' : '點一下畫面：進入全螢幕（再點一下滑鼠變準心）'; if (h.textContent !== t) h.textContent = t; }
 document.addEventListener('fullscreenchange', () => updateLockHint());
 // 右側操作說明欄排在準備框下面（準備框高度會變）
-setInterval(() => { const f = document.getElementById('room-flow'); if (!f) return; const r = f.getBoundingClientRect(), top = r.height ? Math.round(r.bottom + 8) : 74; if (document.documentElement.style.getPropertyValue('--help-top') !== top + 'px') document.documentElement.style.setProperty('--help-top', top + 'px'); }, 500);
+{ const f = document.getElementById('room-flow'), put = () => { const r = f.getBoundingClientRect(), top = r.height ? Math.round(r.bottom + 8) : 74; document.documentElement.style.setProperty('--help-top', top + 'px'); }; if (f && window.ResizeObserver) { new ResizeObserver(put).observe(f); put(); } }   // 只在準備框大小變的時候量（原本每 0.5 秒量一次會讓整頁重排、遊戲一頓一頓）
 // 排球（比賽、陪練、站在排球場上）而且滑鼠已鎖定（轉頭模式）：左鍵＝攻擊（拿著球＝發球）、右鍵＝吊球
 const vbClickOK = () => !roomSpectator() && (VM.on || !!VB.npc || !!vbCourt());
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
