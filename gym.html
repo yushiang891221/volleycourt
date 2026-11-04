@@ -706,6 +706,12 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
 <div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html#lobby">回大廳</a></div></div>
+<script>
+// 出錯時直接顯示在畫面左下角（方便截圖回報；同一個錯誤只列一次）
+(() => { const seen = new Set(), NL = String.fromCharCode(10); const show = (msg) => { if (seen.has(msg) || seen.size > 4) return; seen.add(msg); let box = document.getElementById('err-box'); if (!box) { box = document.createElement('div'); box.id = 'err-box'; box.style.cssText = 'position:fixed;left:10px;bottom:60px;z-index:99999;max-width:min(90vw,720px);background:#3a0d12f0;color:#fff;border:2px solid #ff6b6b;border-radius:8px;padding:8px 12px;font:12px/1.5 monospace;white-space:pre-wrap;pointer-events:auto'; box.title = '點一下關閉'; box.onclick = () => box.remove(); document.body.appendChild(box); box.textContent = '⚠ 遊戲出錯（請截圖回報）'; } box.textContent += NL + msg; };
+  addEventListener('error', (e) => { if (e.message) show(e.message + '  @行 ' + e.lineno + ':' + e.colno + (e.error && e.error.stack ? NL + String(e.error.stack).split(NL).slice(1, 4).join(NL) : '')); });
+  addEventListener('unhandledrejection', (e) => show('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason))); })();
+</script>
 <script>window.entryProgress=(n,t)=>{document.getElementById('entry-progress').value=n;document.getElementById('entry-stage').textContent=n+'% · '+t;};window.entryFail=()=>{document.getElementById('entry-stage').textContent='球館載入失敗，請重新整理或回大廳重試';};addEventListener('error',()=>{if(!document.getElementById('game-loading').hidden)window.entryFail();});</script>
 <header class="sitebar"><a id="goback" href="index.html#lobby">回大廳</a></header>
 <div id="app" class="app" data-mode="plan">
@@ -8134,7 +8140,7 @@ addEventListener('keydown', (e) => {
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('blur', () => { walk.crouch = false; });
-addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === String(SETM.m.n) && performance.now() - SETM.m.t0 > 300) setMenuClose(true); walk.keys.delete(k); });
+addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === String(SETM.m.n)) setMenuClose(true);   // 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個（不再留著轉盤等 2.5 秒） walk.keys.delete(k); });
 addEventListener('blur', () => walk.keys.clear());
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
