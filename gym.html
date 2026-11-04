@@ -9912,8 +9912,9 @@ function myAvPose() {
   if (walk.flash > 0 && (pose === 'setPush' || pose === 'setBack')) return [pose === 'setBack' ? AVP.setBack : AVP.setPush, fast];
   if (walk.setQ) return [AVP.setReady, k];
   if (walk.flash > 0 && pose === 'bumpHit') return [AVP.bumpHit, fast];
-  if (walk.recv) return [AVP.bump, 0.4];
+  if (walk.recv) return [walk.crouch ? AVP.bump : AVP.bumpStand, 0.4];   // 站著接（V）／蹲低接（Ctrl＋V）
   if (walk.hold) return [AVP.hold, k];
+  if (walk.crouch) return [AVP.crouch, 0.35];   // 按住 Ctrl：蹲低
   const ak = vbApproachK(); if (ak > 0) return [avMix(AVP.idle, AVP.approach, ak), 0.35];
   // 比賽中：在網前、對面有人要攻擊＝攔網準備；球在場上＝低重心準備姿勢
   // 比賽中：球正往你這邊來（會落在你 3.5 m 內）才壓低準備接；在網前、對面要攻擊才舉手準備攔網；其他時候自然站
@@ -11197,7 +11198,15 @@ let renderUntil = 0, lastCamKey = '', frameNo = 0, lastT = performance.now();
 window.wakeRender = (ms = 700) => { renderUntil = Math.max(renderUntil, performance.now() + ms); };
 for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'click', 'touchmove']) addEventListener(ev, () => window.wakeRender(), { passive: true, capture: true });
 addEventListener('resize', () => window.wakeRender(400));
-function tick() { requestAnimationFrame(tick); drawFrame(false); }
+// 顯示 FPS（設定 → 畫面）：每 0.5 秒更新一次，也記這段時間最慢的一格（卡頓）
+const FPS = { n: 0, t0: 0, worst: 0, last: 0, el: null };
+function fpsTick(now) {
+  if (!VBSettings.values.showFps) { if (FPS.el) FPS.el.hidden = true; FPS.last = now; return; }
+  if (!FPS.el) { FPS.el = document.createElement('div'); FPS.el.style.cssText = 'position:fixed;right:14px;bottom:70px;z-index:50;padding:4px 10px;border-radius:6px;background:#0b1220d9;color:#9ff0c8;font:13px/1.4 monospace;pointer-events:none'; document.body.appendChild(FPS.el); }
+  FPS.el.hidden = false; if (FPS.last) FPS.worst = Math.max(FPS.worst, now - FPS.last); FPS.last = now; FPS.n++;
+  if (!FPS.t0) FPS.t0 = now; else if (now - FPS.t0 >= 500) { FPS.el.textContent = `FPS ${Math.round(FPS.n * 1000 / (now - FPS.t0))}・最慢一格 ${Math.round(FPS.worst)} ms`; FPS.n = 0; FPS.t0 = now; FPS.worst = 0; }
+}
+function tick(now) { requestAnimationFrame(tick); fpsTick(now || performance.now()); drawFrame(false); }
 function drawFrame(force) {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   if (mode === 'plan' || !state) return;
