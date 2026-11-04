@@ -105,7 +105,7 @@ check('demo only: six rooms, self first, preview levels, mode filter', () => {
 });
 check('direct gym URL redirects to lobby', () => {
   let target; vm.runInNewContext(gym.match(/<script>([\s\S]*?)<\/script>/)[1], { location: { search: '', replace: url => { target = url; } } });
-  assert.equal(target, 'index.html');
+  assert.equal(target, 'index.html#lobby');
 });
 async function apiTests() {
   let calls = 0;

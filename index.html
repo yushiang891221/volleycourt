@@ -10,11 +10,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="lobby.css">
   <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="intro.css">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
   <script src="settings.js" defer></script>
   <script src="lobby-client.js" defer></script>
+  <script src="intro.js" defer></script>
   <script src="lobby.js" defer></script>
 </head>
-<body>
+<body class="intro-active">
+<dialog id="intro" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
+  <section class="intro-content" id="intro-content">
+    <p class="intro-kicker">VOLLEYBALL ONLINE</p>
+    <h1 id="intro-title">排球遊戲</h1>
+    <p id="intro-subtitle">與球友一起上場，打好每一球。</p>
+    <button id="ball-start" type="button" aria-label="點排球開始遊戲"><canvas id="ball" width="600" height="600" aria-hidden="true"></canvas></button>
+    <button class="orange" id="start" type="button" autofocus>開始遊戲</button>
+    <button class="intro-skip" id="skip" type="button">跳過動畫</button>
+  </section>
+  <canvas id="anim3d" hidden aria-hidden="true"></canvas>
+  <div id="phase" hidden role="status"><b></b><span></span></div>
+  <button id="skip-playing" class="intro-skip" type="button" hidden>跳過 · Esc</button>
+</dialog>
+<div id="lobby-shell" inert>
 <header class="top panel">
   <div class="brand"><span class="logo" data-icon="ball"></span><div><div class="brand-line"><h1>排球遊戲</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
   <div class="actions">
@@ -49,5 +66,6 @@
 <dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>2v2</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
 <div id="toast" role="status" hidden></div>
+</div>
 </body>
 </html>

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<script>if (!location.search) location.replace("index.html");</script>
+<script>if (!location.search) location.replace("index.html#lobby");</script>
 <meta charset="utf-8">
 <link rel="stylesheet" href="settings.css">
 <script src="settings.js"></script>
@@ -697,16 +697,16 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
-<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html">回大廳</a></div></div>
+<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html#lobby">回大廳</a></div></div>
 <script>window.entryProgress=(n,t)=>{document.getElementById('entry-progress').value=n;document.getElementById('entry-stage').textContent=n+'% · '+t;};window.entryFail=()=>{document.getElementById('entry-stage').textContent='球館載入失敗，請重新整理或回大廳重試';};addEventListener('error',()=>{if(!document.getElementById('game-loading').hidden)window.entryFail();});</script>
-<header class="sitebar"><a id="goback" href="index.html">回大廳</a></header>
+<header class="sitebar"><a id="goback" href="index.html#lobby">回大廳</a></header>
 <div id="app" class="app" data-mode="plan">
   <aside class="rail" id="rail">
     <header class="rail-head">
       <p class="eyebrow">Step 2 · Hall Planning</p>
       <h1 id="gym-title">排球館規劃</h1>
       <div class="siteinfo" id="siteinfo" hidden></div>
-      <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#map">← 到地圖選場地</a></div></div>
+      <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#lobby">← 到地圖選場地</a></div></div>
       <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
       <p class="status-line" id="autosave" aria-live="polite">改動會自動存在這台裝置</p>
       <p class="status-line cloud" id="cloud-status" aria-live="polite"></p>
@@ -3864,7 +3864,7 @@ async function generateFromSite(id, opts = {}) {
   const sp2 = document.createElement('span');
   sp2.textContent = site.L && site.W ? '長寬為實測。' : `長寬還沒量，先用 ${fmtW(plan.eff)} 坪推估成 ${plan.L}×${plan.W} m；量到之後在下面「廠房」改數字。`;
   const row = document.createElement('div'); row.className = 'row';
-  const back = document.createElement('a'); back.href = 'index.html?site=' + encodeURIComponent(id) + '#map'; back.textContent = '← 回地圖看這個場地';
+  const back = document.createElement('a'); back.href = 'index.html?site=' + encodeURIComponent(id) + '#lobby'; back.textContent = '← 回地圖看這個場地';
   const mem = opts.fresh ? null : loadHall(id);
   const regen = document.createElement('button'); regen.type = 'button'; regen.textContent = '重新生成';
   // regenerating throws away this site's edits, so it takes a second click to confirm
@@ -5458,9 +5458,9 @@ addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------- modes: 01 平面圖 → 02 3D 元件 → 導覽
 let mode = 'plan', walkReturn = 'plan', firstOrbit = true;
 function setMode(m) {
-  if (GAME_ONLY && m !== 'walk') { location.href = 'index.html'; return; }
+  if (GAME_ONLY && m !== 'walk') { location.href = 'index.html#lobby'; return; }
   if (m === mode) return;
-  if (mode === 'walk' && m !== 'walk') { location.href = 'index.html'; return; }
+  if (mode === 'walk' && m !== 'walk') { location.href = 'index.html#lobby'; return; }
   const prev = mode; mode = m;
   $('app').dataset.mode = m;
   for (const [id, k] of [['m-plan', 'plan'], ['m-3d', '3d'], ['m-walk', 'walk']]) $(id).setAttribute('aria-selected', String(k === m));
@@ -5478,7 +5478,7 @@ $('m-plan').addEventListener('click', () => setMode('plan'));
 $('m-3d').addEventListener('click', () => setMode('3d'));
 $('m-walk').addEventListener('click', () => setMode('walk'));
 $('w-exit').textContent = '回大廳';
-$('w-exit').addEventListener('click', () => { netLeave(true); location.href = window.VBLobby?.home() || 'index.html'; });
+$('w-exit').addEventListener('click', () => { netLeave(true); location.href = window.VBLobby?.home() || 'index.html#lobby'; });
 
 
 // ---------------------------------------------------------------- free walk: WASD / arrows + drag to look, joystick on phones, click the floor to walk there
@@ -11164,7 +11164,7 @@ async function loadVenue(id, fresh) {
     <span>${mine ? `目前顯示改過的版本（${new Date(mine.savedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 存）。` : '你在這裡的改動會自動存到網路上，大家看到同一份。'}</span>
     <span class="memo"></span>
     <div class="row">${v.sources.map(([t, u]) => `<a href="${e(u)}" target="_blank" rel="noopener">${e(t)} ↗</a>`).join('')}</div>
-    <div class="row"><a href="index.html#map">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button><button type="button" id="venue-reset"${mine ? '' : ' hidden'}>回到相片版本</button></div>`;
+    <div class="row"><a href="index.html#lobby">← 回地圖</a><button type="button" class="primary" id="venue-walk">▶ 走進去看</button><button type="button" id="venue-reset"${mine ? '' : ' hidden'}>回到相片版本</button></div>`;
   $('venue-walk').addEventListener('click', () => setMode('walk'));
   $('venue-reset').addEventListener('click', async () => { keepHistory(VENUE_KEY(id), true); try { localStorage.removeItem(VENUE_KEY(id)); } catch (er) { /* ignore */ } await loadVenue(id, true); saveDraftSoon(); toast('已回到相片版本（也同步到網路上）；剛才的版本留在「找回之前的版本」裡'); });
   if (fresh) return;
@@ -11201,7 +11201,7 @@ if (VENUE_ID) loadVenue(VENUE_ID);
 </script>
 
 <script>
-document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); location.href = 'index.html'; });
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); location.href = 'index.html#lobby'; });
 document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
 </script>
 </body>

@@ -1,0 +1,34 @@
+#lobby-shell { display: contents; }
+body.intro-active { overflow: hidden; }
+#intro {
+  position: fixed; inset: 0; width: 100vw; height: 100dvh;
+  max-width: none; max-height: none; margin: 0; padding: 0;
+  border: 0; border-radius: 0; overflow: hidden; color: #dce5ef;
+  background: radial-gradient(ellipse at 50% 44%, #24384a 0, #111b2a 42%, #080c13 82%);
+  opacity: 1; transition: opacity .4s ease;
+}
+#intro::backdrop { background: #080c13; }
+#intro.leaving { opacity: 0; }
+#intro [hidden] { display: none !important; }
+.intro-content {
+  position: relative; height: 100%; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 16px; isolation: isolate;
+}
+.intro-content::before {
+  content: ''; position: absolute; z-index: -1; width: 70vw; height: 55vh;
+  bottom: -30vh; border: 2px solid #43cdbf33;
+  transform: perspective(550px) rotateX(50deg); box-shadow: 0 0 80px #43cdbf0b;
+}
+.intro-kicker { margin: 0; color: var(--teal); font-size: 13px; font-weight: 700; letter-spacing: .4em; }
+#intro-title { font-size: clamp(48px, 5vw, 76px); letter-spacing: .1em; color: #ffae48; }
+#intro-subtitle { margin: 0; font-size: 17px; color: #aebdcd; }
+#ball-start { padding: 0; border: 0; background: none; box-shadow: none; border-radius: 50%; }
+#ball { display: block; width: min(32vh, 340px); height: min(32vh, 340px); filter: drop-shadow(0 22px 26px #0007); }
+#start { min-width: 280px; padding: 15px 48px; font-size: 22px; letter-spacing: .12em; border-radius: 6px; }
+#intro .intro-skip { border: 0; background: transparent; box-shadow: none; color: #aebdcd; font-weight: 400; text-decoration: underline; text-underline-offset: 4px; }
+#intro .intro-skip:hover { color: white; }
+#anim3d { position: absolute; inset: 0; width: 100%; height: 100%; }
+#phase { position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 12px 24px; background: #080c13df; border: 1px solid #43cdbf66; border-radius: 5px; font-size: 20px; white-space: nowrap; }
+#phase b { color: var(--teal); }
+#skip-playing { position: absolute; top: 24px; right: 32px; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { #intro { transition: none; } }

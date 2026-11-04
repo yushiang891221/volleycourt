@@ -26,7 +26,7 @@
     url.search='';url.searchParams.set('id',user.id);url.searchParams.set('token',user.token);
     return url;
   }
-  window.VBLobby={id:user.id,carry(query){const value=override();if(value)query.set('lobby',value);},home(){const q=new URLSearchParams();const value=override();if(value)q.set('lobby',value);return 'index.html'+(q.size?'?'+q:'');},connect({hello,onmessage=()=>{},onstate=()=>{}}) {
+  window.VBLobby={id:user.id,carry(query){const value=override();if(value)query.set('lobby',value);},home(){const q=new URLSearchParams();const value=override();if(value)q.set('lobby',value);return 'index.html'+(q.size?'?'+q:'')+'#lobby';},connect({hello,onmessage=()=>{},onstate=()=>{}}) {
     let ws,retry,timeout,ping,attempt=0,stopped=false,lastPong=0;
     const send=m=>{if(ws?.readyState!==WebSocket.OPEN)return false;ws.send(JSON.stringify(m));return true;};
     const clear=()=>{clearTimeout(timeout);clearInterval(ping);};
