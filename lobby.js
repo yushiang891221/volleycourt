@@ -25,8 +25,9 @@ const paths = {
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.user}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); });
-let nickname = '';
-try { nickname = (localStorage.getItem('vb.mp.name') || '').trim().slice(0, 12); } catch (_) {}
+let nickname = VBSettings.values.nickname;
+$('system-settings').addEventListener('click', () => VBSettings.open());
+addEventListener('vb-settings-change', () => { nickname = VBSettings.values.nickname; renderPlayers(); });
 const demo = new URLSearchParams(location.search).get('demo') === '1';
 // Preview-only fixtures. Normal visits show no fabricated rooms, players, levels or latency.
 const samples = [
@@ -66,14 +67,16 @@ renderPlayers();
 if (!nickname) $('nickname').showModal();
 $('nickname').addEventListener('cancel', e => e.preventDefault());
 $('name-form').addEventListener('submit', e => {
-  e.preventDefault(); nickname = $('name').value.trim().slice(0, 12);
-  if (!nickname) { $('name').setCustomValidity('請輸入暱稱'); $('name').reportValidity(); return; }
-  try { localStorage.setItem('vb.mp.name', nickname); } catch (_) { notify('瀏覽器無法儲存暱稱，下次進入需重新輸入'); }
+  e.preventDefault(); nickname = $('name').value.trim();
+  const error = VBSettings.nicknameError(nickname);
+  if (error) { $('name').setCustomValidity(error); $('name').reportValidity(); return; }
+  if (!VBSettings.update({ nickname })) notify('瀏覽器無法儲存暱稱，下次進入需重新輸入');
   renderPlayers(); $('nickname').close();
 });
 $('name').addEventListener('input', () => $('name').setCustomValidity(''));
-function enter(code, mode) {
+function enter(code, mode, host = false) {
   const query = new URLSearchParams({ site: 'bs-shenjing', room: code, mode });
+  if (host) query.set('host', '1');
   location.href = `gym.html?${query}`;
 }
 function renderRooms() {
@@ -106,7 +109,7 @@ $('room-form').addEventListener('submit', e => {
   const code = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
   // Keep the local room label for WEB-002; passwords are deliberately not persisted.
   try { sessionStorage.setItem('vb.room.draft', JSON.stringify({ code, name, mode: $('mode').value })); } catch (_) {}
-  enter(code, $('mode').value);
+  enter(code, $('mode').value, true);
 });
 $('room-name').addEventListener('input', () => $('room-name').setCustomValidity(''));
 $('join').addEventListener('submit', e => { e.preventDefault(); enter($('code').value.toUpperCase(), $('join-mode').value); });
@@ -125,10 +128,10 @@ $('chat').addEventListener('submit', e => {
   $('messages').append(p);
   while ($('messages').children.length > 102) $('messages').children[2].remove();
   $('messages').scrollTop = $('messages').scrollHeight; $('message').value = '';
-  if (sound) try {
+  if (sound && !VBSettings.values.mute && VBSettings.values.volume > 0) try {
     audioContext ||= new AudioContext(); audioContext.resume();
     const osc = audioContext.createOscillator(), gain = audioContext.createGain();
-    gain.gain.setValueAtTime(.035, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + .12);
+    gain.gain.setValueAtTime(.035 * VBSettings.values.volume / 100, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + .12);
     osc.frequency.value = 640; osc.connect(gain).connect(audioContext.destination); osc.start(); osc.stop(audioContext.currentTime + .12);
   } catch (_) {}
 });

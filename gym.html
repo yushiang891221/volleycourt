@@ -3,6 +3,9 @@
 <head>
 <script>if (!location.search) location.replace("index.html");</script>
 <meta charset="utf-8">
+<link rel="stylesheet" href="settings.css">
+<script src="settings.js"></script>
+<script src="room-settings.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>排球遊戲｜球館</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23F2B705'/%3E%3Cpath d='M6 12q10 6 20 0M7 22q9-6 18 0' stroke='%2313233A' stroke-width='2' fill='none'/%3E%3C/svg%3E">
@@ -10,6 +13,14 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style id="game-entry-style">
+html{background:#0b1220}#plan-host{display:none!important}
+#game-loading{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:#0b1220;color:#e9eef7;transition:opacity .3s;font-family:'Noto Sans TC',sans-serif}
+#game-loading.done{opacity:0;pointer-events:none}#game-loading[hidden]{display:none}#game-loading .entry-box{width:min(420px,80vw)}#game-loading h1{font-size:28px;color:#f5a268}#game-loading small{color:#61cdb8;letter-spacing:3px}#game-loading progress{width:100%;height:8px;accent-color:#ed9458}#game-loading p{color:#a3b4ca}#game-loading a{color:#f5a268}
+.room-info{position:absolute;left:14px;top:12px;max-width:390px;padding:10px 14px;background:#111c2deb;border:1px solid #516078;border-radius:9px;pointer-events:auto;color:#e7edf6;font-size:12px}.room-info summary{cursor:pointer;color:#66d2bc}.room-info ul{margin:8px 0 0;padding-left:20px;max-height:160px;overflow:auto}.room-info p{margin:4px 0}.room-info details{margin-top:5px}
+#room-panel{position:absolute;right:14px;top:56px;padding:16px;background:#111c2d;border:1px solid #ed9458;border-radius:9px;pointer-events:auto;color:#eee}#room-panel[hidden],#w-host[hidden]{display:none!important}.walk-top{z-index:20}html.phone-walk .walk-top{display:flex!important}html.phone-walk .wk-fs{display:none!important}
+#walk-ui.vm .room-info{top:120px}#walk-ui.settings-no-cues #wk-keys,#walk-ui.settings-no-cues #walk-help,#walk-ui.settings-no-cues #vb-cue,#walk-ui.settings-no-cues #wk-lock{display:none!important}
+</style>
 <style id="app-style">
 /* 操作介面：深藍底、米白字、金黃重點（和「全部功能」選單同一套）；平面圖紙、3D 標籤與導覽說明卡維持圖紙色 */
 :root {
@@ -683,6 +694,9 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
+</head><body>
+<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html">回大廳</a></div></div>
+<script>window.entryProgress=(n,t)=>{document.getElementById('entry-progress').value=n;document.getElementById('entry-stage').textContent=n+'% · '+t;};window.entryFail=()=>{document.getElementById('entry-stage').textContent='球館載入失敗，請重新整理或回大廳重試';};addEventListener('error',()=>{if(!document.getElementById('game-loading').hidden)window.entryFail();});</script>
 <header class="sitebar"><a id="goback" href="index.html">回大廳</a></header>
 <div id="app" class="app" data-mode="plan">
   <aside class="rail" id="rail">
@@ -815,15 +829,16 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
     <div class="co-badge" id="co-badge" hidden></div>
     <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
     <div class="walk-ui" id="walk-ui" hidden>
-      <div class="walk-top"><button type="button" id="w-mp">多人連線</button><button type="button" id="w-quality" aria-pressed="true">畫質：高</button><button type="button" id="w-sfx" title="擊球、落地的聲音">音效：開</button><button type="button" id="w-bspeed" title="排球飛行的速度（人跑、跳的速度不變）">球速：慢</button><button type="button" id="w-assist" aria-pressed="true" title="對方打過來時，地上出現落點圈、身體輕輕被帶到落點">接球輔助：開</button><button type="button" id="w-full" aria-pressed="false" title="收起側欄和上方列，整個螢幕都是 3D；要離開按「⋯」裡的「離開全螢幕」">全螢幕</button><button type="button" id="w-plan">看平面圖</button><button type="button" class="primary" id="w-exit">離開導覽</button></div>
-      <div class="wk-fs" id="wk-fs"><button type="button" id="w-fs-menu" aria-label="更多功能（多人連線、畫質、平面圖）" aria-expanded="false">⋯</button><button type="button" id="w-fs-x" aria-label="離開導覽">✕</button></div>
-      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd>Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd>E</kbd>互動／拿球</span><span><kbd>空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd>空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd>S</kbd>按著打短</span><span><kbd>V</kbd>接球</span><span><kbd>Shift</kbd>＋<kbd>V</kbd>撲救</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd>P</kbd>第一／第三人稱</span><span>按住<kbd>T</kbd>往左擊掌／往右嘲諷</span><span><kbd>B</kbd>攔網</span><span><kbd>F</kbd>拋給隊友</span><span><kbd>Esc</kbd>切換游標／轉頭</span></div>
-      <p class="walk-help" id="walk-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向鍵走路，按住 <kbd>Shift</kbd> 跑步<br>點一下畫面（或按 <kbd>Esc</kbd>）後，移動滑鼠就是轉頭；再按 <kbd>Esc</kbd> 換回滑鼠游標・準星對著地板點一下就走過去<br>看著物件按 <kbd>E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd>V</kbd> 接球、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd>T</kbd> 切換第一／第三人稱、<kbd>W</kbd> 助跑＋<kbd>空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd>S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd>B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd>空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd>F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd>V</kbd> 下手送高球過網、<kbd>E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只切換游標／轉頭，不會離開）</p>
+      <div class="walk-top"><button type="button" id="w-host" hidden>房主設定</button><button type="button" id="w-settings">⚙ 設定</button><button type="button" id="w-exit">回大廳</button></div>
+      <div class="room-info"><strong id="room-title">練習模式</strong><p id="room-status">單人練習 · 你是房主</p><details><summary id="room-count">1 / 20 人 · 名單</summary><ul id="room-list"></ul></details></div>
+      <div id="room-panel" hidden><label>全房間球速 <select id="room-speed"><option value="0.55">很慢（55%）</option><option value="0.7">慢（70%）</option><option value="1">正常（100%）</option></select></label><p>人跑、跳的速度不變</p><button id="room-close" type="button">完成</button></div>
+      <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd data-key="shift">Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd data-key="e">E</kbd>互動／拿球</span><span><kbd data-key=" ">空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd data-key=" ">空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd data-key="s">S</kbd>按著打短</span><span><kbd data-key="v">V</kbd>接球</span><span><kbd data-key="shift">Shift</kbd>＋<kbd data-key="v">V</kbd>撲救</span><span><kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd data-key="p">P</kbd>第一／第三人稱</span><span>按住<kbd data-key="t">T</kbd>往左擊掌／往右嘲諷</span><span><kbd data-key="b">B</kbd>攔網</span><span><kbd data-key="f">F</kbd>拋給隊友</span><span><kbd>Esc</kbd>開啟個人設定</span></div>
+      <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 或方向鍵走路，按住 <kbd data-key="shift">Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭；按 <kbd>Esc</kbd> 開啟設定・準星對著地板點一下就走過去<br>看著物件按 <kbd data-key="e">E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd data-key="v">V</kbd> 接球、<kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd data-key="p">P</kbd> 切換第一／第三人稱、<kbd data-key="w">W</kbd> 助跑＋<kbd data-key=" ">空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd data-key="s">S</kbd> 打短；<kbd>右鍵</kbd>吊球）、<kbd data-key="b">B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd data-key=" ">空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd data-key="f">F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd data-key="v">V</kbd> 下手送高球過網、<kbd data-key="e">E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只開啟個人設定，不會離開）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div>
       <div class="emo-menu" id="emo-menu" hidden><button type="button" data-emo="hi5">🙌 擊掌</button><i id="emo-cur"></i><button type="button" data-emo="taunt">😜 嘲諷</button></div>
       <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="ov"></i><b id="wk-chg-f"></b></div>
-      <button type="button" class="wk-act" id="wk-act" hidden><kbd>E</kbd><span id="wk-act-t"></span></button>
+      <button type="button" class="wk-act" id="wk-act" hidden><kbd data-key="e">E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
       <div class="rp" id="rp" hidden>
         <div class="rp-stats" id="rp-stats"></div>
@@ -837,17 +852,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
         <div class="pc-app" id="pc-app" hidden><div class="pc-tb"><span id="pc-title"></span><button type="button" id="pc-min" aria-label="最小化">–</button><button type="button" id="pc-close" aria-label="關閉視窗">✕</button></div><div class="pc-body" id="pc-body"></div></div>
         <div class="pc-bar"><span class="pc-start">🏐 新竹排球館</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
       </div></div></div>
-      <div class="mp" id="mp" hidden>
-        <div class="mp-h"><b>多人連線（最多 12 人）</b><button type="button" id="mp-x" aria-label="收起">✕</button></div>
-        <label class="field" for="mp-name"><span>你的名字</span><input id="mp-name" type="text" maxlength="12" placeholder="例如：翔哥"></label>
-        <div id="mp-out"><div class="btn-row"><button type="button" class="primary" id="mp-new">開新房間</button></div>
-          <div class="mp-join"><input id="mp-code" type="text" maxlength="8" placeholder="房間代碼" aria-label="房間代碼"><button type="button" id="mp-go">加入</button></div></div>
-        <div id="mp-in" hidden><div>房間 <b id="mp-room"></b></div><div class="btn-row"><button type="button" id="mp-copy">複製邀請連結</button><button type="button" class="danger" id="mp-leave">離開房間</button></div></div>
-        <p class="mp-st" id="mp-status"></p><ul class="mp-list" id="mp-list"></ul>
-        <p class="hint"><b>怎麼對碰：</b>一個人到球車拿球（E），面向隊友按 <b>F</b> 拋給他；球飛到手邊時按 <b>E</b> 舉球或 <b>Q</b> 墊球，大致面向誰就傳給誰（往上看再按是自己往上打）。隊友把球舉到網前時，按 <b>R</b> 跳起來扣。</p>
-      </div>
       <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
-      <div class="wk-lock" id="wk-lock" hidden>點一下畫面或按 Esc：移動滑鼠就能轉頭看（再按 Esc 換回游標）</div>
+      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：移動滑鼠轉頭；Esc：設定</div>
       <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
       <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
       <div class="wk-use" id="wk-use" hidden></div>
@@ -1288,8 +1294,7 @@ scene.add(ground);
 
 // ---------------------------------------------------------------- post-processing：角落陰影（GTAO）→ 泛光 → AgX 色調 → SMAA
 // 高畫質：電腦預設；低畫質：手機預設（不算 GTAO、像素比 1）。導覽時太卡會自動降成低畫質
-const QKEY = 'vb.quality';
-let quality = (() => { try { const q = localStorage.getItem(QKEY); if (q === 'high' || q === 'low') return q; } catch (e) { /* ignore */ } return matchMedia('(pointer: coarse)').matches || innerWidth < 900 ? 'low' : 'high'; })();
+let quality = VBSettings.values.quality;
 const composer = new EffectComposer(renderer);
 const gtao = new GTAOPass(scene, camera, 1, 1);
 gtao.updateGtaoMaterial({ radius: 0.7, distanceExponent: 1.6, thickness: 1.4, scale: 1.15, samples: 12, distanceFallOff: 1 });
@@ -1313,7 +1318,7 @@ function applyQuality(save) {
   sun.shadow.mapSize.set(quality === 'high' ? 2048 : 1024, quality === 'high' ? 2048 : 1024);
   if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   for (const id of ['t-quality', 'w-quality']) { const b = document.getElementById(id); if (b) { b.textContent = quality === 'high' ? '畫質：高' : '畫質：省電'; b.setAttribute('aria-pressed', String(quality === 'high')); } }
-  if (save) { try { localStorage.setItem(QKEY, quality); } catch (e) { /* ignore */ } }
+  if (save) VBSettings.update({ quality });
   if (typeof resize === 'function' && host.clientWidth) resize();
 }
 const perf = { n: 0, sum: 0 };
@@ -1329,7 +1334,7 @@ function watchPerf(dt) {
   syncGameFast();
   if (quality !== 'high' || gameFast || document.hidden || dt <= 0) return;
   perf.n++; perf.sum += dt;
-  if (perf.n >= 90) { const avg = perf.sum / perf.n; perf.n = 0; perf.sum = 0; if (avg > 0.045) { quality = 'low'; applyQuality(false); toast('畫面有點卡，已自動切到省電畫質（可以再按「畫質」切回來）'); } }
+  if (perf.n >= 90) { const avg = perf.sum / perf.n; perf.n = 0; perf.sum = 0; if (avg > 0.045) { quality = 'low'; applyQuality(false); VBSettings.update({ quality }); toast('畫面有點卡，已自動切到省電畫質（可在設定切回來）'); } }
 }
 
 const buildingGroup = new THREE.Group();
@@ -5472,7 +5477,7 @@ $('m-3d').addEventListener('click', () => setMode('3d'));
 $('m-walk').addEventListener('click', () => setMode('walk'));
 $('w-exit').textContent = '回大廳';
 $('w-exit').addEventListener('click', () => { netLeave(true); location.href = 'index.html'; });
-$('w-plan').addEventListener('click', () => setMode('plan'));
+
 
 // ---------------------------------------------------------------- free walk: WASD / arrows + drag to look, joystick on phones, click the floor to walk there
 const walk = { on: false, x: 0, z: 0, yaw: 0, pitch: -0.04, keys: new Set(), target: null, joy: { x: 0, y: 0 }, zoneKey: '', lastZ: 0, saved: null, look: null, off: new Set(), sit: null, hold: null, focus: null, lastF: 0, score: [0, 0], sets: [0, 0], drinks: 0, dark: false, open: new Set(), bags: new Map(), spike: null, paused: false, clickT: 0 };
@@ -5485,17 +5490,36 @@ function phoneFull(on, force) {
   const de = document.documentElement;
   if (on && !isPhone() && !force) return;
   de.classList.toggle('phone-walk', on); if ($('w-full')) { $('w-full').textContent = on ? '離開全螢幕' : '全螢幕'; setPressed($('w-full'), on); } $('stage').scrollLeft = 0; $('stage').scrollTop = 0;
-  $('walk-ui').querySelector('.walk-top').classList.remove('open'); $('w-fs-menu').setAttribute('aria-expanded', 'false');
+
   try {
     if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => {}); }).catch(() => {});
     if (!on) { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
   } catch (e) { /* 不支援（例如 iPhone Safari）就只用版面全螢幕 */ }
   window.wakeRender && window.wakeRender(600);
 }
-$('w-fs-x').addEventListener('click', () => $('w-exit').click());
-$('w-full').addEventListener('click', () => phoneFull(!document.documentElement.classList.contains('phone-walk'), true));
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); });
-$('w-fs-menu').addEventListener('click', () => { const t = $('walk-ui').querySelector('.walk-top'), o = t.classList.toggle('open'); $('w-fs-menu').setAttribute('aria-expanded', String(o)); });
+function openPersonalSettings() { VBSettings.open(); }
+$('w-settings').addEventListener('click', openPersonalSettings);
+$('w-host').addEventListener('click', () => { if (isRoomHost()) { unlockMouse(); $('room-panel').hidden = !$('room-panel').hidden; walk.keys.clear(); } });
+$('room-close').addEventListener('click', () => { $('room-panel').hidden = true; });
+$('room-speed').addEventListener('change', () => { const speed = Number($('room-speed').value); if (isRoomHost()) { if (ROOM) ROOM.setSpeed(speed); else { VB.ts = speed; renderRoomRules(); } } });
+let settingsPause = false;
+addEventListener('vb-settings-open', () => { settingsPause = walk.paused; walk.paused = true; walk.keys.clear(); walk.target = null; setMenuClose(false); emoMenuClose(false); unlockMouse(); });
+addEventListener('vb-settings-close', () => { walk.paused = settingsPause; updateLockHint(); });
+addEventListener('vb-settings-change', () => { applyPersonalSettings(); });
+function applyPersonalSettings() {
+  const p = VBSettings.values;
+  if (quality !== p.quality) { quality = p.quality; perf.n = 0; perf.sum = 0; applyQuality(false); }
+  VB.assist = p.assist; SFX.on = !p.mute;
+  if (SFX.bus) SFX.bus.out.gain.value = p.mute ? 0 : .9 * p.volume / 100;
+  if (walk.on) { camera.fov = p.fov; camera.updateProjectionMatrix(); }
+  if (applyPersonalSettings.third !== p.third) { TP.manual = null; applyPersonalSettings.third = p.third; }
+  if (NET.on && p.nickname && NET.name !== p.nickname) { NET.name = p.nickname; NET.forceSt = true; renderMpList(); }
+  $('walk-ui').classList.toggle('settings-no-cues', !p.cues);
+  const keys = JSON.stringify(p.keys); if (applyPersonalSettings.keys !== keys) { walk.keys.clear(); applyPersonalSettings.keys = keys; }
+  for (const el of document.querySelectorAll('kbd[data-key]')) el.textContent = VBSettings.keyName(p.keys[el.dataset.key]);
+  window.wakeRender && window.wakeRender(800);
+}
 function startWalk() {
   walk.on = true; window.__walk = true;
   select(null); selZoneId = null;
@@ -5526,28 +5550,8 @@ function startWalk() {
     $('pc-tasks').addEventListener('click', () => $('pc-app').classList.toggle('min'));
     $('pc-min').addEventListener('click', () => $('pc-app').classList.add('min'));
     $('pc-close').addEventListener('click', pcClose); $('pc-off').addEventListener('click', closePC);
-    try { $('mp-name').value = localStorage.getItem('vb.mp.name') || ''; } catch (e) { /* ignore */ }
-    $('w-mp').addEventListener('click', () => { $('mp').hidden = !$('mp').hidden; unlockMouse(); });
-    const bsLabel = () => { $('w-bspeed').textContent = `球速：${(VB_SPEEDS.find(([x]) => x === VB.ts) || [0, '慢'])[1]}`; };
-    bsLabel();
-    $('w-bspeed').addEventListener('click', () => {
-      if (VM.on && !VM.host) { toast('比賽中照開局的人設定的球速'); return; }
-      const i = VB_SPEEDS.findIndex(([x]) => x === VB.ts), nx = VB_SPEEDS[(i + 1) % VB_SPEEDS.length]; VB.ts = nx[0]; bsLabel();
-      try { localStorage.setItem('vb.ballspeed', String(VB.ts)); } catch (e) { /* ignore */ }
-      if (VM.on && VM.host && NET.on) NET.tx.publish('vm', { e: 'ts', ts: VB.ts });
-      toast(`球速：${nx[1]}${nx[0] < 1 ? `（${Math.round(nx[0] * 100)}%，球路和落點不變，只是飛得比較慢）` : ''}`);
-    });
-    $('w-sfx').textContent = `音效：${SFX.on ? '開' : '關'}`;
-    $('w-sfx').addEventListener('click', () => { SFX.on = !SFX.on; $('w-sfx').textContent = `音效：${SFX.on ? '開' : '關'}`; try { localStorage.setItem('vb.sfx', SFX.on ? '1' : '0'); } catch (e) { /* ignore */ } if (SFX.on) sfx('set'); });
-    $('w-assist').addEventListener('click', () => { VB.assist = !VB.assist; $('w-assist').textContent = `接球輔助：${VB.assist ? '開' : '關'}`; setPressed($('w-assist'), VB.assist); toast(VB.assist ? '接球輔助開了：對方打過來時，身體會輕輕被帶到落點' : '接球輔助關了：全部自己跑位（落點圈還是會顯示）'); });
     $('wk-use').addEventListener('click', (e) => { const b = e.target.closest('[data-use],[data-rkopen],[data-npc],[data-vmopen]'), c = state.items.find((i) => i.id === $('wk-use').dataset.id); if (!b) return; if (b.dataset.rkopen) { rkOpenMenu(null); return; } if (!c) return; if (b.dataset.vmopen) { VM_OPT.mode = b.dataset.vmopen === '6' ? '6' : '2'; vmOpenMenu(c); } else if (b.dataset.npc) { vbNpcToggle(b.dataset.npc === 'off' ? null : b.dataset.npc); renderUseBar(c); } else if (b.dataset.rkopen) rkOpenMenu(c); else setCourtUse(c, b.dataset.use); });
     $('wk-use').addEventListener('pointerdown', (e) => e.stopPropagation());
-    $('mp-x').addEventListener('click', () => { $('mp').hidden = true; });
-    $('mp-new').addEventListener('click', () => netJoin(roomCode()));
-    $('mp-go').addEventListener('click', () => netJoin($('mp-code').value));
-    $('mp-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') netJoin($('mp-code').value); });
-    $('mp-leave').addEventListener('click', () => { netLeave(true); location.href = 'index.html'; });
-    $('mp-copy').addEventListener('click', async () => { const u = inviteLink(NET.room); try { await navigator.clipboard.writeText(u); toast('邀請連結複製好了，傳給朋友'); } catch (e) { prompt('複製這個邀請連結：', u); } });
     $('cv-big').addEventListener('click', () => { const b = $('camview').classList.toggle('big'); $('cv-big').textContent = b ? '縮小' : '放大'; });
   }
   $('joy').hidden = $('vpad').hidden = !matchMedia('(pointer: coarse)').matches;
@@ -5556,7 +5560,8 @@ function startWalk() {
   updateWalk(0); updateZoneCard(true); drawScore();
   for (const it of state.items) if (['aircon', 'standac', 'packac'].includes(it.type)) addWind(it);
   // 邀請連結帶著房間代碼：進導覽就自動加入
-  { const rq = new URLSearchParams(location.search).get('room'); if (rq && !NET.on) { $('mp').hidden = false; $('mp-code').value = rq; netJoin(rq); } }
+  { const rq = new URLSearchParams(location.search).get('room'); if (rq && !NET.on) netJoin(rq); else renderRoomRules(); }
+  applyPersonalSettings();
   toast('從主入口進場。走進任何一區，角落會出現那一區的說明');
 }
 function stopWalk() {
@@ -6800,6 +6805,15 @@ function hitWorldBall(b, kind) {
 // 網址加 &localnet 時改用同一個瀏覽器的分頁互傳（不用帳號，開發測試用）
 // hitN：擊球序號，只有「擊球、接球、撿球」才會加一；位置更新沿用同一個序號，不會蓋掉別人的擊球。
 // 同一個序號兩個人同時打到：代號比較大的那一下算數（每台電腦都用同一條規則，結果一致）
+let ROOM = null;
+function isRoomHost() { return new URLSearchParams(location.search).has('practice') || !!(ROOM && ROOM.isHost); }
+function renderRoomRules() {
+  const host = isRoomHost(); $('w-host').hidden = !host; $('room-speed').value = String(VB.ts); $('room-speed').disabled = !host;
+  if (!host) $('room-panel').hidden = true;
+  if (!NET.on) { $('room-list').textContent = (VBSettings.values.nickname || '球友') + '（你・房主）'; }
+  else $('room-title').textContent = '房間 ' + NET.room + (host ? ' · 你是房主' : ROOM && ROOM.host ? ' · 房主：' + (NET.peers.get(ROOM.host)?.n || '球友') : ' · 確認房主中…');
+}
+addEventListener('pagehide', () => netLeave(true));
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null, lat: new Map(), pingT: 0 };
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
@@ -6910,7 +6924,7 @@ async function rtTransport(room, cid) {
   try { const tx = await ablyTransport(room, cid); tx.kind = 'ably'; return tx; }
   catch (e) { if (!cf) throw e; console.info('[即時] Ably 連不上，改用房間伺服器', e && e.message); const tx = await tryCf(); tx.kind = 'cf-backup'; return tx; }
 }
-function netStatus(msg, kind) { const el = $('mp-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
+function netStatus(msg, kind) { const el = $('room-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
 function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
 function inviteLink(room) { const u = new URL(location.href); u.searchParams.delete('debug'); u.searchParams.set('room', room); return u.toString(); }
 async function netJoin(room) {
@@ -6918,9 +6932,9 @@ async function netJoin(room) {
   if (!room) { netStatus('請輸入房間代碼', 'warn'); return; }
   if (NET.on) netLeave(true);
   NET.me = NET.me || 'p' + Math.random().toString(36).slice(2, 9);
-  const typed = $('mp-name').value.trim();
-  NET.name = (typed || '球友' + NET.me.slice(-3)).slice(0, 12);
-  if (typed) { try { localStorage.setItem('vb.mp.name', typed.slice(0, 12)); } catch (e) { /* ignore */ } }
+  const typed = VBSettings.values.nickname;
+  NET.name = [...(typed || '球友' + NET.me.slice(-3))].slice(0, 12).join('');
+
   netStatus('連線中…', 'busy');
   let tx;
   try { tx = await rtTransport(room, NET.me); }
@@ -6933,24 +6947,28 @@ async function netJoin(room) {
   if (others.length >= NET_MAX) { tx.close(); NET.on = false; NET.tx = null; netStatus(`房間 ${room} 已經滿了（最多 ${NET_MAX} 人）`, 'warn'); return; }
   const used = new Set(others.map((m) => m.c)), color = NET_COLORS.find((c) => !used.has(c)) || NET_COLORS[0];
   NET.color = color;
+  ROOM = createRoomSettings({ id: NET.me, creator: new URLSearchParams(location.search).get('host') === '1', send: d => { if (NET.on && NET.tx) NET.tx.publish('room-settings', d); }, changed: rules => { VB.ts = rules.speed; renderRoomRules(rules); } });
   await tx.enter({ n: NET.name, c: color });
   for (const m of others) netPeer(m.id, m);
   netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' || tx.kind === 'ably' ? '' : '・備用線路（跟走主線路的人看不到彼此）'}`, 'ok');
-  $('mp-room').textContent = room; $('mp-in').hidden = false; $('mp-out').hidden = true;
+  ROOM.start();
+  $('room-title').textContent = '房間 ' + room;
   renderMpList();
   toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
 }
 function netLeave(quiet) {
   if (!NET.on) return;
+  if (ROOM) { ROOM.close(); ROOM = null; }
   try { NET.tx.close(); } catch (e) { /* ignore */ }
   for (const id of [...NET.peers.keys()]) netDropPeer(id);
   NET.on = false; NET.tx = null; NET.ownBall = false;
-  $('mp-in').hidden = true; $('mp-out').hidden = false; renderMpList();
+  renderMpList();
   if (!quiet) netStatus('已離開房間', '');
 }
 function renderMpList() {
-  const ul = $('mp-list'); if (!ul) return;
+  const ul = $('room-list'); if (!ul) return;
   ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i>${esc(p2.n)}</li>`)].join('') : '';
+  $('room-count').textContent = `${NET.on ? NET.peers.size + 1 : 1} / 20 人 · 名單`;
   if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人${NET.tx && /backup/.test(NET.tx.kind || '') ? '・備用線路' : ''}`, 'ok');
 }
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
@@ -7390,7 +7408,7 @@ function netPeer(id, d) {
     const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag);
     scene.add(av.g);
     p2 = { id, n: d.n || '球友', c: d.c || '#3E63DD', av, tag, x: 0, z: 0, y: 0, yaw: 0, pose: 0, ball: null, buf: [], vx: 0, vz: 0 };
-    NET.peers.set(id, p2);
+    NET.peers.set(id, p2); if (ROOM) ROOM.join(id);
     if (NET.on) toast(`${p2.n} 進來了`);
   } else { p2.n = d.n || p2.n; p2.tag.element.textContent = peerTag(p2); }
   return p2;
@@ -7398,7 +7416,7 @@ function netPeer(id, d) {
 function netDropPeer(id) {
   const p2 = NET.peers.get(id); if (!p2) return;
   scene.remove(p2.av.g); p2.tag.element.remove(); if (p2.ball) scene.remove(p2.ball); rkPeerAi(p2, null);
-  NET.peers.delete(id); toast(`${p2.n} 離開了`);
+  NET.peers.delete(id); if (ROOM) ROOM.leave(id); toast(`${p2.n} 離開了`);
 }
 // 姿勢代碼：0 一般、1 拿球、2 舉球、3 墊球、4 攻擊／發球
 // ---- T：互動——按住 T 叫出選單（游標往左＝擊掌、往右＝嘲諷），放開 T 或點一下確定
@@ -7500,6 +7518,7 @@ function emoPose(k, t) {
 function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return 3; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return 3; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
+  if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t }); return; }   // 量延遲
   if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); } return; }
   if (t === 'st') {
@@ -7514,6 +7533,7 @@ function netOnMessage(t, d, from) {
       p2.ch = dch; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
       if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
     }
+    if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
     p2.tossing = !!d.ts; p2.bs = d.bs || 0;   // 攔網雙手往哪邊移
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
@@ -8018,14 +8038,12 @@ function setCourtUse(c, k) {
   toast(k === 'none' ? `${labelOf(c)}的網子都收起來了` : `${labelOf(c)}改成${SPORT[k]}${n > 1 ? `（${n} 面）` : ''}，網子架好了`);
 }
 addEventListener('keydown', (e) => {
-  if (!walk.on) return;
+  if (!walk.on || VBSettings.isOpen) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
-  const k = e.key.toLowerCase();
+  const k = VBSettings.key(e);
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn && VM.phase !== 'over') { e.preventDefault(); $('rk-menu').hidden = true; return; }
-  if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (locked()) { unlockMouse(); return; }
-    // Esc 只是切換「滑鼠游標（可以點東西）」和「移動滑鼠＝轉頭」：放開之後再按一下就回到轉頭；不會離開導覽、不會退出全螢幕
-    if (performance.now() - (walk.unlockT || 0) > 400 && !coarse() && !window.__rkOn) lockMouse(); return; }
+  if (k === 'escape') { e.preventDefault(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } openPersonalSettings(); return; }
   if (walk.paused) return;
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'e' && !e.repeat) { e.preventDefault(); if (VM.on) vmFreeBall(); else doInteract(); return; }
@@ -8036,28 +8054,35 @@ addEventListener('keydown', (e) => {
   if (k === 't') { e.preventDefault(); if (!e.repeat) emoMenuOpen(); return; }   // 互動選單：按住 T，游標往左擊掌、往右嘲諷，放開確定
   if (k === 'p' && !e.repeat) { e.preventDefault(); TP.manual = !tpActive(); toast(TP.manual ? '第三人稱：看得到自己和球（P 換回第一人稱）' : '第一人稱（P 換成第三人稱）', 1800); return; }
   if (k === 'f' && !e.repeat) { e.preventDefault(); passToFacing(); return; }
-  if (k === '[' || k === ']') { e.preventDefault(); const f = clamp(walkFov() + (k === ']' ? 5 : -5), 60, 100); try { localStorage.setItem('vb.fov', String(f)); } catch (er) { /* ignore */ } camera.fov = f; camera.updateProjectionMatrix(); toast(`視野 ${f}°（[ 變窄、] 變廣）`, 1200); return; }
+  if (k === '[' || k === ']') { e.preventDefault(); const f = clamp(walkFov() + (k === ']' ? 5 : -5), 60, 100); VBSettings.update({ fov: f }); camera.fov = f; camera.updateProjectionMatrix(); toast(`視野 ${f}°（[ 變窄、] 變廣）`, 1200); return; }
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
-addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 't') emoMenuClose(true); if (SETM.m && e.key === String(SETM.m.n) && performance.now() - SETM.m.t0 > 300) setMenuClose(true); walk.keys.delete(e.key.toLowerCase()); if (e.key === 'Shift') walk.keys.delete('shift'); });
+addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (k === 't') emoMenuClose(true); if (SETM.m && k === String(SETM.m.n) && performance.now() - SETM.m.t0 > 300) setMenuClose(true); walk.keys.delete(k); });
 addEventListener('blur', () => walk.keys.clear());
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
 // 第一人稱的視野（垂直角度）：預設 80 度比較廣、看得到旁邊的隊友和來球；[ 變窄、] 變廣，記在這台電腦
-function walkFov() { try { return clamp(+localStorage.getItem('vb.fov') || 80, 60, 100); } catch (e) { return 80; } }
+function walkFov() { return VBSettings.values.fov; }
 const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 function lockMouse() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
-function unlockMouse() { if (locked()) document.exitPointerLock(); }
+function unlockMouse() { if (locked()) { walk.programmaticUnlock = true; document.exitPointerLock(); } }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
   if (EMO.menu) { emoMenuMove(e.movementX); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
   if (setMenuHolds()) { if (SETM.m) setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
-  if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
-  walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS, -1.2, 1.1);
+  if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003 * VBSettings.values.sensitivity, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
+  walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS * VBSettings.values.sensitivity; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1);
 });
-document.addEventListener('pointerlockchange', () => { if (!locked()) walk.unlockT = performance.now(); updateLockHint(); });
+document.addEventListener('pointerlockchange', () => {
+  if (!locked()) {
+    walk.unlockT = performance.now();
+    if (!walk.programmaticUnlock && walk.on && !walk.paused && !RP.on && !VBSettings.isOpen && document.hasFocus() && $('room-panel').hidden) openPersonalSettings();
+    walk.programmaticUnlock = false;
+  }
+  updateLockHint();
+});
 // 瀏覽器不讓鎖定滑鼠（有些內嵌視窗、舊瀏覽器）：改用按住拖曳轉頭，點一下照樣互動
 document.addEventListener('pointerlockerror', () => { walk.noLock = true; updateLockHint(); toast('這個瀏覽器不能鎖定滑鼠：改成按住滑鼠拖曳轉頭'); });
 function updateLockHint() { const h = $('wk-lock'); if (h) h.hidden = !walk.on || coarse() || locked() || walk.paused || walk.noLock || !!window.__rkOn; }
@@ -8077,7 +8102,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   const l = walk.look; if (!walk.on || !l || l.locked || l.id !== e.pointerId || (walk.spike && walk.spike.t > 0.98) || setMenuHolds() || EMO.menu) return;   // 轉盤開著：只選球路，視角不轉
   const dx = e.clientX - l.x, dy = e.clientY - l.y; l.x = e.clientX; l.y = e.clientY;
   if (Math.hypot(e.clientX - l.sx, e.clientY - l.sy) > 5) l.moved = true;
-  const sens = e.pointerType === 'touch' ? 0.006 : 0.0042;
+  const sens = (e.pointerType === 'touch' ? 0.006 : 0.0042) * VBSettings.values.sensitivity;
   walk.lookT = performance.now(); walk.yaw -= dx * sens; walk.pitch = clamp(walk.pitch - dy * sens * 0.85, -1.2, 1.1);
 });
 function endLook(e) {
@@ -8736,7 +8761,7 @@ function rkMenuClick(e) {
   if (a === 'again') { const c = RK.c; rkStop(true); rkStart(c); return; }
   if (a === 'ai') { rkStart(RK.menuC); return; }
   if (a === 'net') {
-    if (!NET.on) { toast('先按「多人連線」開一個房間，請朋友用代碼加入'); $('mp').hidden = false; return; }
+    if (!NET.on) { toast('請先回大廳開房，再請朋友用代碼加入'); return; }
     const c = RK.menuC; RK.ask = { key: c.key, t: performance.now() };
     NET.tx.publish('rk', { e: 'ask', key: c.key, to: RK.opt.to });
     if (RK.peerAsk && RK.peerAsk.key === c.key && performance.now() - RK.peerAsk.t < 120000) { rkGo(RK.peerAsk.from, c.key, RK.peerAsk.to); return; }
@@ -8832,7 +8857,7 @@ function staTick(dt) {
 const VB = { assist: true, target: null, setSpot: null, npc: null, ringLand: null, ringSet: null, ts: 0.7 };
 // 球速（球的時間倍率）：很慢 0.55、慢 0.7（預設）、正常 1；預測出來的時間都換算成真實時間，提示、輔助、AI 才會對得上
 const VB_SPEEDS = [[0.55, '很慢'], [0.7, '慢'], [1, '正常']];
-try { const v = Number(localStorage.getItem('vb.ballspeed')); if (VB_SPEEDS.some(([x]) => x === v)) VB.ts = v; } catch (e) { /* ignore */ }
+// Room ball speed starts at the original default, never from personal storage.
 const VB_REACH = { atk: 1.0, recv: 0.95, set: 0.9 };
 const vbFwd = () => [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
 // 背舉：雙手在頭上往後上方推
@@ -8899,7 +8924,7 @@ function vbParts(dt) {
 //   3. 碰到的東西：前臂墊球的悶擊、手掌扣球的響亮拍擊、手指舉球幾乎沒聲音、木地板的低頻「咚」、網繩的「嗡」
 // 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
 const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
-try { SFX.on = localStorage.getItem('vb.sfx') !== '0'; } catch (e) { /* ignore */ }
+SFX.on = !VBSettings.values.mute;
 function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
 // 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
 function sfxIR(ac, rt) {
@@ -8914,10 +8939,10 @@ function sfxIR(ac, rt) {
 function sfxBus(ac) {
   if (SFX.bus && SFX.bus.ac === ac) return SFX.bus;
   const master = ac.createDynamicsCompressor(); master.threshold.value = -14; master.ratio.value = 4; master.attack.value = 0.002; master.release.value = 0.15;
-  const out = ac.createGain(); out.gain.value = 0.9; master.connect(out).connect(ac.destination);
+  const out = ac.createGain(); out.gain.value = VBSettings.values.mute ? 0 : .9 * VBSettings.values.volume / 100; master.connect(out).connect(ac.destination);
   const conv = ac.createConvolver(); conv.buffer = sfxIR(ac, 2.1); const wet = ac.createGain(); wet.gain.value = 0.42; conv.connect(wet).connect(master);
   const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  return (SFX.bus = { ac, master, conv, noise });
+  return (SFX.bus = { ac, master, conv, noise, out });
 }
 function sfx(kind, q = 1, pos) {
   if (!SFX.on) return;
@@ -9362,7 +9387,7 @@ function vmFreeBall() {
 const SET_OPT = { 1: [['flat', '平的長攻'], ['high', '高的長攻']], 2: [['high3', '高的 3 號位'], ['quick', '快攻']], 3: [['flat', '平的背'], ['high', '高的背']] };
 const SETM = { m: null };
 // 轉盤：第 i 個選項放在 180°−i×(360°／選項數)（兩個選項＝左、右）；扇形之間畫分隔線
-const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n;
+const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n + (SETM.m && VBSettings.values.swap[SETM.m.n - 1] ? Math.PI : 0);
 function setMenuOpen(n) {
   if (SETM.m) setMenuClose(true);
   const opts = SET_OPT[n], N = opts.length, el = $('set-menu'), m = SETM.m = { n, dx: 0, dy: 0, hov: -1, t0: performance.now() };
@@ -9535,6 +9560,7 @@ function vbAssist(inputMag) {
 }
 // ---- 視角輔助：球朝你來時鏡頭輕輕轉向球；等舉球時只幫你抬頭看球，左右留給你瞄準；剛動過滑鼠就不幫
 function vbCamAssist(dt) {
+  if (!VBSettings.values.cameraAssist) return;
   if (performance.now() - (walk.lookT || 0) < 700 || walk.air || SETM.m) return;
   let p = null, yawOk = true;
   const P0 = VM.on && VM.host ? VM.poss[0] : null, setting = walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1);
@@ -9670,7 +9696,7 @@ function vbRings() {
   const mk = (a, b2, col) => { const m = new THREE.Mesh(new THREE.RingGeometry(a, b2, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m; };
   if (!VB.ringLand) { VB.ringLand = mk(0.28, 0.36, '#FFFFFF'); VB.ringSet = mk(0.42, 0.52, '#F2B705'); VB.ringPass = mk(0.36, 0.46, '#3E9BFF'); }
   const pr0 = vmPassRing(); VB.ringPass.visible = !!pr0; if (pr0) VB.ringPass.position.set(pr0.x, 0.02, pr0.z);
-  const t = VB.target; VB.ringLand.visible = !!t;
+  const t = VB.target; VB.ringLand.visible = !!t && VBSettings.values.landing;
   if (t) { const pr = vbPredict(t.b.m.position, t.b.v, BALL_R) || t; VB.ringLand.position.set(pr.x, 0.02, pr.z); VB.ringLand.material.color.set(t.fast ? '#E5484D' : '#FFFFFF'); }
   const s = VB.setSpot, on = !!(s && performance.now() < s.until && balls.includes(s.b));
   VB.ringSet.visible = on; if (on) { VB.ringSet.position.set(s.x, 0.02, s.z); VB.ringSet.scale.setScalar(1 + Math.sin(performance.now() / 150) * 0.07); }
@@ -9705,6 +9731,7 @@ function vbCue() {
     }
   }
   const el = $('vb-cue');
+  if (cue && !touch) cue[1] = cue[1].replaceAll('空白鍵', VBSettings.keyName(VBSettings.values.keys[' '])).replaceAll('（B）', '（' + VBSettings.keyName(VBSettings.values.keys.b) + '）');
   if (!cue) { el.hidden = true; } else { el.hidden = false; el.dataset.k = cue[0]; if (el.textContent !== cue[1]) el.textContent = cue[1]; }
   if (VB.ringSet) VB.ringSet.material.color.set(cue && cue[0] === 'jump' ? '#30A46C' : '#F2B705');
 }
@@ -9755,7 +9782,7 @@ function vbOwnSide(b) {
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
 function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
-function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VM.on || !!VB.npc; }
+function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc); }
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 // 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
 function vbApproachK() {
@@ -10879,7 +10906,7 @@ const STA_RING = new Map(), staArcGeo = new Map();
 function staArc(n) { if (!staArcGeo.has(n)) staArcGeo.set(n, new THREE.RingGeometry(0.46, 0.64, 48, 1, Math.PI / 2, -(Math.PI * 2 * n) / 40)); return staArcGeo.get(n); }
 function vmStaRings() {
   const my = VM.on && !RP.on ? vmTeamOf(vmMe()) : -1, seen = new Set();
-  if (my >= 0) for (const id of VM.team[my]) {
+  if (my >= 0 && VBSettings.values.rings) for (const id of VM.team[my]) {
     if (id === vmMe()) continue;
     const a = VM.ai.get(id), p2 = a ? null : NET.peers.get(id), g = a ? a.av.g : p2 && p2.av ? p2.av.g : null, v = a ? a.sta ?? 1 : p2 ? p2.sta : null;
     if (!g || v == null) continue;
@@ -10912,7 +10939,7 @@ function vmOnNet(d, from) {
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
-    if (d.ts) VB.ts = d.ts;
+    // Ball speed is owned by room-settings, independent of the match simulation host.
     const colors = { aiT: '#30A46C', ai1: '#E5484D', ai2: '#F76B15', ...(d.six ? d.six.colors : {}) };
     for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D', d.chars && d.chars[id]); a.wx = null; }
     $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); vmClearBalls(); vmDropHeld(); peerTagsAll();
@@ -10942,7 +10969,7 @@ function vmOnNet(d, from) {
   } else if (d.e === 'serve' && d.id === NET.me) vmPrepServe(d.s);
   else if (d.e === 'whistle') vmWhistle();
   else if (d.e === 'form') vm6GoSpot(d.spots && d.spots[NET.me]);
-  else if (d.e === 'ts') VB.ts = d.ts;
+  else if (d.e === 'ts') { /* Legacy field retained; room-settings is authoritative. */ }
   else if (d.e === 'end') { vmStop(true); toast('比賽結束了'); }
 }
 // ---- 計分板（左上角）
@@ -11045,7 +11072,7 @@ function drawFrame(force) {
 // ---------------------------------------------------------------- boot
 function wireUi() {
   renderTemplates(); initBuildingInputs(); renderPalette(); renderZonePalette();
-  for (const id of ['t-quality', 'w-quality']) $(id).addEventListener('click', () => { quality = quality === 'high' ? 'low' : 'high'; perf.n = 0; perf.sum = 0; applyQuality(true); window.wakeRender(800); });
+  for (const id of ['t-quality']) $(id).addEventListener('click', () => { quality = quality === 'high' ? 'low' : 'high'; perf.n = 0; perf.sum = 0; applyQuality(true); window.wakeRender(800); });
   applyQuality(false);
   $('v-bird').addEventListener('click', () => frameView('bird'));
   $('v-top').addEventListener('click', () => frameView('top'));
@@ -11150,7 +11177,14 @@ window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude
 if (SITE_ID && location.search) {
   const requestedMode = new URLSearchParams(location.search).get('mode');
   VM_OPT.mode = requestedMode === '6v6' ? '6' : '2';
-  generateFromSite(SITE_ID).then(() => setMode('walk')).catch((e) => { console.error(e); toast('球館載入失敗，請重新整理'); });
+  entryProgress(20, '讀取球館配置');
+  generateFromSite(SITE_ID).then(async () => {
+    entryProgress(75, '準備 3D 球館'); setMode('walk');
+    await new Promise(requestAnimationFrame); drawFrame(true);
+    entryProgress(100, '準備完成');
+    await new Promise(requestAnimationFrame);
+    const cover = $('game-loading'); cover.classList.add('done'); setTimeout(() => { cover.hidden = true; }, 320);
+  }).catch((e) => { console.error(e); entryFail(); });
 }
 if (VENUE_ID) loadVenue(VENUE_ID);
 
