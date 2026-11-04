@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>排球遊戲｜遊戲大廳</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ff951a'/%3E%3Cpath d='M3 14q13 8 26 0M12 3q-4 16 10 25' fill='none' stroke='%23151f2c' stroke-width='2'/%3E%3C/svg%3E">
+  <title>Let's Play｜遊戲大廳</title>
+<link rel="icon" type="image/png" sizes="32x32" href="img/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="img/brand/favicon-64.png">
+<link rel="apple-touch-icon" href="img/brand/apple-touch-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -21,7 +23,7 @@
 <dialog id="intro" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
   <section class="intro-content" id="intro-content">
     <p class="intro-kicker">VOLLEYBALL ONLINE</p>
-    <h1 id="intro-title">排球遊戲</h1>
+    <h1 id="intro-title">Let's Play</h1>
     <p id="intro-subtitle">與球友一起上場，打好每一球。</p>
     <button id="ball-start" type="button" aria-label="點排球開始遊戲"><canvas id="ball" width="600" height="600" aria-hidden="true"></canvas></button>
     <button class="orange" id="start" type="button" autofocus>開始遊戲</button>
@@ -37,7 +39,7 @@
 </script>
 <div id="lobby-shell" inert>
 <header class="top panel">
-  <div class="brand"><span class="logo" data-icon="ball"></span><div><div class="brand-line"><h1>排球遊戲</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
+  <div class="brand"><img class="logo logo-img" src="img/brand/favicon-64.png" alt=""><div><div class="brand-line"><h1>Let's Play</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
   <div class="actions">
     <button class="orange" id="create"><span data-icon="plus"></span>開啟房間</button>
     <button class="green" id="practice"><span data-icon="court"></span>練習模式</button>
@@ -61,7 +63,7 @@
   </aside>
   <section class="chat panel" aria-labelledby="chat-title">
     <div class="chat-heading"><h2 id="chat-title"><span data-icon="chat"></span>大廳留言板</h2><span>全服聊天</span></div>
-    <div id="messages" class="messages" role="log" aria-live="polite"><p class="notice"><span data-icon="megaphone"></span><b>[全服公告]</b> 歡迎來到排球遊戲，準備好一起上場！</p><p class="system"><span data-icon="info"></span><b>[系統訊息]</b> 大廳共享最近 50 則留言，每秒最多發送一則。</p></div>
+    <div id="messages" class="messages" role="log" aria-live="polite"><p class="notice"><span data-icon="megaphone"></span><b>[全服公告]</b> 歡迎來到 Let's Play，準備好一起上場！</p><p class="system"><span data-icon="info"></span><b>[系統訊息]</b> 大廳共享最近 50 則留言，每秒最多發送一則。</p></div>
     <form id="chat"><select aria-label="聊天頻道"><option>大廳頻道</option></select><input id="message" aria-label="留言" maxlength="200" placeholder="輸入留言訊息（按 Enter 發送）…" required><button class="orange"><span data-icon="send"></span>發送</button><button type="button" id="sound" class="icon-button" aria-label="開啟留言音效" aria-pressed="false" title="開啟留言音效"><span data-icon="mute"></span></button></form>
   </section>
 </main>

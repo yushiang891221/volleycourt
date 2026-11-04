@@ -38,6 +38,7 @@ function setup({ hash = '', reduced = false, nickname = '', failure = '', delaye
     dispatchEvent(e) { for (const fn of events.get(e.type) || []) fn(e); },
     setTimeout(fn, ms) { timers.set(++serial, {fn, ms}); return serial; }, clearTimeout(id) { timers.delete(id); },
     requestAnimationFrame(fn) { frames.set(++serial, fn); return serial; }, cancelAnimationFrame(id) { frames.delete(id); },
+    Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } },
     VBSettings: {values: {nickname}, open(){}, nicknameError: () => '', update: () => true},
     VBLobby: {id: 'self', carry(){}, connect() { connections++; return {send: () => true, close(){}}; }}
   });

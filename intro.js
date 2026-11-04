@@ -66,8 +66,11 @@
   if (!intro.open) intro.showModal();
   $('start').focus({ preventScroll: true });
 
-  // The original canvas ball is restored below; it needs no external assets.
+  // 開場的球：Let's Play 的球圖，慢慢轉、上下浮動
   const bc = $('ball'), bctx = bc.getContext('2d');
+  const ballImg = new Image();
+  ballImg.src = 'img/brand/ball-512.webp';
+  ballImg.onload = () => { if (stage === 'intro' && motion.matches) spin(0); };
   function spin(ts) {
     if (stage !== 'intro' && stage !== 'loading') return;
     if (!bctx) return;
@@ -76,30 +79,11 @@
     if (!motion.matches) spinFrame = requestAnimationFrame(spin);
   }
   spin(0);
-  function drawBall(ctx, x, y, r, rot, alpha = 1) {
-  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(-r, -r, 2 * r, 2 * r);
-  // three wedges, each with three curved strips (classic volleyball panels)
-  const cols = [['#F4C21E', '#1F5FB4', '#FFFFFF'], ['#1F5FB4', '#FFFFFF', '#F4C21E'], ['#FFFFFF', '#F4C21E', '#1F5FB4']];
-  for (let k = 0; k < 3; k++) {
-    ctx.save(); ctx.rotate(rot + k * Math.PI * 2 / 3);
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r * 1.1, -Math.PI / 2 - Math.PI / 3, -Math.PI / 2 + Math.PI / 3); ctx.closePath(); ctx.clip();
-    for (let i = 2; i >= 0; i--) {
-      ctx.beginPath(); ctx.arc(r * 0.35, r * 0.75, r * (0.95 + 0.42 * (i + 1)), 0, Math.PI * 2);
-      ctx.fillStyle = cols[k][i]; ctx.fill();
-      ctx.lineWidth = Math.max(1, r * 0.02); ctx.strokeStyle = 'rgba(20,30,50,.35)'; ctx.stroke();
-    }
+  function drawBall(ctx, x, y, r, rot) {
+    if (!ballImg.complete || !ballImg.naturalWidth) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.drawImage(ballImg, -r, -r, 2 * r, 2 * r);
     ctx.restore();
   }
-  ctx.save(); ctx.rotate(rot); ctx.strokeStyle = 'rgba(20,30,50,.4)'; ctx.lineWidth = Math.max(1, r * 0.022);
-  for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + Math.PI / 3 + k * Math.PI * 2 / 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); }
-  ctx.restore();
-  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.05);
-  g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.45, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,30,.45)');
-  ctx.fillStyle = g; ctx.fillRect(-r, -r, 2 * r, 2 * r);
-  ctx.restore();
-  ctx.save(); ctx.globalAlpha = alpha * 0.6; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.lineWidth = Math.max(1, r * 0.02); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.stroke(); ctx.restore();
-}
 
 })();
