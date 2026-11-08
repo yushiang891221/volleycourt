@@ -10402,7 +10402,8 @@ function vmAiStep(a, dt) {
   // 移動、跳
   { const v0 = Math.hypot(a.vx, a.vz); const c = staCfg(); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - (c.sprint / 100) * 0.6 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + ((VM.phase === 'rally' ? (v0 < 0.5 ? c.regStill : c.regMove) : c.regDead) / 100) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
   const spMax = vmLv(a).speed * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1));   // 累了跑比較慢
-  const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
+  const nav = vmAiYieldRoute(a);
+  const dx = nav.x - a.x, dz = nav.z - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點
   if (a.y <= 0) { a.vx += ((d > 0.05 ? dx / d : 0) * sp - a.vx) * kk; a.vz += ((d > 0.05 ? dz / d : 0) * sp - a.vz) * kk; }
   a.x += a.vx * dt; a.z += a.vz * dt; a.x = sd * clamp(a.x * sd, 0.35, 12); a.z = clamp(a.z, -7, 7);
   {   // 人跟人不能重疊：AI 跟其他 AI、真人至少隔 0.6 m（互相撞到就被推開，不會兩個人疊著接同一顆球）
@@ -10432,7 +10433,7 @@ function vmAiBlock(a, sd, b) {
   if (!th) { if (a.blk && a.y <= 0) a.blk = null; return !!a.blk; }
   // 一隊只派一個人攔：離攻擊手左右比較近、而且這一球還沒碰的人
   let lane = 0;
-  if (VM.six) { if (!vm6BlockPick(a, th)) return false; lane = VM.role[a.id] === 'MB' ? 0 : (a.z >= th.z ? 0.55 : -0.55); }   // 邊上的人站在攻擊手外側一點，中間手在裡面，兩人併成一道牆
+  if (VM.six) { if (!vm6BlockPick(a, th)) return false; lane = vmBlockLane(a, th); }   // 攔中固定在內側，邊翼固定在外側，不依當下誰站哪一邊交換
   else {
     if (VM.team[a.team].some((id) => !VM.ai.has(id) && (() => { const q = vmPos(id); return q && Math.abs(q.x) < 1.8; })())) return false;   // 真人隊友在網前：他攔，我退後防守
     const mates = VM.team[a.team].filter((id) => VM.ai.has(id)).map((id) => VM.ai.get(id));
@@ -10526,13 +10527,18 @@ function vmAiRole(a, P, B, sd) {
     if (st === 0) { a.tx = sd * (VM.six ? 1.1 : 1.4); a.tz = VM.six ? -sd * 1.0 : 0; return; }
     const pHi = vmPredL(B, 2.2), pLo = pHi ? null : vmPredL(B, 1.0), p = pHi || pLo; if (p) { a.tx = p.x + sd * 0.25; a.tz = p.z; }
     const dh = Math.hypot(B.x - a.x, B.z - a.z);
+    if (!pHi && dh < 1.2 && B.y < 1.5 && B.y > 0.35 && B.vy < 0 && VM.six) {
+      vmAiSetAttack(a, P, B, vm6ChooseSet(a, B), true); return;
+    }
     if (!pHi && dh < 1.2 && B.y < 1.5 && B.y > 0.35 && B.vy < 0) { const ap = vmPos(P.attacker) || { z: 0 }; vmAiTouch(a, sd * 1.2, clamp(ap.z, -3.6, 3.6), 2.9, 1.3, vmLv(a).setErr * 1.5, 'set', 3); return; }   // 傳得太低：低手墊舉
-    const qmb = VM.six && !P.fix && (!P.grade || P.grade === 'A') ? vm6AirMB(a.team, a.id) : null, early = !!qmb && dh < 1.45 && B.y < 3.8 && B.y > 1.8;   // 快攻只有到位球（A）才打   // 攔中已經跳起來了：不等球掉到最低，在比較高的位置就推出去
+    const activeCall = a.team === vmTeamOf(vmMe()) && VM.call && VM.t - VM.call.t < 8 ? VM.call : null;
+    const qmb = VM.six && !vmSmallCount() && (!activeCall || (activeCall.n === 2 && activeCall.v !== 'high3')) && !P.fix && (!P.grade || P.grade === 'A') ? vm6AirMB(a.team, a.id) : null, early = !!qmb && dh < 1.45 && B.y < 3.8 && B.y > 1.8;
     if (early && B.y > 2.9 && a.y <= 0 && a.vy <= 0) { a.vy = aiJump(a, 2.6, 'set'); }   // 球還很高：舉球員跳起來舉
     if (early || (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5)) {
       let ap = vmPos(P.attacker) || { z: 0 }, call = a.team === 0 && VM.call && VM.t - VM.call.t < 8 ? VM.call.n : 0, pick = null;
       const callV = call ? VM.call.v : null, mb3 = callV === 'high3' && VM.six ? VM.team[a.team].find((id) => id !== a.id && VM.role[id] === 'MB' && vm6Front(id)) : null;   // 喊平球／3 號位高球
       if (VM.six) { pick = mb3 ? { n: 2, id: mb3 } : early ? { n: 2, id: qmb.id } : vm6ChooseSet(a, B); if (mb3) VM.call = null; call = pick.n; ap = vmPos(pick.id) || ap; if (early && VM.call) VM.call = null; } else if (call) VM.call = null;
+      if (VM.six && pick && (vmSmallCount() || !vm6Front(pick.id))) { vmAiSetAttack(a, P, B, pick, false); return; }
       // 修正球：傳得不到位（C）、離網太遠、或不是舉球員在舉（舉球員追不到、第一球是他接的）→ 又高又慢的高球到兩邊（大多 4 號位），比較不準
       const far = Math.max(0, Math.abs(a.x) - 2.6), fixS = !early && call !== 2 && (P.fix || far > 0.8 || (VM.six && !vmSmallCount() && VM.role[a.id] !== 'S'));   // 小人數沒有專職舉球員：誰舉都照正常舉
       if (fixS) {
@@ -10580,10 +10586,12 @@ function vmAiOwnSide(a) { const [lx] = vmL(VM.ball.m.position.x, VM.ball.m.posit
 function aiEff(a) { return 0.8 + 0.2 * clamp((a.sta ?? 1) / 0.3, 0, 1); }
 function aiPay(a, kind) { const f = aiEff(a); a.sta = Math.max(0, (a.sta ?? 1) - staCost(kind, a.id)); return f; }
 function aiJump(a, vy, kind) { return vy * (0.4 + 0.6 * aiPay(a, kind)); }
-function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose, free = false) {
+function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose, free = false, backSet = false) {
   if (!vmAiOwnSide(a)) return;
   if (!free && (kind === 'set' || (kind === 'bump' && ty > 1)) && tlx * vmSide(a.team) < 0.7) tlx = vmSide(a.team) * 0.7;   // 傳、舉都留在自己這邊（free＝接過頭撞網那種）
-  const b = VM.ball, [wx, wz] = vmW(tlx + rkGauss() * err * 0.5, tlz + rkGauss() * err), [ax0, az0] = vmW(a.x, a.z);
+  let targetX = tlx + rkGauss() * err * 0.5, targetZ = tlz + rkGauss() * err;
+  if (kind === 'set' && (backSet || vmSmallCount() === 3)) { targetX = vmSide(a.team) * clamp(targetX * vmSide(a.team), 4.2, 8.0); targetZ = clamp(targetZ, -3.3, 3.3); }   // 所有人數的後排舉球：誤差也不能把球帶進 3 公尺線
+  const b = VM.ball, [wx, wz] = vmW(targetX, targetZ), [ax0, az0] = vmW(a.x, a.z);
   const p = b.m.position.clone().lerp(new THREE.Vector3(ax0, a.y + (kind === 'set' ? 2.35 : 0.75), az0).lerp(b.m.position, 0.25), 0.65);
   b.mine = false; b.setT = kind === 'set' ? performance.now() : 0; aiPay(a, kind === 'set' ? 'set' : 'bump');
   a.pose = pose; a.swingT = 0.4; a.reactAt = VM.t + 0.25;
@@ -10761,7 +10769,8 @@ function vm6Spot(team, id, mode) {
     return vm6RecvForm(team)[id] || vm6P(team, ...V6_BASE[k]);
   }
   if (mode === 'attack') {   // 舉球員到舉球點；前排攻擊手退到助跑起點（主攻左、中間手在舉球員旁、舉對右）；後排主攻準備後排攻擊；其他人補位
-    if (r === 'S') return vm6P(team, 0.9, -1.0);
+    if (VM.poss[team]?.setter === id) return vm6P(team, 0.9, -1.0);
+    if (r === 'S') return vm6P(team, front ? 3.8 : 5.8, -2.4);   // S 接了第一球、交給 OP 舉：退開，不能再搶舉球點
     if (front) return r === 'MB' ? vm6P(team, 2.6, 0.6) : r === 'OH' ? vm6P(team, 3.8, 3.2) : vm6P(team, 3.8, -3.2);   // 中間手在舉球員左後方準備快攻（不擋舉球員跑位）
     if (r === 'OH') return vm6P(team, 6.4, 0);
     return r === 'MB' ? vm6P(team, 5.4, 2.4) : vm6P(team, 5.4, -2.4);
@@ -10880,8 +10889,13 @@ function vm6ChooseSet(a, B) {
   const Pg = VM.poss[a.team] || {}, oh = at('OH', true), mb = at('MB', true), opp = at('OPP', true), pipe = at('OH', false), good = Math.abs(B.x) < 2.6 && (!Pg.grade || Pg.grade === 'A'), opt = [];   // 快攻、後排攻擊只有到位球
   const oppB = opp ? null : at('OPP', false);   // 舉對在後排：右邊後排攻擊（3 公尺線後起跳）
   const mbAir = mb && (VM.ai.has(mb) ? VM.ai.get(mb).y > 0.02 || VM.ai.get(mb).vy > 0 : mb === vmMe() ? !!(walk.air && !walk.air.block) : ((NET.peers.get(mb) || {}).y || 0) > 0.3);   // 快攻要中間手先跳：舉球那一刻已經在空中才舉
-  if (oh) opt.push([1, oh, 4]); if (mb && good && mbAir) opt.push([2, mb, VM.ai.has(mb) ? 9 : 4]); if (mb && good && !mbAir && VM.ai.has(mb)) opt.push([6, mb, 1.5]);   // 6＝3 號位高球（中間手沒先跳時） if (opp) opt.push([3, opp, 3]); if (oppB && good) opt.push([5, oppB, 2]); if (pipe && good) opt.push([4, pipe, 1]);
-  { const p5 = ids.find((id) => vm6Idx(id) === 4); if (p5 && good) opt.push([7, p5, 0.8]); }   // 後排 5 號位（左後）攻擊：偶爾
+  if (oh) opt.push([1, oh, 4]);
+  if (mb && good && mbAir) opt.push([2, mb, VM.ai.has(mb) ? 9 : 4]);
+  if (mb && good && !mbAir && VM.ai.has(mb)) opt.push([6, mb, 1.5]);   // 6＝3 號位高球（中間手沒先跳時）
+  if (opp) opt.push([3, opp, 3]);
+  if (oppB && good) opt.push([5, oppB, 2]);
+  if (pipe && good) opt.push([4, pipe, 1.5]);
+  { const p5 = ids.find((id) => vm6Idx(id) === 4); if (p5 && good) opt.push([7, p5, 0.35]); }   // 後排 5 號位：少量變化球，不能取代 OP／後排中間／老三
   if (Pg.fix || Math.abs(B.x) > 3.4) { const o2 = opt.filter((q) => q[0] === 1 || q[0] === 3).map((q) => [q[0], q[1], q[0] === 1 ? 5 : 2]); if (o2.length) opt.splice(0, opt.length, ...o2); }   // 修正球：只舉兩邊高球（大多 4 號位）
   if (!opt.length) return { n: 1, id: ids.find((id) => vm6Front(id)) || ids[0] };
   const call = a.team === vmTeamOf(vmMe()) && VM.call && VM.t - VM.call.t < 8 ? VM.call : null;
@@ -10894,7 +10908,7 @@ function vm6ChooseSet(a, B) {
 }
 // 攔網：只有前排；中間手跟著攻擊手移動，兩邊的人攔自己那一側（最多三人攔網）
 function vm6BlockPick(a, th) {
-  if (vmSmallCount()) return vm6Front(a.id) && Math.abs(a.z-th.z)<3.4; // WEB003B
+  if (vmSmallCount()) return vmSmallBlockers(a.team, th).includes(a.id); // WEB003B
 
   if (!vm6Front(a.id)) return false;
   // 前排三個人照現在站的位置：中間的人（中間手）一定上；再加攻擊手那一側的人——對面 4 號位打＝我方 2 號位＋3 號位，對面 2 號位打＝我方 4 號位＋3 號位
@@ -10934,6 +10948,7 @@ function vm6Brain(a, sd, b, live) {
   // 沒輪到碰球：發球還在飛＝留在接發球陣型；第一球還沒碰到＝守住位置；舉出去了＝圍到攻擊手旁邊 cover（被攔回來的球要救）；其他時候準備進攻
   if (st === 1 && VM.role[a.id] === 'MB' && vm6Front(a.id) && P.passer !== a.id && P.setter && P.setter !== a.id && vm6Quick(a, P, B, sd)) return;   // 舉球員是 AI 或真人都一樣：攔中先跳
   const f = st === 2 && P.attacker && P.attacker !== a.id ? vm6CoverSpot(a, P.attacker) : vm6Spot(a.team, a.id, VM.touch.serve ? 'serve' : st === 0 ? 'defense' : 'attack');
+  a.run = false; a.appr = false;   // 接完球／沒被選為攻擊手時取消上一段助跑，正常補位
   if (f) { a.tx = f.x; a.tz = f.z; }
 }
 // 對面要攻擊、前排沒上去攔網的人：中間手留在中間準備；兩邊的人（攻擊方向的斜對角）退到自己那一邊的 3 公尺線，接吊球和小斜線
@@ -10970,23 +10985,31 @@ function vm6Quick(a, P, B, sd) {
 // cover：照攻擊手的位置排出 5 個區域——兩側近身各一（左右，不站助跑走廊）、往場中間的斜後方中段一個、後場兩角各一；
 //   每個人分到離自己最近、還沒人去的那一區（不會全部擠到前面擋住攻擊手）；後排攻擊時近身的兩個站在 3 公尺線前、攻擊手左右兩側
 function vm6CoverPlan(team, attId) {
-  const P = VM.poss[team]; if (P && P.cover && P.cover.att === attId) return P.cover.map;
+  const P = VM.poss[team]; if (P?.cover?.att === attId && VM.t - P.cover.at < 0.15) return P.cover.map;
   const at = vmPos(attId); if (!at) return null;
-  const sd = vmSide(team), d0 = Math.abs(at.x), L0 = at.z / sd, back = !vm6Front(attId) || d0 >= 3, mid = L0 >= 0 ? -1 : 1;
+  const sd = vmSide(team), lane = vmAttackLane(team, attId), contact = lane ? lane.b : at;
+  const d0 = Math.abs(contact.x), L0 = contact.z / sd, back = !vm6Front(attId), mid = L0 >= 0 ? -1 : 1;
   const spots = back ? [[2.0, L0 + 2.1], [2.0, L0 - 2.1], [5.2, L0 + mid * 2.6], [7.3, 2.6], [7.3, -2.6]]
     : [[d0 + 1.3, L0 + 1.9], [d0 + 1.3, L0 - 1.9], [d0 + 3.4, L0 + mid * 2.4], [7.2, 2.6], [7.2, -2.6]];
-  const pts = spots.map(([d, L]) => vm6P(team, clamp(d, 1.0, 8.4), clamp(L, -4.2, 4.2)));
+  const edge = Math.abs(L0) >= 1.5 ? Math.sign(L0) : 0;
+  const pts = spots.map(([d, L]) => {
+    // 邊翼攻擊只在場內側與後方掩護：OH 左外側、OP 右外側不站人。
+    if (edge) L = edge * Math.min(edge * L, Math.abs(L0) - 1.4);
+    const q = vm6P(team, clamp(d, 1.0, 8.4), clamp(L, -4.2, 4.2));
+    const safe = lane ? vmLaneClearPoint(q, lane) : q;
+    if (edge && safe.z / sd * edge > Math.abs(L0) - .5) return vm6P(team, clamp(d, 1.0, 8.4), L0 - edge * 2.6);
+    return safe;
+  });
   const pos = {}; for (const id of VM.team[team]) if (id !== attId) { const q = vmPos(id); if (q) pos[id] = q; }
   const map = {}, free = pts.map((_, i) => i); let rest = Object.keys(pos);
   while (rest.length && free.length) {   // 每次挑「人到那一區」最近的一組配對
     let best = null; for (const id of rest) for (const i of free) { const d = Math.hypot(pos[id].x - pts[i].x, pos[id].z - pts[i].z); if (!best || d < best.d) best = { id, i, d }; }
     map[best.id] = pts[best.i]; rest = rest.filter((x) => x !== best.id); free.splice(free.indexOf(best.i), 1);
   }
-  if (P) P.cover = { att: attId, map };
+  if (P) P.cover = { att: attId, map, at: VM.t };
   return map;
 }
 function vm6CoverSpot(a, attId) {
-  if (vmSmallCount()) { const q = vmPos(attId), sd = vmSide(a.team), h = CourtFormations.home(vmSmallCount(), Math.max(0, vm6Idx(a.id))); if (!q) return vm6Spot(a.team, a.id, "defense"); return vm6P(a.team, clamp(Math.abs(q.x) + 1.8, 3.2, 7.5), (q.z / sd) * 0.5 + h[1] * 0.5); }   // 小人數：圍到攻擊手後面接被攔回來的球
  const m = vm6CoverPlan(a.team, attId); return m && m[a.id] ? m[a.id] : null; }
 // 連線的人：收到主機的輪轉表、局數
 function vm6Apply(d) {
@@ -11350,6 +11373,90 @@ function vmSmallPossession(team,B) {
   const p=vmPredL(B,BALL_R)||vmPredL(B,0.9);if(!p)return null;
   const sd=vmSide(team),k=CourtFormations.owner(vmSmallCount(),p.x*sd,p.z/sd),passer=VM.rot[team][k];
   return VM.poss[team]={stage:0,passer,setter:vm6SetterFor(team,passer),attacker:null};
+}
+// 保留舉球員跑位線和攻擊手整段助跑線；掩護者的目標與實際移動都要避開。
+function vmBlockLane(a, th) {
+  const sd = vmSide(a.team), L = th.z / sd, edge = Math.sign(L) || 1;
+  const small = vmSmallCount(), pair = small ? vmSmallBlockers(a.team, th) : null;
+  if (pair?.length === 1) return 0;
+  const inner = small ? pair[1] === a.id : VM.role[a.id] === 'MB';
+  if (!inner) return sd * edge * .4;
+  let target = L - edge * .4;
+  // 真人邊翼已經在網前時，攔中也不能跨過他的外側；保留約 0.7 m 接縫距離。
+  for (const id of VM.team[a.team]) {
+    if (id === a.id || VM.ai.has(id) || !vm6Front(id)) continue;
+    const q = vmPos(id); if (!q || Math.abs(q.x) > 1.8 || q.z / sd * edge < .5 || Math.abs(q.z / sd - L) > 1.3) continue;
+    target = edge * Math.min(target * edge, q.z / sd * edge - .7);
+  }
+  return sd * target - th.z;
+}
+function vmSmallBlockers(team, th) {
+  const ids = VM.team[team].filter(id => vm6Front(id) && vmPos(id) && Math.abs(vmPos(id).z - th.z) < 3.4);
+  ids.sort((a, b) => Math.abs(vmPos(a).z - th.z) - Math.abs(vmPos(b).z - th.z));
+  return ids.slice(0, 2);   // 小人數沒有專職攔中：靠攻擊邊的在外側，另一位在內側
+}
+function vmAttackLane(team, id) {
+  const at = vmPos(id); if (!at) return null;
+  const sd = vmSide(team), P = VM.poss[team], ball = VM.ball && vmBallL(VM.ball);
+  const pred = P?.stage === 2 && P.attacker === id && ball ? vmPredL(ball, 2.8) : null;
+  const back = VM.six && !vm6Front(id);
+  const L = VM.six && !vmSmallCount() ? (VM.role[id] === 'OH' ? (back ? 0 : 3.3) : VM.role[id] === 'OPP' ? -3.3 : 0) : at.z / sd;
+  const b = { x: sd * (pred ? Math.max(back ? 3.5 : 0.7, pred.x * sd + .55) : back ? 4.4 : 1.2), z: pred ? clamp(pred.z, -4, 4) : sd * L };
+  let dx = at.x - b.x, dz = at.z - b.z, len = Math.hypot(dx, dz);
+  if (len < .5) { dx = sd; dz = 0; len = 1; }
+  const run = Math.max(3.4, len);
+  return { a: { x: b.x + dx / len * run, z: b.z + dz / len * run }, b, r: 1.1, id };
+}
+function vmLaneProject(q, lane) {
+  const dx = lane.b.x - lane.a.x, dz = lane.b.z - lane.a.z, len = Math.hypot(dx, dz) || 1;
+  const t = clamp(((q.x - lane.a.x) * dx + (q.z - lane.a.z) * dz) / (len * len), 0, 1);
+  const x = lane.a.x + dx * t, z = lane.a.z + dz * t;
+  return { x, z, d: Math.hypot(q.x - x, q.z - z), side: ((q.x - x) * -dz + (q.z - z) * dx) / len, ux: dx / len, uz: dz / len };
+}
+function vmLaneClearPoint(q, lane) {
+  const p = vmLaneProject(q, lane); if (p.d >= lane.r + .15) return q;
+  const sign = Math.sign(p.side) || (q.z > 0 ? -1 : 1), step = lane.r + .3;
+  return { x: p.x - p.uz * sign * step, z: p.z + p.ux * sign * step };
+}
+function vmLanePathHits(a, b, lane) {
+  const path = { a, b }, side = (p, q, r) => (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x);
+  const crosses = side(a, b, lane.a) * side(a, b, lane.b) < 0 && side(lane.a, lane.b, a) * side(lane.a, lane.b, b) < 0;
+  return crosses || Math.min(vmLaneProject(a, lane).d, vmLaneProject(b, lane).d, vmLaneProject(lane.a, path).d, vmLaneProject(lane.b, path).d) < lane.r;
+}
+function vmAiYieldRoute(a) {
+  const goal = { x: a.tx, z: a.tz }, P = VM.poss[a.team];
+  if (VM.phase !== 'rally' || !P || VM.touch.team !== a.team || a.y > .05) return goal;
+  if ((P.stage === 1 && P.setter === a.id) || (P.stage === 2 && P.attacker === a.id) || P.stage < 1 || P.stage > 2) return goal;
+  const lanes = [];
+  if (P.stage === 1 && P.setter) {
+    const q = vmPos(P.setter), b = VM.ball && vmBallL(VM.ball), p = b && (vmPredL(b, 2.2) || vmPredL(b, 1));
+    if (q && p) lanes.push({ a: q, b: p, r: .85, id: P.setter });
+    // 球還沒舉出去時，真人 OH 也需要先助跑，掩護者不能卡住他的起步。
+    for (const id of VM.team[a.team]) if (id !== a.id && id !== P.setter && !VM.ai.has(id)) { const lane = vmAttackLane(a.team, id); if (lane) lanes.push(lane); }
+  } else if (P.attacker && P.attacker !== a.id) { const lane = vmAttackLane(a.team, P.attacker); if (lane) lanes.push(lane); }
+  let nav = goal;
+  for (const lane of lanes) {
+    const here = vmLaneProject(a, lane);
+    if (here.d < lane.r) { nav = vmLaneClearPoint(a, lane); continue; }
+    nav = vmLaneClearPoint(nav, lane);
+    // 跑位兩端在助跑線不同側：從起跳點前方繞過，不直穿攻擊手的路。
+    if (vmLanePathHits(a, nav, lane)) {
+      const sign = Math.sign(here.side) || 1, pad = lane.r + .45;
+      nav = { x: lane.b.x + here.ux * pad - here.uz * sign * pad, z: lane.b.z + here.uz * pad + here.ux * sign * pad };
+    }
+  }
+  return nav;
+}
+function vmAiSetAttack(a, P, B, pick, low) {
+  if (!pick.id || pick.id === a.id) { vmAiFree(a, vmSide(a.team)); return; }
+  const sd = vmSide(a.team), back = !vm6Front(pick.id), far = Math.max(0, Math.abs(a.x) - 2.6);
+  const fix = low || !!P.fix || far > 0.8;
+  const zone = vmSmallCount() ? CourtFormations.get(vmSmallCount())[vm6Idx(pick.id)] : null;
+  const L = zone ? clamp(zone.L, -3.0, 3.0) : pick.n === 7 || pick.n === 1 ? 3 : pick.n === 5 || pick.n === 3 ? -3 : 0;
+  // 所有人數共用：依選中的攻擊手是否在後排決定球深度，修正球與低手舉球也不能強制送到網前。
+  const T = (low ? 1.65 : fix ? 1.5 : 1.3) + Math.min(far, 4) * 0.06;
+  vmAiTouch(a, sd * (back ? 4.4 : 1.2), sd * L, 3.1, T, Math.min(vmLv(a).setErr * (fix ? 1.5 : 1), 0.5), 'set', low ? 3 : 2, false, back);
+  if (VM.poss[a.team]?.stage === 2) { VM.poss[a.team].attacker = pick.id; VM.poss[a.team].fix = fix; VM.poss[a.team].td = false; }
 }
 function vmSmallChooseSet(a,B) {
   // 沒有固定分工：舉球的人以外每個人都可以打，照他現在的區域選球路（前排左＝1、前排右＝3、後排左＝7、後排中＝4、後排右＝5）

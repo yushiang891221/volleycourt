@@ -86,7 +86,7 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
  for(const f of ['gym.html','index.html'])assert(read(f).includes('src="settings.js"')&&read(f).includes('href="settings.css"'));
 });
 // WEB-003D 依使用者要求改了接重扣（蹲接）和舉球（新增後排 5 號位），vbJump～SETM、vbSet～vbAssist 兩段，以及 AI 分工所在的 vmJudge～vm6Start，不再跟 WEB-001 基準比對
-await check('physics, movement, hit calculations and AI remain unchanged',()=>{
+await check('unmodified physics, scoring, rotation and transports match baseline; AI fixes have dedicated regression checks',()=>{
  const old=execFileSync('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'show','9351dab:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
  // WEB-003 changes only startup/stop/end presentation in this formerly broad range.
  // Keep exact comparisons for every intervening physics, scoring and AI section.
@@ -95,6 +95,15 @@ await check('physics, movement, hit calculations and AI remain unchanged',()=>{
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
   // 球館計分板跟著比賽比分（只是顯示），不算物理／玩法：兩邊都拿掉 drawScore 這段再比
   const noScore=t=>{const i=t.indexOf('function drawScore() {'),j=t.indexOf('function addPoint(');return i>=0&&j>i?t.slice(0,i)+t.slice(j):t;};current=noScore(current);previous=noScore(previous);
+  // Intentional AI bug fixes are exercised by verify-ai-attack-routing and verify-3v3-back-sets.
+  // Retain exact comparison of the surrounding rotation, blocking, scoring and transport code.
+  const changedAi = t => {
+    for (const [from,to] of [['function vm6Spot(', '// 接發球陣型'],['function vm6ChooseSet(', '// 攔網：只有前排'],['function vm6Brain(', '// 對面要攻擊'],['function vm6CoverPlan(', '// 連線的人']]) {
+      const i=t.indexOf(from),j=t.indexOf(to,i); if(i>=0&&j>i)t=t.slice(0,i)+`/* ${from} verified by attack routing tests */\n`+t.slice(j);
+    }
+    return t;
+  };
+  current=changedAi(current);previous=changedAi(previous);
   // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
   // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
   current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/^  if \(vmSmallCount\(\).*\/\/ 小人數.*\n/gm,'').replace(/^.*\/\/ 後排 5 號位.*\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');
