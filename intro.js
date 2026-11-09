@@ -3,10 +3,31 @@
   const $ = id => document.getElementById(id);
   const intro = $('intro'), motion = matchMedia('(prefers-reduced-motion: reduce)');
   const state = window.VBIntro = { entered: false };
+  let creatorReady = false;
   let stage = 'intro', spinFrame = 0, stopSpike, deadline;
 
-  function enterLobby(immediate = false) {
-    if (stage === 'leaving' || stage === 'lobby') return;
+  async function enterLobby(immediate = false) {
+    if (stage === 'leaving' || stage === 'lobby' || stage === 'creator') return;
+    if (!creatorReady) {
+      stage = 'creator'; clearTimeout(deadline); cancelAnimationFrame(spinFrame);
+      stopSpike?.(); stopSpike = null;
+      try {
+        const { needsCreator } = await import('./appearance.js');
+        if (needsCreator()) {
+          const { editAppearance } = await import('./character-panel.js');
+          intro.close(); intro.hidden = true;
+          await editAppearance('create');
+        }
+        creatorReady = true;
+      } catch {
+        stage = 'intro'; intro.hidden = false;
+        $('intro-content').hidden = false; $('anim3d').hidden = true;
+        $('phase').hidden = true; $('skip-playing').hidden = true;
+        $('start').disabled = false; $('ball-start').disabled = false;
+        $('start').textContent = '載入或儲存失敗，按此重試';
+        intro.showModal(); return;
+      }
+    }
     stage = 'leaving'; clearTimeout(deadline); cancelAnimationFrame(spinFrame);
     stopSpike?.(); stopSpike = null;
     intro.classList.add('leaving');
@@ -23,28 +44,8 @@
     if (immediate || motion.matches) finish(); else setTimeout(finish, 420);
   }
 
-  async function start() {
-    if (stage !== 'intro') return;
-    if (motion.matches) { enterLobby(); return; }
-    stage = 'loading';
-    $('start').disabled = true; $('start').textContent = '載入中…';
-    $('ball-start').disabled = true;
-    $('skip').focus({ preventScroll: true });
-    deadline = setTimeout(() => enterLobby(), 10000);
-    try {
-      const { playSpike3D } = await import('./spike3d.js');
-      if (stage !== 'loading') return; // Ignore a late load after skip or timeout.
-      clearTimeout(deadline); stage = 'playing';
-      cancelAnimationFrame(spinFrame);
-      $('anim3d').hidden = false;
-      stopSpike = playSpike3D($('anim3d'), (name, i, total) => {
-        $('phase').querySelector('b').textContent = `${i + 1}/${total}`;
-        $('phase').querySelector('span').textContent = name;
-      }, () => enterLobby(), { onError: () => enterLobby() });
-      $('intro-content').hidden = true; $('phase').hidden = false;
-      $('skip-playing').hidden = false; $('skip-playing').focus({ preventScroll: true });
-      deadline = setTimeout(() => enterLobby(), 20000);
-    } catch (_) { enterLobby(); }
+  function start() {
+    if (stage === 'intro') enterLobby();
   }
 
   $('start').addEventListener('click', start);

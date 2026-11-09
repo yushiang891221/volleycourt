@@ -116,6 +116,10 @@ await check('unmodified physics, scoring, rotation and transports match baseline
   current=current.replace('function vm6RotToast() {\n ', 'function vm6RotToast() { ').replace('function vm6CoverSpot(a, attId) {\n ', 'function vm6CoverSpot(a, attId) { ');
   current=current.replace('return vmSmallCount() ? (vmSmallCount() === 1 || !!CourtFormations.get(vmSmallCount())[k]?.front) : k >= 1 && k <= 3;', 'return k >= 1 && k <= 3;');
   current=current.replace('back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;', 'back = k6 === 0 || k6 >= 4;');
+  // WEB-005C 外觀接線由 verify-web005c 驗證，保留其他邏輯逐字比對。
+  current=current.replace('function vmPickChar(used) {\n  const code = aiLook(used.size); used.add(code); return code;\n}', 'function vmPickChar(used) { return null; }')
+    .replace('  ch = aiLook(id); VM.chars[id] = ch;\n', '')
+    .replace('const av = makeAvatar(color, ch, team), el =', 'const av = makeAvatar(color, ch), el =');
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));

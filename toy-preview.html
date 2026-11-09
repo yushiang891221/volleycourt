@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>角色預覽</title>
+<style>
+html,body{margin:0;height:100%;background:#E9DED0;font:14px "Microsoft JhengHei",sans-serif;color:#3A2A20;overflow:hidden}
+#ui{position:absolute;right:12px;top:12px;width:230px;background:#FFF8EFee;border-radius:12px;padding:10px 12px;max-height:calc(100% - 48px);overflow:auto}
+#ui label{display:flex;justify-content:space-between;align-items:center;margin:5px 0;gap:8px}
+#ui select,#ui input{width:120px}
+#ui button{width:100%;margin-top:6px;padding:6px;border:0;border-radius:8px;background:#F08A3C;color:#fff;font:inherit;cursor:pointer}
+#code{font:12px monospace;margin-top:6px;word-break:break-all}
+body.shot #ui{display:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<div id="ui"></div>
+<script>addEventListener('error',(e)=>{const d=document.createElement('div');d.id='__errbox';d.style.cssText='position:fixed;left:0;top:0;z-index:9;background:#fff;color:red;font:14px monospace';d.textContent=e.message+' @'+e.lineno;document.body.appendChild(d);});</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { makeToyAvatar, OPTIONS, DEFAULT_LOOK, encodeLook, decodeLook, randomLook, setExpression, EXPRESSIONS } from './avatar-toy.js';
+
+// 從 gym.html 的 AVP 複製幾個代表姿勢（只看外觀用；遊戲裡還是用 gym.html 那份）
+const AVP = {
+  idle: { sh: [[-0.08, 0.1], [-0.08, 0.1]], el: [0.3, 0.3], hip: [0.02, 0.02], kn: [0.06, 0.06], sp: 0.04, tw: 0 },
+  ready: { sh: [[-0.62, 0.22], [-0.62, 0.22]], el: [0.95, 0.95], hip: [0.85, 0.85], kn: [1.3, 1.3], hab: [0.2, 0.2], sp: 0.58, tw: 0 },
+  bump: { sh: [[-0.98, -0.14], [-0.98, -0.14]], el: [0.02, 0.02], hip: [0.92, 0.92], kn: [1.42, 1.42], hab: [0.2, 0.2], sp: 0.55, tw: 0 },
+  setReady: { sh: [[-2.55, 0.45], [-2.55, 0.45]], el: [1.75, 1.75], hip: [0.38, 0.3], kn: [0.68, 0.55], hab: [0.08, 0.08], sp: -0.04, tw: 0 },
+  setPush: { sh: [[-2.98, 0.16], [-2.98, 0.16]], el: [0.18, 0.18], hip: [0.1, 0.06], kn: [0.14, 0.1], hab: [0.06, 0.06], sp: -0.14, tw: 0 },
+  approach: { sh: [[0.95, 0.18], [0.95, 0.18]], el: [0.12, 0.12], hip: [0.8, 0.45], kn: [1.3, 0.95], hab: [0.1, 0.1], sp: 0.62, tw: 0 },
+  airUp: { sh: [[-2.6, 0.75], [-2.75, 0.12]], el: [2.15, 0.22], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.42, tw: 0.45 },
+  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: -0.28, shy: [0.1, 0] },
+  serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35 },
+  block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, shy: [0.08, 0.08] },
+  land: { sh: [[-0.55, 0.35], [-0.55, 0.35]], el: [0.75, 0.75], hip: [0.9, 0.9], kn: [1.5, 1.5], hab: [0.16, 0.16], sp: 0.45, tw: 0 },
+};
+const POSE_NAMES = { idle: '站立', ready: '接球準備', bump: '低手接球', setReady: '舉球準備', setPush: '舉球推出', approach: '助跑', airUp: '空中拉弓', spikeHit: '扣球', serveToss: '發球拋球', block: '攔網', land: '落地' };
+// 跟 avDrive 靜止時一樣的套法
+function pose(av, P) {
+  const ext = [0, 0];
+  for (let i = 0; i < 2; i++) {
+    const sx = i === 0 ? -1 : 1, a = av.arms[i], h = av.legs[i], kn = av.knees[i];
+    if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + (P.shy || [0, 0])[i];
+    a.rotation.set(P.sh[i][0], 0, sx * P.sh[i][1]); av.elbows[i].rotation.x = -P.el[i];
+    h.rotation.set(-P.hip[i], 0, sx * (P.hab || [0, 0])[i]); kn.rotation.x = P.kn[i];
+    ext[i] = (av.L1 * Math.cos(P.hip[i]) + av.L2 * Math.cos(P.hip[i] - P.kn[i])) * Math.cos((P.hab || [0, 0])[i]);
+    av.feet[i].rotation.set(-(h.rotation.x + kn.rotation.x) * 0.9, 0, -h.rotation.z);
+  }
+  av.spine.rotation.set(P.sp, P.tw || 0, 0); av.head.rotation.x = -P.sp * 0.6;
+  av.root.position.y = -Math.max(0, av.hipH - Math.max(ext[0], ext[1]));
+}
+
+const Q = new URLSearchParams(location.search), shot = Q.has('shot');
+if (shot) document.body.classList.add('shot');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#E9DED0');
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 100);
+scene.add(new THREE.HemisphereLight('#FFF6EA', '#B08A62', 1.6));
+const sun = new THREE.DirectionalLight('#FFFFFF', 2.2); sun.position.set(2.5, 5, 4); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4;
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 }); scene.add(sun);
+const fill = new THREE.DirectionalLight('#FFE6CC', 0.7); fill.position.set(-3, 2, -2); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: '#D9B48A', roughness: 0.55 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+let look = Q.get('look') ? decodeLook(Q.get('look')) : { ...DEFAULT_LOOK }, team = Q.get('team') || '#F08A3C', poseKey = Q.get('pose') || 'idle', avs = [];
+const grid = Q.has('grid');
+function rebuild() {
+  for (const a of avs) scene.remove(a.g); avs = [];
+  const list = grid ? [0, 1, 2, 3, 4, 5].map((i) => ({ L: randomLook(i + 1 + (+Q.get('seed') || 0)), c: i % 2 ? '#3E63DD' : '#E5484D' })) : [{ L: look, c: team }];
+  list.forEach((it, i) => { const av = makeToyAvatar(it.L, it.c); av.g.position.x = grid ? (i - 2.5) * 0.85 : 0; pose(av, AVP[poseKey]); if (Q.get('expr')) setExpression(av, Q.get('expr')); scene.add(av.g); avs.push(av); });
+  const code = document.getElementById('code'); if (code) code.textContent = encodeLook(look);
+}
+const view = Q.get('view') || 'front', ang = Q.has('ang') ? +Q.get('ang') : { front: 0.35, side: Math.PI / 2, back: Math.PI + 0.3, face: 0.15 }[view] ?? 0.35;
+const dist = Q.has('dist') ? +Q.get('dist') : grid ? 7.5 : view === 'face' ? 1.6 : 4.4, ty = Q.has('ty') ? +Q.get('ty') : view === 'face' ? 1.35 : 0.9;
+camera.position.set(Math.sin(ang) * dist, ty + (grid ? 0.6 : 0.35), Math.cos(ang) * dist); controls.target.set(0, ty, 0); controls.update();
+
+// 介面
+const ui = document.getElementById('ui');
+const LABEL = { sex: '性別', skin: '膚色', hair: '髮型', hairColor: '髮色', eyes: '眼睛', top: '球衣', pants: '褲子', knee: '護膝', shoe: '球鞋' };
+const COLOR_NAMES = { skin: ['很淺', '淺', '自然', '小麥', '深', '很深'], hairColor: ['黑', '深棕', '棕', '金', '紅', '灰'], shoe: ['紅', '白', '黑', '藍'] };
+let html = '';
+for (const k in LABEL) html += `<label>${LABEL[k]}<select data-k="${k}">${OPTIONS[k].map((v, i) => `<option value="${i}">${(COLOR_NAMES[k] || OPTIONS[k])[i]}</option>`).join('')}</select></label>`;
+html += `<label>背號<input type="number" min="0" max="99" data-k="num"></label>`;
+html += `<label>隊伍顏色<select id="team"><option>#F08A3C</option><option>#E5484D</option><option>#3E63DD</option><option>#30A46C</option></select></label>`;
+html += `<button id="rand">隨機外觀</button><div id="code"></div><hr><div style="font-size:12px;opacity:.7">預覽用（遊戲中按 T 換表情、動作）</div>`;
+html += `<label>動作<select id="pose">${Object.keys(AVP).map((k) => `<option value="${k}">${POSE_NAMES[k]}</option>`).join('')}</select></label>`;
+html += `<label>表情<select id="expr">${Object.entries(EXPRESSIONS).map(([k, v]) => `<option value="${k}">${v.replace('<', '&lt;').replace('>', '&gt;')}</option>`).join('')}</select></label>`;
+ui.innerHTML = html;
+const sync = () => { ui.querySelectorAll('[data-k]').forEach((el) => (el.value = look[el.dataset.k])); ui.querySelector('#team').value = team; ui.querySelector('#pose').value = poseKey; };
+ui.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset.k) look[el.dataset.k] = +el.value; else if (el.id === 'team') team = el.value; else if (el.id === 'pose') poseKey = el.value;
+  if (el.dataset.k === 'pants' && +el.value === 1) look.knee = 2; rebuild(); const ex = ui.querySelector('#expr').value; if (ex) avs.forEach((a) => setExpression(a, ex)); sync();
+});
+ui.querySelector('#rand').onclick = () => { look = randomLook(Math.floor(Math.random() * 1e6)); sync(); rebuild(); };
+sync(); rebuild();
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body></html>

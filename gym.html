@@ -923,6 +923,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 <script type="importmap" id="app-importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module" id="app-script">
 import * as THREE from 'three';
+import { makeToyAvatar, decodeLook } from './avatar-toy.js';
+import { readLook, normalizeLook, teamKit, aiLook } from './appearance.js';
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
@@ -7044,7 +7046,7 @@ function renderMpList() {
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
 // 所有玩家與 AI 統一使用內建人形；通用造型工具保留給後續外觀系統。
-const myChar = () => null;
+const myChar = () => normalizeLook(readLook());
 // 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
 const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toonCache = new Map();
@@ -7258,39 +7260,20 @@ function makeChibi(C) {
   chMerge(g);
   return { g, body, root, spine, head, hc, arms, elbows, hands, legs, knees, feet, phase: 0, rig: true, L1: 0.46, L2: 0.52, hipH: 0.98, chibi: true };
 }
-function makeAvatar(color, ch) {
-  // 舊版傳入的外觀代碼一律忽略，維持內建人形與原有判定。
-  // 人形骨架：body（跳的時候整個往上）→ root（蹲低時往下）→ 大腿／膝蓋／小腿、腰（上身前傾、轉身）→ 肩膀／手肘／手掌、頭
-  // 面向 +z；[0] 是右手／右腳（打球、拿拍的那隻）
-  const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
-  const skin = mat('#D9A57E'), jersey = mat(color, { roughness: 0.7 }), dark = mat('#22304A', { roughness: 0.7 }), shoe = mat('#F4F4F2');
-  const add = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
-  const legs = [], knees = [];
-  for (const sx of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(sx * 0.1, 0.9, 0); root.add(hip);
-    add(new THREE.CylinderGeometry(0.075, 0.06, 0.44, 12), skin, 0, -0.22, 0, hip);
-    const knee = new THREE.Group(); knee.position.set(0, -0.44, 0); hip.add(knee);
-    add(new THREE.SphereGeometry(0.06, 10, 8), skin, 0, 0, 0, knee); add(new THREE.CylinderGeometry(0.058, 0.045, 0.42, 12), skin, 0, -0.21, 0, knee);
-    add(new THREE.BoxGeometry(0.11, 0.07, 0.26), shoe, 0, -0.43, 0.05, knee);
-    legs.push(hip); knees.push(knee);
-  }
-  add(new THREE.CylinderGeometry(0.17, 0.155, 0.26, 16), dark, 0, 0.9, 0, root);   // 短褲
-  const spine = new THREE.Group(); spine.position.set(0, 0.98, 0); root.add(spine);
-  add(new THREE.CylinderGeometry(0.18, 0.16, 0.5, 16), jersey, 0, 0.27, 0, spine);
-  const arms = [], elbows = [], hands = [];
-  for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.22, 0.52, 0); spine.add(sh);
-    add(new THREE.SphereGeometry(0.055, 10, 8), jersey, 0, 0, 0, sh); add(new THREE.CylinderGeometry(0.046, 0.04, 0.3, 10), skin, 0, -0.15, 0, sh);
-    const el = new THREE.Group(); el.position.set(0, -0.3, 0); sh.add(el);
-    add(new THREE.SphereGeometry(0.04, 8, 6), skin, 0, 0, 0, el); add(new THREE.CylinderGeometry(0.04, 0.034, 0.27, 10), skin, 0, -0.135, 0, el);
-    const hd = new THREE.Group(); hd.position.set(0, -0.29, 0); el.add(hd); add(new THREE.SphereGeometry(0.045, 10, 8), skin, 0, 0, 0, hd);
-    arms.push(sh); elbows.push(el); hands.push(hd);
-  }
-  const head = new THREE.Group(); head.position.set(0, 0.62, 0); spine.add(head);
-  add(new THREE.CylinderGeometry(0.05, 0.055, 0.1, 10), skin, 0, 0.0, 0, head);
-  add(new THREE.SphereGeometry(0.12, 18, 14), skin, 0, 0.13, 0, head);
-  add(new THREE.SphereGeometry(0.125, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat('#1F2124'), 0, 0.16, 0, head);
-  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, phase: 0, rig: true };
+function makeAvatar(color, ch, team = -1) {
+  const av = makeToyAvatar(decodeLook(ch), teamKit(team));
+  av.gameKit = teamKit(team);
+  return av;
+}
+function refreshPeerAppearance(p2) {
+  const kit = teamKit(VM.on ? vmTeamOf(p2.id) : -1);
+  if (p2.av.gameKit === kit && p2.avCode === p2.ch) return;
+  const old = p2.av, av = makeAvatar(p2.c, p2.ch, VM.on ? vmTeamOf(p2.id) : -1);
+  av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation);
+  av.body.position.copy(old.body.position); av.phase = old.phase;
+  av.g.add(p2.tag);
+  if (p2.racket) av.hands[0].add(p2.racket);
+  scene.remove(old.g); scene.add(av.g); p2.av = av; p2.avCode = p2.ch;
 }
 // ---- 全身姿勢（弧度）：sh＝肩膀 [往前抬（負）, 往外張]、el＝手肘彎、hip＝大腿往前抬、kn＝膝蓋彎、sp＝上身前傾（負＝後仰）、tw＝上身轉、arm＝跑步時手要不要擺
 // 參考排球動作：接球低重心、前臂伸直併攏成平台；舉球雙手在額頭前、手肘彎成窗戶再一起推出去；扣球起跳拉弓（右手肘高、左手指球）、揮臂、收在身體另一側；攔網雙手伸直往網子上方壓
@@ -7603,11 +7586,8 @@ function netOnMessage(t, d, from) {
     p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
     if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) { const L = netLat(from); p2.jump = d.jp.vy ? { vy: d.jp.vy - JUMP_G * L, y: d.jp.vy * L - 0.5 * JUMP_G * L * L } : { h: d.jp.h, T: d.jp.T, t: L }; } }   // 照延遲往前推
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
-    const dch = null;
-    if (dch !== (p2.ch || null)) {   // 換角色：重做人形，名牌、球拍搬過去
-      p2.ch = dch; const old = p2.av, av = makeAvatar(p2.c, p2.ch); av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation); scene.remove(old.g); old.g.remove(p2.tag); av.g.add(p2.tag); scene.add(av.g);
-      if (p2.racket) { old.hands[0].remove(p2.racket); av.hands[0].add(p2.racket); } p2.av = av;
-    }
+    const dch = normalizeLook(d.ch);
+    p2.ch = dch; refreshPeerAppearance(p2);
     if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
     p2.tossing = !!d.ts; p2.bs = d.bs || 0;   // 攔網雙手往哪邊移
@@ -7693,6 +7673,7 @@ function netTick(dt, now) {
   // 對方的人形：最新一筆位置＋速度往前推算到「現在」（最多 0.5 秒），畫面平滑靠過去；差太多（瞬移、剛進來）就直接跳過去
   const k = 1 - Math.exp(-dt * 14), kp = 1 - Math.exp(-dt * 15);
   for (const p2 of NET.peers.values()) {
+    refreshPeerAppearance(p2);
     const Ls = p2.last; if (!Ls) continue;
     const age = Math.min(0.5, (now - Ls.t) / 1000 + netLat(p2.id)), vx = Ls.vx || 0, vz = Ls.vz || 0, tx = Ls.x + vx * age, tz = Ls.z + vz * age;
     const ox = p2.x, oz = p2.z, far = p2.seen == null || Math.hypot(tx - p2.x, tz - p2.z) > 3; p2.seen = true;
@@ -9930,8 +9911,9 @@ function myAvPose() {
 function tpBegin(dt) {
   const on = tpActive(); $('walk-ui').classList.toggle('tp', on);
   if (!on) { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } return false; }
-  if (TP.av && TP.avCh !== myChar()) { scene.remove(TP.av.g); TP.av = null; }   // 換了角色就重做
-  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
+  const kit = teamKit(VM.on ? vmTeamOf(vmMe()) : -1);
+  if (TP.av && (TP.avCh !== myChar() || TP.av.gameKit !== kit)) { scene.remove(TP.av.g); TP.av = null; }   // 換了角色就重做
+  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
   av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
@@ -10062,9 +10044,12 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   vmSetupServe();
   toast(`2 對 2 開始！先到 ${VM.to} 分・對手：${opps.length ? VM.team[1].map(vmName).join('＋') : 'AI（' + VM_LEVELS[VM_OPT.lv].name + '）'}`, 2400);
 }
-function vmPickChar(used) { return null; }
+function vmPickChar(used) {
+  const code = aiLook(used.size); used.add(code); return code;
+}
 function vmMkAi(id, team, name, color, ch) {
-  const av = makeAvatar(color, ch), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
+  ch = aiLook(id); VM.chars[id] = ch;
+  const av = makeAvatar(color, ch, team), el = document.createElement('div'); el.className = 'mp-tag'; el.textContent = name;
   const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); av.g.add(tag); scene.add(av.g);
   const side = vmSide(team), a = { id, team, name, color, ch, av, tag, x: side * 6, z: id === 'ai2' ? -2 : 2, vx: 0, vz: 0, y: 0, vy: 0, pose: 0, swingT: 0, reactAt: 0, tx: side * 6, tz: 0 };
   VM.ai.set(id, a); VM.names[id] = name; return a;

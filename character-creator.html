@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>捏臉畫面</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body style="margin:0">
+<script type="module">
+// 單獨測試捏臉畫面用。?mode=edit 看「調整外觀」版；?cat=hair 一開始停在哪個部位（截圖用）
+import { openCreator } from './creator.js';
+import { encodeLook, decodeLook } from './avatar-toy.js';
+const Q = new URLSearchParams(location.search);
+let saved = null; try { saved = localStorage.getItem('vb.look'); } catch {}
+const open = () => openCreator({
+  look: saved ? decodeLook(saved) : undefined, mode: Q.get('mode') || 'create',
+  onDone: (L) => { saved = encodeLook(L); try { localStorage.setItem('vb.look', saved); } catch {} document.body.innerHTML = `<p style="font:16px sans-serif;padding:20px">已儲存：${saved}　<button id="again">再開一次</button></p>`; document.getElementById('again').onclick = open; },
+  onCancel: () => (document.body.innerHTML = '<p style="font:16px sans-serif;padding:20px">已取消</p>'),
+});
+open();
+if (Q.has('dbg')) setTimeout(() => { const c = document.querySelector('.cc-stage canvas'); const dd = document.createElement('div'); dd.style.cssText = 'position:fixed;left:20px;top:80px;z-index:99;font:20px monospace;background:#fff'; document.body.appendChild(dd); dd.textContent = JSON.stringify({ w: c.width, h: c.height, cw: c.clientWidth, ch: c.clientHeight, sw: c.parentElement.clientWidth, sh: c.parentElement.clientHeight, err: window.__err || '', cam: window.__cc.camera.position.toArray().map((v) => v.toFixed(2)), calls: window.__cc.renderer.info.render.calls, frames: window.__cc.renderer.info.render.frame, kids: window.__cc.scene.children.length, avy: window.__cc.av && window.__cc.av.g.position.y, pm: window.__cc.camera.projectionMatrix.elements[0].toFixed(3), asp: window.__cc.camera.aspect, px: (() => { const r = window.__cc.renderer, gl = r.getContext(); r.render(window.__cc.scene, window.__cc.camera); const b = new Uint8Array(4); gl.readPixels(gl.drawingBufferWidth >> 1, gl.drawingBufferHeight >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b); return [...b].join(','); })() });   const im = new Image(); im.src = window.__cc.renderer.domElement.toDataURL(); im.style.cssText = 'position:fixed;left:20px;top:140px;width:420px;z-index:99;border:3px solid red'; document.body.appendChild(im); }, 3000);
+addEventListener('error', (e) => (window.__err = e.message));
+if (Q.get('cat')) setTimeout(() => [...document.querySelectorAll('.cc-cat')].find((e) => e.textContent.includes(Q.get('cat')))?.click(), 50);
+</script>
+</body></html>

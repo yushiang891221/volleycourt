@@ -159,3 +159,9 @@ main { grid-template-rows: minmax(0, 1.25fr) minmax(170px, 1fr); }
 .empty { gap: 6px; }
 .empty .icon { width: 28px; height: 28px; margin-bottom: 0; }
 .empty strong { font-size: 15px; }
+
+#character-panel { width: 580px; background: #152236; color: #e5edf7; }
+.character-info { display: flex; gap: 28px; align-items: center; }
+.character-info img { object-fit: contain; border-radius: 12px; }
+.character-info dl { display: grid; grid-template-columns: auto auto; gap: 16px 24px; }
+.character-info dd { margin: 0; }

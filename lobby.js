@@ -92,6 +92,10 @@ const client=VBLobby.connect({hello:()=>({name:nickname||'球友',status:'大廳
  if(m.k==='chat')appendChat(m.chat,true);if(m.k==='error')notify(m.reason);if(m.k==='joined')enter(m);
 }});
 function send(m){if(!client.send(m))notify('大廳尚未連線，請稍後再試');}
+$('character-info').addEventListener('click', async () => {
+ try { const { openCharacterPanel } = await import('./character-panel.js'); openCharacterPanel(); }
+ catch { notify('角色資訊載入失敗，請稍後重試'); }
+});
 $('system-settings').addEventListener('click',()=>VBSettings.open());
 addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
 function welcome(){if(!nickname)$('nickname').showModal();}
