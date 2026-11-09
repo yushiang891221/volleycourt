@@ -15,9 +15,12 @@ export function editAppearance(mode = 'edit') {
     const finish = result => { cleanup(); resolve(result); };
     try {
       close = openCreator({ mode, look: decodeLook(readLook()),
-        onDone(look) {
-          try { saveLook(look); finish(true); }
-          catch (error) { cleanup(); reject(error); }
+        async onDone(look) {
+          try {
+            saveLook(look);
+            const { syncAppearance } = await import('./account-flow.js'); await syncAppearance();   // 登入模式：存進帳號
+            finish(true);
+          } catch (error) { cleanup(); reject(error); }
         },
         onCancel() { finish(false); }
       });
@@ -47,12 +50,16 @@ export function openCharacterPanel() {
   if (!dialog) {
     dialog = document.createElement('dialog'); dialog.id = 'character-panel';
     dialog.setAttribute('aria-labelledby', 'character-title');
-    dialog.innerHTML = '<form method="dialog"><h2 id="character-title">角色資訊</h2><div class="character-info"><img alt="你的角色預覽" width="240" height="300"><div><h3></h3><dl><dt>等級</dt><dd>—</dd><dt>場數</dt><dd>—</dd><dt>勝率</dt><dd>—</dd><dt>遊玩時數</dt><dd>—</dd></dl></div></div><p class="form-error" role="status"></p><div class="buttons"><button type="button" class="orange" data-edit>調整外觀</button><button>關閉</button></div></form>';
+    dialog.innerHTML = '<form method="dialog"><h2 id="character-title">角色資訊</h2><div class="character-info"><img alt="你的角色預覽" width="240" height="300"><div><h3></h3><dl><dt>等級</dt><dd>—</dd><dt>場數</dt><dd>—</dd><dt>勝率</dt><dd>—</dd><dt>遊玩時數</dt><dd>—</dd></dl></div></div><p class="form-error" role="status"></p><div class="buttons"><button type="button" class="orange" data-edit>調整外觀</button><button type="button" data-logout hidden>登出</button><button>關閉</button></div></form>';
     document.body.append(dialog);
+    import('./account-flow.js').then(({ accountEnabled, signOut }) => {
+      const b = dialog.querySelector('[data-logout]'); b.hidden = !accountEnabled();
+      b.onclick = async () => { try { await signOut(); } catch (e) { dialog.querySelector('.form-error').textContent = (e && e.message) || '登出失敗'; } };
+    });
     dialog.querySelector('[data-edit]').onclick = async () => {
       dialog.close();
       try { await editAppearance('edit'); openCharacterPanel(); }
-      catch { openCharacterPanel(); dialog.querySelector('.form-error').textContent = '外觀儲存失敗，請確認瀏覽器允許本機儲存後重試。'; }
+      catch (e) { openCharacterPanel(); dialog.querySelector('.form-error').textContent = (e && e.message) || '外觀儲存失敗，請重試。'; }
     };
   }
   dialog.querySelector('h3').textContent = window.VBSettings.values.nickname || '球友';

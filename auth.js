@@ -70,6 +70,9 @@ export function createAccountService(client) {
   }
   return {
     read, save,
+    async signedIn() {   // 只判斷有沒有登入，不丟錯
+      try { const { data } = await client.auth.getSession(); return data?.session?.user?.id || null; } catch { return null; }
+    },
     async migrate(local) {
       const current = await read();
       const patch = migrationPatch(current, local);

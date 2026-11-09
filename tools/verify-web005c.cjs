@@ -42,17 +42,17 @@ async function introFlow(saved, hash = '') {
   let finishCreator, opened = 0;
   const c = vm.createContext({
     window: {}, document: { getElementById: element, body: element('body') },
-    matchMedia: () => ({ matches: true, addEventListener() {} }), location: { hash },
+    matchMedia: () => ({ matches: true, addEventListener() {} }), location: { hash, search: '', pathname: '/' }, history: { replaceState() {} },
     addEventListener() {}, dispatchEvent: event => events.push(event.type), Event,
     Image: class {}, setTimeout, clearTimeout, cancelAnimationFrame() {},
     requestAnimationFrame() { return 1; },
-    load: async file => file === './appearance.js' ? { needsCreator: () => !saved } : {
+    load: async file => file === './account-flow.js' ? { accountGate: async () => 'guest' } : file === './appearance.js' ? { needsCreator: () => !saved } : {
       editAppearance: () => { opened++; return new Promise(resolve => { finishCreator = resolve; }); }
     }
   });
   vm.runInContext(read('intro.js').replace(/import\(/g, 'load('), c);
   if (!hash) element('start').listeners.click();
-  await new Promise(setImmediate);
+  for (let i = 0; i < 5; i++) await new Promise(setImmediate);
   assert.equal(opened, saved ? 0 : 1);
   if (!saved) {
     assert.equal(c.window.VBIntro.entered, false);

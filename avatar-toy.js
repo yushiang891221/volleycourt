@@ -339,6 +339,7 @@ async function loadAvatar(sex) {
 }
 export function preloadAvatars() {
   if (!avatarPromise) avatarPromise = (async () => {
+    if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('avatar') === 'legacy') return false;   // 開發用：?avatar=legacy 用舊的程式角色（比較效能）
     try { jerseyLayout = await readAvatarJSON('models/jersey_layout.json'); }
     catch (error) { console.warn('[avatar] 球衣排版載入失敗，使用備用角色', error); return false; }
     await Promise.all([0, 1].map(async sex => {

@@ -12,6 +12,10 @@
       stage = 'creator'; clearTimeout(deadline); cancelAnimationFrame(spinFrame);
       stopSpike?.(); stopSpike = null;
       try {
+        intro.close(); intro.hidden = true;
+        const { accountGate } = await import('./account-flow.js');
+        await accountGate();   // 有設定 Supabase 才會要求登入；訪客模式直接過
+        if (/[?&](code|error|error_description)=/.test(location.search)) history.replaceState(null, '', location.pathname);
         const { needsCreator } = await import('./appearance.js');
         if (needsCreator()) {
           const { editAppearance } = await import('./character-panel.js');
@@ -63,7 +67,7 @@
     if (stage === 'intro') spin(0);
     else if (stage === 'loading' || stage === 'playing') enterLobby(true);
   });
-  if (location.hash === '#lobby') { enterLobby(true); return; }
+  if (location.hash === '#lobby' || /[?&](code|error)=/.test(location.search)) { enterLobby(true); return; }   // 從 Google 登入回來就直接接著走
   if (!intro.open) intro.showModal();
   $('start').focus({ preventScroll: true });
 
