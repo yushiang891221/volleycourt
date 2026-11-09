@@ -1,5 +1,5 @@
 // 捏臉畫面：建帳號時第一次進來、之後從「角色資訊 → 調整外觀」進來。
-// openCreator({ look, mode: 'create' | 'edit', onDone(look), onCancel() }) → 回傳 close()。
+// openCreator({ look, background, mode: 'create' | 'edit', onDone(look), onCancel() }) → 回傳 close()。
 // 左邊：排球場上的角色（可以拖曳轉身、滾輪拉近）；右邊：部位格子 → 樣式格子，直接點選。
 import * as THREE from 'three';
 import { makeToyAvatar, OPTIONS, DEFAULT_LOOK, KITS, EXPRESSIONS, PREVIEW_POSES, applyStaticPose, setExpression, randomLook } from './avatar-toy.js';
@@ -19,14 +19,14 @@ const CATS = [
 ];
 // 鏡頭：[相機位置, 看的點]（角色站在原點、面向 +z）
 const SHOTS = {
-  full: [[0.9, 1.15, 3.9], [0, 0.88, 0]], head: [[0.45, 1.45, 1.35], [0, 1.4, 0]], face: [[0.12, 1.36, 0.95], [0, 1.34, 0]],
+  full: [[0, 1.1, 4.2], [0, 0.85, 0]], head: [[0.45, 1.45, 1.35], [0, 1.4, 0]], face: [[0.12, 1.36, 0.95], [0, 1.34, 0]],
   bust: [[0.5, 1.2, 2.2], [0, 1.12, 0]], torso: [[0.6, 0.95, 1.9], [0, 0.88, 0]], legs: [[0.55, 0.5, 1.75], [0, 0.42, 0]],
   shoe: [[0.55, 0.28, 0.95], [0, 0.07, 0.05]], back: [[-0.4, 1.0, -2.2], [0, 0.9, 0]],
 };
 
 const CSS = `
 .cc{position:fixed;inset:0;z-index:50;display:flex;font:15px "Microsoft JhengHei","PingFang TC",sans-serif;color:#3B2A1E;background:#E8DCCB;user-select:none}
-.cc-stage{position:relative;flex:1 1 auto;min-width:0}
+.cc-stage{position:relative;flex:1 1 auto;min-width:0;background-size:cover;background-position:center;background-repeat:no-repeat}
 .cc-stage canvas{display:block;width:100%;height:100%;cursor:grab}
 .cc-stage canvas:active{cursor:grabbing}
 .cc-title{position:absolute;left:28px;top:22px;font-size:30px;font-weight:800;letter-spacing:2px;color:#4A3424;text-shadow:0 2px 0 #fff8}
@@ -95,10 +95,10 @@ function buildCourt(scene) {
   for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), wall.material); w.position.set(sx * 14, 5, 0); w.rotation.y = -sx * Math.PI / 2; scene.add(w); }
 }
 function lights(scene, shadow) {
-  scene.add(new THREE.HemisphereLight('#FFF6EA', '#A98458', 1.5));
-  const sun = new THREE.DirectionalLight('#FFFFFF', 2.3); sun.position.set(2.5, 6, 4);
+  scene.add(new THREE.HemisphereLight(shadow ? '#FFFAF0' : '#FFF6EA', shadow ? '#B9AD9A' : '#A98458', 1.5));
+  const sun = new THREE.DirectionalLight(shadow ? '#FFF4E2' : '#FFFFFF', shadow ? 1.6 : 2.3); sun.position.set(2.5, 6, 4);
   if (shadow) { sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 5; Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 1, far: 15 }); sun.shadow.bias = -0.0004; }
-  scene.add(sun); const fill = new THREE.DirectionalLight('#FFE6CC', 0.8); fill.position.set(-3, 2, 3); scene.add(fill);
+  scene.add(sun); const fill = new THREE.DirectionalLight(shadow ? '#E8EEFC' : '#FFE6CC', 0.8); fill.position.set(-3, 2, 3); scene.add(fill);
 }
 
 // ---------- 格子縮圖：離屏畫一次，存成圖片 ----------
@@ -123,7 +123,7 @@ class Thumbs {   // 用主畫面的畫布畫縮圖（只開一個 3D 畫布）�
   dispose() {}
 }
 
-export function openCreator({ look = DEFAULT_LOOK, mode = 'create', onDone, onCancel } = {}) {
+export function openCreator({ look = DEFAULT_LOOK, background = 'assets/creator-bg.jpg', mode = 'create', onDone, onCancel } = {}) {
   let L = { ...DEFAULT_LOOK, ...look }, kit = 'orange', pose = 'idle', expr = '', cat = 'hair', av = null, yaw = 0.35, zoom = 0;
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = CSS; document.head.appendChild(st); }
   const root = document.createElement('div'); root.className = 'cc';
@@ -134,15 +134,37 @@ export function openCreator({ look = DEFAULT_LOOK, mode = 'create', onDone, onCa
   const stage = root.querySelector('.cc-stage'), catsEl = root.querySelector('.cc-cats'), gridEl = root.querySelector('.cc-grid'), hEl = root.querySelector('.cc-h');
 
   // 主畫面
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = 1.1;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; stage.prepend(renderer.domElement);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#E8DCCB'); scene.fog = new THREE.Fog('#E8DCCB', 12, 30);
-  buildCourt(scene); lights(scene, true);
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 60), camPos = new THREE.Vector3(), camAt = new THREE.Vector3();
+  const scene = new THREE.Scene(); scene.background = null;
+  lights(scene, true);
+  const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.25 }));
+  shadowFloor.rotation.x = -Math.PI / 2; shadowFloor.receiveShadow = true; scene.add(shadowFloor);
+  const backgroundImage = new Image();
+  backgroundImage.onload = () => {
+    if (!root.isConnected) return;
+    stage.style.backgroundImage = `url(${JSON.stringify(backgroundImage.src)})`;
+    stage.dataset.background = 'photo';
+  };
+  backgroundImage.onerror = () => {
+    if (!root.isConnected) return;
+    stage.dataset.background = 'fallback';
+    scene.remove(shadowFloor);
+    scene.background = new THREE.Color('#E8DCCB'); scene.fog = new THREE.Fog('#E8DCCB', 12, 30);
+    buildCourt(scene);
+  };
+  backgroundImage.src = background || '';
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 60);
   const resize = () => { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   const ro = new ResizeObserver(resize); ro.observe(stage); resize();
   const thumbs = new Thumbs(renderer);
+  // 所有主舞台鏡頭沿用拍照位置，以同一個裁切窗同步放大照片與 3D。
+  // 保留 SHOTS 給格子縮圖，避免改動格子呈現。
+  const photoCamera = new THREE.PerspectiveCamera(32, 16 / 9, 0.05, 60);
+  photoCamera.position.set(...SHOTS.full[0]); photoCamera.lookAt(...SHOTS.full[1]); photoCamera.updateMatrixWorld();
+  const focus = new THREE.Vector3();
+  let photoZoom = 1, focusY = 0.5;
 
   const rebuild = () => {
     if (av) scene.remove(av.g);
@@ -211,19 +233,28 @@ export function openCreator({ look = DEFAULT_LOOK, mode = 'create', onDone, onCa
 
   rebuild(); drawCats(); drawGrid();
   // 鏡頭跟著選的部位移動（角色放在畫面中間偏左一點）
-  camPos.set(...SHOTS.full[0]); camAt.set(...SHOTS.full[1]);
   let alive = true, last = performance.now();
   (function loop(now) {
     if (!alive) return; requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now;
     const [p, t] = SHOTS[shotOf()], k = 1 - Math.exp(-dt * 6);
-    camPos.lerp(new THREE.Vector3(...p), k); camAt.lerp(new THREE.Vector3(...t), k);
-    camera.position.copy(camPos); camera.lookAt(camAt);
-    if (av) { av.g.rotation.y += (yaw - av.g.rotation.y) * k; av.spine.rotation.z = Math.sin(now / 900) * 0.012; }
+    const shot = shotOf();
+    const targetZoom = shot === 'full' ? 1 : 4.2 / Math.hypot(p[0] - t[0], p[1] - t[1], p[2] - t[2]);
+    focus.set(...t).project(photoCamera);
+    photoZoom += (targetZoom - photoZoom) * k;
+    focusY += ((shot === 'full' ? 0.5 : (1 - focus.y) / 2) - focusY) * k;
+    const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
+    const scale = Math.max(w / 2560, h / 1440) * photoZoom;
+    const ox = 1280 - w / (2 * scale), oy = focusY * 1440 - h / (2 * scale);
+    camera.position.copy(photoCamera.position); camera.quaternion.copy(photoCamera.quaternion);
+    camera.setViewOffset(2560, 1440, ox, oy, w / scale, h / scale);
+    stage.style.backgroundSize = `${2560 * scale}px ${1440 * scale}px`;
+    stage.style.backgroundPosition = `${-ox * scale}px ${-oy * scale}px`;
+    if (av) { av.g.rotation.y += (yaw + (shot === 'back' ? Math.PI : 0) - av.g.rotation.y) * k; av.spine.rotation.z = Math.sin(now / 900) * 0.012; }
     renderer.render(scene, camera);
   })(last);
 
   window.__cc = { renderer, scene, camera, get av() { return av; } };
-  function close() { alive = false; ro.disconnect(); renderer.dispose(); thumbs.dispose(); root.remove(); }
+  function close() { alive = false; backgroundImage.onload = backgroundImage.onerror = null; shadowFloor.geometry.dispose(); shadowFloor.material.dispose(); ro.disconnect(); renderer.dispose(); thumbs.dispose(); root.remove(); }
   return close;
 }

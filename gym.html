@@ -926,6 +926,7 @@ import * as THREE from 'three';
 import { makeToyAvatar, decodeLook } from './avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook } from './appearance.js';
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
+const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -11214,7 +11215,7 @@ if (new URLSearchParams(location.search).has('practice')) {
   ROOM = createRoomSettings({id:'me',creator:true,count:roomDefaultCount(),courtOf:roomCourtOf,send:()=>{},changed:roomRulesChanged}); ROOM.start();
 }
 function resize() {
-  const w = host.clientWidth || 1, h = host.clientHeight || 1;
+  const w = CREATOR_SHOT ? innerWidth : host.clientWidth || 1, h = CREATOR_SHOT ? innerHeight : host.clientHeight || 1;
   renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
   labelRenderer.setSize(w, h);
   composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
@@ -11236,6 +11237,7 @@ function fpsTick(now) {
 }
 function tick(now) { requestAnimationFrame(tick); fpsTick(now || performance.now()); drawFrame(false); }
 function drawFrame(force) {
+  if (CREATOR_SHOT) return; // 拍照模式由 prepareCreatorShot 單次繪製，不進遊戲更新。
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
   if (mode === 'plan' || !state) return;
   if (RP.on) updateReplay(dt); else if (walk.on) { if (window.__rkOn) rkUpdate(dt); else updateWalk(dt); watchPerf(dt); } else { if (moveEditCam(dt)) renderUntil = Math.max(renderUntil, now + 200); controls.update(); }
@@ -11519,6 +11521,7 @@ if (SITE_ID && location.search) {
   VM_OPT.mode = requestedMode === '6v6' ? '6' : '2';
   entryProgress(20, '讀取球館配置');
   generateFromSite(SITE_ID).then(async () => {
+    if (CREATOR_SHOT) { await prepareCreatorShot(); return; }
     entryProgress(75, '準備 3D 球館'); setMode('walk');
     await new Promise(requestAnimationFrame); drawFrame(true);
     entryProgress(100, '準備完成');
@@ -11527,6 +11530,35 @@ if (SITE_ID && location.search) {
   }).catch((e) => { console.error(e); entryFail(); });
 }
 if (VENUE_ID) loadVenue(VENUE_ID);
+
+// 開發用空館照片。沿用遊戲的場館來源、材質與最高畫質後製。
+async function prepareCreatorShot() {
+  const court = state.items.find(it => CAT[it.type].court === 'vb');
+  if (!court) throw new Error('球館沒有排球場，無法拍攝角色背景');
+  controls.enabled = false;
+  showLabels = false; applyLabelVisibility();
+  scene.traverse(o => { if (o.isCSS2DObject || o.userData.isTag) o.visible = false; });
+  VIS.structure = true; applyStructure();
+  walls.forEach(wall => { wall.visible = true; });
+  if (roof) roof.visible = true;
+  for (const roof of zoneRoofs) roof.visible = true;
+  const [x, z] = toWorldOf(court, -6, 6.7);
+  const [tx, tz] = toWorldOf(court, -1, 0);
+  camera.position.set(x, 1.1, z);
+  // 與 creator 全身鏡頭相同的俯角，站位在鏡頭前方 4.2 公尺。
+  camera.lookAt(tx, 1.1 - Math.hypot(tx - x, tz - z) * 0.25 / 4.2, tz);
+  camera.fov = 32; camera.near = 0.05;
+  quality = 'high'; applyQuality(false);
+  renderer.setPixelRatio(1); resize();
+  const style = document.createElement('style');
+  style.textContent = 'body{visibility:hidden!important}#canvas-host{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important}#canvas-host canvas{visibility:visible!important}';
+  document.head.appendChild(style);
+  await new Promise(requestAnimationFrame);
+  resize();
+  await renderer.compileAsync(scene, camera);
+  renderScene();
+  window.__creatorShot = { ready: true, court: court.id, position: camera.position.toArray(), target: [tx, tz] };
+}
 
 </script>
 

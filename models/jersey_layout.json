@@ -1,0 +1,14 @@
+{
+ "size": 1024,
+ "torso_v": [0.3, 1.0],
+ "torso_z_blender": [0.56, 1.1],
+ "front_u": 0.25,
+ "back_u": 0.75,
+ "side_u": [0.0, 0.5, 1.0],
+ "side_stripe_half": 0.046,
+ "side_piping_half": 0.056,
+ "raglan": {"top_v": 1.0, "bottom_tv": 0.62, "top_du": 0.075, "bottom_du": 0.2, "half_width": 0.0045},
+ "sleeve_v": [0.0, 0.28],
+ "sleeve_u": {"R": [0.0, 0.5], "L": [0.5, 1.0]},
+ "note": "v 從下往上；tv＝(v-0.3)/0.7 是身體由下擺到領口的比例"
+}

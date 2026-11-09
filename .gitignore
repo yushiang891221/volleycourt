@@ -1,0 +1,4 @@
+models/*.blend
+models/*.blend1
+models/shots/
+blender/__pycache__/
