@@ -104,6 +104,12 @@ await check('unmodified physics, scoring, rotation and transports match baseline
     return t;
   };
   current=changedAi(current);previous=changedAi(previous);
+  // Position-based setters and optional 6v6 rotation mode have behavioral coverage in verify-position-setters.
+  current=current.replace(/^  vm6SyncRotationRoles\(\);\n/gm,'')
+    .replace(/^  if \(VM.tactics === 'rotation'\) return null;\n/gm,'')
+    .replace(/^  if \(d.tactics\) VM.tactics = d.tactics;\n/gm,'')
+    .replace(/  if \(vmSmallCount\(\) > 1 \|\| VM.tactics === 'rotation'\) \{\n    const order = vmPositionSetters\(team\);\n    return order.find\(id => id !== passer\) \|\| null;\n  \}\n/,'');
+  current=current.replace("(VM.tactics === 'rotation' ? fr.find(o=>vm6Idx(o.id)===2) : fr.find((o) => VM.role[o.id] === 'MB'))", "fr.find((o) => VM.role[o.id] === 'MB')");
   // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
   // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
   current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/^  if \(vmSmallCount\(\).*\/\/ 小人數.*\n/gm,'').replace(/^.*\/\/ 後排 5 號位.*\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');

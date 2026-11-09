@@ -12,11 +12,19 @@
     panel.addEventListener('keydown',e=>{const b=e.target.closest?.('[data-slot]');if(b&&!b.disabled&&(e.key==='Enter'||e.key===' ')){e.preventDefault();getRoom()?.pick(Number(b.dataset.slot));}});
     $('room-ready').addEventListener('click',ready);$('room-start').addEventListener('click',start);
     $('room-size').addEventListener('input',e=>{getRoom()?.setCount(Number(e.target.value));render();});
+    const tactics=document.createElement('label');tactics.id='room-tactics-wrap';
+    tactics.innerHTML='6 人模式 <select id="room-tactics"><option value="roles">跑位模式（固定角色）</option><option value="rotation">輪轉模式（3 號位舉球）</option></select><p id="room-tactics-note"></p>';
+    $('room-size').closest('label').after(tactics);
+    $('room-tactics').addEventListener('change',e=>{getRoom()?.setTactics(e.target.value);render();});
     function render(){
       const s=getRoom()?.snapshot;if(!s)return;
       const {flow:f,count:n}=s, mine=f.ready.includes(me()), locked=f.phase!=='waiting';
       $('room-size').value=n;$('room-size').disabled=locked||!s.isHost;$('room-size-value').textContent=`${n} 對 ${n}`;
       $('room-size-note').textContent=locked?'比賽結束後才能改':'兩隊人數相同，空位補 AI';
+      const rotation=s.tactics==='rotation';
+      tactics.hidden=n!==6;$('room-tactics').value=s.tactics||'roles';$('room-tactics').disabled=locked||!s.isHost;
+      $('room-tactics-note').textContent=rotation?'當輪 3 號位舉球；依號位輪轉，不判越位。後排攻擊與攔網限制保留。':'固定 S／OH／OP／MB，發球後跑到專職位置；接發球時判越位。';
+      panel.querySelector('header + p').textContent=n===6&&rotation?'依當輪號位分工，3 號位負責舉球；接第一球時由隊友補舉。':'發球時維持正確的前後左右相對位置，發球後依分工行動。';
       $('room-ready').hidden=locked;$('room-ready').textContent=mine?'取消準備':'準備';$('room-ready').setAttribute('aria-pressed',String(mine));
       $('room-start').hidden=!s.isHost||locked;$('room-start').disabled=!f.ready.length;
       $('room-flow-note').textContent=f.phase==='playing'?(f.picks.includes(me())?'比賽中 · 你已上場':'比賽中 · 你是觀眾'):f.phase==='pick'?'選位中…':'走到球場上按準備；房主開始後選位';
@@ -26,8 +34,8 @@
       $('pick-clock').textContent=`${Math.max(0,Math.ceil((f.deadline-Date.now())/1000))} 秒`;
       for(const half of panel.querySelectorAll('.pick-half')){
         const team=Number(half.dataset.team);
-        if(half.dataset.count!==String(n)){
-          half.querySelectorAll('button,.pick-zone').forEach(b=>b.remove());half.dataset.count=n;
+        if(half.dataset.count!==`${n}:${s.tactics}`){
+          half.querySelectorAll('button,.pick-zone').forEach(b=>b.remove());half.dataset.count=`${n}:${s.tactics}`;
           const zones=CourtFormations.get(n);
           if(zones)for(const z of zones){
             const line=document.createElement('div');line.className='pick-zone';
@@ -40,9 +48,9 @@
             const role=['S','OH','MB','OP','OH','MB'][k], label={S:'舉球',OH:'主攻',MB:'副攻',OP:'舉對'}[role];
             const [depth,left]=n===6?[[6.8,-3],[2.2,-3],[2.2,0],[2.2,3],[6.8,3],[7.4,0]][k]:n===2?[4.5,k===0?2.2:-2.2]:CourtFormations.home(n,k);
             b.style.left=`${team===0?(9-depth)/9*100:depth/9*100}%`;b.style.top=`${50+(team===0?-left:left)/9*100}%`;
-            b.className='pick-slot'+(n===6&&role==='S'?' setter':'');
+            b.className='pick-slot'+(n===6&&(rotation?k===2:role==='S')?' setter':'');
             b.innerHTML='<span class="pick-avatar"></span><span class="pick-role"></span><span class="pick-person"></span>';
-            b.querySelector('.pick-role').textContent=n===6?`${k+1} 號位 · ${label} ${role}`:zones?`${k+1} 號位 · ${zones[k].name}`:`${k+1} 號位`;
+            b.querySelector('.pick-role').textContent=n===6?(rotation?`${k+1} 號位 · ${['後排右','前排右','舉球','前排左','後排左','後排中'][k]}`:`${k+1} 號位 · ${label} ${role}`):zones?`${k+1} 號位 · ${zones[k].name}`:`${k+1} 號位`;
             half.append(b);
           }
         }

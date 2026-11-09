@@ -9458,7 +9458,8 @@ function vmPassRing() {
   if (!VM.on || VM.phase !== 'rally' || !VM.ball || !balls.includes(VM.ball) || VM.ball.mine) return null;
   const me = vmMe(), t = vmTeamOf(me), tc = VM.host ? (VM.touch && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
   if (!tc || tc[0] !== t || tc[1] !== 1) return null;
-  const P = VM.host ? VM.poss[t] : null; if (P ? P.setter !== me : VM.six && VM.role[me] !== 'S') return null;
+  const P = VM.host ? VM.poss[t] : null, setter = P ? P.setter : VM.remoteSetters?.[t];
+  if (setter ? setter !== me : VM.six && VM.role[me] !== 'S') return null;
   const B = vmBallL(VM.ball), p = vmPredL(B, 2.3) || vmPredL(B, 1.0); if (!p || Math.sign(p.x) !== vmSide(t)) return null;
   const [x, z] = vmW(p.x, p.z); return { x, z };
 }
@@ -10727,9 +10728,12 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   }
   for (const t of [0, 1]) for (const id of VM.rot[t]) if (!VM.ai.has(id) && id !== vmMe()) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
   VM.team = VM.rot.map((r) => r.slice()); VM.rot0 = VM.rot.map((r) => r.slice());
+  VM.tactics = count === 6 && ROOM?.snapshot.tactics === 'rotation' ? 'rotation' : 'roles';
+  vm6SyncRotationRoles();
   VM.srvTeam = Math.random() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
   for (const a of VM.ai.values()) { const f = vm6Spot(a.team, a.id, 'defense'); a.x = a.tx = f.x; a.z = a.tz = f.z; }
   VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } };
+  VM.startData.six.tactics = VM.tactics;
   if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
@@ -10742,6 +10746,7 @@ function vm6Rotate(t) {
 
   const meK = vm6Idx(vmMe()), mine = VM.rot[t].includes(vmMe());
   VM.rot[t] = VM.rot[t].slice(1).concat(VM.rot[t][0]); VM.rotN[t] = (VM.rotN[t] % 6) + 1; VM.formC = {};
+  vm6SyncRotationRoles();
   if (mine && meK >= 0) vm6RotToast();
 }
 function vm6RotToast() {
@@ -10751,6 +10756,7 @@ function vm6RotToast() {
 function vm6NextSet() {
   VM.setNo++; VM.sc = [0, 0]; VM.swap8 = false;
   VM.rot = VM.rot0.map((r) => r.slice()); VM.rotN = [1, 1]; VM.formC = {};
+  vm6SyncRotationRoles();
   const deciding = VM.bestOf > 1 && VM.sets[0] + VM.sets[1] === VM.bestOf - 1;
   VM.srvTeam = deciding ? (Math.random() < 0.5 ? 0 : 1) : 1 - VM.firstSrv; VM.firstSrv = VM.srvTeam;
   vm6Swap(); vmSetupServe();
@@ -10764,6 +10770,11 @@ function vm6Spot(team, id, mode) {
 
   const k = vm6Idx(id), r = VM.role[id], front = k >= 1 && k <= 3;
   if (k < 0) return vm6P(team, 6, 0);
+  if (VM.tactics === 'rotation') {
+    if (mode === 'serve') return vm6P(team, ...(team === VM.srvTeam && k === 0 ? [9.8,-2.2] : V6_BASE[k]));
+    if (mode === 'attack' && VM.poss[team]?.setter === id) return vm6P(team,.9,0);
+    return vm6P(team, front ? (mode === 'attack' ? 3.8 : mode === 'cover' ? 3.4 : 1.8) : 6.8, V6_BASE[k][1]);
+  }
   if (mode === 'serve') {
     if (team === VM.srvTeam) return k === 0 ? vm6P(team, 9.8, -2.2) : vm6P(team, ...V6_BASE[k]);
     return vm6RecvForm(team)[id] || vm6P(team, ...V6_BASE[k]);
@@ -10819,6 +10830,7 @@ function vm6GoSpot(sp) {
 //   發球的人（1 號位）在底線外，不算；兩個都是 AI 就不用查（AI 一定站對）
 function vm6Overlap() {
   if (vmSmallCount()) return vmSmallOverlap(); // WEB003B
+  if (VM.tactics === 'rotation') return null;
 
   for (const t of [1 - VM.srvTeam]) {   // 發球方整隊不判越位，只判接發球那一隊
     const rot = VM.rot[t], sd = vmSide(t), at = (id) => { const a = VM.ai.get(id); if (a) return { d: Math.abs(a.tx), L: a.tz / sd }; const q = vmPos(id); return q ? { d: Math.abs(q.x), L: q.z / sd } : null; };
@@ -10853,7 +10865,10 @@ function vm6Possession(team, B) {
   return VM.poss[team];
 }
 function vm6SetterFor(team, passer) {
-  if (vmSmallCount() > 1) { const sp = vm6P(team, 0.9, -1.0); let best = null; for (const id of VM.team[team]) { if (id === passer) continue; const q = vmPos(id); if (!q) continue; const c = Math.hypot(q.x - sp.x, q.z - sp.z) + (VM.ai.has(id) ? 0 : 2); if (!best || c < best.c) best = { id, c }; } return best ? best.id : null; }   // 小人數：沒有固定舉球員
+  if (vmSmallCount() > 1 || VM.tactics === 'rotation') {
+    const order = vmPositionSetters(team);
+    return order.find(id => id !== passer) || null;
+  }
   const s = VM.team[team].find((id) => VM.role[id] === 'S'); if (s && s !== passer) return s;
   return VM.team[team].find((id) => id !== passer && VM.role[id] === 'OPP') || VM.team[team].find((id) => id !== passer && vm6Front(id)) || VM.team[team].find((id) => id !== passer);   // 舉球員自己接了第一球：舉對或前排的人來舉
 }
@@ -10913,7 +10928,7 @@ function vm6BlockPick(a, th) {
   if (!vm6Front(a.id)) return false;
   // 前排三個人照現在站的位置：中間的人（中間手）一定上；再加攻擊手那一側的人——對面 4 號位打＝我方 2 號位＋3 號位，對面 2 號位打＝我方 4 號位＋3 號位
   const fr = VM.rot[a.team].slice(1, 4).map((id) => ({ id, q: vmPos(id) })).filter((o) => o.q);
-  const mid = fr.find((o) => VM.role[o.id] === 'MB') || [...fr].sort((p, q) => Math.abs(p.q.z) - Math.abs(q.q.z))[0];
+  const mid = (VM.tactics === 'rotation' ? fr.find(o=>vm6Idx(o.id)===2) : fr.find((o) => VM.role[o.id] === 'MB')) || [...fr].sort((p, q) => Math.abs(p.q.z) - Math.abs(q.q.z))[0];
   if (!mid) return false; if (mid.id === a.id) return true;
   const side = fr.filter((o) => o.id !== mid.id).sort((p, q) => Math.abs(p.q.z - th.z) - Math.abs(q.q.z - th.z))[0];
   return !!side && side.id === a.id && Math.abs(side.q.z - th.z) < 3.4;
@@ -11015,6 +11030,8 @@ function vm6CoverSpot(a, attId) {
 function vm6Apply(d) {
   const before = vm6Idx(vmMe());
   VM.rot = d.rot; VM.sets = d.sets; VM.setNo = d.setNo; VM.rotN = d.rn || VM.rotN;
+  if (d.tactics) VM.tactics = d.tactics;
+  vm6SyncRotationRoles();
   const now = vm6Idx(vmMe()); if (before >= 0 && now !== before) vm6RotToast();
 }
 // 輪轉表（左上角）：我方、對方各一張；上面是網子，前排（藍）4 3 2、後排 5 6 1；金框＝你、🏐＝發球的人
@@ -11099,7 +11116,7 @@ function vmStaRings() {
 // ---- 連線：開局的人每 0.1 秒送比分與 AI 位置；其他人照著顯示
 function vmStatePayload() {
   const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0]; });
-  return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
+  return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
 function vmBroadcast(force, msg, pt) {
@@ -11114,6 +11131,8 @@ function vmOnNet(d, from) {
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
+    VM.tactics = d.six?.tactics === 'rotation' ? 'rotation' : 'roles';
+    vm6SyncRotationRoles();
     // Ball speed is owned by room-settings, independent of the match simulation host.
     const colors = { aiT: '#30A46C', ai1: '#E5484D', ai2: '#F76B15', ...(d.six ? d.six.colors : {}) };
     for (const id of [...d.team[0], ...d.team[1]]) if (/^ai/.test(id)) { const a = vmMkAi(id, d.team[0].includes(id) ? 0 : 1, d.names[id] || id, colors[id] || '#E5484D', d.chars && d.chars[id]); a.wx = null; }
@@ -11133,6 +11152,7 @@ function vmOnNet(d, from) {
     const mySrv = d.srv === NET.me && (walk.jserve || walk.serve || balls.some((q) => q.serve && q.room && NET.hitBy === NET.me));
     if (d.ph === 'serve' && VM.phase !== 'serve' && !mySrv) { vmClearBalls(); if (d.srv !== NET.me) vmDropHeld(); }
     VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv; VM.tc = d.tc || null;
+    VM.remoteSetters = Array.isArray(d.setter) ? d.setter : null;
     if (d.gr && (!VM.grade || VM.grade.s !== d.gr[0])) { const first = !VM.grade; VM.grade = { s: d.gr[0], team: d.gr[1], g: d.gr[2], why: d.gr[3] }; if (!first) vmGradeShow(VM.grade); }   // 到位等級（剛加入時的舊等級不顯示）
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
@@ -11361,6 +11381,21 @@ async function loadVenue(id, fresh) {
 // WEB-003B: small teams share the existing indoor scoring and ball/AI actions.
 // The six-player and beach paths never enter these adapters.
 function vmSmallCount() { const n = VM.six && VM.team?.[0]?.length; return n === 1 || n === 3 || n === 4 || n === 5 ? n : 0; }
+// 按當輪位置決定舉球，不按距離或真人／AI 身分搶走第二球。
+function vmPositionSetters(team) {
+  const rot = VM.rot[team], n = vmSmallCount();
+  if (!n) return [rot[2],rot[1],rot[3],rot[5],rot[0],rot[4]].filter(Boolean);
+  const zones = CourtFormations.get(n);
+  return rot.map((id,k)=>({id,k,z:zones[k]})).sort((a,b)=>Number(b.z.front)-Number(a.z.front) || a.z.L-b.z.L || a.k-b.k).map(q=>q.id);
+}
+function vm6SyncRotationRoles() {
+  if (!VM.six || VM.tactics !== 'rotation' || VM.team?.[0]?.length !== 6) return;
+  const roles=['MB','OPP','S','OH','MB','OH'];
+  for (const rot of VM.rot) rot.forEach((id,k)=>{
+    VM.role[id]=roles[k];const a=VM.ai.get(id);
+    if(a){a.name=VM.names[id]=`AI・${k+1}號位`;if(a.tag?.element)a.tag.element.textContent=a.name;}
+  });
+}
 function vmSmallLabel(id) { const k = vm6Idx(id); return k < 0 ? '觀眾' : `${k+1} 號位 · ${CourtFormations.get(vmSmallCount())[k].name}`; }
 function vmSmallOverlap() {
   const t = 1-VM.srvTeam, sd = vmSide(t);
@@ -11379,7 +11414,7 @@ function vmBlockLane(a, th) {
   const sd = vmSide(a.team), L = th.z / sd, edge = Math.sign(L) || 1;
   const small = vmSmallCount(), pair = small ? vmSmallBlockers(a.team, th) : null;
   if (pair?.length === 1) return 0;
-  const inner = small ? pair[1] === a.id : VM.role[a.id] === 'MB';
+  const inner = small ? pair[1] === a.id : VM.tactics === 'rotation' ? vm6Idx(a.id) === 2 : VM.role[a.id] === 'MB';
   if (!inner) return sd * edge * .4;
   let target = L - edge * .4;
   // 真人邊翼已經在網前時，攔中也不能跨過他的外側；保留約 0.7 m 接縫距離。
@@ -11400,7 +11435,7 @@ function vmAttackLane(team, id) {
   const sd = vmSide(team), P = VM.poss[team], ball = VM.ball && vmBallL(VM.ball);
   const pred = P?.stage === 2 && P.attacker === id && ball ? vmPredL(ball, 2.8) : null;
   const back = VM.six && !vm6Front(id);
-  const L = VM.six && !vmSmallCount() ? (VM.role[id] === 'OH' ? (back ? 0 : 3.3) : VM.role[id] === 'OPP' ? -3.3 : 0) : at.z / sd;
+  const L = VM.six && !vmSmallCount() ? (VM.tactics === 'rotation' ? V6_BASE[vm6Idx(id)]?.[1] || 0 : VM.role[id] === 'OH' ? (back ? 0 : 3.3) : VM.role[id] === 'OPP' ? -3.3 : 0) : at.z / sd;
   const b = { x: sd * (pred ? Math.max(back ? 3.5 : 0.7, pred.x * sd + .55) : back ? 4.4 : 1.2), z: pred ? clamp(pred.z, -4, 4) : sd * L };
   let dx = at.x - b.x, dz = at.z - b.z, len = Math.hypot(dx, dz);
   if (len < .5) { dx = sd; dz = 0; len = 1; }
