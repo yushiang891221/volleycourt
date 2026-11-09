@@ -52,7 +52,7 @@ def kit_image(name, body, accent, piping, num, numcol, size=1024):
         return col * (1 - a) + c * a
     torso = v >= 0.3; tv = (v - 0.3) / 0.7
     d_side = np.minimum(np.minimum(np.abs(u - 0.0), np.abs(u - 0.5)), np.abs(u - 1.0))
-    t = np.where(torso, d_side, 9); col = blend(t, 0.056, P); col = blend(t, 0.046, A)   # 兩側直條＋白色鑲邊
+    t = np.where(torso & (tv < 0.62), d_side, 9); col = blend(t, 0.056, P); col = blend(t, 0.046, A)   # 兩側直條＋白色鑲邊（只到腋下）
     for fc in (0.25, 0.75):   # 插肩細線：領口斜到腋下
         for sg in (-1, 1):
             top_u, bot_u, top_v, bot_v = fc + sg * 0.075, fc + sg * 0.2, 1.0, 0.62

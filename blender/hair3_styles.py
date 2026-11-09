@@ -55,7 +55,7 @@ def tie_ring(P, at, normal, r=0.034):
 def finish(P, name):
     for o in P:
         if o.name.startswith('chunk'):
-            sd = o.modifiers.new('sd', 'SUBSURF'); sd.levels = 2; apply_mods(o)
+            sd = o.modifiers.new('sd', 'SUBSURF'); sd.levels = 1; apply_mods(o)
     for o in P:   # 沒有頂點顏色的零件（辮子、髮圈）補上，不然合併後會變黑
         if o.type == 'MESH' and 'Col' not in o.data.color_attributes:
             ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')

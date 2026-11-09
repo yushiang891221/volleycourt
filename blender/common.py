@@ -127,10 +127,28 @@ def export_glb(path, obs):
 
 
 def smooth_weights(ob, repeat=12, factor=0.6):
-    """骨頭權重做平滑過渡（腋下、肩膀不會被扯裂）"""
-    select_only(ob)
-    try:
-        bpy.ops.object.vertex_group_smooth(group_select_mode='BONE_DEFORM', factor=factor, repeat=repeat, expand=0.0)
-        bpy.ops.object.vertex_group_normalize_all(group_select_mode='BONE_DEFORM', lock_active=False)
-    except Exception as e:
-        print('smooth_weights failed', e)
+    """骨頭權重做平滑過渡（腋下、肩膀不會被扯裂）。自己算（Blender 內建指令在背景模式不能用）：
+    每次讓每個點的各骨頭權重往鄰居平均靠近 factor，最後每點正規化成總和 1、只留最大的 4 根"""
+    import numpy as np
+    me = ob.data; nv = len(me.vertices)
+    bones = [g for g in ob.vertex_groups if g.name in JOINTS]
+    if not bones or nv == 0: print('smooth_weights: no bone groups'); return
+    col = {g.index: k for k, g in enumerate(bones)}
+    W = np.zeros((nv, len(bones)))
+    for v in me.vertices:
+        for g in v.groups:
+            if g.group in col: W[v.index, col[g.group]] = g.weight
+    e = np.array([ed.vertices[:] for ed in me.edges]); a, b = e[:, 0], e[:, 1]
+    deg = np.bincount(np.concatenate([a, b]), minlength=nv).astype(float); deg[deg == 0] = 1
+    for _ in range(repeat):
+        acc = np.zeros_like(W); np.add.at(acc, a, W[b]); np.add.at(acc, b, W[a])
+        W = W * (1 - factor) + (acc / deg[:, None]) * factor
+    for r in range(nv):   # 只留最大的 4 根、正規化
+        row = W[r]
+        if row.sum() <= 0: continue
+        keep = np.argsort(row)[-4:]; m = np.zeros_like(row); m[keep] = row[keep]; W[r] = m / m.sum()
+    for k, g in enumerate(bones):
+        g.remove(list(range(nv)))
+        idx = np.nonzero(W[:, k] > 1e-4)[0]
+        for vi in idx: g.add([int(vi)], float(W[vi, k]), 'REPLACE')
+    print('smooth_weights ok', ob.name, repeat)

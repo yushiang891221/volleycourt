@@ -20,20 +20,17 @@ REG = ['torso', 'arm_u', 'arm_f', 'hand', 'thigh', 'shin', 'foot']
 
 
 def region(co, dom):
-    if arm_dist(co) < 0.1 and arm_param(co) > -0.03:
-        return 'hand' if arm_param(co) > UA + FA - 0.01 else ('arm_f' if arm_param(co) > UA else 'arm_u')
-    if co.z >= HIP_H - 0.025: return 'torso'
-    if co.z >= HIP_H - L1: return 'thigh'
-    if co.z >= 0.09: return 'shin'
-    return 'foot'
+    # 球形關節版：身體每段整塊只跟一根骨頭，所以直接看這個點屬於哪根骨頭
+    b = (dom or 'spine').split('.')[0]
+    return {'upperarm': 'arm_u', 'forearm': 'arm_f', 'hand': 'hand', 'thigh': 'thigh', 'shin': 'shin', 'foot': 'foot'}.get(b, 'torso')
 
 
 def make(body, name, keep, cuts, gap, thick=0.007, flare=None, trim_w=0.018, colors=('cloth', 'trim'), cols=('#F07C24', '#1C1C21'), extra=None, plain=False):
     """keep：留下哪些區域；cuts：[(平面點, 平面法線(切掉那側), 只切哪些區域 or None, 這條邊要不要滾邊)]"""
     dom = dominant(body)
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
-    L = bm.verts.layers.int.new('reg')
-    for v in bm.verts: v[L] = REG.index(region(v.co, dom[v.index]))
+    L = bm.verts.layers.int.new('reg'); BL = bm.verts.layers.int.new('bone'); BN = list(JOINTS.keys())
+    for v in bm.verts: v[L] = REG.index(region(v.co, dom[v.index])); v[BL] = BN.index(dom[v.index]) if dom[v.index] in BN else BN.index('spine')
     ok = {REG.index(r) for r in keep}
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if not all(v[L] in ok for v in f.verts)], context='FACES')
     trims = []
@@ -102,26 +99,35 @@ def make(body, name, keep, cuts, gap, thick=0.007, flare=None, trim_w=0.018, col
             nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
             if len(nb) == 2: new[v] = v.co * 0.4 + (nb[0].co + nb[1].co) * 0.3
         for v, c in new.items(): v.co = c
+    dl = bm.verts.layers.deform.active   # 身體原本的權重資料不要帶到衣服上（下面會照段落重新設定）
+    if dl: bm.verts.layers.deform.remove(dl)
     ob = mesh_obj(name, bm)
     ob.data.materials.append(mat(colors[0], cols[0], 0.78)); ob.data.materials.append(mat(colors[1], cols[1], 0.75))
+    # 骨頭權重直接照來源那段身體：手腳整塊一根骨頭；軀幹依高度在 spine／root 漸變（跟身體一樣），衣服和身體完全一起動
+    att = ob.data.attributes.get('bone'); G = {}
+    for v in ob.data.vertices:
+        bn = BN[att.data[v.index].value] if att else 'spine'
+        if bn in ('spine', 'root'):
+            t = max(0.0, min(1.0, (v.co.z - HIP_H) / 0.24)); t = t * t * (3 - 2 * t)
+            for n_, w_ in (('spine', t), ('root', 1 - t)):
+                if w_ > 0: (G.get(n_) or G.setdefault(n_, ob.vertex_groups.new(name=n_))).add([v.index], w_, 'REPLACE')
+        else:
+            (G.get(bn) or G.setdefault(bn, ob.vertex_groups.new(name=bn))).add([v.index], 1.0, 'REPLACE')
     inner = ob.vertex_groups.new(name='inner'); inner.add([v.index for v in ob.data.vertices if v.index not in edge_idx], 1.0, 'REPLACE')
     sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 4; sm.vertex_group = 'inner'   # 邊界不參與平滑，切口保持乾淨
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False; so.material_offset_rim = 0 if plain else 1
     apply_mods(ob); smooth(ob)
-    dt = ob.modifiers.new('dt', 'DATA_TRANSFER'); dt.object = body; dt.use_vert_data = True; dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'POLYINTERP_NEAREST'
-    select_only(ob); bpy.ops.object.datalayout_transfer(modifier='dt'); apply_mods(ob)
-    smooth_weights(ob, repeat=20)
     return ob
 
 
 def tops(body, sex):
     out = []
     near = lambda c: (c.x ** 2 + (c.y - 0.01) ** 2) ** 0.5 < 0.13 and c.z > 0.93
-    neck = [((0, -0.02, 1.03), (0, 0.35, 1), near, True)]
+    neck = [((0, -0.02, 1.03), (0, -0.35, 1), near, True)]   # 前低後高（真的球衣是前面 V 領較低、背後較高）
     loose = lambda co: 0.006 * max(0, min(1, (0.9 - co.z) / 0.25)) + 0.012 * max(0, min(1, (0.78 - co.z) / 0.1))   # 下半身寬鬆、褲頭那段離身體多一點（不會被短褲穿出來）
     for kind in range(4):   # 0 無袖 1 短袖 2 長袖 3 短版
         keep = {'torso', 'arm_u'} | ({'arm_f'} if kind == 2 else set())
-        hem_z = 0.8 if kind == 3 else 0.52   # 下擺跟短褲重疊多一點
+        hem_z = 0.8 if kind == 3 else 0.58   # 球形關節版舉手不會拉起球衣，下擺不用太長（太長蹲低時大腿會頂出來）
         cuts = neck + [((0, 0, hem_z), (0, 0, -1), {'torso'}, True)]
         if kind == 0:
             for s in (-1, 1): cuts.append(((s * 0.2, 0, 0.98), (s, 0, 0.35), {'torso', 'arm_u'}, True))
@@ -141,7 +147,7 @@ def tops(body, sex):
             for gi, w in snap:
                 ob.vertex_groups[gi].add([v.index], w * (1 - k), 'REPLACE')
             vg['root'].add([v.index], k + sum(w for gi, w in snap if ob.vertex_groups[gi].name == 'root') * (1 - k), 'REPLACE')
-        rigid_sleeves(ob)
+        # 改成 A 字姿勢後，袖子和衣身保持相連、權重平滑過渡（rigid_sleeves 會在肩膀留下切口，舉手時破圖）
         collar = neck_trim(ob)
         J.unwrap(ob); ob.data.materials.clear(); ob.data.materials.append(J.kit_material('kit_orange', J.kit_image('kit_orange', '#F07C24', '#1C1C21', '#FFFFFF', 10, '#1C1C21')))
         out.append(ob)

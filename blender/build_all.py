@@ -7,7 +7,7 @@ from common import *
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 SEX = int(args[0]) if args else 0
 sys.argv = [sys.argv[0], '--', str(SEX)]
-exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build_body.py'), encoding='utf-8').read().split("print('BODY verts'")[0])
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build_body2.py'), encoding='utf-8').read().split("print('BODY verts'")[0])
 import clothes as C
 tops = C.tops(body, SEX); pts = C.pants(body); kn = C.kneepads(body); sk = C.socks(body); sh = C.shoes()
 for o in tops + pts + kn + [sk]:
@@ -37,6 +37,11 @@ pb = rig.pose.bones
 for n in ('upperarm.R', 'upperarm.L'): pb[n].rotation_mode = 'XYZ'; pb[n].rotation_euler = (-2.75, 0, 0)
 render(os.path.join(SHOT, f'pose_{SEX}_block.png'), (1.6, -2.6, 1.1), (0, 0, 0.9), 55, (600, 600))
 render(os.path.join(SHOT, f'pose_{SEX}_block_side.png'), (3.2, -0.3, 0.9), (0, 0, 0.9), 55, (600, 600))
+for n in ('upperarm.R', 'upperarm.L'): pb[n].rotation_euler = (0, 0, 0)
+# 扣球姿勢：右手往前上方舉高、左手往前
+pb['upperarm.R'].rotation_euler = (-2.6, 0, 0.4); pb['upperarm.L'].rotation_euler = (-1.2, 0, 0)
+render(os.path.join(SHOT, f'pose_{SEX}_spike.png'), (1.9, -2.3, 1.2), (0, 0, 0.95), 55, (600, 600))
+render(os.path.join(SHOT, f'pose_{SEX}_spike_back.png'), (-1.6, 2.6, 1.3), (0, 0, 0.95), 55, (600, 600))
 for n in ('upperarm.R', 'upperarm.L'): pb[n].rotation_euler = (0, 0, 0)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, f'avatar_{SEX}.blend'))
 # ---- 輸出給網頁：骨架＋所有零件（網頁依外觀選擇顯示哪幾個） ----

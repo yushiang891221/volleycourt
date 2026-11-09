@@ -105,7 +105,7 @@ for v in body.data.vertices:
         for gi, w in gs: body.vertex_groups[gi].add([v.index], w / tot, 'REPLACE')
     else: body.vertex_groups['spine' if v.co.z > HIP_H else 'root'].add([v.index], 1.0, 'REPLACE')
 body.parent = rig
-smooth_weights(body, repeat=8, factor=0.5)
+smooth_weights(body, repeat=45, factor=0.6)   # 過渡範圍約 10 公分：舉手時腋下不會被扯破
 print('BODY verts', len(body.data.vertices))
 render(os.path.join(SHOT, f'body_{SEX}.png'), (1.2, -3.2, 1.1), (0, 0, 0.85), 55)
 render(os.path.join(SHOT, f'body_{SEX}_side.png'), (3.4, 0, 0.95), (0, 0, 0.85), 55)

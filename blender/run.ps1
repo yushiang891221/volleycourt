@@ -1,8 +1,14 @@
-# 執行 Blender 建模腳本並把四張算繪圖拼成一張：  powershell -File run.ps1 [sex]
+# Run Blender build (4 threads, BelowNormal priority so the PC stays usable), then make a 2x2 contact sheet.
+# Usage: powershell -File run.ps1 [sex]
 param([int]$sex = 0)
 $B = "C:\Users\C\Downloads\blender-5.4.0-alpha+main.741e9ebfbd96-windows.amd64-release\blender-5.4.0-alpha+main.741e9ebfbd96-windows.amd64-release\blender.exe"
 Set-Location $PSScriptRoot
-& $B --background --factory-startup --python build_all.py -- $sex 2>&1 | Select-String -Pattern "DONE|Error|Traceback|File `"|line \d+" | Select-Object -First 12
+$log = Join-Path $env:TEMP "blender_build_$sex.log"
+$argsList = @('--background', '--factory-startup', '-t', '4', '--python', 'build_all.py', '--', "$sex")
+$p = Start-Process -FilePath $B -ArgumentList $argsList -RedirectStandardOutput $log -NoNewWindow -PassThru
+try { $p.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal } catch {}
+$p.WaitForExit()
+Select-String -Path $log -Pattern "DONE|EXPORTED|Error|Traceback|failed|smooth_weights|File `"|line \d+" | Select-Object -First 12 | ForEach-Object { $_.Line }
 Add-Type -AssemblyName System.Drawing
 $d = Join-Path $PSScriptRoot "..\models\shots"
 $o = New-Object System.Drawing.Bitmap 1200, 1200; $g = [System.Drawing.Graphics]::FromImage($o); $i = 0
