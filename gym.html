@@ -366,6 +366,8 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .mp-list li { display: flex; align-items: center; gap: 6px; } .mp-list i { width: 10px; height: 10px; border-radius: 50%; }
 .mp .hint { color: #AEB8C6; margin: 0; font-size: 12px; line-height: 1.5; }
 .mp-tag { background: rgba(27,38,56,.85); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+/* CSS2DRenderer writes inline display; visibility keeps this preference independent. */
+.hide-nametags .mp-tag:not(.mp-shout) { visibility: hidden; }
 .pcwin { position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(8,12,18,.55); padding: 14px; }
 .pcwin[hidden] { display: none !important; }
 .pc-mon { width: min(1100px, 100%); aspect-ratio: 16 / 10; max-height: 100%; background: #0B0D10; border-radius: 14px; padding: 12px 12px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 2px #22262C; }
@@ -5528,7 +5530,12 @@ let settingsPause = false;
 addEventListener('vb-settings-open', () => { settingsPause = walk.paused; walk.paused = true; walk.keys.clear(); walk.target = null; setMenuClose(false); emoMenuClose(false); unlockMouse(); });
 addEventListener('vb-settings-close', () => { walk.paused = settingsPause; updateLockHint(); });
 addEventListener('vb-settings-change', () => { applyPersonalSettings(); });
+function applyNameTags() {
+  document.body.classList.toggle('hide-nametags', !VBSettings.values.nameTags);
+}
+applyNameTags();
 function applyPersonalSettings() {
+  applyNameTags();
   const p = VBSettings.values;
   if (quality !== p.quality) { quality = p.quality; perf.n = 0; perf.sum = 0; applyQuality(false); }
   VB.assist = p.assist; SFX.on = !p.mute;
@@ -10347,7 +10354,7 @@ function vmOut(B) {
 // 一次進攻：誰接（離落點最近的人）、誰舉（另一個）、誰攻（接球的人）
 // 頭上冒一下喊的話
 function vmShout(t) {
-  const el = document.createElement('div'); el.className = 'mp-tag'; el.style.background = '#F2B705'; el.style.color = '#1B2638'; el.textContent = t;
+  const el = document.createElement('div'); el.className = 'mp-tag mp-shout'; el.style.background = '#F2B705'; el.style.color = '#1B2638'; el.textContent = t;
   const o = new CSS2DObject(el); o.position.set(walk.x, 2.3, walk.z); scene.add(o); setTimeout(() => { scene.remove(o); el.remove(); }, 1200);
 }
 function vmPossession(team, B) {
