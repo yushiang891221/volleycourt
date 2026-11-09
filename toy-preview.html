@@ -16,7 +16,8 @@ body.shot #ui{display:none}
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { makeToyAvatar, OPTIONS, DEFAULT_LOOK, encodeLook, decodeLook, randomLook, setExpression, EXPRESSIONS } from './avatar-toy.js';
+import { preloadAvatars, makeToyAvatar, OPTIONS, DEFAULT_LOOK, encodeLook, decodeLook, randomLook, setExpression, EXPRESSIONS } from './avatar-toy.js';
+await preloadAvatars();
 
 // 從 gym.html 的 AVP 複製幾個代表姿勢（只看外觀用；遊戲裡還是用 gym.html 那份）
 const AVP = {

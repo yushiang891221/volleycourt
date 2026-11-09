@@ -923,8 +923,9 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 <script type="importmap" id="app-importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module" id="app-script">
 import * as THREE from 'three';
-import { makeToyAvatar, decodeLook } from './avatar-toy.js';
+import { preloadAvatars, makeToyAvatar, decodeLook } from './avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook } from './appearance.js';
+await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

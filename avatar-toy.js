@@ -2,6 +2,8 @@
 // 面向 +z；arms[0]／legs[0] 是右手右腳（在 -x 那側）。五官是畫在頭上的貼圖；頭髮是一束一束沿頭皮彎曲、尾端變細的髮束。
 // 表情不是外觀選項：遊戲中按 T 換表情／動作，用 setExpression(av, key)。
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const OPTIONS = {
@@ -180,6 +182,12 @@ const CAP_HY = 0.27 * 0.88 + 0.03, HIP_H = 0.62, L1 = 0.29, KN_ANK = 0.27, ANK_S
 const SPINE_Y = 0.66, SH_Y = 0.34, UA = 0.22, FA = 0.19;
 
 export function makeToyAvatar(look, team = 'orange') {
+  const L = normLook(look);
+  if (AVATAR_ASSETS[L.sex]) return makeGLBAvatar(L, team, AVATAR_ASSETS[L.sex]);
+  return makeProceduralAvatar(L, team);
+}
+
+function makeProceduralAvatar(look, team = 'orange') {
   const L = normLook(look), fem = L.sex === 1, SH_X = fem ? 0.238 : 0.255;
   const skinC = OPTIONS.skin[L.skin], hairC = OPTIONS.hairColor[L.hairColor], shoeC = OPTIONS.shoe[L.shoe];
   const skin = mat(skinC, 0.62), hairM = hairMat(hairC), white = mat('#F6F6F2', 0.7);
@@ -250,8 +258,187 @@ export function makeToyAvatar(look, team = 'orange') {
 
 export function setExpression(av, key) {
   if (!av || !av._faceM) return;
-  const L = av.look; av._faceM.map = faceTexture(OPTIONS.skin[L.skin], L.eyes, L.sex, key || ''); av._faceM.needsUpdate = true;
+  const L = av.look;
+  if (av.glb) {
+    av._faceM = glbFaceMaterial(L, key || ''); av._skull.material = av._faceM;
+  } else { av._faceM.map = faceTexture(OPTIONS.skin[L.skin], L.eyes, L.sex, key || ''); av._faceM.needsUpdate = true; }
 }
+
+// ---------- Blender 模型（幾何、材質與貼圖共用；骨架逐人獨立） ----------
+const AVATAR_ASSETS = [], GLB_MATS = new Map();
+let avatarPromise, jerseyLayout;
+const webPoint = ([x, y, z]) => new THREE.Vector3(x, z, -y);
+const boneKey = name => name.replace(/[.]/g, '');
+function partVisible(name, L) {
+  const m = /^(top|collar|pants|knee|hair)_(\d+)$/.exec(name);
+  if (m) return (m[1] !== 'knee' || (L.pants !== 1 && L.knee !== 2)) && +m[2] === L[m[1] === 'collar' ? 'top' : m[1]];
+  return name !== 'headband_3' || L.hair === 3;
+}
+function sphericalUV(x, y, z) {
+  const r = Math.hypot(x, y, z) || 1;
+  return [((Math.atan2(z, -x) / (2 * Math.PI)) % 1 + 1) % 1, 1 - Math.acos(Math.max(-1, Math.min(1, y / r))) / Math.PI];
+}
+function unwrapFaceTriangle(uv) {
+  if (Math.max(...uv.map(p => p[0])) - Math.min(...uv.map(p => p[0])) > 0.5)
+    uv.forEach(p => { if (p[0] < 0.5) p[0] += 1; });
+  return uv;
+}
+function projectHeadUV(geometry, center) {
+  // 非索引幾何讓接縫兩側可各自使用 u 與 u+1，並保留 skinIndex/skinWeight。
+  const gm = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+  const p = gm.attributes.position, uv = [];
+  for (let i = 0; i < p.count; i += 3) {
+    const tri = [0, 1, 2].map(j => sphericalUV(p.getX(i + j) - center.x, p.getY(i + j) - center.y, p.getZ(i + j) - center.z));
+    unwrapFaceTriangle(tri).forEach(pair => uv.push(...pair));
+  }
+  gm.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); return gm;
+}
+async function readAvatarJSON(file) {
+  const response = await fetch(new URL(file, import.meta.url), { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
+  return response.json();
+}
+async function loadAvatar(sex) {
+  const loader = new GLTFLoader();
+  const [gltf, meta] = await Promise.all([
+    // 先 fetch 以限定等待時間，失敗仍可使用舊角色。
+    fetch(new URL(`models/avatar_${sex}.glb`, import.meta.url), { signal: AbortSignal.timeout(15000) })
+      .then(r => { if (!r.ok) throw new Error(`avatar_${sex}.glb: HTTP ${r.status}`); return r.arrayBuffer(); })
+      .then(data => loader.parseAsync(data, new URL('models/', import.meta.url).href)),
+    readAvatarJSON(`models/avatar_${sex}.json`),
+  ]);
+  const scene = gltf.scene, found = new Set(); scene.updateMatrixWorld(true);
+  scene.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    // GLTFLoader 會改寫重名 head，鞋子兩個 primitive 也會變成群組。
+    let part, node = o;
+    while (node && !part) {
+      const index = gltf.parser.associations.get(node)?.nodes;
+      const original = index == null ? null : gltf.parser.json.nodes[index].name;
+      if (meta.parts.includes(original)) part = original;
+      node = node.parent;
+    }
+    if (!part) throw new Error(`找不到零件名稱對照：${o.name}`);
+    found.add(part); o.userData.avatarPart = part;
+    const assoc = gltf.parser.associations.get(o);
+    o.userData.avatarPrimitive = assoc?.primitives ?? 0;
+    // 一次轉成模型世界座標，之後重綁與 UV 都使用同一座標系。
+    o.geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    if (part === 'head') o.geometry = projectHeadUV(o.geometry, webPoint(meta.headC));
+    o.userData.avatarBones = o.skeleton.bones.map(b => {
+      const index = gltf.parser.associations.get(b)?.nodes;
+      return index == null ? b.name : gltf.parser.json.nodes[index].name;
+    });
+    for (const name of o.userData.avatarBones) {
+      if (name !== 'neutral_bone' && !meta.bones.some(b => boneKey(b) === boneKey(name))) throw new Error(`未知骨頭：${name}`);
+    }
+  });
+  for (const part of meta.parts) if (!found.has(part) && !part.startsWith('collar_')) console.warn(`[avatar] 缺少零件 ${sex}/${part}`);
+  for (const required of ['body', 'head']) if (!found.has(required)) throw new Error(`缺少必要零件 ${required}`);
+  return { scene, meta };
+}
+export function preloadAvatars() {
+  if (!avatarPromise) avatarPromise = (async () => {
+    try { jerseyLayout = await readAvatarJSON('models/jersey_layout.json'); }
+    catch (error) { console.warn('[avatar] 球衣排版載入失敗，使用備用角色', error); return false; }
+    await Promise.all([0, 1].map(async sex => {
+      try { AVATAR_ASSETS[sex] = await loadAvatar(sex); }
+      catch (error) { console.warn(`[avatar] 模型 ${sex} 載入失敗，使用備用角色`, error); }
+    }));
+    return [0, 1].every(sex => Boolean(AVATAR_ASSETS[sex]));
+  })();
+  return avatarPromise;
+}
+function glbMaterial(key, params) {
+  if (!GLB_MATS.has(key)) GLB_MATS.set(key, new THREE.MeshPhysicalMaterial(params));
+  return GLB_MATS.get(key);
+}
+function glbFaceMaterial(L, expr = '') {
+  const map = faceTexture(OPTIONS.skin[L.skin], L.eyes, L.sex, expr); map.wrapS = THREE.RepeatWrapping;
+  // 臉貼圖已有膚色，材質保持白色避免二次乘色。
+  return glbMaterial(`face|${L.skin}|${L.eyes}|${L.sex}|${expr}`, { map, roughness: 0.35, clearcoat: 0.25 });
+}
+function glbJerseyTexture(kit, num) {
+  const key = `glbJersey|${kit.name}|${num}`; if (TEX.has(key)) return TEX.get(key);
+  const d = jerseyLayout, c = document.createElement('canvas'); c.width = c.height = d.size;
+  const x = c.getContext('2d'), W = d.size, Y = v => (1 - v) * W;
+  const [lo, hi] = d.torso_v, tv = t => lo + (hi - lo) * t;
+  x.fillStyle = kit.body; x.fillRect(0, 0, W, W);
+  for (const [width, color] of [[d.side_piping_half, '#FFFFFF'], [d.side_stripe_half, kit.trim]]) {
+    x.fillStyle = color;
+    for (const u of d.side_u) x.fillRect((u - width) * W, Y(tv(d.raglan.bottom_tv)), width * 2 * W, (tv(d.raglan.bottom_tv) - lo) * W);   // 側條只到腋下，不畫到肩膀頂端
+  }
+  x.strokeStyle = '#FFFFFF'; x.lineWidth = d.raglan.half_width * 2 * W;
+  for (const u of [d.front_u, d.back_u]) for (const side of [-1, 1]) {
+    x.beginPath(); x.moveTo((u + side * d.raglan.top_du) * W, Y(d.raglan.top_v));
+    x.lineTo((u + side * d.raglan.bottom_du) * W, Y(tv(d.raglan.bottom_tv))); x.stroke();
+  }
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  for (const [u, height, size] of [[d.front_u, 0.7, 0.13], [d.back_u, 0.6, 0.21]]) {
+    x.font = `700 ${Math.round(W * size)}px Bahnschrift, "Arial Narrow", "Roboto Condensed", Arial, sans-serif`;
+    x.strokeStyle = kit.numEdge; x.lineWidth = W * size * 0.08; x.strokeText(String(num), u * W, Y(tv(height)));
+    x.fillStyle = kit.num; x.fillText(String(num), u * W, Y(tv(height)));
+  }
+  const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
+  texture.flipY = false;   // glb 的 UV 已經是 glTF 的上下方向（Blender 輸出時翻過一次），畫布不能再翻
+  texture.wrapS = THREE.RepeatWrapping; texture.anisotropy = 4; TEX.set(key, texture); return texture;
+}
+function glbPartMaterial(part, L, kit, primitive) {
+  if (part === 'head') return glbFaceMaterial(L);
+  if (part === 'body') return glbMaterial(`skin|${L.skin}`, { color: OPTIONS.skin[L.skin], roughness: 0.35, clearcoat: 0.25 });
+  if (part.startsWith('hair_')) return glbMaterial(`hair|${L.hairColor}`, { color: OPTIONS.hairColor[L.hairColor], vertexColors: true, roughness: 0.24, clearcoat: 0.7 });
+  if (part.startsWith('top_')) return glbMaterial(`top|${kit.name}|${L.num}`, { map: glbJerseyTexture(kit, L.num), roughness: 0.78, side: THREE.DoubleSide });
+  const color = part.startsWith('collar_') ? kit.trim : part.startsWith('pants_') ? kit.shorts
+    : part === 'knee_0' ? '#24262C' : part === 'knee_1' ? '#F2F2EE'
+    : part === 'headband_3' ? kit.accent : part.startsWith('shoe') && primitive === 0 ? OPTIONS.shoe[L.shoe] : '#F6F6F2';
+  return glbMaterial(`solid|${color}`, { color, roughness: 0.65 });
+}
+function makeGLBRig(meta) {
+  const g = new THREE.Group(), body = new THREE.Group(), root = new THREE.Group(); g.add(body); body.add(root);
+  // root 保留遊戲的零位移，否則 avDrive 的貼地公式會額外抬高 0.56 公尺。
+  const groups = { root }, positions = { root: new THREE.Vector3() };
+  const add = (name, parent, armAngle = 0) => {
+    const group = new THREE.Group(), position = webPoint(meta.joints[name][0]);
+    group.position.copy(position).sub(positions[parent]);
+    if (armAngle) group.position.applyAxisAngle(new THREE.Vector3(0, 0, 1), -armAngle);
+    groups[parent].add(group); groups[name] = group; positions[name] = position; return group;
+  };
+  const spine = add('spine', 'root'), head = add('head', 'spine');
+  const arms = [], elbows = [], hands = [], legs = [], knees = [], feet = [];
+  for (const [i, side] of ['R', 'L'].entries()) {
+    const angle = (i ? 1 : -1) * meta.armA;
+    legs.push(add(`thigh.${side}`, 'root')); knees.push(add(`shin.${side}`, `thigh.${side}`)); feet.push(add(`foot.${side}`, `shin.${side}`));
+    arms.push(add(`upperarm.${side}`, 'spine')); elbows.push(add(`forearm.${side}`, `upperarm.${side}`, angle)); hands.push(add(`hand.${side}`, `forearm.${side}`, angle));
+    arms[i].rotation.z = angle;
+  }
+  const bones = {};
+  for (const [name, group] of Object.entries(groups)) { const b = new THREE.Bone(); b.name = name; group.add(b); bones[boneKey(name)] = b; }
+  // Blender 匯出器為未加權頂點增加的固定骨頭，也必須跟著角色 root。
+  const neutral = new THREE.Bone(); root.add(neutral); bones.neutral_bone = neutral;
+  return { g, body, root, spine, head, arms, elbows, hands, legs, knees, feet, bones };
+}
+function makeGLBAvatar(L, team, asset) {
+  const rig = makeGLBRig(asset.meta), kit = kitOf(team), copy = cloneSkeleton(asset.scene), meshes = [];
+  copy.traverse(o => { if (o.isSkinnedMesh && partVisible(o.userData.avatarPart, L)) meshes.push(o); });
+  const skeletons = new Map(); let skull;
+  for (const mesh of meshes) {
+    const part = mesh.userData.avatarPart;
+    rig.root.add(mesh); mesh.position.set(0, 0, 0); mesh.quaternion.identity(); mesh.scale.set(1, 1, 1);
+    mesh.material = glbPartMaterial(part, L, kit, mesh.userData.avatarPrimitive);
+    mesh.frustumCulled = false; mesh.castShadow = true;
+    const names = mesh.userData.avatarBones, key = names.join('|');
+    rig.g.updateMatrixWorld(true);
+    if (!skeletons.has(key)) skeletons.set(key, new THREE.Skeleton(names.map(n => rig.bones[boneKey(n)])));
+    // 必須保留 glTF skinIndex 的原始順序，不能用 metadata 的 bones 排序。
+    mesh.bind(skeletons.get(key), mesh.matrixWorld);
+    if (part === 'head') skull = mesh;
+  }
+  rig.arms.forEach(a => { a.rotation.z = 0; }); rig.g.updateMatrixWorld(true);
+  return { ...rig, kit, look: L, phase: 0, rig: true, chibi: true, glb: true,
+    L1: 0.29, L2: 0.33, hipH: 0.62, _skull: skull, _faceM: skull?.material };
+}
+// 模組載入即開始；失敗會被 preloadAvatars 捕捉，不產生未處理 rejection。
+void preloadAvatars();
 
 // ---------- 頭髮：髮束 ----------
 // 頭的位置用球座標：pol＝離頭頂的角度（0 頭頂、π/2 耳朵高度），az＝0 正前方、π 正後方、正值往左（+x）

@@ -2,7 +2,7 @@
 // openCreator({ look, background, mode: 'create' | 'edit', onDone(look), onCancel() }) → 回傳 close()。
 // 左邊：排球場上的角色（可以拖曳轉身、滾輪拉近）；右邊：部位格子 → 樣式格子，直接點選。
 import * as THREE from 'three';
-import { makeToyAvatar, OPTIONS, DEFAULT_LOOK, KITS, EXPRESSIONS, PREVIEW_POSES, applyStaticPose, setExpression, randomLook } from './avatar-toy.js';
+import { preloadAvatars, makeToyAvatar, OPTIONS, DEFAULT_LOOK, KITS, EXPRESSIONS, PREVIEW_POSES, applyStaticPose, setExpression, randomLook } from './avatar-toy.js';
 
 const CATS = [
   { k: 'sex', name: '性別', shot: 'bust' },
@@ -231,7 +231,13 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/creator-
   root.querySelector('.cc-done').onclick = () => { close(); onDone && onDone({ ...L }); };
   const cancel = root.querySelector('.cc-cancel'); if (cancel) cancel.onclick = () => { close(); onCancel && onCancel(); };
 
-  rebuild(); drawCats(); drawGrid();
+  const panel = root.querySelector('.cc-panel'); panel.inert = true;
+  hEl.textContent = '角色載入中…';
+  (async () => {
+    await preloadAvatars();
+    if (!alive) return;
+    rebuild(); drawCats(); drawGrid(); panel.inert = false;
+  })();
   // 鏡頭跟著選的部位移動（角色放在畫面中間偏左一點）
   let alive = true, last = performance.now();
   (function loop(now) {
