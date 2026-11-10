@@ -544,3 +544,17 @@ console.log('PASS 練習模式大面板（自由練習／新手教學）、按�
   assert(tut.includes('.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%)'), '面板在上方中間、陪練按鈕列下面');
   console.log('PASS 各段失敗提示、成功清提示、教學中不被接球輔助拉走、面板位置');
 }
+
+{ /* 教練（拋球、餵球的人）要面向玩家，玩家走動也跟著轉；雙人攔網隊友跟玩家一樣面向網子（角色朝向＝rotation.y 的 sin、cos 方向） */
+  const facing = (g, w) => { const r = g.rotation.y, dx = w.x - g.position.x, dz = w.z - g.position.z; return (Math.sin(r) * dx + Math.cos(r) * dz) / Math.hypot(dx, dz); };
+  for (const id of ['recv', 'set', 'atk', 'block']) {
+    const t = engine(); t.api.start(id); t.tick();
+    assert(facing(t.c.coach.coach.g, t.walk) > 0.99, id + ' 教練要面向玩家');
+    t.walk.x += 1.5; t.walk.z += 0.7; t.tick();
+    assert(facing(t.c.coach.coach.g, t.walk) > 0.99, id + ' 玩家走動後教練要跟著轉');
+  }
+  const t = engine(); t.api.start('block'); for (let i = 0; i < 3; i++) { t.api.skip(); t.advance(); }
+  const r = t.c.coach.mate.av.g.rotation.y, yaw = t.walk.yaw;
+  assert(Math.sin(r) * -Math.sin(yaw) + Math.cos(r) * -Math.cos(yaw) > 0.99, '雙人攔網隊友要跟玩家一樣面向網子');
+  console.log('PASS 教練面向玩家（玩家走動也跟著轉）、雙人攔網隊友面向網子');
+}

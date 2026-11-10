@@ -11290,6 +11290,7 @@ const TUT_COACH = {
       vbLaunch(b, b.m.position.clone(), v, 'spike'); this.toss = null;
     }
   },
+  face(av) { av.g.rotation.y = Math.atan2(walk.x - av.g.position.x, walk.z - av.g.position.z); },   // 角色面向玩家（角色朝向＝rotation.y 的 sin、cos 方向）
   coachAnim(now) {
     const av = this.coach, k = this.cj ? (now - this.cj) / this.TOSS.jumpMs : -1, air = k >= 0 && k < 1;
     av.g.position.y = air ? this.TOSS.jumpH * Math.sin(Math.PI * k) : 0;
@@ -11314,7 +11315,7 @@ const TUT_COACH = {
   },
   avatar(p) {
     const av = makeAvatar('#30A46C', myChar());
-    av.g.position.copy(p); av.g.rotation.y = walk.yaw + Math.PI;
+    av.g.position.copy(p); this.face(av);
     scene.add(av.g); this.objects.push(av.g); return av;
   },
   clearStep() {
@@ -11373,7 +11374,7 @@ const TUT_COACH = {
     if (id === 'block') {
       this.ring = this.circle(this.world(0.7, 0));
       if (index === 3) {
-        const av = this.avatar(this.world(0.7, 1.1)); av.g.rotation.y = walk.yaw;
+        const av = this.avatar(this.world(0.7, 1.1)); av.g.rotation.y = walk.yaw + Math.PI;   // 隊友跟你一樣面向網子
         this.mate = { av, jumping: false };
       }
     } else this.ring = this.circle(this.world(id === 'recv' ? 5 : 1.45, 0));
@@ -11441,6 +11442,7 @@ const TUT_COACH = {
       avDrive(this.mate.av, air ? avBlockPose(walk.blkShift || 0) : AVP.idle, 0.5, 0, !!air);
       if (!air) this.mate.jumping = false;
     }
+    if (this.coach) this.face(this.coach);   // 拋球／餵球的教練一直面向玩家
     if (this.toss) this.tossStep(now);
     if (this.coach && this.id === 'block') this.coachAnim(now);
     const incoming = this.incoming();
