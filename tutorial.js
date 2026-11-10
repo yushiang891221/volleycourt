@@ -68,7 +68,7 @@
           `按住 ${key('1')}、${key('2')} 或 ${key('3')}，滑鼠往左或右拖，選不同於預設的舉法再放開。`
         ],
         atk: [
-          `往網前助跑，移動中按 ${key(' ')} 起跳。這一步要一般起跳。`,
+          `按住 ${key('shift')} 往網前助跑，移動中按 ${key(' ')} 起跳。這一步要一般起跳。`,
           '等舉球來到身前上方，空中按住左鍵蓄力，放開打到球。',
           '空中蓄力條到金色時放開左鍵，打到球。金色甜蜜點最大力又最準，紅色表示蓄過頭。',
           '等球到身前上方，起跳後在空中按右鍵吊球。'
@@ -136,7 +136,7 @@
     function advance() {
       saved.at[section.id] = step + 1;
       if (step + 1 === section.count) {
-        saved.done[section.id] = true; phase = 'complete'; coach.stop?.(); persist(); render();
+        saved.done[section.id] = true; phase = 'complete'; coach.stop?.(); coach.release?.(); persist(); render();
       } else { step++; enter(); }
     }
     function emit(name, data = {}) {
@@ -188,12 +188,21 @@
     function mount(document) {
       if (panel) return;
       const style = document.createElement('style');
-      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:16px;left:50%;transform:translateX(-50%);width:min(420px,38vw)}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:74px;left:max(16px,calc((100vw - 900px)/2));width:min(420px,calc(100vw - 480px));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
       button = document.createElement('button'); button.className = 'vb-tut-entry'; button.textContent = '📘 新手教學'; button.onclick = open;
-      document.body.append(menu, panel, button);
+      document.body.append(menu, panel);
+      const toolbar = document.querySelector('.walk-top');
+      (toolbar || document.body).append(button);
+      if (toolbar) button.style.cssText = 'position:static;pointer-events:auto';
+      for (const element of [menu, panel, button]) {
+        for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'wheel']) {
+          element.addEventListener(type, event => event.stopPropagation());
+        }
+      }
+      button.addEventListener('click', event => event.stopPropagation());
       const actions = { open, stop, reset, skip: () => succeed(true) };
       const click = event => {
         event.stopPropagation();

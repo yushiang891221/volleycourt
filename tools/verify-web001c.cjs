@@ -120,6 +120,9 @@ await check('unmodified physics, scoring, rotation and transports match baseline
   current=current.replace('function vmPickChar(used) {\n  const code = aiLook(used.size); used.add(code); return code;\n}', 'function vmPickChar(used) { return null; }')
     .replace('  ch = aiLook(id); VM.chars[id] = ch;\n', '')
     .replace('const av = makeAvatar(color, ch, team), el =', 'const av = makeAvatar(color, ch), el =');
+  /* WEB-006C 只排除兩條教學通知，其他物理與比賽程式仍逐字比對。 */
+  current=current.replace("  tutEv('serve', { type, zone: C && C.zone }, b);\n", '')
+    .replace('  globalThis.VBTutorial?.stop();\n', '');
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));
