@@ -39,7 +39,7 @@ function preview(img, code = myLookCode()) {
     const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
     const av = makeToyAvatar(decodeLook(code), 'orange'); scene.add(av.g);   // 含裝備
     const camera = new THREE.PerspectiveCamera(32, .8, .05, 20);
-    camera.position.set(.35, .95, 2.5); camera.lookAt(0, .68, 0);   // 拉近：角色填滿預覽圖
+    camera.position.set(.35, 1.0, 2.95); camera.lookAt(0, .78, 0);   // 角色整個人（含頭頂、帽子）都在預覽圖裡
     renderer.render(scene, camera); img.src = renderer.domElement.toDataURL();
   } finally { renderer.dispose(); renderer.forceContextLoss(); }
 }
