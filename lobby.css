@@ -188,3 +188,7 @@ main { grid-template-rows: minmax(0, 1.25fr) minmax(170px, 1fr); }
 .character-info img { object-fit: contain; border-radius: 12px; }
 .character-info dl { display: grid; grid-template-columns: auto auto; gap: 16px 24px; }
 .character-info dd { margin: 0; }
+/* 整體放大：100% 瀏覽器縮放時，大廳看起來跟 125% 一樣大（字、按鈕、圖片一起放大）。
+   zoom 會連 dvh 一起放大，所以高度、最小寬度要除回去；螢幕不夠大時放少一點，避免擠不下 */
+@media (min-width: 1300px) and (min-height: 760px) { body { zoom: 1.12; height: calc(100dvh / 1.12); min-width: calc(1100px / 1.12); } }
+@media (min-width: 1500px) and (min-height: 860px) { body { zoom: 1.25; height: calc(100dvh / 1.25); min-width: calc(1100px / 1.25); } }
