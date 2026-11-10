@@ -256,7 +256,7 @@ function engine() {
     avDrive: noop, avBlockPose: () => ({}), setMenuClose: noop, unlockMouse: noop,
     toast: noop, recHit: noop, vbImpact: noop, vbFx: noop, vbBlockFx: noop, vbSpinFor: () => null,
     vbPep: () => null, vmSecond: () => false, vmThird: () => false, vbHardDefl: () => null,
-    vmMe: () => 'me', vmOnTouch: noop, vmBlockTest: noop, vbChargeStep: noop,
+    vmMe: () => 'me', vbMyRole: () => null, vbHangK: () => 1, vbIsSetter: () => true, ROLE_SUPER: {}, vmOnTouch: noop, vmBlockTest: noop, vbChargeStep: noop,
     staCost: () => 5, staEff: () => 1, staWarn: noop,
     updateTweens: noop, updateDoors: noop, updateWind: noop, netFxStep: noop, ballShadowSync: noop,
     blockers: () => [], solidSegs: () => [], vmCrossCheck: noop, sfx: noop, netFxHit: noop,

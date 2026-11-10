@@ -61,6 +61,10 @@
     <div class="player-list" id="players"></div>
     <div class="player-note muted" id="player-note">正在取得在線名單</div>
     <div class="pager players-pager"><button id="players-prev" disabled aria-label="玩家上一頁">‹</button><span id="players-page">1 / 1 頁</span><button id="players-next" disabled aria-label="玩家下一頁">›</button></div>
+    <section class="me-card" id="character-info" aria-labelledby="me-title">
+      <div class="panel-head"><h2 id="me-title"><span data-icon="user"></span>角色資訊</h2></div>
+      <div class="me-body"><img alt="你的角色預覽" width="240" height="300"><div class="me-side"><h3 class="me-name">球友</h3><dl><dt>等級</dt><dd>—</dd><dt>場數</dt><dd>—</dd><dt>勝率</dt><dd>—</dd><dt>遊玩時數</dt><dd>—</dd></dl><button type="button" class="orange" data-edit>調整外觀</button><p class="me-err" role="status"></p></div></div>
+    </section>
   </aside>
   <section class="chat panel" aria-labelledby="chat-title">
     <div class="chat-heading"><h2 id="chat-title"><span data-icon="chat"></span>大廳留言板</h2><span>全服聊天</span></div>
@@ -68,7 +72,7 @@
     <form id="chat"><select aria-label="聊天頻道"><option>大廳頻道</option></select><input id="message" aria-label="留言" maxlength="200" placeholder="輸入留言訊息（按 Enter 發送）…" required><button class="orange"><span data-icon="send"></span>發送</button><button type="button" id="sound" class="icon-button" aria-label="開啟留言音效" aria-pressed="false" title="開啟留言音效"><span data-icon="mute"></span></button></form>
   </section>
 </main>
-<footer class="panel"><nav aria-label="系統功能"><button id="character-info"><span data-icon="user"></span>角色資訊</button><button data-soon><span data-icon="trophy"></span>成就系統</button><button data-soon><span data-icon="rank"></span>天梯排行榜</button><button data-soon><span data-icon="shirt"></span>球衣與裝備</button><button id="system-settings"><span data-icon="settings"></span>系統設定</button></nav><span class="muted">一起上場，打好每一球。</span></footer>
+<footer class="panel"><nav aria-label="系統功能"><button data-soon><span data-icon="trophy"></span>成就系統</button><button data-soon><span data-icon="rank"></span>天梯排行榜</button><button data-soon><span data-icon="shirt"></span>球衣與裝備</button><button id="system-settings"><span data-icon="settings"></span>系統設定</button></nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>
 <dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>1v1</option><option selected>2v2</option><option>3v3</option><option>4v4</option><option>5v5</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>

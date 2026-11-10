@@ -97,6 +97,18 @@ h2 .icon, .count { color: #f3a24b; }
 .player-note { padding: 10px 2px; text-align: center; font-size: 9px; }
 .players-pager { justify-content: space-between; border-top: 1px solid #222f41; padding-top: 8px; }
 .players-pager span { color: #90a0b4; background: transparent; border: 0; }
+/* 右欄下半部：角色資訊（玩家名單佔上半） */
+.players .player-list { flex: 1 1 0; }
+.me-card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid #222f41; margin-top: 10px; padding-top: 10px; }
+.me-card h2 { color: #f0a34b; }
+.me-body { flex: 1; min-height: 0; display: flex; gap: 12px; align-items: stretch; background: #0a101b; border: 1px solid #202d40; padding: 8px; }
+.me-body img { width: 46%; height: 100%; min-height: 0; object-fit: contain; border-radius: 8px; background: #152236; }
+.me-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.me-name { margin: 2px 0 0; font-size: 16px; color: #ffb363; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-side dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
+.me-side dt { color: #7d91aa; } .me-side dd { margin: 0; color: #d8e2ee; }
+.me-side button { margin-top: auto; }
+.me-err { margin: 0; min-height: 14px; font-size: 11px; color: #ff9c8a; }
 .chat { display: flex; flex-direction: column; gap: 7px; }
 .chat-heading { display: flex; justify-content: space-between; align-items: center; }
 .chat-heading h2 { font-size: 10px; color: #94a9bd; }

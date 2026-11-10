@@ -8,6 +8,7 @@ export function readLook() {
 export function saveLook(look) {
   const code = encodeLook(look);
   localStorage.setItem(LOOK_KEY, code);
+  try { dispatchEvent(new Event('vb-look-change')); } catch {}   // 大廳角色卡重畫
   return code;
 }
 export const needsCreator = () => !readLook();

@@ -161,7 +161,7 @@ def tops(body, sex):
     return out
 
 
-def _shell(name, nodes, edges, top_z, hem_z, thick):
+def _shell(name, nodes, edges, top_z, hem_z, thick, body=None):
     """用 Skin 修改器做一整塊平滑的褲子（腰→骨盆→兩條褲管），切掉上下開口、加厚度。沒有分層、沒有接縫"""
     K = 1.32
     me = bpy.data.meshes.new(name); me.from_pydata([Vector(p) for p, _, _ in nodes], edges, [])
@@ -183,6 +183,17 @@ def _shell(name, nodes, edges, top_z, hem_z, thick):
             nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
             if len(nb) == 2: new[v] = Vector((v.co.x * 0.4 + (nb[0].co.x + nb[1].co.x) * 0.3, v.co.y * 0.4 + (nb[0].co.y + nb[1].co.y) * 0.3, v.co.z))
         for v, c in new.items(): v.co = c
+    if body is not None:   # 褲頭像鬆緊帶：最上面 3.5 cm 往內收到身體外 1.1 cm（加厚度後內面離身體約 4 mm）——蹲下從上面看不到褲頭和身體之間的縫
+        from mathutils.bvhtree import BVHTree
+        dg = bpy.context.evaluated_depsgraph_get(); tree = BVHTree.FromObject(body, dg)
+        for v in bm.verts:
+            w = _ss(v.co.z, top_z - 0.035, top_z - 0.005)
+            r = math.hypot(v.co.x, v.co.y)
+            if w <= 0 or r < 1e-4: continue
+            d = Vector((v.co.x / r, v.co.y / r, 0)); hit = tree.ray_cast(Vector((0, 0, v.co.z)), d)
+            if hit[0] is None: continue
+            rb = hit[3]; nr = r - max(0.0, r - (rb + 0.011)) * w
+            v.co.x, v.co.y = d.x * nr, d.y * nr
     bm.to_mesh(ob.data); bm.free()
     # 權重：腰以上照身體（spine/root 漸變）；褲管從髖往下漸漸改跟大腿（長褲再照膝蓋分大腿/小腿）
     G = {}
@@ -199,6 +210,11 @@ def _shell(name, nodes, edges, top_z, hem_z, thick):
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False
     sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.4; sm.iterations = 3
     apply_mods(ob); smooth(ob)
+    # 褲頭、褲管口的直角邊標成硬邊：外面那圈自己打光，不會被邊緣的法線帶成一條條鋸齒亮紋
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    for e in bm.edges:
+        if len(e.link_faces) == 2 and e.calc_face_angle(0) > 0.9: e.smooth = False
+    bm.to_mesh(ob.data); bm.free()
     return ob
 
 
@@ -214,13 +230,14 @@ def pants(body, sex=0):
     res = []
     for kind, g, hem in ((0, 0.016, HIP_H - 0.16), (1, 0.022, 0.11)):
         # 兩條褲管直接從腰分出去（中間不放骨盆節點：那裡會多一團，蹲下時從褲底凸出來）
-        top = [((0, 0, HIP_H + 0.13), 0.155 * (0.62 if F else 1) + g, 0.122 * (0.84 if F else 1) + g)]
+        # 褲頭要比腰那圈身體寬一點（男生側面原本窄 1.4 公分、女生前後只差 1～2 公釐）：身體才不會從褲頭穿出來變鋸齒
+        top = [((0, 0, HIP_H + 0.13), (0.155 * 0.62 + 0.014 if F else 0.185) + g, (0.122 * 0.84 + 0.016 if F else 0.134) + g)]
         lg = legs(g, kind == 1); n = len(lg) // 2
         nodes = top + lg
         edges = []
         for side in range(2):
             b = 1 + side * n; edges += [(0, b)] + [(b + i, b + i + 1) for i in range(n - 1)]
-        res.append(_shell(f'pants_{kind}', nodes, edges, HIP_H + 0.1, hem, 0.007))
+        res.append(_shell(f'pants_{kind}', nodes, edges, HIP_H + 0.1, hem, 0.007, body))
     return res
 
 
@@ -233,7 +250,7 @@ def hide_under_pants(body):
         dom = names.get(max(ws.items(), key=lambda kv: kv[1])[0], '') if ws else ''
         if dom.startswith(('upperarm', 'forearm', 'hand')): return False
         if dom.startswith('thigh'): return v.co.z > HIP_H - 0.06   # 大腿留到褲管裡面一段：蹲下時從褲管口看進去不會透空
-        return HIP_H - 0.13 < v.co.z < HIP_H + 0.07
+        return HIP_H - 0.13 < v.co.z < HIP_H + 0.05   # 褲頭在 HIP_H+0.1：裡面留 5 公分身體，蹲下從褲頭往裡看是皮膚、不是切口
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(gone(v) for v in f.verts)], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     bm.to_mesh(body.data); bm.free(); body.data.update()

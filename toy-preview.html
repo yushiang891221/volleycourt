@@ -66,6 +66,7 @@ const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStan
 const controls = new OrbitControls(camera, renderer.domElement);
 
 let look = Q.get('look') ? decodeLook(Q.get('look')) : { ...DEFAULT_LOOK }, team = Q.get('team') || '#F08A3C', poseKey = Q.get('pose') || 'idle', avs = [];
+window.__toy = { scene, get avs() { return avs; } };   // 開發檢查用
 const grid = Q.has('grid');
 function rebuild() {
   for (const a of avs) scene.remove(a.g); avs = [];
