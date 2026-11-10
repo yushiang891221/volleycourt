@@ -5590,7 +5590,7 @@ function startWalk() {
   // 邀請連結帶著房間代碼：進導覽就自動加入
   { const rq = new URLSearchParams(location.search).get('room'); if (rq && !NET.on) netJoin(rq); else renderRoomRules(); }
   applyPersonalSettings();
-  if (window.VBTutorial && new URLSearchParams(location.search).get('tutorial') === '1') window.VBTutorial.open();
+  tutAutoOpen();
   toast('從主入口進場。走進任何一區，角落會出現那一區的說明');
 }
 function stopWalk() {
@@ -9653,6 +9653,7 @@ function vbBlockTest(b, h) {
 // ---- 接球微輔助：球會落在你這邊、3.5 m 以內時，身體輕輕被帶到落點後面（球在身體前方）
 function vbAssist(inputMag) {
   VB.target = null;
+  if (TUT_COACH.id === 'block' || (TUT_COACH.id === 'recv' && TUT_COACH.index === 0)) return null;   // 教學攔網段：不把人從網前圈拉走；接球第 1 步：要自己走進落點圈
   if (walk.air || walk.hold || walk.sit) return null;
   const ct = vbCourt(); if (!ct) return null;
   const sg = Math.sign(ct.lx) || 1; let best = null;
@@ -11239,6 +11240,12 @@ $('rk-menu').addEventListener('click', (e) => {
 });
 
 /* 教學場景只組合現有球路，球仍由原本的碰撞與擊球流程處理。 */
+function tutAutoOpen() {   // 網址 tutorial=1：等「進入球館中…」載入畫面收掉、真的進了球館才開選單
+  if (tutAutoOpen.done || new URLSearchParams(location.search).get('tutorial') !== '1') return;
+  const cover = $('game-loading');
+  if (!window.VBTutorial || !walk.on || (cover && !cover.hidden)) { clearTimeout(tutAutoOpen.t); tutAutoOpen.t = setTimeout(tutAutoOpen, 300); return; }
+  tutAutoOpen.done = true; window.VBTutorial.open();
+}
 function tutEv(name, data, ball) {
   const tutorial = window.VBTutorial;
   if (!tutorial?.active) return;
@@ -11257,6 +11264,38 @@ function tutSnapshot() {
 const TUT_COACH = {
   id: null, index: 0, court: null, sg: 1, ball: null, owned: new Set(), objects: [],
   next: 0, lastServe: -Infinity, paused: false, settled: false, failed: false, mate: null, ring: null, held: null,
+  coach: null, toss: null, cj: 0,
+  // 攔網教練：手上 2.3 m 往上拋（約到 3.7 m），球落回 3.3 m 時扣過來；球到最高點那一刻教練起跳（玩家看這個起跳）
+  TOSS: { y0: 2.3, vy: 5.2, hitY: 3.3, speed: 8, jumpH: 0.6, jumpMs: 700 },
+  recvTarget(index) {   // 接球落點：照玩家「現在」的位置算，都在自己場內
+    const [lx, lz] = toLocalOf(this.court, walk.x, walk.z), px = lx * this.sg;
+    const ok = (x, z) => x >= 1.2 && x <= 8.5 && Math.abs(z) <= 4;
+    if (index === 0) {   // 走進落點圈：落在旁邊 2～2.5 m
+      for (let i = 0; i < 24; i++) { const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 0.5, x = px + Math.cos(a) * r, z = lz + Math.sin(a) * r; if (ok(x, z)) return this.world(x, z); }
+      return this.world(px > 4.8 ? px - 2.2 : px + 2.2, lz);
+    }
+    if (index === 3) {   // 撲救：落在側邊 3～3.5 m（撲救最遠 5 m）
+      const r = 3 + Math.random() * 0.5, s = Math.random() < 0.5 ? 1 : -1;
+      for (const d of [s, -s]) if (ok(px, lz + d * r)) return this.world(px, lz + d * r);
+      return this.world(px > 4.8 ? px - r : px + r, lz);
+    }
+    return this.world(clamp(px, 1.2, 8.5), clamp(lz, -4, 4));
+  },
+  tossStep(now) {
+    const t = this.toss, b = t.ball;
+    if (!balls.includes(b)) { this.toss = null; return; }
+    if (!t.apex && b.v.y < 0) { t.apex = now; this.cj = now; }
+    if (t.apex && b.m.position.y <= this.TOSS.hitY) {
+      const v = this.world(-1, 0).sub(this.world(-2, 0)).multiplyScalar(this.TOSS.speed); v.y = -0.5;
+      vbLaunch(b, b.m.position.clone(), v, 'spike'); this.toss = null;
+    }
+  },
+  coachAnim(now) {
+    const av = this.coach, k = this.cj ? (now - this.cj) / this.TOSS.jumpMs : -1, air = k >= 0 && k < 1;
+    av.g.position.y = air ? this.TOSS.jumpH * Math.sin(Math.PI * k) : 0;
+    avDrive(av, this.toss ? (air ? AVP.airUp : AVP.serveToss) : air ? AVP.spikeHit : AVP.ready, 0.5, 0, air);
+    if (k >= 1) this.cj = 0;
+  },
   world(x, z, y = 0) {
     const [wx, wz] = toWorldOf(this.court, x * this.sg, z);
     return new THREE.Vector3(wx, y, wz);
@@ -11292,6 +11331,7 @@ const TUT_COACH = {
       if (object.isMesh) { object.geometry.dispose(); object.material.dispose(); }
     }
     this.objects = []; this.mate = null; this.ring = null; this.ball = null; this.next = 0;
+    this.coach = null; this.toss = null; this.cj = 0;
     if (this.held) {
       this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
       this.held = null;
@@ -11329,7 +11369,7 @@ const TUT_COACH = {
       if (performance.now() >= this.next) this.give();
       return null;
     }
-    this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0));
+    this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0));
     if (id === 'block') {
       this.ring = this.circle(this.world(0.7, 0));
       if (index === 3) {
@@ -11351,19 +11391,20 @@ const TUT_COACH = {
   },
   feed() {
     const id = this.id;
-    const from = this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, id === 'block' ? 3.3 : 2.2);
+    const from = this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, id === 'block' ? this.TOSS.y0 : 2.2);
     const mesh = newBallMesh(); mesh.position.copy(from);
     const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.failed = false; this.next = Infinity;
     if (id === 'block') {
-      const end = this.world(-1, 0, 3.3), velocity = end.sub(from).multiplyScalar(8); velocity.y = -0.5;
-      vbLaunch(ball, from, velocity, 'spike');
+      /* 攔網：教練先把球往上拋（預兆），球落回扣球高度時起跳扣過來（frame 裡做） */
+      vbLaunch(ball, from, new THREE.Vector3(0, this.TOSS.vy, 0), 'set');
+      this.toss = { ball, t0: performance.now(), apex: 0 };
     } else if (id === 'atk') {
       const target = this.world(1.45, 0);
       vbSendSet(ball, target.x, target.z, 3.05, 1.1, 2, '教練', from);
     } else {
-      const target = id === 'recv' ? this.world(5, this.index === 3 ? 3.5 : 0) : new THREE.Vector3(walk.x - Math.sin(walk.yaw) * 0.3, 0, walk.z - Math.cos(walk.yaw) * 0.3);
+      const target = id === 'recv' ? this.recvTarget(this.index) : new THREE.Vector3(walk.x - Math.sin(walk.yaw) * 0.3, 0, walk.z - Math.cos(walk.yaw) * 0.3);
       const velocity = id === 'recv' ? solveShot(from, target.x, target.z, this.court, -this.sg, this.index === 2 ? 1.25 : 1.65)
         : new THREE.Vector3((target.x - from.x) / 1.15, (2.05 - from.y) / 1.15 + 4.9 * 1.15, (target.z - from.z) / 1.15);
       vbLaunch(ball, from, velocity, id === 'set' ? 'set' : 'bump');
@@ -11400,6 +11441,8 @@ const TUT_COACH = {
       avDrive(this.mate.av, air ? avBlockPose(walk.blkShift || 0) : AVP.idle, 0.5, 0, !!air);
       if (!air) this.mate.jumping = false;
     }
+    if (this.toss) this.tossStep(now);
+    if (this.coach && this.id === 'block') this.coachAnim(now);
     const incoming = this.incoming();
     if (this.id === 'recv' && this.ring) {
       this.ring.visible = !!incoming;
@@ -11433,7 +11476,7 @@ if (new URLSearchParams(location.search).has('practice')) {
   tutorialScript.onload = () => {
     window.VBTutorial = window.VBTutorialFactory.create({ coach: TUT_COACH });
     window.VBTutorial.mount(document);
-    if (walk.on && new URLSearchParams(location.search).get('tutorial') === '1') window.VBTutorial.open();
+    tutAutoOpen();
   };
   document.head.append(tutorialScript);
 }
@@ -11538,7 +11581,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {

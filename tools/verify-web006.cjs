@@ -198,7 +198,8 @@ for (const name of ['stopWalk', 'vmStart', 'vm6Start', 'rkStart']) assert(source
 const loader = gym.slice(gym.indexOf("if (new URLSearchParams(location.search).has('practice')) {\n  ROOM ="), gym.indexOf('function resize()'));
 assert(loader.includes("tutorialScript.src = 'tutorial.js'"));
 assert(loader.includes('window.VBTutorial.mount(document)'));
-assert(loader.includes("get('tutorial') === '1'"));
+assert(loader.includes('tutAutoOpen()'));
+assert(source('tutAutoOpen').includes("get('tutorial') !== '1'") && source('tutAutoOpen').includes("$('game-loading')") && source('tutAutoOpen').includes('!cover.hidden'), 'tutorial=1 要等載入畫面收掉才開選單');
 assert.equal((gym.match(/tutorialScript.src/g) || []).length, 1);
 assert(source('setMenuPick').includes('SET_OPT[m.n][i][0], true'));
 assert(source('vbSet').includes('walk.setQ = { n, v, menu,'));
@@ -266,6 +267,7 @@ function engine() {
   };
   c.vbFwd = () => [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
   vm.createContext(c);
+  vm.runInContext('Math.random = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', c);   /* 固定亂數：教練落點每次一樣，測試結果穩定 */
   for (const name of ['toWorldOf', 'toLocalOf', 'courtAt', 'vbCourt', 'solveShot', 'vbPredict', 'vbMine', 'vbLaunch',
     'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
     'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
@@ -310,7 +312,16 @@ for (const step of [1, 2, 3, 4, 5]) {
 }
 assert(api.progress().done.move);
 walk.crouch = false; walk.keys.clear();
-api.start('recv'); until(() => api.view().phase === 'success'); advance();
+api.start('recv');
+{ /* 第 1 步：落點在玩家旁 2～2.5 m，站著不動不會過關，走進落點圈才過 */
+  until(() => c.coach.incoming());
+  const p = c.coach.incoming(), d0 = Math.hypot(p.x - walk.x, p.z - walk.z);
+  assert(d0 >= 1.8 && d0 <= 2.7, '接球第 1 步落點離玩家 ' + d0);
+  for (let i = 0; i < 30; i++) tick();
+  assert.equal(api.view().phase, 'running', '站著不動不能過關');
+  until(() => api.view().phase === 'success', () => { const q = c.coach.incoming(); if (q) { walk.x = q.x; walk.z = q.z; } });
+  advance();
+}
 for (const index of [1, 2]) {
   walk.crouch = index === 2;
   until(() => api.view().phase === 'success', () => {
@@ -320,9 +331,16 @@ for (const index of [1, 2]) {
   advance();
 }
 walk.crouch = false;
+let diveFeeds = 0;
 until(() => api.view().phase === 'success', () => {
-  const ball = c.coach.ball;
-  if (ball && ball.m.position.y < 2.8 && ball.v.y < 0 && !walk.dive && !walk.down) { walk.keys.add('shift'); c.vbReceive(); }
+  const ball = c.coach.ball; if (!ball || ball.v.y >= 0) return;
+  if (ball !== c.lastDiveBall) { /* 撲救球：落在玩家側邊 3～3.5 m */
+    c.lastDiveBall = ball; diveFeeds++;
+    const pr = c.vbPredict(ball.m.position, ball.v, c.BALL_R), d = Math.hypot(pr.x - walk.x, pr.z - walk.z);
+    assert(d >= 2.8 && d <= 3.7, '撲救落點離玩家 ' + d);
+  }
+  const pr = c.vbPredict(ball.m.position, ball.v, c.BALL_R);   /* 球快落地才撲：這裡的人物移動是簡化版，0.4～0.6 秒能接到；真遊戲在瀏覽器實測是落地前 0.2～0.42 秒 */
+  if (pr && pr.t < 0.5 && !walk.dive && !walk.down) { walk.keys.add('shift'); c.vbReceive(); }
 }, 1200);
 advance(); assert(api.progress().done.recv);
 assert.equal(api.view().failures, 0, '撲救應實際接到，不靠三次失敗放寬');
@@ -367,9 +385,9 @@ assert(api.progress().done.serve);
 api.start('block'); tick(); c.vbJump('block'); advance();
 c.vbJump('block'); walk.blkAim = .3; tick(); advance();
 for (const index of [2, 3]) {
-  let jumped = false;
+  let jumped = false;   /* 真人：看到教練起跳後約 0.25 秒才按 B */
   until(() => api.view().phase === 'success', () => {
-    if (c.coach.ball && !jumped) { jumped = true; c.vbJump('block'); }
+    if (c.coach.cj && !jumped && c.performance.now() - c.coach.cj >= 250) { jumped = true; c.vbJump('block'); }
   });
   if (index === 3) assert(c.coach.together());
   advance();
@@ -389,12 +407,34 @@ for (const speed of [.55, .7, 1]) for (const side of [-1, 1]) for (const rotatio
   for (let step = 0; step < 2; step++) { test.api.skip(); test.advance(); }
   let jumped = false;
   test.until(() => test.api.view().phase === 'success', () => {
-    if (g.coach.ball && !jumped) { jumped = true; g.vbJump('block'); }
-  }, 200);
+    if (g.coach.cj && !jumped && g.performance.now() - g.coach.cj >= 250) { jumped = true; g.vbJump('block'); }
+  }, 400);
   assert(!g.coach.ball.floorHit, '碰手發生於落地前');
   test.api.stop(); assert.equal(g.balls.length, 0);
 }
-console.log('PASS 攔網固定球路在三種球速、兩側、三種場地旋轉皆經原判定碰手');
+console.log('PASS 攔網：教練先拋球再起跳扣，看教練起跳 0.25 秒後按 B，三種球速、兩側、三種場地旋轉皆攔得到');
+
+{ /* 攔網預兆：拋球→教練起跳→扣球 依序發生；看到教練起跳後 0～0.4 秒按 B 都攔得到，太早（剛拋球就跳）攔不到 */
+  for (const [delay, ok] of [[0, true], [200, true], [400, true], [null, false]]) {   /* null＝剛拋球 0.1 秒就跳 */
+    const test = engine(), g = test.c;
+    test.api.start('block');
+    for (let step = 0; step < 2; step++) { test.api.skip(); test.advance(); }
+    test.until(() => !!g.coach.toss);
+    const tossT = g.performance.now(); let apexT = 0, spikeT = 0, jumped = false, hit = false;
+    const emit = test.api.emit; test.api.emit = (n, d) => { if (n === 'block') hit = true; return emit(n, d); };
+    test.until(() => hit || (g.coach.ball && g.coach.ball.floorHit), () => {
+      const now = g.performance.now();
+      if (!apexT && g.coach.cj) apexT = now;
+      if (apexT && !spikeT && !g.coach.toss) spikeT = now;
+      const at = delay === null ? tossT + 100 : apexT && apexT + delay;
+      if (!jumped && at && now >= at) { jumped = true; g.vbJump('block'); }
+    }, 400);
+    assert(apexT - tossT > 400, '教練拋球後要隔一段時間才起跳（看得到預兆）');
+    assert(spikeT > apexT, '教練起跳後才扣球');
+    assert.equal(hit, ok, `看到教練起跳後 ${delay} ms 按 B：應${ok ? '' : '不'}攔得到`);
+  }
+  console.log('PASS 攔網預兆：拋球→起跳→扣球，起跳後 0～0.4 秒按 B 攔得到、剛拋球就跳攔不到');
+}
 
 const retry = engine(); retry.api.start('recv'); retry.api.skip(); retry.advance();
 retry.until(() => !!retry.c.coach.ball);
@@ -461,3 +501,19 @@ assert(stopped); assert.equal(dom.api.view().section, 'recv'); assert.equal(pane
 panel.events.get('click')({ stopPropagation() {}, target: { closest: () => ({ dataset: { action: 'stop' } }) } });
 assert.equal(dom.api.view().phase, 'closed');
 console.log('PASS 選單／面板正常入口與滑鼠事件隔離（畫面仍待瀏覽器驗收）');
+
+{ /* WEB-006D：各段失敗提示、做到就清提示、教學攔網段與接球第 1 步不被接球輔助拉走、面板位置 */
+  const hints = {};
+  for (const id of ['recv', 'set', 'atk', 'block', 'serve']) {
+    const t = engine(); t.api.start(id); t.api.emit('feedMiss');
+    hints[id] = t.api.view().hint; assert(hints[id], id + ' 要有失敗提示');
+    t.api.skip(); assert.equal(t.api.view().hint, '', id + ' 做到時要清掉舊的失敗提示');
+  }
+  assert.equal(new Set(Object.values(hints)).size, 5, '五段的失敗提示要不一樣');
+  assert(/教練/.test(hints.block) && /額頭/.test(hints.set) && /起跳/.test(hints.atk));
+  const vbAssist = source('vbAssist');
+  assert(vbAssist.includes("TUT_COACH.id === 'block'") && vbAssist.includes("TUT_COACH.id === 'recv' && TUT_COACH.index === 0"));
+  const tut = fs.readFileSync(path.join(__dirname, '../tutorial.js'), 'utf8');
+  assert(tut.includes('.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%)'), '面板在上方中間、陪練按鈕列下面');
+  console.log('PASS 各段失敗提示、成功清提示、教學中不被接球輔助拉走、面板位置');
+}

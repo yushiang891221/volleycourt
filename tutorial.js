@@ -79,10 +79,10 @@
           `拿著球按 ${key(' ')} 拋球起跳，等球發亮，在空中按住左鍵蓄力再放開跳發；改用右鍵可以跳飄，這一步請完成跳發。`
         ],
         block: [
-          `走進網前黃色圈，離網 1 公尺內，球被扣過來時按 ${key('b')} 起跳攔網。`,
+          `走進網前黃色圈（離網 1 公尺內）。看教練把球拋起來，他起跳時你也按 ${key('b')} 起跳攔網。`,
           `按 ${key('b')} 起跳後，在空中左右移動滑鼠移手，練習封直線或斜線。`,
-          `看球被扣來的時機按 ${key('b')}，讓球碰到攔網手；任何碰手都算。`,
-          `站在隊友旁 1.5 公尺內，按 ${key('b')} 一起起跳，攔到球。`
+          `教練拋球、起跳扣球時跟著按 ${key('b')}，讓球碰到攔網手；任何碰手都算。`,
+          `站在隊友旁 1.5 公尺內，教練起跳時按 ${key('b')}，隊友會跟你一起跳，攔到球。`
         ]
       };
       return texts[section.id]?.[step] || '';
@@ -105,7 +105,7 @@
       const next = sections[sections.indexOf(section) + 1];
       const body = phase === 'complete'
         ? `<p>這段完成！${view().allDone ? '恭喜！六段教學全部完成。' : ''}</p>${next?.enabled ? `<button data-start="${next.id}">下一段</button>` : ''} <button data-action="open">回選單</button>`
-        : `<p>${instruction()}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? escape(hint) : '') : escape(hint)}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
+        : `<p>${instruction()}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? hint : '') : hint}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
       const markup = `<strong>${section?.name || ''} ${step + 1}／${section?.count || 0}</strong>${body}`;
       panel.dataset.phase = phase;
       if (markup !== lastMarkup) { panel.innerHTML = markup; lastMarkup = markup; }
@@ -129,8 +129,18 @@
     }
     function open() { stop(); phase = 'menu'; coach.release?.(); render(); }
     function reset() { stop(); saved = empty(); persist(); open(); }
+    function missHint() {   // 每段自己的失敗提示（按鍵照玩家設定）
+      const id = section?.id;
+      if (id === 'recv') return step === 3 ? `球快掉到地上時才按住 ${key('shift')} 再按 ${key('v')} 撲過去，太早撲會撲空。` : '等球靠近身體、亮起來再按，先看落點站好。';
+      if (id === 'set') return '球掉到額頭前上方時再按數字鍵，太早太晚都舉不到。';
+      if (id === 'atk') return '等球掉到頭頂前上方再起跳，起跳後再按左鍵。';
+      if (id === 'block') return `看教練：他一起跳你就按 ${key('b')}，跟他同時跳，手才來得及舉到網上。`;
+      if (id === 'serve') return '拿著球再按，發完等下一顆球回到手上。';
+      return '再試一次。';
+    }
     function succeed(skip = false) {
       if (phase !== 'running') return;
+      if (!(section?.id === 'block' && /攔網成功|碰到球/.test(hint))) hint = '';   // 做到了：清掉舊的失敗提示（攔網保留成功的那句）
       skipped = skip; phase = 'success'; successAt = now(); coach.pause?.(); render();
     }
     function advance() {
@@ -143,7 +153,7 @@
       if (phase !== 'running') return;
       if (name === 'recvMiss' || name === 'whiff' || name === 'feedMiss') {
         if (name !== 'whiff') failures++;
-        hint = '等球靠近身體、亮起來再按，先看落點站好。';
+        hint = missHint();
         if (section.id === 'recv' && step === 3 && failures >= 3) hint = '已連續三次沒接到，這次只要有撲出去就算完成。';
       }
       if (section.id === 'recv') {
@@ -188,7 +198,7 @@
     function mount(document) {
       if (panel) return;
       const style = document.createElement('style');
-      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:74px;left:max(16px,calc((100vw - 900px)/2));width:min(420px,calc(100vw - 480px));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%);width:min(440px,max(300px,calc(100vw - 680px)));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
