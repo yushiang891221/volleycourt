@@ -190,7 +190,8 @@ def _shell(name, nodes, edges, top_z, hem_z, thick):
         if w > 0.001: (G.get(n) or G.setdefault(n, ob.vertex_groups.new(name=n))).add([i], w, 'REPLACE')
     for v in ob.data.vertices:
         c = v.co; side = 'L' if c.x > 0 else 'R'
-        wl = _ss(HIP_H + 0.02 - c.z, 0.0, 0.1) * _ss(abs(c.x), 0.0, 0.035)
+        back = max(0.0, min(1.0, c.y / 0.1))   # 屁股那側（+Y）早一點跟大腿動：蹲下時褲子後面整片撐開，不會在褲管口夾成一條
+        wl = _ss(HIP_H + 0.02 + 0.08 * back - c.z, 0.0, 0.1 + 0.06 * back) * _ss(abs(c.x), 0.0, 0.035)
         t = _ss(c.z, HIP_H, HIP_H + 0.24)
         add('spine', v.index, (1 - wl) * t); add('root', v.index, (1 - wl) * (1 - t))
         for n, w in limb_weights(c, f'thigh.{side}').items(): add(n, v.index, wl * w)
@@ -206,18 +207,19 @@ def pants(body, sex=0):
     def legs(g, long):
         x = 0.095; out = []
         for s in (-1, 1):
-            out += [((s * x, 0, HIP_H - 0.07), 0.093 * f + g, 0.091 * f + g)]
+            out += [((s * x, 0, HIP_H - 0.02), 0.1 * f * (1.03 if F else 1) + g, 0.098 * f + g), ((s * x, 0, HIP_H - 0.08), 0.092 * f + g, 0.09 * f + g)]
             if long: out += [((s * x, -0.004, HIP_H - L1), 0.062 * f + g, 0.062 * f + g), ((s * x, 0.012, HIP_H - L1 - 0.08), 0.064 * f + g, 0.068 * f + g), ((s * x, 0, 0.05), 0.04 * f + g, 0.042 * f + g)]
             else: out += [((s * x, 0, HIP_H - 0.22), 0.068 * f + g, 0.068 * f + g)]
         return out
     res = []
     for kind, g, hem in ((0, 0.016, HIP_H - 0.16), (1, 0.022, 0.11)):
-        top = [((0, 0, HIP_H + 0.13), 0.155 * (0.76 if F else 1) + g, 0.122 * (0.84 if F else 1) + g), ((0, 0, HIP_H), 0.158 * (1.03 if F else 1) + g, 0.125 + g)]
+        # 兩條褲管直接從腰分出去（中間不放骨盆節點：那裡會多一團，蹲下時從褲底凸出來）
+        top = [((0, 0, HIP_H + 0.13), 0.155 * (0.7 if F else 1) + g, 0.122 * (0.84 if F else 1) + g)]
         lg = legs(g, kind == 1); n = len(lg) // 2
         nodes = top + lg
-        edges = [(0, 1)]
+        edges = []
         for side in range(2):
-            b = 2 + side * n; edges += [(1, b)] + [(b + i, b + i + 1) for i in range(n - 1)]
+            b = 1 + side * n; edges += [(0, b)] + [(b + i, b + i + 1) for i in range(n - 1)]
         res.append(_shell(f'pants_{kind}', nodes, edges, HIP_H + 0.1, hem, 0.007))
     return res
 
@@ -230,7 +232,8 @@ def hide_under_pants(body):
         ws = v[dl] if dl else {}
         dom = names.get(max(ws.items(), key=lambda kv: kv[1])[0], '') if ws else ''
         if dom.startswith(('upperarm', 'forearm', 'hand')): return False
-        return v.co.z > HIP_H - 0.13 and (v.co.z < HIP_H + 0.07 or dom.startswith('thigh'))
+        if dom.startswith('thigh'): return v.co.z > HIP_H - 0.06   # 大腿留到褲管裡面一段：蹲下時從褲管口看進去不會透空
+        return HIP_H - 0.13 < v.co.z < HIP_H + 0.07
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(gone(v) for v in f.verts)], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     bm.to_mesh(body.data); bm.free(); body.data.update()
