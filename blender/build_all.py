@@ -9,7 +9,8 @@ SEX = int(args[0]) if args else 0
 sys.argv = [sys.argv[0], '--', str(SEX)]
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build_body2.py'), encoding='utf-8').read().split("print('BODY verts'")[0])
 import clothes as C
-tops = C.tops(body, SEX); pts = C.pants(body); kn = C.kneepads(body); sk = C.socks(body); sh = C.shoes()
+tops = C.tops(body, SEX); pts = C.pants(body, SEX); kn = C.kneepads(body); sk = C.socks(body); sh = C.shoes()
+C.hide_under_pants(body)   # 褲子蓋住的身體刪掉（衣服都做完之後才刪）
 for o in tops + pts + kn + [sk]:
     o.parent = rig; m = o.modifiers.new('rig', 'ARMATURE'); m.object = rig
 for o, b in sh: bind_to(rig, o, b)
