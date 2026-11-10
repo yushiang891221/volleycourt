@@ -1,0 +1,213 @@
+/* 教學只消費事件與快照。Three.js 場景操作由 coach 注入。 */
+(function (root) {
+  'use strict';
+  const sections = [
+    { id: 'move', name: '移動與視角', count: 6, enabled: true },
+    { id: 'recv', name: '接球', count: 4, enabled: true },
+    { id: 'set', name: '舉球', count: 4, enabled: true },
+    { id: 'atk', name: '攻擊', count: 4, enabled: true },
+    { id: 'serve', name: '發球', count: 3, enabled: true },
+    { id: 'block', name: '攔網', count: 4, enabled: true }
+  ];
+  const empty = () => ({ v: 1, done: {}, at: {}, updated: 0 });
+  const copy = value => JSON.parse(JSON.stringify(value));
+  const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function create(options = {}) {
+    const now = options.now || Date.now;
+    const coach = options.coach || {};
+    const settings = options.settings || (() => root.VBSettings);
+    let storage;
+    try { storage = options.storage === undefined ? root.localStorage : options.storage; } catch (_) { /* 儲存可能被瀏覽器封鎖。 */ }
+    let saved = empty();
+    try {
+      const raw = JSON.parse(storage?.getItem('vb.tutorial') || 'null');
+      if (raw && raw.v === 1 && raw.done && raw.at && !Array.isArray(raw.done) && !Array.isArray(raw.at)) {
+        for (const section of sections) {
+          if (raw.done[section.id] === true) saved.done[section.id] = true;
+          const at = raw.at[section.id];
+          if (Number.isInteger(at) && at >= 0 && at <= section.count) saved.at[section.id] = at;
+        }
+        saved.updated = Number.isFinite(raw.updated) ? raw.updated : 0;
+      }
+    } catch (_) { /* 壞資料當成空進度。 */ }
+    let section = null, step = 0, phase = 'closed', since = 0, successAt = 0;
+    let snapshot = null, previous = null, target = null, turn = 0, crouchTime = 0;
+    let seen = new Set(), failures = 0, dived = false, hint = '', skipped = false;
+    let menu, panel, button, lastMarkup = '';
+    const persist = () => {
+      saved.updated = now();
+      try { storage?.setItem('vb.tutorial', JSON.stringify(saved)); } catch (_) { /* 本次工作階段仍可繼續。 */ }
+    };
+    const key = action => {
+      const config = settings();
+      return '<kbd>' + escape(config?.keyName(config.values.keys[action]) || '未設定') + '</kbd>';
+    };
+    function instruction() {
+      if (!section) return '';
+      const movement = ['w', 'a', 's', 'd'].map(key).join(' ');
+      const texts = {
+        move: [
+          '點一下遊戲畫面，鎖定滑鼠。',
+          `用 ${movement} 走進地上的黃色圈。`,
+          '移動滑鼠轉頭，看向另一個黃色圈，左右轉動約 90 度。',
+          `按住 ${key('shift')} 跑進遠一點的黃色圈。`,
+          `按住 ${key('crouch')} 蹲下，持續 1 秒。`,
+          `按 ${key('p')} 切換視角，看看自己。`
+        ],
+        recv: [
+          '看地上的落點圈，在球落地前走進圈裡，這一步不用接球。',
+          `球快到身前時按 ${key('v')} 接球。`,
+          `按住 ${key('crouch')}，球快到時按 ${key('v')} 接球。`,
+          `按住 ${key('shift')} 再按 ${key('v')}，撲向遠處的球並接住。`
+        ],
+        set: [
+          `球快到額頭前上方時按 ${key('1')}，前舉到 4 號位。`,
+          `分別完成 ${key('2')} 中間快攻${seen.has(2) ? ' ✓' : ''}、${key('3')} 後舉到 2 號位${seen.has(3) ? ' ✓' : ''}。`,
+          `任選一種完成，${key('4')} 後排中間、${key('5')} 老三（右後排）、${key('6')} 後排 5 號位（左後排）。`,
+          `按住 ${key('1')}、${key('2')} 或 ${key('3')}，滑鼠往左或右拖，選不同於預設的舉法再放開。`
+        ],
+        atk: [
+          `往網前助跑，移動中按 ${key(' ')} 起跳。這一步要一般起跳。`,
+          '等舉球來到身前上方，空中按住左鍵蓄力，放開打到球。',
+          '空中蓄力條到金色時放開左鍵，打到球。金色甜蜜點最大力又最準，紅色表示蓄過頭。',
+          '等球到身前上方，起跳後在空中按右鍵吊球。'
+        ],
+        serve: [
+          '站在底線後，拿著球按左鍵站發。對面紅圈是落點：轉頭調左右、滾輪調深淺。',
+          '拿到下一顆球後，按右鍵站飄。',
+          `拿著球按 ${key(' ')} 拋球起跳，等球發亮，在空中按住左鍵蓄力再放開跳發；改用右鍵可以跳飄，這一步請完成跳發。`
+        ],
+        block: [
+          `走進網前黃色圈，離網 1 公尺內，球被扣過來時按 ${key('b')} 起跳攔網。`,
+          `按 ${key('b')} 起跳後，在空中左右移動滑鼠移手，練習封直線或斜線。`,
+          `看球被扣來的時機按 ${key('b')}，讓球碰到攔網手；任何碰手都算。`,
+          `站在隊友旁 1.5 公尺內，按 ${key('b')} 一起起跳，攔到球。`
+        ]
+      };
+      return texts[section.id]?.[step] || '';
+    }
+    function view() {
+      return { phase, section: section?.id || null, name: section?.name || '', step, count: section?.count || 0,
+        instruction: instruction(), hint, target: target && { ...target }, failures,
+        completed: [...seen], allDone: sections.every(s => saved.done[s.id]) };
+    }
+    function render() {
+      options.changed?.(view());
+      if (!panel) return;
+      menu.hidden = phase !== 'menu';
+      panel.hidden = !['running', 'success', 'complete'].includes(phase);
+      if (phase === 'menu') {
+        menu.innerHTML = '<h2>新手教學</h2>' + (view().allDone ? '<p>恭喜！六段教學全部完成。</p>' : '') + sections.map(s =>
+          `<p>${saved.done[s.id] ? '✓ ' : ''}${s.name} <button data-start="${s.id}" ${s.enabled ? '' : 'disabled'}>${s.enabled ? saved.done[s.id] ? '再練一次' : '開始' : '即將推出'}</button></p>`
+        ).join('') + '<button data-action="reset">重設教學進度</button> <button data-action="stop">關閉</button>';
+      }
+      const next = sections[sections.indexOf(section) + 1];
+      const body = phase === 'complete'
+        ? `<p>這段完成！${view().allDone ? '恭喜！六段教學全部完成。' : ''}</p>${next?.enabled ? `<button data-start="${next.id}">下一段</button>` : ''} <button data-action="open">回選單</button>`
+        : `<p>${instruction()}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? escape(hint) : '') : escape(hint)}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
+      const markup = `<strong>${section?.name || ''} ${step + 1}／${section?.count || 0}</strong>${body}`;
+      panel.dataset.phase = phase;
+      if (markup !== lastMarkup) { panel.innerHTML = markup; lastMarkup = markup; }
+    }
+    function enter() {
+      phase = 'running'; since = now(); previous = null; turn = 0; crouchTime = 0;
+      seen = new Set(); failures = 0; dived = false; hint = ''; skipped = false;
+      target = coach.step?.(section.id, step, snapshot) || null;
+      saved.at[section.id] = step; persist(); render();
+    }
+    function start(id) {
+      const chosen = sections.find(s => s.id === id && s.enabled);
+      if (!chosen) return false;
+      stop();
+      if (coach.start?.(id) === false) return false;
+      section = chosen; step = saved.done[id] ? 0 : Math.min(saved.at[id] || 0, chosen.count - 1);
+      enter(); return true;
+    }
+    function stop() {
+      coach.stop?.(); section = null; phase = 'closed'; target = null; previous = null; snapshot = null; render();
+    }
+    function open() { stop(); phase = 'menu'; coach.release?.(); render(); }
+    function reset() { stop(); saved = empty(); persist(); open(); }
+    function succeed(skip = false) {
+      if (phase !== 'running') return;
+      skipped = skip; phase = 'success'; successAt = now(); coach.pause?.(); render();
+    }
+    function advance() {
+      saved.at[section.id] = step + 1;
+      if (step + 1 === section.count) {
+        saved.done[section.id] = true; phase = 'complete'; coach.stop?.(); persist(); render();
+      } else { step++; enter(); }
+    }
+    function emit(name, data = {}) {
+      if (phase !== 'running') return;
+      if (name === 'recvMiss' || name === 'whiff' || name === 'feedMiss') {
+        if (name !== 'whiff') failures++;
+        hint = '等球靠近身體、亮起來再按，先看落點站好。';
+        if (section.id === 'recv' && step === 3 && failures >= 3) hint = '已連續三次沒接到，這次只要有撲出去就算完成。';
+      }
+      if (section.id === 'recv') {
+        if (name === 'dive') { dived = true; if (step === 3 && failures >= 3) succeed(); }
+        if (name === 'recv' && (step === 1 || step === 2 && data.crouch || step === 3 && dived && data.dive)) succeed();
+      }
+      if (section.id === 'set' && name === 'set') {
+        if (step === 1 && [2, 3].includes(data.n)) seen.add(data.n);
+        if (step === 0 && data.n === 1 || step === 1 && seen.size === 2 || step === 2 && [4, 5, 7].includes(data.n) || step === 3 && data.menu && data.def === false) succeed();
+      }
+      if (section.id === 'atk') {
+        if (name === 'whiff') hint = '等球發亮、掉到身前上方再放開左鍵，太早揮會打不到。';
+        if (step === 0 && name === 'jump' && data.block === false && data.speed >= 2) succeed();
+        if (name === 'atk' && (step === 1 && data.air && Number.isFinite(data.chg) || step === 2 && data.zone === 'sweet' || step === 3 && data.tip)) succeed();
+      }
+      if (section.id === 'serve' && name === 'serve' && data.type === ['std', 'float', 'jump'][step]) succeed();
+      if (section.id === 'block') {
+        if (step === 0 && name === 'jump' && data.block && snapshot && Number.isFinite(snapshot.nearNet) && snapshot.nearNet >= 0 && snapshot.nearNet <= 1) succeed();
+        if (name === 'block' && (step === 2 || step === 3 && data.mate === true)) {
+          hint = data.kind === 'stuff' ? '攔網成功！' : '碰到球了！'; succeed();
+        }
+      }
+      render();
+    }
+    function frame(state) {
+      snapshot = state;
+      if (phase === 'success') { if (now() - successAt >= 800) advance(); return; }
+      if (phase !== 'running') return;
+      coach.frame?.(state);
+      const dt = previous ? Math.max(0, Math.min(0.1, (now() - previous.time) / 1000)) : 0;
+      if (section.id === 'move') {
+        const inCircle = target && Math.hypot(state.x - target.x, state.z - target.z) <= 0.8;
+        if (previous) turn += Math.abs(Math.atan2(Math.sin(state.yaw - previous.yaw), Math.cos(state.yaw - previous.yaw)));
+        crouchTime = state.crouch ? crouchTime + dt : 0;
+        if (step === 0 && state.locked || step === 1 && inCircle || step === 2 && turn > 1.5 || step === 3 && state.sprint && inCircle || step === 4 && crouchTime >= 1 || step === 5 && previous && state.tp !== previous.tp) succeed();
+      }
+      if (section.id === 'recv' && step === 0 && state.incoming && Math.hypot(state.x - state.incoming.x, state.z - state.incoming.z) <= 0.8) succeed();
+      if (section.id === 'block' && step === 1 && state.air && state.airBlock && Math.abs(state.blkAim) >= 0.2) succeed();
+      if (now() - since > 12000 && !hint) hint = '可以再試一次，或放開滑鼠後按「略過這步」。';
+      previous = { ...state, time: now() }; render();
+    }
+    function mount(document) {
+      if (panel) return;
+      const style = document.createElement('style');
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:16px;left:50%;transform:translateX(-50%);width:min(420px,38vw)}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      document.head.append(style);
+      menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
+      panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
+      button = document.createElement('button'); button.className = 'vb-tut-entry'; button.textContent = '📘 新手教學'; button.onclick = open;
+      document.body.append(menu, panel, button);
+      const actions = { open, stop, reset, skip: () => succeed(true) };
+      const click = event => {
+        event.stopPropagation();
+        const b = event.target.closest('button');
+        if (b?.dataset.start) start(b.dataset.start);
+        else actions[b?.dataset.action]?.();
+      };
+      menu.addEventListener('click', click); panel.addEventListener('click', click);
+      root.addEventListener?.('vb-settings-change', render); render();
+    }
+    return { open, start, stop, reset, emit, frame, mount, skip: () => succeed(true), view,
+      get active() { return phase === 'running' || phase === 'success'; },
+      progress: () => copy(saved), sections: copy(sections) };
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = { create, sections };
+  else root.VBTutorialFactory = { create, sections };
+})(typeof window === 'undefined' ? globalThis : window);
