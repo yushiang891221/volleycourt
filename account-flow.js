@@ -90,6 +90,7 @@ export async function accountGate() {
       if (profile.appearance) saveLook(decodeLook(profile.appearance));
       else if (owner && owner !== uid) store.del('vb.settings.look');
       watchNickname();
+      try { const g = await import('./session-guard.js'); await g.claim(); } catch {}   // WEB-007：登記「現在是這台裝置」，別處登入的會被踢掉
       return 'account';
     } catch (e) {
       await errorScreen((e && e.message) || '帳號服務暫時無法連線，請確認網路後重試。');

@@ -100,6 +100,18 @@ export function createAccountService(client) {
       const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: target.href } });
       if (error) throw new Error('Google 登入未能開始，請確認網路後重試。');
     },
+    // WEB-007 單一登入：登記「目前是這台裝置在用」、查目前登記的是誰（資料表還沒建會丟錯，呼叫端當作功能未開）
+    async claimSession(sid) {
+      await userId();
+      const { error } = await client.from('active_sessions').upsert({ session_id: sid }, { onConflict: 'user_id' });
+      if (error) throw new Error('session');
+    },
+    async activeSession() {
+      const id = await userId();
+      const { data, error } = await client.from('active_sessions').select('session_id').eq('user_id', id).maybeSingle();
+      if (error) throw new Error('session');
+      return data?.session_id || null;
+    },
     async signOut() {
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) throw new Error('登出失敗，請確認網路後重試。');
