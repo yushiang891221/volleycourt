@@ -11240,8 +11240,8 @@ $('rk-menu').addEventListener('click', (e) => {
 });
 
 /* 教學場景只組合現有球路，球仍由原本的碰撞與擊球流程處理。 */
-function tutAutoOpen() {   // 網址 tutorial=1：等「進入球館中…」載入畫面收掉、真的進了球館才開選單
-  if (tutAutoOpen.done || new URLSearchParams(location.search).get('tutorial') !== '1') return;
+function tutAutoOpen() {   // 進練習模式：等「進入球館中…」載入畫面收掉、真的進了球館，就跳出大面板（自由練習／新手教學）
+  if (tutAutoOpen.done || !new URLSearchParams(location.search).has('practice')) return;
   const cover = $('game-loading');
   if (!window.VBTutorial || !walk.on || (cover && !cover.hidden)) { clearTimeout(tutAutoOpen.t); tutAutoOpen.t = setTimeout(tutAutoOpen, 300); return; }
   tutAutoOpen.done = true; window.VBTutorial.open();

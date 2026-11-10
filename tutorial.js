@@ -35,6 +35,7 @@
     let snapshot = null, previous = null, target = null, turn = 0, crouchTime = 0;
     let seen = new Set(), failures = 0, dived = false, hint = '', skipped = false;
     let menu, panel, button, lastMarkup = '';
+    let full = false, nextTimer = 0;   // full＝「新手教學」從頭走完六段（一段做完自動接下一段）
     const persist = () => {
       saved.updated = now();
       try { storage?.setItem('vb.tutorial', JSON.stringify(saved)); } catch (_) { /* 本次工作階段仍可繼續。 */ }
@@ -89,7 +90,7 @@
     }
     function view() {
       return { phase, section: section?.id || null, name: section?.name || '', step, count: section?.count || 0,
-        instruction: instruction(), hint, target: target && { ...target }, failures,
+        instruction: instruction(), hint, target: target && { ...target }, failures, full,
         completed: [...seen], allDone: sections.every(s => saved.done[s.id]) };
     }
     function render() {
@@ -97,16 +98,28 @@
       if (!panel) return;
       menu.hidden = phase !== 'menu';
       panel.hidden = !['running', 'success', 'complete'].includes(phase);
-      if (phase === 'menu') {
-        menu.innerHTML = '<h2>新手教學</h2>' + (view().allDone ? '<p>恭喜！六段教學全部完成。</p>' : '') + sections.map(s =>
-          `<p>${saved.done[s.id] ? '✓ ' : ''}${s.name} <button data-start="${s.id}" ${s.enabled ? '' : 'disabled'}>${s.enabled ? saved.done[s.id] ? '再練一次' : '開始' : '即將推出'}</button></p>`
-        ).join('') + '<button data-action="reset">重設教學進度</button> <button data-action="stop">關閉</button>';
+      if (phase === 'menu') {   // 進練習模式的大面板：自由練習（也可以單獨練一段）／新手教學（從頭走完六段）
+        const doneCount = sections.filter(s => saved.done[s.id]).length, first = sections.find(s => !saved.done[s.id]);
+        const fullLabel = !doneCount ? '開始新手教學' : first ? `繼續新手教學（從「${first.name}」開始）` : '再走一次新手教學';
+        menu.innerHTML = '<h2>練習模式</h2><p class="vb-tut-lead">要怎麼練？</p><div class="vb-tut-cards">'
+          + '<section class="vb-tut-card"><h3>🏐 自由練習</h3><p>自己在球場上練：拿球發球、叫陪練舉球或對碰，想練什麼就練什麼。</p>'
+          + '<button class="vb-tut-big" data-action="free">開始自由練習</button>'
+          + '<p class="vb-tut-sub">也可以只練其中一段新手教學：</p><div class="vb-tut-chips">'
+          + sections.map(s => `<button data-start="${s.id}" ${s.enabled ? '' : 'disabled'}>${saved.done[s.id] ? '✓ ' : ''}${s.name}</button>`).join('')
+          + '</div></section>'
+          + '<section class="vb-tut-card vb-tut-main"><h3>📘 新手教學</h3><p>從移動、接球、舉球、攻擊、發球到攔網，六段一步一步帶你做一遍，每一步都會提示要按哪個鍵。</p>'
+          + `<p class="vb-tut-sub">${doneCount === sections.length ? '恭喜！六段全部完成。' : `已完成 ${doneCount}／${sections.length} 段`}</p>`
+          + `<button class="vb-tut-big" data-action="full">${fullLabel}</button></section></div>`
+          + (doneCount || Object.keys(saved.at).length ? '<button class="vb-tut-link" data-action="reset">重設教學進度</button>' : '');
       }
       const next = sections[sections.indexOf(section) + 1];
       const body = phase === 'complete'
-        ? `<p>這段完成！${view().allDone ? '恭喜！六段教學全部完成。' : ''}</p>${next?.enabled ? `<button data-start="${next.id}">下一段</button>` : ''} <button data-action="open">回選單</button>`
+        ? full && next?.enabled
+          ? `<p>這段完成！馬上進入下一段：${next.name}</p><button data-action="next">現在就開始</button> <button data-action="stop">離開教學</button>`
+          : `<p>這段完成！${view().allDone ? '恭喜！六段教學全部完成。' : ''}</p>${!full && next?.enabled ? `<button data-start="${next.id}">下一段</button>` : ''} <button data-action="open">回選單</button> <button data-action="stop">自由練習</button>`
         : `<p>${instruction()}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? hint : '') : hint}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
-      const markup = `<strong>${section?.name || ''} ${step + 1}／${section?.count || 0}</strong>${body}`;
+      const head = full && section ? `新手教學 第 ${sections.indexOf(section) + 1}／${sections.length} 段・` : '';
+      const markup = `<strong>${head}${section?.name || ''} ${step + 1}／${section?.count || 0}</strong>${body}`;
       panel.dataset.phase = phase;
       if (markup !== lastMarkup) { panel.innerHTML = markup; lastMarkup = markup; }
     }
@@ -124,10 +137,20 @@
       section = chosen; step = saved.done[id] ? 0 : Math.min(saved.at[id] || 0, chosen.count - 1);
       enter(); return true;
     }
-    function stop() {
-      coach.stop?.(); section = null; phase = 'closed'; target = null; previous = null; snapshot = null; render();
+    function startOne(id) { full = false; return start(id); }   // 單獨練一段
+    function startFull() {   // 新手教學：從第一段還沒做完的開始（都做完就從頭），一段做完自動接下一段
+      const first = sections.find(s => s.enabled && !saved.done[s.id]) || sections[0];
+      full = true; if (!start(first.id)) full = false;
     }
-    function open() { stop(); phase = 'menu'; coach.release?.(); render(); }
+    function nextSection() {
+      const next = sections[sections.indexOf(section) + 1];
+      if (full && next) start(next.id);
+    }
+    function quit() { full = false; stop(); }
+    function stop() {
+      clearTimeout(nextTimer); coach.stop?.(); section = null; phase = 'closed'; target = null; previous = null; snapshot = null; render();
+    }
+    function open() { full = false; stop(); phase = 'menu'; coach.release?.(); render(); }
     function reset() { stop(); saved = empty(); persist(); open(); }
     function missHint() {   // 每段自己的失敗提示（按鍵照玩家設定）
       const id = section?.id;
@@ -146,7 +169,11 @@
     function advance() {
       saved.at[section.id] = step + 1;
       if (step + 1 === section.count) {
-        saved.done[section.id] = true; phase = 'complete'; coach.stop?.(); coach.release?.(); persist(); render();
+        saved.done[section.id] = true; phase = 'complete'; coach.stop?.(); persist();
+        const next = sections[sections.indexOf(section) + 1];
+        if (full && next?.enabled) { clearTimeout(nextTimer); nextTimer = setTimeout(() => { if (phase === 'complete' && full) nextSection(); }, 2500); }   // 新手教學：2.5 秒後自動進下一段（滑鼠不放開，接著練）
+        else coach.release?.();
+        render();
       } else { step++; enter(); }
     }
     function emit(name, data = {}) {
@@ -198,14 +225,15 @@
     function mount(document) {
       if (panel) return;
       const style = document.createElement('style');
-      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%);width:min(440px,max(300px,calc(100vw - 680px)));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);min-width:320px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%);width:min(440px,max(300px,calc(100vw - 680px)));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
-      button = document.createElement('button'); button.className = 'vb-tut-entry'; button.textContent = '📘 新手教學'; button.onclick = open;
+      button = document.createElement('button'); button.type = 'button'; button.className = 'vb-tut-entry'; button.textContent = '📘 新手教學'; button.onclick = open;
       document.body.append(menu, panel);
       const toolbar = document.querySelector('.walk-top');
-      (toolbar || document.body).append(button);
+      if (toolbar) toolbar.insertBefore(button, toolbar.querySelector('#w-host') || toolbar.firstChild);   // 放在「房主設定」左邊
+      else document.body.append(button);
       if (toolbar) button.style.cssText = 'position:static;pointer-events:auto';
       for (const element of [menu, panel, button]) {
         for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'wheel']) {
@@ -213,17 +241,17 @@
         }
       }
       button.addEventListener('click', event => event.stopPropagation());
-      const actions = { open, stop, reset, skip: () => succeed(true) };
+      const actions = { open, stop: quit, free: quit, full: startFull, next: nextSection, reset, skip: () => succeed(true) };
       const click = event => {
         event.stopPropagation();
         const b = event.target.closest('button');
-        if (b?.dataset.start) start(b.dataset.start);
+        if (b?.dataset.start) startOne(b.dataset.start);
         else actions[b?.dataset.action]?.();
       };
       menu.addEventListener('click', click); panel.addEventListener('click', click);
       root.addEventListener?.('vb-settings-change', render); render();
     }
-    return { open, start, stop, reset, emit, frame, mount, skip: () => succeed(true), view,
+    return { open, start: startOne, startFull, stop: quit, reset, emit, frame, mount, skip: () => succeed(true), view,
       get active() { return phase === 'running' || phase === 'success'; },
       progress: () => copy(saved), sections: copy(sections) };
   }

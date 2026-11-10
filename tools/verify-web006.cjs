@@ -199,7 +199,7 @@ const loader = gym.slice(gym.indexOf("if (new URLSearchParams(location.search).h
 assert(loader.includes("tutorialScript.src = 'tutorial.js'"));
 assert(loader.includes('window.VBTutorial.mount(document)'));
 assert(loader.includes('tutAutoOpen()'));
-assert(source('tutAutoOpen').includes("get('tutorial') !== '1'") && source('tutAutoOpen').includes("$('game-loading')") && source('tutAutoOpen').includes('!cover.hidden'), 'tutorial=1 要等載入畫面收掉才開選單');
+assert(source('tutAutoOpen').includes("has('practice')") && source('tutAutoOpen').includes("$('game-loading')") && source('tutAutoOpen').includes('!cover.hidden'), '進練習模式：等載入畫面收掉才跳出大面板');
 assert.equal((gym.match(/tutorialScript.src/g) || []).length, 1);
 assert(source('setMenuPick').includes('SET_OPT[m.n][i][0], true'));
 assert(source('vbSet').includes('walk.setQ = { n, v, menu,'));
@@ -483,13 +483,19 @@ console.log('PASS 重餵去重與間隔、失誤補球、換段／回選單／�
 function element() {
   return { dataset: {}, style: {}, events: new Map(), children: [], hidden: false,
     setAttribute() {}, append(...children) { this.children.push(...children); },
+    insertBefore(child, ref) { const i = this.children.indexOf(ref); this.children.splice(i < 0 ? 0 : i, 0, child); },
+    querySelector(sel) { return this.children.find(c => '#' + c.id === sel) || null; },
     addEventListener(type, handler) { this.events.set(type, handler); }
   };
 }
 const doc = { head: element(), body: element(), toolbar: element(), createElement: element,
   querySelector: () => doc.toolbar };
+for (const id of ['w-host', 'w-settings', 'w-exit']) doc.toolbar.append(Object.assign(element(), { id }));   /* 房主設定、設定、回大廳 */
 const dom = fixture(); dom.api.mount(doc); dom.api.open();
 const [menu, panel] = doc.body.children, entry = doc.toolbar.children[0];
+assert.deepEqual(doc.toolbar.children.map(c => c.id || c.textContent), ['📘 新手教學', 'w-host', 'w-settings', 'w-exit'], '新手教學按鈕在房主設定左邊');
+assert(menu.innerHTML.includes('🏐 自由練習') && menu.innerHTML.includes('📘 新手教學') && menu.innerHTML.includes('data-action="free"') && menu.innerHTML.includes('data-action="full"'), '大面板有自由練習、新手教學兩個選項');
+for (const id of ['move', 'recv', 'set', 'atk', 'serve', 'block']) assert(menu.innerHTML.includes(`data-start="${id}"`), '自由練習裡可以單獨選 ' + id);
 assert.equal(menu.hidden, false); assert.equal(panel.hidden, true);
 assert.equal(entry.textContent, '📘 新手教學');
 for (const node of [menu, panel, entry]) for (const type of ['pointerdown','pointerup','mousedown','mouseup','dblclick','contextmenu','wheel']) {
@@ -500,7 +506,28 @@ menu.events.get('click')({ stopPropagation() { stopped = true; }, target: { clos
 assert(stopped); assert.equal(dom.api.view().section, 'recv'); assert.equal(panel.hidden, false);
 panel.events.get('click')({ stopPropagation() {}, target: { closest: () => ({ dataset: { action: 'stop' } }) } });
 assert.equal(dom.api.view().phase, 'closed');
-console.log('PASS 選單／面板正常入口與滑鼠事件隔離（畫面仍待瀏覽器驗收）');
+dom.api.open(); menu.events.get('click')({ stopPropagation() {}, target: { closest: () => ({ dataset: { action: 'free' } }) } });
+assert.equal(dom.api.view().phase, 'closed', '自由練習：關掉大面板');
+console.log('PASS 練習模式大面板（自由練習／新手教學）、按鈕在房主設定左邊、滑鼠事件隔離');
+
+{ /* 新手教學（從頭走完）：從第一段開始，一段做完 2.5 秒後自動接下一段；單獨練一段不會自動接；已完成的段落從下一段繼續 */
+  const g = engine(), api = g.api;
+  api.startFull(); assert.equal(api.view().section, 'move'); assert.equal(api.view().full, true);
+  const skipSection = () => { const n = api.view().count; for (let i = 0; i < n; i++) { api.skip(); g.advance(); } };
+  skipSection(); assert.equal(api.view().phase, 'complete'); assert.equal(api.view().section, 'move');
+  g.api.open(); api.startFull(); assert.equal(api.view().section, 'recv', '繼續：從還沒做完的段落開始');
+  api.stop(); api.start('set'); skipSection(); assert.equal(api.view().full, false);
+  const single = api.view();
+  const full = engine(); full.api.startFull(); for (let i = 0; i < 6; i++) { full.api.skip(); full.advance(); }
+  setTimeout(() => {
+    assert.equal(single.phase, 'complete');
+    assert.equal(api.view().phase, 'complete', '單獨練一段：做完停在完成畫面');
+    assert.equal(full.api.view().section, 'recv', '新手教學：2.5 秒後自動進入下一段');
+    assert.equal(full.api.view().phase, 'running');
+    full.api.stop(); api.stop();
+    console.log('PASS 新手教學從頭走完：自動接下一段、從未完成的段落繼續；單獨練一段不自動接');
+  }, 2700);
+}
 
 { /* WEB-006D：各段失敗提示、做到就清提示、教學攔網段與接球第 1 步不被接球輔助拉走、面板位置 */
   const hints = {};
