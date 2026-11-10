@@ -937,7 +937,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 <script type="module" id="app-script">
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook } from './avatar-toy.js';
-import { readLook, normalizeLook, teamKit, aiLook } from './appearance.js';
+import { readLook, normalizeLook, teamKit, aiLook, myLookCode } from './appearance.js';
 await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
@@ -7072,7 +7072,7 @@ function renderMpList() {
 // 對方的人形：身體顏色＝他的代表色，頭上有名字；手的姿勢跟著他（舉球舉高、墊球往前下）
 
 // 所有玩家與 AI 統一使用內建人形；通用造型工具保留給後續外觀系統。
-const myChar = () => normalizeLook(readLook());
+const myChar = () => (readLook() ? myLookCode() : normalizeLook(readLook()));   // 外觀＋裝備
 // 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
 const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toonCache = new Map();

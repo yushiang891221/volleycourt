@@ -12,7 +12,6 @@ const CATS = [
   { k: 'eyes', name: '眼睛', shot: 'face' },
   { k: 'top', name: '球衣', shot: 'torso' },
   { k: 'pants', name: '褲子', shot: 'legs' },
-  { k: 'knee', name: '護膝', shot: 'legs' },
   { k: 'shoe', name: '球鞋', swatch: true, shot: 'shoe', names: ['紅', '白', '黑', '藍'] },
   { k: 'num', name: '背號', shot: 'back' },
   { k: 'preview', name: '預覽', shot: 'full' },

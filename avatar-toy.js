@@ -22,14 +22,35 @@ const KEYS = ['sex', 'skin', 'hair', 'hairColor', 'eyes', 'top', 'pants', 'knee'
 export const DEFAULT_LOOK = { v: 2, sex: 0, skin: 1, hair: 0, hairColor: 1, eyes: 0, top: 1, num: 10, pants: 0, knee: 0, shoe: 0 };
 
 export function encodeLook(L) {
-  L = normLook(L);
-  return 't2' + KEYS.map((k) => L[k].toString(36)).join('') + String(L.num).padStart(2, '0');
+  const eq = L && L.eq; L = normLook(L);
+  return 't2' + KEYS.map((k) => L[k].toString(36)).join('') + String(L.num).padStart(2, '0') + equipSuffix(eq);
 }
 export function decodeLook(code) {
-  if (typeof code !== 'string' || !/^t2[0-9a-z]{9}\d{2}$/.test(code)) return { ...DEFAULT_LOOK };
-  const L = {}; KEYS.forEach((k, i) => (L[k] = parseInt(code[2 + i], 36))); L.num = +code.slice(11);
-  return normLook(L);
+  if (typeof code !== 'string' || !/^t2[0-9a-z]{9}\d{2}(~e[0-9a-z]{4})?$/.test(code)) return { ...DEFAULT_LOOK };
+  const L = {}; KEYS.forEach((k, i) => (L[k] = parseInt(code[2 + i], 36))); L.num = +code.slice(11, 13);
+  const o = normLook(L), eq = decodeEquip(code.slice(14)); if (eq) o.eq = eq;
+  return o;
 }
+// ---------- 裝備（官方送的配件；之後商店賣的也放這裡）----------
+// 護膝還是存在外觀代碼（knee），其他配件存在外觀代碼後面的「~e＋4 碼」：帽子、眼鏡、項鍊、護腕，0＝沒戴
+export const EQUIP = {
+  hat: { name: '帽子', items: ['不戴', '運動帽（黑）', '運動帽（白）'] },
+  glasses: { name: '眼鏡', items: ['不戴', '運動眼鏡（黑）', '運動眼鏡（炫彩）'] },
+  neck: { name: '項鍊', items: ['不戴', '運動項鍊（銀）', '運動項鍊（金）'] },
+  wrist: { name: '護腕', items: ['不戴', '護腕（白）', '護腕（黑）'] },
+};
+const EQ_KEYS = Object.keys(EQUIP);
+function equipSuffix(eq) {
+  if (!eq) return '';
+  const d = EQ_KEYS.map((k) => { const n = eq[k] | 0; return n > 0 && n < EQUIP[k].items.length ? n : 0; });
+  return d.some(Boolean) ? '~e' + d.map((n) => n.toString(36)).join('') : '';
+}
+export function decodeEquip(s) {
+  if (typeof s !== 'string' || !/^e[0-9a-z]{4}$/.test(s)) return null;
+  const eq = {}; EQ_KEYS.forEach((k, i) => { const n = parseInt(s[1 + i], 36); eq[k] = n < EQUIP[k].items.length ? n : 0; });
+  return eq;
+}
+export const encodeEquip = (eq) => equipSuffix(eq).slice(1);
 function normLook(L) {
   const o = { ...DEFAULT_LOOK };
   if (L && typeof L === 'object') for (const k of KEYS) { const n = L[k] | 0; if (n >= 0 && n < OPTIONS[k].length) o[k] = n; }
@@ -147,6 +168,16 @@ function torsoProfile(sex, crop) {
   const pts = curve.getSpacedPoints(36); return { pts, len: curve.getLength() };
 }
 // 球衣貼圖：u＝0 在正前方，v 依弧長（下擺 0 → 領口 1）。畫布比例對應實際尺寸，字不會被拉寬。
+// 背號字型：網路字型 Anton（粗的窄體運動字），每台電腦看起來都一樣；畫球衣前先載好（preloadAvatars 會等）
+const NUM_FONT = { family: '"Anton", "Arial Narrow", Impact, sans-serif', k: 0.92 };
+// 背號一個字一個字畫：兩位數中間留一點空隙（字寬的 8%），整組置中；先畫所有外框再畫所有字，外框不會蓋到隔壁的字
+function drawNumber(x, txt, cx, cy, size, edge, fill) {
+  x.font = `${size * NUM_FONT.k}px ${NUM_FONT.family}`; x.textAlign = 'left'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  const ch = [...String(txt)], w = ch.map((c) => x.measureText(c).width), gap = size * 0.08, total = w.reduce((a, b) => a + b, 0) + gap * (ch.length - 1);
+  const xs = []; let cur = cx - total / 2; for (const wi of w) { xs.push(cur); cur += wi + gap; }
+  x.lineWidth = size * 0.08; x.strokeStyle = edge; ch.forEach((c, i) => x.strokeText(c, xs[i], cy));
+  x.fillStyle = fill; ch.forEach((c, i) => x.fillText(c, xs[i], cy));
+}
 function jerseyTexture(kit, num, sex, crop) {
   const color = kit.body, key = ['j', kit.name, num, sex, crop ? 1 : 0].join('|');
   if (TEX.has(key)) return TEX.get(key);
@@ -163,8 +194,7 @@ function jerseyTexture(kit, num, sex, crop) {
   const txt = String(num), yFromTop = (v) => H * (1 - v);
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
   const draw = (cxp, v, hM) => {
-    const size = hM * ppm * 1.32; x.font = `700 ${size}px Bahnschrift, "Arial Narrow", "Roboto Condensed", Arial, sans-serif`;
-    x.lineWidth = size * 0.08; x.strokeStyle = kit.numEdge; x.strokeText(txt, cxp, yFromTop(v)); x.fillStyle = kit.num; x.fillText(txt, cxp, yFromTop(v));
+    drawNumber(x, txt, cxp, yFromTop(v), hM * ppm * 1.32, kit.numEdge, kit.num);
   };
   if (crop) { draw(0, 0.42, 0.1); draw(W, 0.42, 0.1); draw(W * 0.5, 0.42, 0.15); } else { draw(0, 0.56, 0.11); draw(W, 0.56, 0.11); draw(W * 0.5, 0.52, 0.17); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
@@ -182,7 +212,7 @@ const CAP_HY = 0.27 * 0.88 + 0.03, HIP_H = 0.62, L1 = 0.29, KN_ANK = 0.27, ANK_S
 const SPINE_Y = 0.66, SH_Y = 0.34, UA = 0.22, FA = 0.19;
 
 export function makeToyAvatar(look, team = 'orange') {
-  const L = normLook(look);
+  const L = normLook(look); if (look && look.eq) L.eq = look.eq;   // 裝備跟著帶進去
   if (AVATAR_ASSETS[L.sex]) return makeGLBAvatar(L, team, AVATAR_ASSETS[L.sex]);
   return makeProceduralAvatar(L, team);
 }
@@ -266,6 +296,18 @@ export function setExpression(av, key) {
 
 // ---------- Blender 模型（幾何、材質與貼圖共用；骨架逐人獨立） ----------
 const AVATAR_ASSETS = [], GLB_MATS = new Map();
+// 背號字型（Anton）要先載好才畫球衣
+function loadNumFont() {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
+  if ([...document.fonts].some((f) => f.family.replace(/["']/g, '') === 'Anton' && f.status === 'loaded')) return Promise.resolve();   // fonts.check 在字型還沒宣告時也回 true，不能用
+  let l = document.getElementById('vb-num-font');
+  const sheet = new Promise((ok) => {   // 樣式表（@font-face）要先載好，fonts.load 才知道去哪裡下載字型
+    if (!l) { l = document.createElement('link'); l.id = 'vb-num-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Anton&display=swap'; document.head.append(l); }
+    else if (l.sheet) return ok();
+    l.addEventListener('load', ok, { once: true }); l.addEventListener('error', ok, { once: true });
+  });
+  return Promise.race([sheet.then(() => document.fonts.load('64px "Anton"', '0123456789')), new Promise((r) => setTimeout(r, 4000))]).catch(() => {});
+}
 let avatarPromise, jerseyLayout;
 const webPoint = ([x, y, z]) => new THREE.Vector3(x, z, -y);
 const boneKey = name => name.replace(/[.]/g, '');
@@ -339,6 +381,7 @@ async function loadAvatar(sex) {
 }
 export function preloadAvatars() {
   if (!avatarPromise) avatarPromise = (async () => {
+    await loadNumFont();   // 背號字型先載好再畫球衣
     if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('avatar') === 'legacy') return false;   // 開發用：?avatar=legacy 用舊的程式角色（比較效能）
     try { jerseyLayout = await readAvatarJSON('models/jersey_layout.json'); }
     catch (error) { console.warn('[avatar] 球衣排版載入失敗，使用備用角色', error); return false; }
@@ -376,9 +419,7 @@ function glbJerseyTexture(kit, num) {
   }
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
   for (const [u, height, size] of [[d.front_u, 0.7, 0.13], [d.back_u, 0.6, 0.21]]) {
-    x.font = `700 ${Math.round(W * size)}px Bahnschrift, "Arial Narrow", "Roboto Condensed", Arial, sans-serif`;
-    x.strokeStyle = kit.numEdge; x.lineWidth = W * size * 0.08; x.strokeText(String(num), u * W, Y(tv(height)));
-    x.fillStyle = kit.num; x.fillText(String(num), u * W, Y(tv(height)));
+    drawNumber(x, num, u * W, Y(tv(height)), W * size, kit.numEdge, kit.num);
   }
   const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = false;   // glb 的 UV 已經是 glTF 的上下方向（Blender 輸出時翻過一次），畫布不能再翻
@@ -436,8 +477,44 @@ function makeGLBAvatar(L, team, asset) {
   }
   rig.arms.forEach(a => { a.rotation.z = 0; }); rig.g.updateMatrixWorld(true);
   rig.head.scale.setScalar(0.64);   // 頭縮小一點（太大會擋視野）；頭和頭髮都綁在 head 骨頭，一起縮
+  if (L.eq) addAccessories(rig, L.eq, asset.meta);
   return { ...rig, kit, look: L, phase: 0, rig: true, chibi: true, glb: true,
     L1: 0.29, L2: 0.33, hipH: 0.62, _skull: skull, _faceM: skull?.material };
+}
+// ---------- 配件的 3D 模型：直接綁在頭、脊椎、前臂骨頭上，跟著角色動 ----------
+const ACC_MAT = new Map();
+function accMat(color, o = {}) {
+  const key = color + JSON.stringify(o); if (!ACC_MAT.has(key)) ACC_MAT.set(key, new THREE.MeshStandardMaterial({ color, roughness: o.r ?? 0.45, metalness: o.m ?? 0, transparent: !!o.op, opacity: o.op ?? 1 }));
+  return ACC_MAT.get(key);
+}
+function addAccessories(rig, eq, meta) {
+  const hc = webPoint(meta.headC).sub(webPoint(meta.joints.head[0])), R = meta.headR;   // 頭中心（head 骨頭座標）
+  const mesh = (geo, mat, parent, pos, rot) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (pos) m.position.copy(pos); if (rot) m.rotation.set(...rot); parent.add(m); return m; };
+  if (eq.hat) {   // 運動帽：圓頂蓋住頭髮＋前面帽簷
+    const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, R * 0.2, -R * 0.03)); rig.head.add(g);
+    const dome = mesh(new THREE.SphereGeometry(R * 1.3, 32, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), accMat(col, { r: 0.6 }), g); dome.scale.set(1.04, 0.92, 1.04);   // 夠大才蓋得住刺蝟頭
+    mesh(new THREE.SphereGeometry(R * 0.11, 12, 8), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, R * 1.18, 0));   // 頂端扣子
+    const brim = mesh(new THREE.CylinderGeometry(R * 1.62, R * 1.62, R * 0.05, 40, 1, false, -1.05, 2.1), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, R * 0.01, R * 0.05), [0.1, 0, 0]); brim.scale.set(0.86, 1, 0.95);
+  }
+  if (eq.glasses) {   // 運動眼鏡：包覆式鏡片＋上緣鏡框
+    const g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, -R * 0.06, 0)); rig.head.add(g);
+    const lens = eq.glasses === 1 ? accMat('#15181E', { r: 0.15, m: 0.6, op: 0.9 }) : accMat('#3E8EDB', { r: 0.1, m: 0.9, op: 0.92 });
+    const band = mesh(new THREE.CylinderGeometry(R * 1.05, R * 1.03, R * 0.26, 36, 1, true, -1.15, 2.3), lens, g); band.scale.set(1.05, 1, 1.02); band.material.side = THREE.DoubleSide;
+    const rim = mesh(new THREE.TorusGeometry(R * 1.06, R * 0.025, 6, 40, 2.3), accMat('#1C1E24', { r: 0.4 }), g, new THREE.Vector3(0, R * 0.13, 0), [Math.PI / 2, 0, Math.PI / 2 - 1.15]); rim.scale.set(1.02, 1.05, 1);
+  }
+  if (eq.neck) {   // 運動項鍊：脖子底部一圈細鍊＋前面小墜子
+    const col = eq.neck === 1 ? '#D9DDE3' : '#E8B94A', base = webPoint(meta.joints.head[0]).sub(webPoint(meta.joints.spine[0]));
+    const g = new THREE.Group(); g.position.copy(base).add(new THREE.Vector3(0, 0.012, 0.004)); g.rotation.x = 0.38; rig.spine.add(g);   // 掛在衣領上面一點的脖子上
+    const ring = mesh(new THREE.TorusGeometry(0.074, 0.0045, 6, 40), accMat(col, { r: 0.25, m: 0.9 }), g, null, [Math.PI / 2, 0, 0]); ring.scale.set(1.05, 0.95, 1);
+    mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.005, 16), accMat(col, { r: 0.2, m: 0.95 }), g, new THREE.Vector3(0, -0.012, 0.078), [Math.PI / 2 - 0.38, 0, 0]);
+  }
+  if (eq.wrist) {   // 護腕：兩手手腕各一圈
+    const col = eq.wrist === 1 ? '#F4F4F0' : '#22252B';
+    rig.hands.forEach((h, i) => {
+      const p = h.position.clone(), d = p.clone().normalize(), m = mesh(new THREE.CylinderGeometry(0.043, 0.045, 0.05, 20, 1, true), accMat(col, { r: 0.85 }), rig.elbows[i], p.clone().multiplyScalar(0.86));
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d); m.material.side = THREE.DoubleSide;
+    });
+  }
 }
 // 模組載入即開始；失敗會被 preloadAvatars 捕捉，不產生未處理 rejection。
 void preloadAvatars();

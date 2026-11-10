@@ -108,6 +108,17 @@ h2 .icon, .count { color: #f3a24b; }
 .me-side dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
 .me-side dt { color: #7d91aa; } .me-side dd { margin: 0; color: #d8e2ee; }
 .me-side button { margin-top: auto; }
+#equip-panel { width: 720px; background: #152236; color: #e5edf7; }
+.eq-tabs { display: flex; gap: 8px; margin: 6px 0 12px; }
+.eq-tabs button[aria-selected="true"] { background: #df8040; color: #101724; border-color: #f7b57e; font-weight: 700; }
+.eq-body { display: flex; gap: 18px; align-items: flex-start; }
+.eq-body img { width: 220px; height: 275px; object-fit: contain; border-radius: 10px; background: #0f1a2b; flex-shrink: 0; }
+.eq-slots { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.eq-row { display: flex; flex-direction: column; gap: 6px; }
+.eq-row > span { font-size: 13px; font-weight: 700; color: #ffb363; } .eq-row small { margin-left: 8px; color: #7d91aa; font-weight: 400; }
+.eq-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.eq-items button { font-size: 12px; padding: 6px 10px; }
+.eq-items button[aria-pressed="true"] { border-color: #f99528; background: #3a2615; color: #ffcf9a; }
 .me-err { margin: 0; min-height: 14px; font-size: 11px; color: #ff9c8a; }
 .chat { display: flex; flex-direction: column; gap: 7px; }
 .chat-heading { display: flex; justify-content: space-between; align-items: center; }

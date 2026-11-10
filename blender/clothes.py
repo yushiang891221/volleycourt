@@ -119,9 +119,31 @@ def make(body, name, keep, cuts, gap, thick=0.007, flare=None, trim_w=0.018, col
             (G.get(bn) or G.setdefault(bn, ob.vertex_groups.new(name=bn))).add([v.index], 1.0, 'REPLACE')
     inner = ob.vertex_groups.new(name='inner'); inner.add([v.index for v in ob.data.vertices if v.index not in edge_idx], 1.0, 'REPLACE')
     sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 9; sm.vertex_group = 'inner'   # 邊界不參與平滑，切口保持乾淨
+    apply_mods(ob)
+    push_out(ob, body, min(gap, 0.006))   # 平滑會把肩膀、脖子這些凸的地方磨得往內縮：身體會從領口邊緣冒出小三角形，推回身體外面
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False; so.material_offset_rim = 0 if plain else 1
-    apply_mods(ob); smooth(ob)
+    apply_mods(ob); smooth(ob); sharp_rims(ob)
     return ob
+
+
+def push_out(ob, body, clear):
+    """衣服每一點至少在身體外面 clear 公尺（照最近的身體表面法線推出去）"""
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    for v in ob.data.vertices:
+        hit = tree.find_nearest(v.co)
+        if hit[0] is None: continue
+        d = (v.co - hit[0]).dot(hit[1])
+        if d < clear: v.co += hit[1] * (clear - d)
+    ob.data.update()
+
+
+def sharp_rims(ob, ang=0.9):
+    """加厚後的切口（領口、袖口、下擺、褲頭）直角邊標硬邊：外面那圈自己打光，不會被邊緣法線帶出鋸齒亮紋"""
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    for e in bm.edges:
+        if len(e.link_faces) == 2 and e.calc_face_angle(0) > ang: e.smooth = False
+    bm.to_mesh(ob.data); bm.free()
 
 
 def tops(body, sex):
@@ -209,12 +231,7 @@ def _shell(name, nodes, edges, top_z, hem_z, thick, body=None):
     ob.data.materials.append(mat('pants', '#1C1C21', 0.78)); ob.data.materials.append(mat('ptrim', '#F07C24', 0.75))
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False
     sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.4; sm.iterations = 3
-    apply_mods(ob); smooth(ob)
-    # 褲頭、褲管口的直角邊標成硬邊：外面那圈自己打光，不會被邊緣的法線帶成一條條鋸齒亮紋
-    bm = bmesh.new(); bm.from_mesh(ob.data)
-    for e in bm.edges:
-        if len(e.link_faces) == 2 and e.calc_face_angle(0) > 0.9: e.smooth = False
-    bm.to_mesh(ob.data); bm.free()
+    apply_mods(ob); smooth(ob); sharp_rims(ob)   # 褲頭、褲管口的直角邊標成硬邊
     return ob
 
 
