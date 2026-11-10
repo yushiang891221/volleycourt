@@ -48,20 +48,28 @@ function kicked() {
 
 function kickedPage() { return /[?&]kicked=1/.test(location.search); }
 
-// 被踢回首頁：顯示提示，按「知道了」後網址拿掉 ?kicked=1。之後按「開始遊戲」就會在這裡重新登入（換另一邊被踢）
-if (kickedPage()) {
+// 被踢回首頁（或刪除帳號後）：顯示提示，按「知道了」後網址拿掉 ?kicked=1。之後按「開始遊戲」就會在這裡重新登入（換另一邊被踢）
+const deletedPage = /[?&]deleted=1/.test(location.search);   // WEB-008：刪除帳號後回到首頁
+if (kickedPage() || deletedPage) {
+  const [eyebrow, title, text] = deletedPage
+    ? ['ACCOUNT DELETED', '帳號已刪除', '你的帳號、暱稱和角色外觀都已從伺服器刪除。之後想再玩，按「開始遊戲」用 Google 登入就會建立新帳號。']
+    : ['SIGNED IN ELSEWHERE', '帳號在其他地方登入了', '同一個帳號只能在一個地方玩，所以這裡已經離開遊戲。要在這裡繼續玩，按「開始遊戲」重新進入就好（另一邊會被登出）。'];
   const show = () => {
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:#0b1220e6;font-family:inherit';
+    // 用 <dialog>.showModal()：首頁開場畫面也是 modal，後開的才會蓋在上面（一般 div 的 z-index 蓋不過）
+    const el = document.createElement('dialog');
+    el.setAttribute('aria-labelledby', 'kick-t');
+    el.style.cssText = 'padding:0;border:0;background:transparent;font-family:inherit';
+    if (!document.getElementById('kick-css')) { const st = document.createElement('style'); st.id = 'kick-css'; st.textContent = '#kick-note::backdrop{background:#0b1220e6}'; document.head.append(st); }
+    el.id = 'kick-note';
     el.innerHTML = `<div role="alertdialog" aria-labelledby="kick-t" style="width:min(420px,92vw);background:#152236;border:1px solid #F07C2466;border-radius:16px;padding:26px 26px 20px;color:#e8eef8;box-shadow:0 20px 60px #0008">
-      <div style="font-size:12px;letter-spacing:2px;color:#F2A65A">SIGNED IN ELSEWHERE</div>
-      <h2 id="kick-t" style="margin:6px 0 10px;font-size:24px">帳號在其他地方登入了</h2>
-      <p style="margin:0 0 16px;color:#b8c4d6;line-height:1.6">同一個帳號只能在一個地方玩，所以這裡已經離開遊戲。要在這裡繼續玩，按「開始遊戲」重新進入就好（另一邊會被登出）。</p>
+      <div style="font-size:12px;letter-spacing:2px;color:#F2A65A">${eyebrow}</div>
+      <h2 id="kick-t" style="margin:6px 0 10px;font-size:24px">${title}</h2>
+      <p style="margin:0 0 16px;color:#b8c4d6;line-height:1.6">${text}</p>
       <button type="button" style="width:100%;height:44px;border:0;border-radius:10px;background:#F07C24;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer">知道了</button></div>`;
-    el.querySelector('button').onclick = () => { el.remove(); history.replaceState(null, '', location.pathname + location.hash); };
-    document.body.append(el); el.querySelector('button').focus();
+    el.querySelector('button').onclick = () => { el.close(); el.remove(); history.replaceState(null, '', location.pathname + location.hash); };
+    document.body.append(el); el.showModal(); el.querySelector('button').focus();
   };
-  if (document.body) show(); else addEventListener('DOMContentLoaded', show);
+  addEventListener('load', () => setTimeout(show, 0));   // 等開場畫面開好再開，才會在最上層
 } else {
   watch();
 }

@@ -112,6 +112,14 @@ export function createAccountService(client) {
       if (error) throw new Error('session');
       return data?.session_id || null;
     },
+    // WEB-008 刪除帳號：只能刪自己（server/supabase/003_delete_account.sql），刪完把本機登入狀態也清掉
+    async deleteAccount() {
+      await userId();
+      const { error } = await client.rpc('delete_my_account');
+      if (error) throw new Error(error.code === 'PGRST202' ? '刪除帳號功能還沒開通，請稍後再試。' : '刪除帳號失敗，請確認網路後重試。');
+      await client.auth.signOut({ scope: 'local' }).catch(() => {});
+      profile = null;
+    },
     async signOut() {
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) throw new Error('登出失敗，請確認網路後重試。');

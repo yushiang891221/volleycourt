@@ -50,11 +50,22 @@ export function openCharacterPanel() {
   if (!dialog) {
     dialog = document.createElement('dialog'); dialog.id = 'character-panel';
     dialog.setAttribute('aria-labelledby', 'character-title');
-    dialog.innerHTML = '<form method="dialog"><h2 id="character-title">角色資訊</h2><div class="character-info"><img alt="你的角色預覽" width="240" height="300"><div><h3></h3><dl><dt>等級</dt><dd>—</dd><dt>場數</dt><dd>—</dd><dt>勝率</dt><dd>—</dd><dt>遊玩時數</dt><dd>—</dd></dl></div></div><p class="form-error" role="status"></p><div class="buttons"><button type="button" class="orange" data-edit>調整外觀</button><button type="button" data-logout hidden>登出</button><button>關閉</button></div></form>';
+    dialog.innerHTML = '<form method="dialog"><h2 id="character-title">角色資訊</h2><div class="character-info"><img alt="你的角色預覽" width="240" height="300"><div><h3></h3><dl><dt>等級</dt><dd>—</dd><dt>場數</dt><dd>—</dd><dt>勝率</dt><dd>—</dd><dt>遊玩時數</dt><dd>—</dd></dl></div></div><p class="form-error" role="status"></p><div class="buttons"><button type="button" class="orange" data-edit>調整外觀</button><button type="button" data-logout hidden>登出</button><button>關閉</button></div><p style="margin:12px 0 0;text-align:center;font-size:13px;color:#8a99b0"><a href="privacy.html" target="_blank" rel="noopener" style="color:#8a99b0">隱私權政策</a><span data-del-wrap hidden> · <button type="button" data-delete style="all:unset;cursor:pointer;color:#ff9c8a;text-decoration:underline">刪除帳號</button></span></p></form>';
     document.body.append(dialog);
     import('./account-flow.js').then(({ accountEnabled, signOut }) => {
       const b = dialog.querySelector('[data-logout]'); b.hidden = !accountEnabled();
       b.onclick = async () => { try { await signOut(); } catch (e) { dialog.querySelector('.form-error').textContent = (e && e.message) || '登出失敗'; } };
+      // WEB-008 刪除帳號：要打字確認，避免誤按
+      dialog.querySelector('[data-del-wrap]').hidden = !accountEnabled();
+      dialog.querySelector('[data-delete]').onclick = async () => {
+        const err = dialog.querySelector('.form-error');
+        const ans = prompt('刪除後，帳號、暱稱和角色外觀都會永久刪除，無法復原。\n確定要刪除，請輸入「刪除」兩個字：');
+        if (ans === null) return;
+        if (ans.trim() !== '刪除') { err.textContent = '沒有輸入「刪除」，帳號沒有刪除。'; return; }
+        err.textContent = '正在刪除帳號…';
+        try { const { deleteAccount } = await import('./account-flow.js'); await deleteAccount(); }
+        catch (e) { err.textContent = (e && e.message) || '刪除帳號失敗，請重試。'; }
+      };
     });
     dialog.querySelector('[data-edit]').onclick = async () => {
       dialog.close();

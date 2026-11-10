@@ -26,6 +26,8 @@ const CSS = `
 .acct-orange{background:#F07C24;color:#fff;margin-top:10px}
 .acct-box input{width:100%;box-sizing:border-box;height:44px;border-radius:10px;border:1px solid #3a4a63;background:#0e1828;color:#fff;padding:0 12px;font:inherit;font-size:16px}
 .acct-err{min-height:22px;margin-top:10px;color:#ff9c8a;font-size:14px}
+.acct-legal{display:block;color:#8a99b0;font-size:12.5px;line-height:1.5}
+.acct-legal a{color:#F2A65A}
 `;
 function panel(html) {
   if (!document.getElementById('acct-css')) { const st = document.createElement('style'); st.id = 'acct-css'; st.textContent = CSS; document.head.append(st); }
@@ -36,7 +38,8 @@ const GOOGLE_ICON = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden
 function loginScreen(message = '') {
   return new Promise(() => {   // 按下去會轉到 Google，回來後頁面重新載入，所以這個 Promise 不會結束
     const el = panel(`<span class="eyebrow">LET'S PLAY</span><h2>登入開始打球</h2><p>登入後，你的角色外觀和暱稱會存在帳號裡，換電腦也能用。</p>
-      <button class="acct-google" data-g>${GOOGLE_ICON}使用 Google 登入</button><div class="acct-err" role="status">${message}</div>`);
+      <button class="acct-google" data-g>${GOOGLE_ICON}使用 Google 登入</button><div class="acct-err" role="status">${message}</div>
+      <small class="acct-legal">登入即表示你同意我們依 <a href="privacy.html" target="_blank" rel="noopener">隱私權政策</a> 處理你的資料。</small>`);
     const btn = el.querySelector('[data-g]'), err = el.querySelector('.acct-err');
     btn.onclick = async () => {
       btn.disabled = true; err.textContent = '正在前往 Google…';
@@ -119,6 +122,16 @@ function watchNickname() {   // 設定裡改暱稱 → 同步到帳號
 export async function signOut() {
   if (!service) return;
   await service.signOut(); store.del(OWNER_KEY); location.href = location.pathname;
+}
+
+// WEB-008 刪除帳號：資料庫刪掉後，本機的帳號標記、登入裝置代碼、暱稱和外觀也清掉，回首頁
+export async function deleteAccount() {
+  if (!service) service = await getAccountService();
+  if (!service) return;
+  await service.deleteAccount();
+  for (const k of [OWNER_KEY, 'vb.account.sid', 'vb.mp.name', 'vb.settings.look']) store.del(k);
+  try { const s = JSON.parse(store.get('vb.settings')); if (s && typeof s === 'object') { s.nickname = ''; store.set('vb.settings', JSON.stringify(s)); } } catch {}   // 按鍵、音量等設定保留
+  location.href = location.pathname.replace(/[^/]*$/, '') + 'index.html?deleted=1';
 }
 
 // 從 Google 登入回來（網址帶 ?code=）：intro 自動接著走，不用再按一次開始
