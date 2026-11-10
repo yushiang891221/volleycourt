@@ -121,7 +121,7 @@ await check('unmodified physics, scoring, rotation and transports match baseline
     .replace('  ch = aiLook(id); VM.chars[id] = ch;\n', '')
     .replace('const av = makeAvatar(color, ch, team), el =', 'const av = makeAvatar(color, ch), el =');
   /* WEB-009 企聯：只拿掉標了「企聯」的新增行（原本的程式行都沒改），行為由 verify-ai-attack-routing 驗證 */
-  current=current.replace(/^.*企聯.*\n/gm,'');
+  current=current.replace(/^.*(企聯|WEB-010).*\n/gm,'');   /* WEB-010 戰績的掛勾也是單獨一行 */
   /* WEB-006C 只排除兩條教學通知，其他物理與比賽程式仍逐字比對。 */
   current=current.replace("  tutEv('serve', { type, zone: C && C.zone }, b);\n", '')
     .replace('  globalThis.VBTutorial?.stop();\n', '');

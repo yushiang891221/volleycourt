@@ -333,7 +333,9 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .wk-chg[data-z="sweet"] b { background: #F2B705; } .wk-chg[data-z="late"] b { background: #F0A040; } .wk-chg[data-z="over"] b { background: #E5483C; }
 .wk-chg[data-z="sweet"] { border-color: #F2B705; box-shadow: 0 0 12px rgba(242,183,5,.75); }
 .walk-ui.rk .wk-chg { display: none !important; }
-.emo-menu { position: absolute; left: 50%; top: calc(50% - 96px); transform: translateX(-50%); display: flex; align-items: center; gap: 70px; z-index: 12; }
+.emo-menu { position: absolute; left: 50%; top: calc(50% - 96px); width: 0; height: 0; z-index: 12; }
+.emo-menu button { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; }
+.emo-menu button[data-slot="0"] { left: -110px; top: 0; } .emo-menu button[data-slot="1"] { left: 110px; top: 0; } .emo-menu button[data-slot="2"] { left: 0; top: -72px; } .emo-menu button[data-slot="3"] { left: 0; top: 72px; }
 .emo-menu[hidden], .set-wheel[hidden] { display: none !important; }
 /* 舉球轉盤：選項平均分在一圈 360 度上，滑鼠往哪個方向拖就選哪個 */
 .set-wheel { position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; margin: -115px 0 0 -115px; border-radius: 50%; z-index: 12; box-shadow: 0 0 0 2px rgba(255,255,255,.35), 0 6px 24px rgba(0,0,0,.35); }
@@ -864,7 +866,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 或方向鍵走路，按住 <kbd data-key="shift">Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭；按 <kbd>Esc</kbd> 放開滑鼠・準星對著地板點一下就走過去<br>看著物件按 <kbd data-key="e">E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd data-key="v">V</kbd> 接球、<kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd data-key="p">P</kbd> 切換第一／第三人稱、<kbd data-key="w">W</kbd> 助跑＋<kbd data-key=" ">空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd data-key="s">S</kbd> 打短；<kbd>右鍵</kbd>吊球）、舉球員在網前舉球時按<kbd>右鍵</kbd>＝舉球員吊球（自動往網子那側吊過去）、<kbd data-key="b">B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd data-key=" ">空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd data-key="f">F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd data-key="v">V</kbd> 下手送高球過網、<kbd data-key="e">E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只放開滑鼠，不會離開；設定在右上角 ⚙）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div>
-      <div class="emo-menu" id="emo-menu" hidden><button type="button" data-emo="hi5">🙌 擊掌</button><i id="emo-cur"></i><button type="button" data-emo="taunt">😜 嘲諷</button></div>
+      <div class="emo-menu" id="emo-menu" hidden><i id="emo-cur"></i></div>
       <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="sp" hidden></i><i class="ov"></i><b id="wk-chg-f"></b></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd data-key="e">E</kbd><span id="wk-act-t"></span></button>
       <div class="wk-combo" id="wk-combo" hidden></div>
@@ -937,7 +939,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 <script type="module" id="app-script">
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook } from './avatar-toy.js';
-import { readLook, normalizeLook, teamKit, aiLook, myLookCode } from './appearance.js';
+import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey } from './appearance.js';
+import { myTitle, myWheel, EMOTES } from './progress.js';   // WEB-010：稱號、T 輪盤
 await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
@@ -7286,16 +7289,18 @@ function makeChibi(C) {
   chMerge(g);
   return { g, body, root, spine, head, hc, arms, elbows, hands, legs, knees, feet, phase: 0, rig: true, L1: 0.46, L2: 0.52, hipH: 0.98, chibi: true };
 }
-function makeAvatar(color, ch, team = -1) {
-  const av = makeToyAvatar(decodeLook(ch), teamKit(team));
+const tjOk = (j) => (j && typeof j === 'object' && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? { name: String(j.name || '').slice(0, 12), body: j.body, trim: j.trim, num: j.num } : null);
+function makeAvatar(color, ch, team = -1, tj = null) {   // tj＝球隊球衣（比賽以外才穿）
+  const av = tj && team < 0 ? makeToyAvatar(decodeLook(ch), tj) : makeToyAvatar(decodeLook(ch), teamKit(team));
   av.g.scale.setScalar(AV_SCALE);   // 遊戲裡整個人放大一點（維持 Q 版比例；捏臉畫面不放大）
   av.gameKit = teamKit(team);
   return av;
 }
 function refreshPeerAppearance(p2) {
   const kit = teamKit(VM.on ? vmTeamOf(p2.id) : -1);
-  if (p2.av.gameKit === kit && p2.avCode === p2.ch) return;
-  const old = p2.av, av = makeAvatar(p2.c, p2.ch, VM.on ? vmTeamOf(p2.id) : -1);
+  const tj = VM.on ? null : tjOk(p2.tj), tjKey = tj ? JSON.stringify(tj) : '';   // WEB-010 球隊球衣
+  if (p2.av.gameKit === kit && p2.avCode === p2.ch && (p2.avTj || '') === tjKey) return;
+  const old = p2.av, av = makeAvatar(p2.c, p2.ch, VM.on ? vmTeamOf(p2.id) : -1, tj); p2.avTj = tjKey;
   av.g.position.copy(old.g.position); av.g.rotation.copy(old.g.rotation);
   av.body.position.copy(old.body.position); av.phase = old.phase;
   av.g.add(p2.tag);
@@ -7485,7 +7490,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
   }
 }
 // 名條：6 對 6 時前面加位置簡稱（S、OP、OH、M）
-function peerTag(p2) { const tag = VM.on && VM.six && VM.role && VM.role[p2.id] ? `${V6_TAG[VM.role[p2.id]]}・${p2.n}` : p2.n; return tag + (ROOM?.snapshot.flow.ready.includes(p2.id) && ROOM.snapshot.flow.phase !== 'playing' ? ' · 準備' : ''); }
+function peerTag(p2) { const tag = (p2.tt ? `「${p2.tt}」` : '') + VM.on && VM.six && VM.role && VM.role[p2.id] ? `${V6_TAG[VM.role[p2.id]]}・${p2.n}` : p2.n; return tag + (ROOM?.snapshot.flow.ready.includes(p2.id) && ROOM.snapshot.flow.phase !== 'playing' ? ' · 準備' : ''); }
 function peerTagsAll() { for (const p2 of NET.peers.values()) if (p2.tag) p2.tag.element.textContent = peerTag(p2); }
 function netPeer(id, d) {
   let p2 = NET.peers.get(id);
@@ -7516,14 +7521,22 @@ const emoName = (id) => (VM.names && VM.names[id]) || (NET.peers.get(id) || {}).
 const emoD = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
 function emoMenuOpen() {
   if (EMO.menu || walk.dive || walk.down > 0 || walk.sit || walk.paused || window.__rkOn) return;
-  EMO.menu = { dx: 0, pick: null }; $('emo-menu').hidden = false; emoMenuDraw();
+  // WEB-010：T 輪盤四格（左、右、上、下），放的是玩家在「球衣與裝備 → 動作與表情」選的
+  const w = myWheel(), menu = $('emo-menu'); menu.querySelectorAll('button').forEach((b) => b.remove());
+  w.forEach((k, i) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.emo = k; b.dataset.slot = i; b.textContent = `${EMOTES[k].icon} ${EMOTES[k].name}`; menu.append(b); });
+  EMO.menu = { dx: 0, dy: 0, pick: null, w }; menu.hidden = false; emoMenuDraw();
 }
-function emoMenuMove(dx) { const m = EMO.menu; if (!m) return; m.dx = clamp(m.dx + dx, -90, 90); m.pick = m.dx < -25 ? 'hi5' : m.dx > 25 ? 'taunt' : null; emoMenuDraw(); }
-function emoMenuDraw() { const m = EMO.menu; if (!m) return; $('emo-cur').style.transform = `translateX(${m.dx}px)`; for (const el of $('emo-menu').querySelectorAll('[data-emo]')) el.classList.toggle('on', el.dataset.emo === m.pick); }
+function emoMenuMove(dx, dy = 0) {
+  const m = EMO.menu; if (!m) return; m.dx = clamp(m.dx + dx, -90, 90); m.dy = clamp(m.dy + dy, -70, 70);
+  const ax = Math.abs(m.dx), ay = Math.abs(m.dy), slot = Math.max(ax, ay) < 25 ? -1 : ax >= ay ? (m.dx < 0 ? 0 : 1) : (m.dy < 0 ? 2 : 3);
+  m.pick = slot >= 0 ? m.w[slot] || null : null; emoMenuDraw();
+}
+function emoMenuDraw() { const m = EMO.menu; if (!m) return; $('emo-cur').style.transform = `translate(${m.dx}px, ${m.dy}px)`; for (const el of $('emo-menu').querySelectorAll('[data-emo]')) el.classList.toggle('on', el.dataset.emo === m.pick); }
 function emoMenuClose(ok) { const m = EMO.menu; if (!m) return; EMO.menu = null; $('emo-menu').hidden = true; if (ok && m.pick) emoDo(m.pick); }
 function emoDo(k) {
   const me = vmMe(), now = performance.now();
   if (k === 'taunt') { walk.emote = { k: 'taunt', t0: now, until: now + 1600 }; toast('😜 嘲諷！', 1100); if (NET.on) NET.tx.publish('emo', { e: 'taunt', id: me }); return; }
+  if (k !== 'hi5' && EMOTES[k]) { walk.emote = { k: 'up', t0: now, until: now + 1100 }; toast(`${EMOTES[k].icon} ${EMOTES[k].name}`, 1100); if (NET.on) NET.tx.publish('emo', { e: 'em', k, id: me }); return; }   // WEB-010 解鎖的表情：頭上冒圖示
   // 旁邊（2.5 m 內）有同隊的人正舉手等擊掌 → 回他；沒有就自己舉手邀請
   const mp = emoPos(me); let sid = me;
   for (const H of EMO.hi5.values()) if (H.stage === 'wait' && H.team === emoTeam(me) && H.by !== me) { const bp = emoPos(H.by); if (bp && mp && emoD(bp, mp) <= EMO.R + 0.3) { sid = H.by; break; } }
@@ -7595,6 +7608,7 @@ function emoBubble(id, txt) {
 function emoOnNet(d) {
   if (d.e === 'taunt') { emoBubble(d.id, '😜'); if (VM.on && emoTeam(d.id) >= 0 && emoTeam(d.id) !== emoTeam(vmMe())) toast(`${emoName(d.id)} 在嘲諷你們 😜`, 1400); }
   else if (d.e === 'hi5') emoHi5Join(d.s || d.id, d.id, d.tm);
+  else if (d.e === 'em' && EMOTES[d.k]) emoBubble(d.id, EMOTES[d.k].icon);   // WEB-010
 }
 function emoPose(k, t) {
   if (k === 'slap') return AVP.hi5Hit;
@@ -7618,6 +7632,8 @@ function netOnMessage(t, d, from) {
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
     const dch = normalizeLook(d.ch);
     p2.ch = dch; refreshPeerAppearance(p2);
+    p2.tj = d.tj || null;   // WEB-010 球隊球衣
+    if ((d.tt || '') !== (p2.tt || '')) { p2.tt = String(d.tt || '').slice(0, 12); p2.tag.element.textContent = peerTag(p2); }   // WEB-010 稱號
     if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
     p2.tossing = !!d.ts; p2.bs = d.bs || 0;   // 攔網雙手往哪邊移
@@ -7689,7 +7705,7 @@ function netTick(dt, now) {
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
   let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, tj: VM.on ? undefined : readTeamJersey() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
@@ -8177,7 +8193,7 @@ function lockMouseNow() { if (!coarse() && renderer.domElement.requestPointerLoc
 function unlockMouse() { if (locked()) { walk.programmaticUnlock = true; document.exitPointerLock(); } }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
-  if (EMO.menu) { emoMenuMove(e.movementX); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
+  if (EMO.menu) { emoMenuMove(e.movementX, e.movementY); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
   if (setMenuHolds()) { if (SETM.m) setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
   if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003 * VBSettings.values.sensitivity, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
   walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS * VBSettings.values.sensitivity; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1);
@@ -9491,6 +9507,7 @@ function vbDoReceive(o, dive) {
   vmOnTouch(b, vmMe(), 'bump'); vbFx(b, q);
   if (second && q >= 0.32 && !over) { vbMarkSet(b); const P2 = VM.host ? VM.poss[vmTeamOf(vmMe())] : null; if (P2) P2.fix = true; note = '下手舉高球（修正）'; }
   recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'bump' });
+  if (VM.on && q >= 0.88 && !defl && !dive && !second) MREC.local.p++;   // WEB-010 戰績：完美接球
   toast(q >= 0.88 && !defl && !dive && !second ? '到位！完美接球' : q < 0.32 ? `接噴了（${note || '沒接正'}）` : note ? `接起來了（${note}）` : '接起來了', 1300);
 }
 // ---- 舉球（1／2／3）：提早按，球掉到額頭前上方時自動舉；舉出去一定會經過那個攻擊點
@@ -9668,6 +9685,7 @@ function vbDoSet(b, n, q = 0.9, hy = 0.3, v = null, menu = false) {
   // 時機沒抓好（球離額頭前上方那個點太遠）：兩手沒同時碰到＝連擊（球會轉）；球太低、在手上停太久＝持球——比賽中會被吹
   const pf = clamp((0.5 - q) * 1.6, 0, 0.6) * (vbMyRole() === 'OPP' ? 0.3 : 1); b.setFault =   /* 舉對幫忙舉球：連擊、持球機率只剩三成 */ Math.random() < pf ? (hy < -0.3 ? 'held' : 'double') : null;
   vbSendSet(b, tx, tz, ty, T, n, who, cp, q);
+  if (VM.on) { const sn = VM.setNo || 1, x = MREC.local.sets[sn] || (MREC.local.sets[sn] = { n: 0, f: 0 }); x.n++; if (b.setFault) x.f++; }   // WEB-010 戰績：這一局舉了幾球、有沒有連擊持球
   tutEv('set', { ...tutorialSet, n: n === 6 ? tutorialSet.n : n }, b);
   VB.setN = mbq ? 2 : n;   // 舉到哪個號位（決定誰打）
   if (b.setFault) toast(b.setFault === 'held' ? '持球！球太低、在手上停太久（比賽會被吹）' : '連擊！兩手沒同時碰到，球在轉（比賽會被吹）', 1800);
@@ -9903,6 +9921,43 @@ function vbCue() {
   if (!cue) { el.hidden = true; } else { el.hidden = false; el.dataset.k = cue[0]; if (el.textContent !== cue[1]) el.textContent = cue[1]; }
   if (VB.ringSet) VB.ringSet.material.color.set(cue && cue[0] === 'jump' ? '#30A46C' : '#F2B705');
 }
+// ---- WEB-010 比賽紀錄：開房比賽（練習不算）結束時，每個真人把自己的結果記進帳號
+//   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
+const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, local: { p: 0, sets: {} } };
+function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, blkR: {}, last: null, local: { p: 0, sets: {} } }); }
+const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, wall: false });
+function vmPerfTouch(id, kind) {   // 房主：每次有效觸球
+  if (!MREC.id) return;
+  MREC.last = { id, kind, team: vmTeamOf(id) };
+  if (kind === 'block') { MREC.blkR[id] = (MREC.blkR[id] || 0) + 1; if (MREC.blkR[id] >= 5) mrecPf(id).wall = true; }
+}
+function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人）
+  const L = MREC.last; MREC.blkR = {}; MREC.last = null;
+  if (!MREC.id || !L || L.team < 0) return;
+  if (L.team === win) { if (L.kind === 'serve') mrecPf(L.id).a++; else if (L.kind === 'block') mrecPf(L.id).b++; else if (['spike', 'tip', 'hit'].includes(L.kind)) mrecPf(L.id).k++; }
+  else mrecPf(L.id).e++;
+}
+function vmSendResult() {   // 房主：比賽結束，把結果送給大家（也給自己）
+  if (!ROOM || !ROOM.isHost || vmIsPractice() || !MREC.id) return;
+  const d = { e: 'result', id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+  if (NET.on) NET.tx.publish('vm', d);
+  vmGotResult(d); MREC.id = '';
+}
+async function vmGotResult(d) {
+  if (!d || typeof d.id !== 'string' || vmIsPractice()) return;
+  const me = vmMe(), team = Array.isArray(d.team) ? d.team.findIndex((t) => Array.isArray(t) && t.includes(me)) : -1; if (team < 0) return;   // 觀眾不記
+  const A = d.six && d.sets ? d.sets : d.sc, won = A[team] > A[1 - team], sets = d.six && d.sets ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
+  const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
+  const perf = { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, wall: !!hp.wall, p: MREC.local.p, clean };
+  MREC.local = { p: 0, sets: {} };
+  try {
+    const { recordMatch, ACHIEVEMENTS } = await import('./progress.js');
+    const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
+    if (!r || r.dup) return;
+    toast(`${won ? '🏆 贏了！' : '比賽結束'}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 4200);
+    (r.new || []).forEach((k, i) => setTimeout(() => toast(`🎖 解鎖成就「${ACHIEVEMENTS[k]?.name || k}」・可以套用稱號「${ACHIEVEMENTS[k]?.title || ''}」`, 3600), 4400 + i * 3800));
+  } catch (e) { toast((e && e.message) || '戰績記錄失敗', 2600); }
+}
 // 我是不是這一波的舉球員（比賽：這一波指定的舉球員，或六人制專職舉球；練習：都算）
 function vbIsSetter() {
   if (!VM.on) return true;
@@ -10022,7 +10077,7 @@ function tpBegin(dt) {
   if (!on) { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } return false; }
   const kit = teamKit(VM.on ? vmTeamOf(vmMe()) : -1);
   if (TP.av && (TP.avCh !== myChar() || TP.av.gameKit !== kit)) { scene.remove(TP.av.g); TP.av = null; }   // 換了角色就重做
-  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
+  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readTeamJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
   av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
@@ -10092,7 +10147,9 @@ const VM_LEVELS = {
 VM_LEVELS[5] = { name: '企聯', pro: true, speed: 6.1, react: 0.06, passErr: 0.08, setErr: 0.045, spike: [26, 31], out: 0.006, net: 0.003, tip: 0.2, miss: 0.01, block: 1, blockSkill: 1, judge: 0.04, serve: { jump: 0.55, jfloat: 0.35, float: 0.05 }, sweet: 0.8, flat: 0.55 };
 const VM_ROOM_LV = [5, 4, 3];   // 開房只能選企聯、校隊、高手；練習模式五級都能選
 // 房主設定：AI 強度（隊友和對手一樣；開房只能企聯／校隊／高手）、每局分數、局數
-function vmApplyRoomRules(rules) { VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
+function vmApplyRoomRules(rules) {
+  mrecReset(vmIsPractice() ? '' : `${NET.room || 'room'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);   // WEB-010：房主開賽＝新的比賽代碼
+  VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
 const vmIsPractice = () => new URLSearchParams(location.search).has('practice');
 const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
 const VM_OPT = { to: 7, lv: 2, mate: 3, mode: '2', role: 'OH', sets: 3, to6: 25 };
@@ -10283,6 +10340,7 @@ function vmOnTouch(b, id, kind) {
   const team = vmTeamOf(id); if (team < 0 || kind === 'throw') return;
   // 只有比賽球算：發球階段只認輪到的人發出去的那一下；開打之後別顆球（有人手上本來拿著的、場外的）碰到、落地都不算
   if (VM.phase === 'serve' && (kind !== 'serve' || id !== vmServer())) return;
+  vmPerfTouch(id, kind);   // WEB-010 戰績
   if (VM.phase === 'rally' && VM.ball && balls.includes(VM.ball) && b !== VM.ball) return;
   VM.ball = b; b.spike = null; b.floorHit = null; if (kind !== 'block') b.blkDone = false;
   if (VM.phase === 'serve') {   // 發球那一下：對方要接，自己這隊不能再碰
@@ -10356,6 +10414,7 @@ function vmFixSetter(team, P, p, passer) {
 }
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
+  vmPerfPoint(win);   // WEB-010 戰績
   VM.phase = 'dead'; VM.sc[win]++;
   sfx('whistle', 1);
   if (win !== VM.srvTeam) { VM.srvTeam = win; if (VM.six) vm6Rotate(win); else VM.srvIdx[win]++; }   // 拿回發球權：6 對 6 要輪轉
@@ -10373,6 +10432,7 @@ function vmPoint(win, why) {
 function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => !/^ai/.test(id)); return ids.includes(vmMe()) ? '你們' : !hs.length ? 'AI 隊' : hs.map(vmName).join('＋') + (hs.length < ids.length ? '＋AI' : ''); }
 function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
 function vmOver() {
+  vmSendResult();   // WEB-010 戰績（開房比賽才送）
   if (ROOM) { if (ROOM.isHost) { toast(`比賽結束 ${VM.sc[0]}：${VM.sc[1]}，請重新準備`,4000); ROOM.end(); } return; }
   VM.phase = 'over'; vmBroadcast(true);
   const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
@@ -11250,6 +11310,8 @@ function vmBroadcast(force, msg, pt) {
   if (force) NET.forceSt = true;
 }
 function vmOnNet(d, from) {
+  if (d.e === 'result') { if (!ROOM || from === ROOM.host) vmGotResult(d); return; }   // WEB-010 戰績
+  if (d.e === 'start' && (!ROOM || from === ROOM.host)) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
   if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host) return;
   if (d.e === 'start') {
     if (VM.on) return;

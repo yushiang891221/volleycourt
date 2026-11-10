@@ -86,6 +86,11 @@ export const KITS = {
 };
 export function kitOf(team) {
   if (KITS[team]) return KITS[team];
+  if (team && typeof team === 'object') {   // WEB-010 球隊球衣：{ name, body, trim, num }（短褲跟著邊條色、背號外框白色）
+    const hex = (c, d) => (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : d);
+    const body = hex(team.body, '#2B6CB0'), trim = hex(team.trim, '#F2F2EE'), num = hex(team.num, '#FFFFFF');
+    return { name: `team:${body}${trim}${num}`, label: String(team.name || '球隊球衣').slice(0, 12), body, trim, num, numEdge: num.toUpperCase() === '#FFFFFF' ? '#1C1C21' : '#FFFFFF', shorts: trim, accent: trim };
+  }
   try { const h = new THREE.Color(team).getHSL({}).h; return h < 0.17 || h > 0.9 ? KITS.orange : KITS.blue; } catch { return KITS.orange; }
 }
 

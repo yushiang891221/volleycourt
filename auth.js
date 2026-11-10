@@ -112,6 +112,31 @@ export function createAccountService(client) {
       if (error) throw new Error('session');
       return data?.session_id || null;
     },
+    // WEB-010 玩家進度（server/supabase/004_progress.sql）：讀進度、記比賽、稱號、T 輪盤、球隊
+    async progress() {
+      await userId();
+      const { data, error } = await client.rpc('my_progress');
+      if (error) throw new Error(error.code === 'PGRST202' ? '戰績功能還沒開通' : '讀取戰績失敗');
+      return data;
+    },
+    async recordMatch(m) {
+      await userId();
+      const { data, error } = await client.rpc('record_match', { p_match: m.id, p_level: m.level, p_human: !!m.human, p_won: !!m.won, p_sets: m.sets, p_points: m.points, p_seconds: m.seconds, p_perf: m.perf || {} });
+      if (error) throw new Error(error.code === 'PGRST202' ? '戰績功能還沒開通' : error.message.includes('daily') ? '今天記錄的場數到上限了' : '戰績記錄失敗');
+      return data;
+    },
+    async setTitle(key) { await userId(); const { error } = await client.rpc('set_title', { p_title: key }); if (error) throw new Error(error.message.includes('locked') ? '這個稱號還沒解鎖' : '套用稱號失敗'); },
+    async setWheel(w) { await userId(); const { error } = await client.rpc('set_wheel', { p_wheel: w }); if (error) throw new Error('T 輪盤儲存失敗'); },
+    async team(op, arg) {
+      await userId();
+      const call = { mine: ['my_team'], create: ['create_team', { p_name: arg }], join: ['join_team', { p_code: arg }], leave: ['leave_team'], jersey: ['set_team_jersey', { p_jersey: arg }] }[op];
+      const { data, error } = await client.rpc(...call);
+      if (error) {
+        const m = error.message || '';
+        throw new Error(error.code === 'PGRST202' ? '球隊功能還沒開通' : m.includes('level') ? '要 Lv10 才能加入或建立球隊' : m.includes('already') ? '你已經在一個球隊裡了' : m.includes('no team') ? '找不到這個邀請碼' : m.includes('full') ? '這個球隊滿了（30 人）' : m.includes('duplicate') || m.includes('unique') ? '隊名已經有人用了' : m.includes('not owner') ? '只有隊長可以改球衣' : '球隊操作失敗');
+      }
+      return data;
+    },
     // WEB-008 刪除帳號：只能刪自己（server/supabase/003_delete_account.sql），刪完把本機登入狀態也清掉
     async deleteAccount() {
       await userId();

@@ -64,6 +64,11 @@ def make(body, name, keep, cuts, gap, thick=0.007, flare=None, trim_w=0.018, col
         if len(comp) > 40: best.update(comp)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f not in best], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    for _ in range(4):   # 切口上的小牙齒（兩條以上邊在切口上的面＝凸出去的尖角，例如領口那刀只切到脖子附近、旁邊肩膀的面留一角）剪掉
+        teeth = [f for f in bm.faces if sum(e.is_boundary for e in f.edges) >= 2]
+        if not teeth: break
+        bmesh.ops.delete(bm, geom=teeth, context='FACES')
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     bm.normal_update()
     edge = [v for v in bm.verts if any(e.is_boundary for e in v.link_edges)]
     for _ in range(12):

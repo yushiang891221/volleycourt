@@ -19,6 +19,10 @@ export function saveEquip(eq) {
   try { const c = encodeEquip(eq); if (c) localStorage.setItem(EQUIP_KEY, c); else localStorage.removeItem(EQUIP_KEY); } catch {}
   try { dispatchEvent(new Event('vb-look-change')); } catch {}
 }
+// WEB-010 球隊球衣：穿上時存在這台電腦（{ name, body, trim, num }），比賽以外的時間穿（比賽照兩隊隊服）
+export const TEAM_JERSEY_KEY = 'vb.teamJersey';
+export function readTeamJersey() { try { const j = JSON.parse(localStorage.getItem(TEAM_JERSEY_KEY) || 'null'); return j && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? j : null; } catch { return null; } }
+export function saveTeamJersey(j) { try { if (j) localStorage.setItem(TEAM_JERSEY_KEY, JSON.stringify({ name: j.name, body: j.body, trim: j.trim, num: j.num })); else localStorage.removeItem(TEAM_JERSEY_KEY); } catch {} try { dispatchEvent(new Event('vb-look-change')); } catch {} }
 // 自己的外觀＋裝備（連線送給別人、遊戲裡的角色用這個）
 export const myLookCode = () => encodeLook({ ...decodeLook(readLook()), eq: readEquip() });
 export const teamKit = team => team === 1 ? 'blue' : 'orange';

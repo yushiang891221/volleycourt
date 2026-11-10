@@ -105,6 +105,13 @@ h2 .icon, .count { color: #f3a24b; }
 .me-body img { width: 46%; height: 100%; min-height: 0; object-fit: contain; border-radius: 8px; background: #152236; }
 .me-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .me-name { margin: 2px 0 0; font-size: 16px; color: #ffb363; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-title { margin: -4px 0 0; font-size: 12px; color: #c58bff; min-height: 14px; }
+.me-lv { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.me-lvn { color: #ffd092; font-size: 14px; } .me-exp { grid-column: 2; color: #7d91aa; font-size: 10px; }
+.me-bar { height: 7px; background: #1d2a3d; border-radius: 4px; overflow: hidden; } .me-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f39227, #ffd092); }
+.me-coins, .me-time { margin: 0; font-size: 12px; color: #d8e2ee; }
+.me-stats { width: 100%; border-collapse: collapse; font-size: 11px; } .me-stats th { color: #7d91aa; font-weight: 500; text-align: right; } .me-stats th:first-child { text-align: left; }
+.me-stats td { text-align: right; padding: 2px 0; color: #d8e2ee; } .me-stats td:first-child { text-align: left; color: #f0a34b; }
 .me-side dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
 .me-side dt { color: #7d91aa; } .me-side dd { margin: 0; color: #d8e2ee; }
 .me-side button { margin-top: auto; }
@@ -118,7 +125,19 @@ h2 .icon, .count { color: #f3a24b; }
 .eq-row > span { font-size: 13px; font-weight: 700; color: #ffb363; } .eq-row small { margin-left: 8px; color: #7d91aa; font-weight: 400; }
 .eq-items { display: flex; flex-wrap: wrap; gap: 6px; }
 .eq-items button { font-size: 12px; padding: 6px 10px; }
+.eq-items button:disabled { opacity: .45; cursor: not-allowed; }
+.eq-note { font-size: 11px; color: #7d91aa; margin: 0; }
+.eq-wheel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .eq-wheel div { background: #0f1a2b; border: 1px solid #2a3a52; border-radius: 8px; padding: 6px; text-align: center; } .eq-wheel small { display: block; color: #7d91aa; font-size: 10px; } .eq-wheel b { font-size: 12px; color: #ffcf9a; }
 .eq-items button[aria-pressed="true"] { border-color: #f99528; background: #3a2615; color: #ffcf9a; }
+#team-panel { width: 640px; background: #152236; color: #e5edf7; }
+.tm-lock { font-size: 14px; color: #c5d2e2; line-height: 1.8; }
+.tm-row { display: flex; gap: 8px; align-items: center; margin: 10px 0; } .tm-row b { width: 70px; color: #ffb363; font-size: 13px; } .tm-row input { flex: 1; }
+.tm-head { display: flex; align-items: baseline; gap: 14px; } .tm-head h3 { margin: 0; color: #ffd092; font-size: 20px; } .tm-head span { font-size: 12px; color: #9bafc0; } .tm-head b { color: #fff; letter-spacing: 2px; }
+.tm-cols { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; margin: 12px 0; } .tm-cols > div > b { font-size: 13px; color: #ffb363; }
+.tm-members { list-style: none; padding: 0; margin: 6px 0; max-height: 220px; overflow: auto; font-size: 13px; } .tm-members li { padding: 4px 0; border-bottom: 1px solid #22314a; }
+.tm-shirt { width: 90px; height: 70px; margin: 8px 0; border: 5px solid; border-radius: 16px 16px 8px 8px; display: grid; place-items: center; font: 900 30px/1 "Anton", sans-serif; }
+.tm-design { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; } .tm-design label { flex-direction: row; margin: 0; align-items: center; gap: 4px; font-size: 12px; } .tm-design input[type=color] { width: 32px; height: 24px; padding: 0; }
+.tm-leave { border-color: #a8483f; color: #ffb4a8; }
 .me-err { margin: 0; min-height: 14px; font-size: 11px; color: #ff9c8a; }
 .chat { display: flex; flex-direction: column; gap: 7px; }
 .chat-heading { display: flex; justify-content: space-between; align-items: center; }
@@ -192,3 +211,12 @@ main { grid-template-rows: minmax(0, 1.25fr) minmax(170px, 1fr); }
    zoom 會連 dvh 一起放大，所以高度、最小寬度要除回去；螢幕不夠大時放少一點，避免擠不下 */
 @media (min-width: 1300px) and (min-height: 760px) { body { zoom: 1.12; height: calc(100dvh / 1.12); min-width: calc(1100px / 1.12); } }
 @media (min-width: 1500px) and (min-height: 860px) { body { zoom: 1.25; height: calc(100dvh / 1.25); min-width: calc(1100px / 1.25); } }
+/* WEB-010 角色卡內容變多：卡片佔右欄六成、行距縮小，真的放不下時右邊那欄可以捲 */
+.me-card { flex: 1.5 1 0; }
+.me-side { gap: 4px; overflow: auto; min-height: 0; }
+.me-body { align-items: stretch; min-height: 0; }
+.me-side .me-name { font-size: 15px; }
+.me-stats td, .me-stats th { padding: 1px 0; }
+.me-side button { margin-top: 4px; padding: 6px 10px; }
+.me-lv { grid-template-columns: auto 1fr auto; } .me-exp { grid-column: auto; }
+.me-card { flex: 1.9 1 0; } .me-coins { font-size: 11px; }
