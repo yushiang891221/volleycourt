@@ -1,6 +1,6 @@
 # Blender 共用工具：關節位置（跟網頁 avatar-toy.js 一致）、清場、材質、算繪、輸出
 # 座標：Blender Z 朝上、角色面向 -Y（輸出 glTF 後會變成網頁的 Y 朝上、面向 +Z）
-import bpy, bmesh, math, os
+import bpy, bmesh, math, os, sys
 from mathutils import Vector
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -11,8 +11,9 @@ os.makedirs(SHOT, exist_ok=True)
 # ---- 關節（公尺） ----
 HIP_H, L1, KN_ANK = 0.62, 0.29, 0.27
 SPINE_Z = 0.66
-SH_X, SH_Z = 0.255, SPINE_Z + 0.34
-UA, FA = 0.22, 0.19
+_SEX = int(sys.argv[sys.argv.index('--') + 1]) if '--' in sys.argv and len(sys.argv) > sys.argv.index('--') + 1 and sys.argv[sys.argv.index('--') + 1].isdigit() else 0
+SH_X, SH_Z = (0.232 if _SEX == 1 else 0.255), SPINE_Z + 0.34   # 女生肩膀比男生窄（網頁照各自 json 的關節位置）
+UA, FA = 0.25, 0.22   # 手臂加長（之前太短，攔網像用頭擋）
 HEAD_BASE = SPINE_Z + 0.41
 HEAD_R = 0.27
 HEAD_C = Vector((0, 0.025, HEAD_BASE + HEAD_R * 0.88 + 0.03))   # 頭的中心
@@ -28,6 +29,18 @@ def arm_dist(co, sx=1.0):
     return best
 def arm_param(co, sx=1.0):
     s = 1 if co.x > 0 else -1; return (co - arm_pt(s, 0, sx)).dot(arm_dir(s))
+
+def _ss(x, a, b): t = max(0.0, min(1.0, (x - a) / (b - a))); return t * t * (3 - 2 * t)
+def limb_weights(co, bone):
+    """手臂（上臂→前臂→手）、腿（大腿→小腿）是一整塊網格：手肘、手腕、膝蓋附近權重平滑過渡（沒有接縫線）"""
+    kind, side = bone.split('.')
+    if kind in ('upperarm', 'forearm', 'hand'):
+        p = arm_param(co); e = _ss(p, UA - 0.04, UA + 0.04); w = _ss(p, UA + FA - 0.015, UA + FA + 0.025)
+        return {f'upperarm.{side}': 1 - e, f'forearm.{side}': e * (1 - w), f'hand.{side}': e * w}
+    if kind in ('thigh', 'shin'):
+        k = _ss(HIP_H - L1 - co.z, -0.045, 0.045)
+        return {f'thigh.{side}': 1 - k, f'shin.{side}': k}
+    return None
 
 JOINTS = {   # 骨頭名稱 → (起點, 終點, 父骨頭)
     'root': ((0, 0, HIP_H - 0.06), (0, 0, SPINE_Z), None),

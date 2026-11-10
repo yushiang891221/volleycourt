@@ -63,7 +63,7 @@ def chunk(ctrl, w0, th0, curl=0.02, seg=24, ring=14, root_w=0.5):
     return mesh_obj('chunk', bm)
 
 
-def volume(front, side, back, k_top=1.16, k_edge=1.02):
+def volume(front, side, back, k_top=1.16, k_edge=1.02, p=1.6):   # p 越大：越晚才收進頭皮（女生髮型用 4，包到後頸）
     """頭髮主體：從頭頂到髮線的厚殼，頭頂撐最高、往髮線慢慢收進頭皮，底下封住（看不到空心）"""
     NA, NT = 96, 36; bm = bmesh.new(); outer = []; CL = bm.verts.layers.float_color.new('Col')
     def H(az):
@@ -72,7 +72,7 @@ def volume(front, side, back, k_top=1.16, k_edge=1.02):
         az = -math.pi + i / NA * 2 * math.pi; h = H(az); col = []
         for j in range(NT + 1):
             t = j / NT; pol = max(1e-3, t * h)
-            k = k_edge + (k_top - k_edge) * (1 - t ** 1.6) ** 1.2
+            k = k_edge + (k_top - k_edge) * (1 - t ** p) ** 1.2
             col.append(bm.verts.new(sph(pol, az, k)))
         outer.append(col)
     inner = [[bm.verts.new(sph(max(1e-3, j / NT * H(-math.pi + i / NA * 2 * math.pi)), -math.pi + i / NA * 2 * math.pi, 0.985)) for j in range(NT + 1)] for i in range(NA)]
@@ -81,7 +81,7 @@ def volume(front, side, back, k_top=1.16, k_edge=1.02):
         for j in range(NT):
             bm.faces.new((a[j], a[j + 1], b[j + 1], b[j])); bm.faces.new((ib[j], ib[j + 1], ia[j + 1], ia[j]))
         bm.faces.new((a[NT], ia[NT], ib[NT], b[NT]))
-    for v in bm.verts: v[CL] = (0.38, 0.38, 0.38, 1)
+    for v in bm.verts: v[CL] = (0.62, 0.62, 0.62, 1)   # 主體顏色接近髮色（太暗會從髮塊縫隙露出深色）
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     ob = mesh_obj('vol', bm); sd = ob.modifiers.new('sd', 'SUBSURF'); sd.levels = 1; apply_mods(ob)

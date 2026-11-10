@@ -179,13 +179,14 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/creator-
   renderer.domElement.addEventListener('pointerup', () => (drag = null));
   renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); zoom = Math.max(0, Math.min(1, zoom + (e.deltaY < 0 ? 0.5 : -0.5))); }, { passive: false });
 
-  const set = (k, v) => { L[k] = v; if (k === 'pants' && v === 1) L.knee = 2; rebuild(); drawCats(); drawGrid(); };
+  const set = (k, v) => { L[k] = v; if (k === 'pants' && v === 1) L.knee = 2; if (k === 'sex' && (L.hair >= 4) !== !!v) L.hair = (L.hair % 4) + (v ? 4 : 0); rebuild(); drawCats(); drawGrid(); };   /* 換性別時髮型換到同性別同位置 */
   function cellsFor(c) {
     const out = [], base = { ...L };
     if (c.k === 'preview') return null;
     const n = OPTIONS[c.k].length;
     for (let i = 0; i < n; i++) {
-      const lk = { ...base, [c.k]: i }; if (c.k === 'pants' && i === 1) lk.knee = 2;
+      if (c.k === 'hair' && (i >= 4) !== !!L.sex) continue;   /* 男生只列男髮型 0–3，女生只列 4–7 */
+      const lk = { ...base, [c.k]: i }; if (c.k === 'pants' && i === 1) lk.knee = 2; if (c.k === 'sex' && (lk.hair >= 4) !== !!i) lk.hair = (lk.hair % 4) + (i ? 4 : 0);   /* 性別縮圖用該性別的髮型 */
       out.push({ i, label: c.names ? c.names[i] : OPTIONS[c.k][i], color: c.swatch ? OPTIONS[c.k][i] : null, img: c.swatch ? null : () => thumbs.shot(lk, kit, c.shot === 'bust' ? 'bust' : c.k === 'eyes' ? 'face' : c.shot), off: c.k === 'knee' && L.pants === 1 && i !== 2 });
     }
     return out;

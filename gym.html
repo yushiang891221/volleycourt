@@ -7271,6 +7271,7 @@ function makeChibi(C) {
 }
 function makeAvatar(color, ch, team = -1) {
   const av = makeToyAvatar(decodeLook(ch), teamKit(team));
+  av.g.scale.setScalar(AV_SCALE);   // 遊戲裡整個人放大一點（維持 Q 版比例；捏臉畫面不放大）
   av.gameKit = teamKit(team);
   return av;
 }
@@ -7432,13 +7433,16 @@ function avDrive(av, P, k, sp = 0, air = false) {
   const drop = air ? 0 : Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1]));
   if (DK) {   // 髖要在關鍵格的位置：根節點（腳底）＝髖的位置 − 轉過的「腳底到髖」
     const hp = DIVE_HV.set(0, av.hipH || 0.9, 0).applyEuler(R.rotation), tx = Math.sin(fd) * DK.d, tz = Math.cos(fd) * DK.d;
-    R.position.x = (tx - hp.x) * fa; R.position.z = (tz - hp.z) * fa; R.position.y = -drop * (1 - fa) + (DK.y - hp.y) * fa;
-  } else { R.position.x = 0; R.position.z = 0; R.position.y += (-drop - R.position.y) * (1 - Math.exp(-dt * 22)); }
+    R.position.x = (tx - hp.x) * fa; R.position.z = (tz - hp.z) * fa; R.position.y = -drop * (1 - fa) + (DK.y - hp.y) * fa; av._rootY = R.position.y;
+  } else {   // 跳躍：Q 版角色比判定用的身高矮，畫面上的離地高度乘 AV_JUMP_K（等於起跳速度和重力乘同倍數：到頂時間不變、手能到網子上方；判定不變）
+    R.position.x = 0; R.position.z = 0; av._rootY = av._rootY == null ? R.position.y : av._rootY; av._rootY += (-drop - av._rootY) * (1 - Math.exp(-dt * 22));
+    R.position.y = av._rootY + (av.chibi ? Math.max(0, av.body.position.y) * (AV_JUMP_K - 1) : 0);
+  }
   // 不陷進地板（翻滾時身體、跑步時鞋尖鞋跟）：全身最低的點比地板低，就把整個人往上抬
   av.g.updateMatrixWorld(true);
   const gy = av.g.getWorldPosition(GP_V).y; let minY = Infinity;
   for (const [o, x, y, z] of av._gp || (av._gp = avGroundPts(av))) { GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < minY) minY = GP_V.y; }
-  if (minY < gy + 0.022) { R.position.y += gy + 0.022 - minY; R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
+  if (minY < gy + 0.022) { R.position.y += (gy + 0.022 - minY) / (av.g.scale.y || 1); R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
 }
 // 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
 function avPoseOf(code, t = 0.5, ready = false) {
@@ -8911,6 +8915,7 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
 // 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
 const JUMP_G = 8.4;
+const AV_SCALE = 1.2, AV_JUMP_K = 1.18;   /* 角色放大 1.2 倍後舉手高約 1.91 m（判定手高 2.37 m）；離地高度在放大的座標裡再乘 1.18，畫面上總共約 1.4 倍，到頂時手跟判定位置差不多 */
 // 體力設定（百分比，比賽選單「⚙️ 體力設定」可以改，存在這台電腦；連線時大家照開局的人的設定）
 const STA_DEF = { sprint: 21, jump: 15.5, jserve: 15.5, block: 11.5, spike: 8, hit: 4, serve: 4, tip: 2.6, set: 2.6, bump: 2, dive: 39, spec: 30, regMove: 5, regStill: 8, regDead: 10 };   // 每個動作比上一版多耗三成
 const STA_LBL = { sprint: '衝刺（每秒）', jump: '起跳攻擊', jserve: '跳發', block: '攔網起跳', spike: '扣球', hit: '站著打', serve: '發球', tip: '吊球', set: '舉球', bump: '接球', dive: '撲救', spec: '專職少耗', regMove: '比賽中跑動（每秒回）', regStill: '比賽中站著（每秒回）', regDead: '死球、等發球（每秒回）' };

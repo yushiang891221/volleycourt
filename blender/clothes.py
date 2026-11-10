@@ -111,10 +111,13 @@ def make(body, name, keep, cuts, gap, thick=0.007, flare=None, trim_w=0.018, col
             t = max(0.0, min(1.0, (v.co.z - HIP_H) / 0.24)); t = t * t * (3 - 2 * t)
             for n_, w_ in (('spine', t), ('root', 1 - t)):
                 if w_ > 0: (G.get(n_) or G.setdefault(n_, ob.vertex_groups.new(name=n_))).add([v.index], w_, 'REPLACE')
+        elif limb_weights(v.co, bn) if '.' in bn else None:   # 手臂／腿：跟身體一樣平滑過渡（袖子、褲管在手肘膝蓋跟著彎）
+            for n_, w_ in limb_weights(v.co, bn).items():
+                if w_ > 0.001: (G.get(n_) or G.setdefault(n_, ob.vertex_groups.new(name=n_))).add([v.index], w_, 'REPLACE')
         else:
             (G.get(bn) or G.setdefault(bn, ob.vertex_groups.new(name=bn))).add([v.index], 1.0, 'REPLACE')
     inner = ob.vertex_groups.new(name='inner'); inner.add([v.index for v in ob.data.vertices if v.index not in edge_idx], 1.0, 'REPLACE')
-    sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 4; sm.vertex_group = 'inner'   # 邊界不參與平滑，切口保持乾淨
+    sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 9; sm.vertex_group = 'inner'   # 邊界不參與平滑，切口保持乾淨
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False; so.material_offset_rim = 0 if plain else 1
     apply_mods(ob); smooth(ob)
     return ob
@@ -143,7 +146,9 @@ def tops(body, sex):
         for v in ob.data.vertices:
             z = v.co.z
             if z > 0.74: continue
-            k = min(1, max(0, (0.74 - z) / 0.12)); snap = [(g.group, g.weight) for g in v.groups]
+            snap = [(g.group, g.weight) for g in v.groups]
+            if any(ob.vertex_groups[gi].name.startswith(('upperarm', 'forearm', 'hand')) for gi, w in snap): continue   # 袖子（長袖手腕比腰低）不能綁到骨盆
+            k = min(1, max(0, (0.74 - z) / 0.12))
             for gi, w in snap:
                 ob.vertex_groups[gi].add([v.index], w * (1 - k), 'REPLACE')
             vg['root'].add([v.index], k + sum(w for gi, w in snap if ob.vertex_groups[gi].name == 'root') * (1 - k), 'REPLACE')
@@ -156,8 +161,8 @@ def tops(body, sex):
 
 
 def pants(body):
-    sh = make(body, 'pants_0', {'torso', 'thigh'}, [((0, 0, HIP_H + 0.1), (0, 0, 1), {'torso'}, False), ((0, 0, HIP_H - 0.13), (0, 0, -1), {'thigh'}, True)], 0.008, flare=0.014, colors=('pants', 'ptrim'), cols=('#1C1C21', '#F07C24'), plain=True)
-    lp = make(body, 'pants_1', {'torso', 'thigh', 'shin'}, [((0, 0, HIP_H + 0.1), (0, 0, 1), {'torso'}, False), ((0, 0, 0.11), (0, 0, -1), {'shin'}, True)], 0.013, colors=('pants', 'ptrim'), cols=('#1C1C21', '#F4F4F0'), plain=True)
+    sh = make(body, 'pants_0', {'torso', 'thigh'}, [((0, 0, HIP_H + 0.1), (0, 0, 1), {'torso'}, False), ((0, 0, HIP_H - 0.16), (0, 0, -1), {'thigh'}, True)], 0.008, flare=0.014, colors=('pants', 'ptrim'), cols=('#1C1C21', '#F07C24'), plain=True)
+    lp = make(body, 'pants_1', {'torso', 'thigh', 'shin'}, [((0, 0, HIP_H + 0.1), (0, 0, 1), {'torso'}, False), ((0, 0, 0.11), (0, 0, -1), {'shin'}, True)], 0.022, colors=('pants', 'ptrim'), cols=('#1C1C21', '#F4F4F0'), plain=True)
     return [sh, lp]
 
 

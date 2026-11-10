@@ -435,6 +435,7 @@ function makeGLBAvatar(L, team, asset) {
     if (part === 'head') skull = mesh;
   }
   rig.arms.forEach(a => { a.rotation.z = 0; }); rig.g.updateMatrixWorld(true);
+  rig.head.scale.setScalar(0.8);   // 頭縮小一點（太大會擋視野）；頭和頭髮都綁在 head 骨頭，一起縮
   return { ...rig, kit, look: L, phase: 0, rig: true, chibi: true, glb: true,
     L1: 0.29, L2: 0.33, hipH: 0.62, _skull: skull, _faceM: skull?.material };
 }

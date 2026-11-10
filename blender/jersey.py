@@ -14,8 +14,8 @@ def is_arm(c):
     return arm_dist(c) < 0.1 and arm_param(c) > 0.02
 
 
-def uv_of(c):
-    if is_arm(c):
+def uv_of(c, arm=None):
+    if arm if arm is not None else is_arm(c):
         s = 1 if c.x > 0 else -1; d = arm_dir(s); side = Vector((d.z * -1 * s, 0, d.x * s)) if False else Vector((math.cos(ARM_A) * s, 0, math.sin(ARM_A)))
         rel = c - arm_pt(s, 0); ang = math.atan2(rel.y, rel.dot(side)) / (2 * math.pi) % 1
         v = 0.28 * max(0, min(1, 1 - arm_param(c) / (UA + FA + 0.05)))
@@ -27,12 +27,20 @@ def uv_of(c):
 
 def unwrap(ob):
     me = ob.data; uv = me.uv_layers.get('UVMap') or me.uv_layers.new(name='UVMap')
+    # 袖子／衣身照「跟哪根骨頭動」分：肩膀關節球那段（站著藏在衣身裡）舉手時露出來，要是袖子的素色，不能貼到衣身側邊條紋
+    names = {g.index: g.name for g in ob.vertex_groups}
+    armv = [sum(g.weight for g in v.groups if names.get(g.group, '').startswith(('upperarm', 'forearm'))) > 0.5 for v in me.vertices] if names else None
     for p in me.polygons:
         us = []
+        fa = None if armv is None else sum(armv[me.loops[li].vertex_index] for li in p.loop_indices) * 2 > len(p.loop_indices)
         for li in p.loop_indices:
-            u, v, arm = uv_of(me.vertices[me.loops[li].vertex_index].co); us.append([li, u, v])
+            u, v, arm = uv_of(me.vertices[me.loops[li].vertex_index].co, fa); us.append([li, u, v])
         lo = [x[1] for x in us]
-        if max(lo) - min(lo) > 0.5:   # 跨過接縫的面：小的那邊 +1（貼圖會重複）
+        if fa and max(lo) - min(lo) > 0.25:   # 袖子繞一圈的接縫：小的那邊 +0.5（兩邊袖子圖案一樣、貼圖會重複），不然整個面拉過整條袖子變成黑色尖刺
+            m0 = min(lo)
+            for x in us:
+                if x[1] < m0 + 0.25: x[1] += 0.5
+        elif max(lo) - min(lo) > 0.5:   # 跨過接縫的面：小的那邊 +1（貼圖會重複）
             for x in us:
                 if x[1] < 0.5: x[1] += 1
         for li, u, v in us: uv.data[li].uv = (u, v)

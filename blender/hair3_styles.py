@@ -76,10 +76,11 @@ def build(t):
         for i in range(3): P.append(lean(0.8, (i - 1) * 0.42 + 0.1, 0.1 + rnd.random() * 0.03, up=0.7, k0=1.12, w=0.075, curl=0.03, bend=0.03))
     elif t == 1:   # 蓬鬆捲髮：很多短的 C 字捲
         P.append(volume(0.85, 1.25, 1.65, k_top=1.2, k_edge=0.97)); temples(P, k=1.16); ears(P)
-        for i in range(34):
-            pol = 0.15 + math.sqrt(rnd.random()) * 1.3; az = rnd.random() * 2 * math.pi; dz = 0.2 if rnd.random() < 0.5 else -0.2
+        for i in range(72):   # 捲塊小而多、大小不一（之前太大顆像巧克力球）
+            pol = 0.12 + math.sqrt(rnd.random()) * 1.42; az = rnd.random() * 2 * math.pi; dz = 0.16 if rnd.random() < 0.5 else -0.16
             if pol > 0.95 and math.cos(az) > 0.6: continue
-            P.append(chunk([S(pol, az, 1.17), S(pol + 0.2, az + dz, 1.25), S(pol + 0.32, az + dz * 0.3, 1.15)], 0.06, 0.035, curl=0.02, root_w=0.8))
+            sz = 0.7 + rnd.random() * 0.5
+            P.append(chunk([S(pol, az, 1.16), S(pol + 0.14 * sz, az + dz * sz, 1.16 + 0.06 * sz), S(pol + 0.22 * sz, az + dz * 0.3 * sz, 1.13)], 0.042 * sz, 0.028 * sz, curl=0.016, root_w=0.8))
         fringe(P, 5, 1.3, end=1.02, k=1.2, w=0.06, curl=0.04)
     elif t == 2:   # 側分短髮（參考圖）
         ob = H3.style_sweep(); ob.name = 'hair_2'; ob.data.materials.clear(); ob.data.materials.append(H3.glossy_hair_mat()); H3.angel_ring(ob); return ob
@@ -92,7 +93,7 @@ def build(t):
         for s in (-1, 1):
             for j in range(2): P.append(chunk([S(0.7, s * (0.8 + j * 0.3), 1.1), S(1.1, s * (0.85 + j * 0.3), 1.08), S(1.45, s * (0.9 + j * 0.3), 1.02)], 0.065, 0.03))
     elif t == 4:   # 高馬尾：往後梳到後腦上方綁起，馬尾 S 形垂下
-        P.append(volume(0.85, 1.3, 1.7, k_top=1.1, k_edge=0.97)); tie = S(0.95, math.pi, 1.1)
+        P.append(volume(0.85, 1.3, 2.5, k_top=1.1, k_edge=0.97, p=4)); tie = S(0.95, math.pi, 1.1)
         for i in range(12):
             az = -1.65 + i * 0.3
             P.append(chunk([S(1.0 + abs(az) * 0.22, az, 1.08), S(0.55, az * 0.75, 1.12), S(0.75, math.pi - az * 0.25, 1.12), tie], 0.075, 0.03, curl=0.0, root_w=0.8))
@@ -103,7 +104,7 @@ def build(t):
         for s in (-1, 1): P.append(chunk([S(0.9, s * 0.95, 1.1), S(1.35, s * 1.02, 1.12), S(1.75, s * 0.98, 1.08), S(2.02, s * 0.88, 1.02)], 0.035, 0.02, curl=0.01))
         tie_ring(P, tie, Vector((0, 0.4, 1)).normalized() * -1)
     elif t == 5:   # 雙辮子：中分往兩側梳到耳後，一節一節的辮子
-        P.append(volume(0.85, 1.4, 1.75, k_top=1.1, k_edge=0.97))
+        P.append(volume(0.85, 1.4, 2.5, k_top=1.1, k_edge=0.97, p=4))   # 女生髮型主體包到後頸
         for s in (-1, 1):
             tie = S(1.72, s * 1.85, 1.08)
             for i in range(7):
@@ -117,14 +118,14 @@ def build(t):
             tie_ring(P, tie + Vector((0, 0, -0.035)), Vector((0, 0, 1)))
         fringe(P, 6, 1.2, end=1.1, w=0.065)
     elif t == 6:   # 長直髮：頭頂順下來，長髮塊垂到背後（舉手不會穿過）
-        P.append(volume(0.85, 1.4, 1.75, k_top=1.12, k_edge=0.97)); temples(P, end=1.55)
+        P.append(volume(0.85, 1.4, 2.5, k_top=1.12, k_edge=0.97, p=4)); temples(P, end=1.55)
         for i in range(14):
             az = 1.45 + i * (2 * math.pi - 2.9) / 13; m = S(1.55, az, 1.12)
             e1 = Vector((m.x * 0.95, max(m.y, 0.08) + 0.04, HEAD_C.z - 0.22)); e2 = Vector((m.x * 0.85, max(m.y, 0.1) + 0.06, HEAD_C.z - 0.44 - rnd.random() * 0.05))
             P.append(chunk([S(0.2, az * 0.3, 1.12), S(0.9, az, 1.13), m, e1, e2], 0.08, 0.035, curl=0.01, root_w=0.7))
         fringe(P, 7, 1.5, end=1.12, w=0.065, curl=0.01)
     else:   # 鮑伯頭：到下巴長度、髮尾往內收
-        P.append(volume(0.85, 1.5, 1.8, k_top=1.14, k_edge=0.97))
+        P.append(volume(0.85, 1.5, 2.5, k_top=1.14, k_edge=0.97, p=4))
         for i in range(16):
             az = 0.85 + i * (2 * math.pi - 1.7) / 15
             P.append(chunk([S(0.2, az * 0.3, 1.14), S(0.9, az, 1.16), S(1.5, az, 1.15), S(1.95, az, 1.04)], 0.085, 0.036, curl=-0.03, root_w=0.7))
