@@ -2,16 +2,17 @@
 (() => {
   'use strict';
   window.createRoomSettings = ({id, creator=false, send, changed, speed=.7, count=2, courtOf=()=>null}) => {
-    let order=[], settled=false, revision=0, timer, retry, beat=0, tactics='roles';
+    let order=[], settled=false, revision=0, timer, retry, beat=0, tactics='roles', lv=3, to=25, bestOf=1;   // lv＝AI 強度（隊友和對手一樣）、to＝每局分數、bestOf＝局數
     count = Number.isInteger(count) && count>=1 && count<=6 ? count : 2;
     let flow={phase:'waiting',ready:[],picks:[],court:null,deadline:0,round:0};
     const copy=v=>JSON.parse(JSON.stringify(v));
     const members=new Map([[id,{at:Date.now(),creator}]]), departed=new Set();
     const validSpeed = n => [.55,.7,1].includes(n);
+    const validLv = n => Number.isInteger(n) && n>=1 && n<=5, validTo = n => [15,20,25].includes(n), validBest = n => [1,3,5].includes(n);
     const host=()=>order[0] || '';
-    const snapshot=()=>({host:host(),isHost:settled && host()===id,speed,count,tactics,order:[...order],flow:copy(flow)});
+    const snapshot=()=>({host:host(),isHost:settled && host()===id,speed,count,tactics,lv,to,bestOf,order:[...order],flow:copy(flow)});
     const notify=()=>changed(snapshot());
-    const state=()=>send({e:'state',order:[...order],speed,count,tactics,flow:copy(flow),revision});
+    const state=()=>send({e:'state',order:[...order],speed,count,tactics,lv,to,bestOf,flow:copy(flow),revision});
     const commit=()=>{revision++;state();notify();};
     const waiting=()=>{flow={phase:'waiting',ready:[],picks:[],court:null,deadline:0,round:flow.round};};
     function finishPick(){
@@ -62,6 +63,7 @@
         if(settled && d.revision<revision)return;
         if(d.count!==undefined && (!Number.isInteger(d.count)||d.count<1||d.count>6))return;
         if(d.tactics!==undefined && !['roles','rotation'].includes(d.tactics))return;
+        if((d.lv!==undefined && !validLv(d.lv))||(d.to!==undefined && !validTo(d.to))||(d.bestOf!==undefined && !validBest(d.bestOf)))return;
         if(d.flow){
           const f=d.flow,n=d.count||count;
           if(!['waiting','pick','playing'].includes(f.phase)||!Array.isArray(f.ready)||f.ready.length>n*2||new Set(f.ready).size!==f.ready.length||!f.ready.every(x=>d.order.includes(x))||!Array.isArray(f.picks)||!Number.isFinite(f.deadline)||!Number.isInteger(f.round))return;
@@ -69,7 +71,7 @@
           flow=copy(f);
         }
         order=[...d.order];for(const x of order)if(!members.has(x))members.set(x,{at:Infinity,creator:false});
-        speed=d.speed;count=d.count||count;tactics=d.tactics||'roles';revision=d.revision;settled=true;clearTimeout(timer);notify();
+        speed=d.speed;count=d.count||count;tactics=d.tactics||'roles';if(d.lv!==undefined)lv=d.lv;if(d.to!==undefined)to=d.to;if(d.bestOf!==undefined)bestOf=d.bestOf;revision=d.revision;settled=true;clearTimeout(timer);notify();
       }
     }
     function join(peer){departed.delete(peer);if(settled && host()===id){if(!members.has(peer))members.set(peer,{at:Date.now(),creator:false});if(!order.includes(peer)){order.push(peer);revision++;}state();notify();}}
@@ -84,6 +86,9 @@
     return {start,receive,join,leave,get host(){return host();},get isHost(){return settled && host()===id;},get speed(){return speed;},
       get snapshot(){return snapshot();},get count(){return count;},
       setCount(n){if(!settled||host()!==id||flow.phase!=='waiting'||!Number.isInteger(n)||n<1||n>6)return false;count=n;flow.ready=flow.ready.slice(0,2*n);commit();return true;},
+      setLevel(n){if(!settled||host()!==id||flow.phase!=='waiting'||!validLv(n))return false;lv=n;commit();return true;},
+      setPoints(n){if(!settled||host()!==id||flow.phase!=='waiting'||!validTo(n))return false;to=n;commit();return true;},
+      setBestOf(n){if(!settled||host()!==id||flow.phase!=='waiting'||!validBest(n))return false;bestOf=n;commit();return true;},
       setTactics(mode){if(!settled||host()!==id||flow.phase!=='waiting'||count!==6||!['roles','rotation'].includes(mode))return false;tactics=mode;commit();return true;},
       toggleReady(){return command({e:'ready'});},pick(slot){return command({e:'pick',slot});},
       begin(){

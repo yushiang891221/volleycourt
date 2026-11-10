@@ -6885,6 +6885,7 @@ function roomRulesChanged(rules) {
     // Flip only internal team indices/sign; the selected physical left/right stays unchanged.
     const right = seats[1].includes(vmMe()), sg = right ? 1 : -1;
     if (right) seats.reverse();
+    vmApplyRoomRules(rules);   // 房主設定（企聯等 AI 強度、每局分數、局數）
     if (rules.count !== 2) vm6Start(c,sg,{},seats); else vmStart(c,sg,null,[],seats);
   }
   if (!rules.isHost && !VM.on && NET.tx) NET.tx.publish('room-match-sync', {});
@@ -10085,11 +10086,29 @@ const VM_LEVELS = {
   1: { name: '新手', speed: 4.2, react: 0.28, passErr: 0.6, setErr: 0.33, spike: [14, 19], out: 0.09, net: 0.05, tip: 0.25, miss: 0.2, block: 0.55, blockSkill: 0.5, judge: 0.6, serve: { jump: 0.05, jfloat: 0.05, float: 0.3 }, sweet: 0.1, flat: 0.1 },
   2: { name: '球友', speed: 4.7, react: 0.2, passErr: 0.4, setErr: 0.21, spike: [17, 23], out: 0.055, net: 0.035, tip: 0.22, miss: 0.11, block: 0.8, blockSkill: 0.68, judge: 0.35, serve: { jump: 0.2, jfloat: 0.25, float: 0.3 }, sweet: 0.25, flat: 0.2 },
   3: { name: '高手', speed: 5.2, react: 0.13, passErr: 0.25, setErr: 0.13, spike: [20, 26], out: 0.03, net: 0.018, tip: 0.2, miss: 0.06, block: 0.95, blockSkill: 0.85, judge: 0.18, serve: { jump: 0.35, jfloat: 0.35, float: 0.2 }, sweet: 0.45, flat: 0.35 },
-  4: { name: '校隊', speed: 5.7, react: 0.08, passErr: 0.15, setErr: 0.08, spike: [23, 29], out: 0.015, net: 0.008, tip: 0.18, miss: 0.025, block: 1, blockSkill: 0.97, judge: 0.08, serve: { jump: 0.45, jfloat: 0.4, float: 0.1 }, sweet: 0.65, flat: 0.45 },
+  4: { name: '校隊', speed: 5.6, react: 0.09, passErr: 0.16, setErr: 0.085, spike: [23, 28.5], out: 0.017, net: 0.009, tip: 0.18, miss: 0.03, block: 1, blockSkill: 0.95, judge: 0.09, serve: { jump: 0.45, jfloat: 0.4, float: 0.1 }, sweet: 0.65, flat: 0.45 },
 };
+// 企聯（pro）：數值最高、幾乎不失誤；球風自由（誰離舉球點近誰舉、舉球員也會攻擊），而且會用位置技能（舉球員跳起來吊、大砲／舉對超強重扣、中間手滯空）
+VM_LEVELS[5] = { name: '企聯', pro: true, speed: 6.1, react: 0.06, passErr: 0.08, setErr: 0.045, spike: [26, 31], out: 0.006, net: 0.003, tip: 0.2, miss: 0.01, block: 1, blockSkill: 1, judge: 0.04, serve: { jump: 0.55, jfloat: 0.35, float: 0.05 }, sweet: 0.8, flat: 0.55 };
+const VM_ROOM_LV = [5, 4, 3];   // 開房只能選企聯、校隊、高手；練習模式五級都能選
+// 房主設定：AI 強度（隊友和對手一樣；開房只能企聯／校隊／高手）、每局分數、局數
+function vmApplyRoomRules(rules) { VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
+const vmIsPractice = () => new URLSearchParams(location.search).has('practice');
+const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
 const VM_OPT = { to: 7, lv: 2, mate: 3, mode: '2', role: 'OH', sets: 3, to6: 25 };
 try { Object.assign(VM_OPT, JSON.parse(localStorage.getItem('vb.vmopt') || '{}')); } catch (e) { /* ignore */ }
-const vmLv = (a) => VM_LEVELS[a.team === 0 ? VM_OPT.mate : VM_OPT.lv] || VM_LEVELS[2];
+const vmLv = (a) => VM_LEVELS[VM_OPT.lv] || VM_LEVELS[2];   // AI 隊友和對手同一級
+const vmPro = (a) => !!vmLv(a).pro;
+const vmProLv = () => !!VM_LEVELS[VM_OPT.lv]?.pro;
+// 企聯：專職舉球員（AI）離舉球點太遠，就由離球最近的 AI 來舉（每個位置都會舉）；真人是舉球員就照舊
+function vmProSetter(team, passer, b = VM.ball) {
+  if (!vmProLv() || !b || vmSmallCount() || VM.tactics === 'rotation') return null;
+  const sp = vmPredL(vmBallL(b), 2.3); if (!sp) return null;
+  const s0 = VM.team[team].find((id) => VM.role[id] === 'S' && id !== passer), far = (id) => { const q = vmPos(id); return q ? Math.hypot(q.x - sp.x, q.z - sp.z) : 99; };
+  if (s0 && !VM.ai.has(s0)) return null;
+  let best = s0 || null; for (const id of VM.team[team]) if (id !== passer && VM.ai.has(id) && (!best || far(id) < far(best) - 1.5)) best = id;
+  return best;
+}
 const vmMe = () => (NET.on ? NET.me : 'me');
 const vmL = (x, z) => toLocalOf(VM.c, x, z);
 const vmW = (lx, lz) => toWorldOf(VM.c, lx, lz);
@@ -10119,8 +10138,7 @@ function vmOpenMenu(c) {
     <div class="rk-seg"><button type="button" data-vmmode="2" aria-pressed="true">2 對 2 沙排</button><button type="button" data-vmmode="6">6 對 6 室內</button></div>
     <p class="rk-sub">${NET.on ? `你這半場：<b style="color:#fff">你${mates[0] ? '、' + esc(mates[0].n) : ''}</b>　對面半場：<b style="color:#fff">${opps.length ? opps.map((q) => esc(q.n)).join('、') : '沒有人'}</b>　（站在哪個半場就是哪一隊，人不夠的位置由 AI 補）` : '要跟朋友打：先開「多人連線」、進同一個房間，隊友站你這半場、對手站對面半場，再按一次這個按鈕'}</p>
     <p class="rk-sub">打到幾分</p><div class="rk-seg">${[7, 11, 15, 21, 25].map((n) => `<button type="button" data-vmto="${n}" aria-pressed="${VM_OPT.to === n}">${n} 分</button>`).join('')}</div>
-    <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
-    <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
+    <p class="rk-sub">AI 強度（隊友和對手一樣）</p><div class="rk-seg">${vmLvChoices().map((k) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === k}">${VM_LEVELS[k].name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
     <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
     <p class="rk-sub" style="margin-top:10px">V 接球、1／2／3／4 舉球（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中按住滑鼠左鍵蓄力、放開扣球（金色格最強最準）、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
@@ -10506,7 +10524,7 @@ function vmAiStep(a, dt) {
     for (const id of [...VM.team[0], ...VM.team[1]]) if (!VM.ai.has(id)) { const q = vmPos(id); if (q) bodies.push([q.x, q.z]); }
     for (const [ox, oz] of bodies) { const ex = a.x - ox, ez = a.z - oz, e = Math.hypot(ex, ez); if (e > 0.001 && e < 0.62) { a.x += (ex / e) * (0.62 - e) * 0.6; a.z += (ez / e) * (0.62 - e) * 0.6; } }
   }
-  if (a.y > 0 || a.vy > 0) { a.vy -= JUMP_G * dt; a.y += a.vy * dt; if (a.y <= 0) { a.y = 0; a.vy = 0; a.tdFake = false; } }
+  if (a.y > 0 || a.vy > 0) { a.vy -= JUMP_G * (a.vy < 0 && VM.six && VM.role[a.id] === 'MB' && vmPro(a) ? 0.6 : 1) * dt; a.y += a.vy * dt;   /* 企聯中間手：下降比較慢＝滯空久 */ if (a.y <= 0) { a.y = 0; a.vy = 0; a.tdFake = false; } }
   { const want = a.blk && a.y > 0.05 ? a.blk.bsZ || 0 : 0, d = want - (a.bs || 0); a.bs = (a.bs || 0) + clamp(d, -1.6 * dt, 1.6 * dt); }   // 攔網雙手往左右移（跟你一樣有速度上限）
 }
 // 對面的攻擊手（你、真人隊友或 AI）：位置、是不是已經起跳
@@ -10630,12 +10648,20 @@ function vmAiRole(a, P, B, sd) {
     const qmb = VM.six && !vmSmallCount() && (!activeCall || (activeCall.n === 2 && activeCall.v !== 'high3')) && !P.fix && (!P.grade || P.grade === 'A') ? vm6AirMB(a.team, a.id) : null, early = !!qmb && dh < 1.45 && B.y < 3.8 && B.y > 1.8;
     if (early && B.y > 2.9 && a.y <= 0 && a.vy <= 0) { a.vy = aiJump(a, 2.6, 'set'); }   // 球還很高：舉球員跳起來舉
     if (early || (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5)) {
+      if (vmPro(a) && !P.dumpChk && !P.fix && Math.abs(a.x) < 1.8 && (!VM.six || vm6Front(a.id)) && B.y > 2.0) {   // 企聯技能：舉球員跳起來雙手往右推，貼網吊到對面三米線中間（每波最多想一次）
+        P.dumpChk = true;
+        if (Math.random() < 0.14) {
+          if (a.y <= 0 && a.vy <= 0) a.vy = aiJump(a, 2.6, 'set');
+          const netH = NETS[state.net].h, f = clamp(Math.abs(B.x) / (Math.abs(B.x) + 3), 0.05, 0.95), base = B.y + (BALL_R - B.y) * f, T = Math.max(0.55, Math.sqrt(Math.max(0.02, netH + BALL_R + 0.12 - base) / (4.9 * f * (1 - f))));
+          vmAiTouch(a, -sd * 3, (Math.random() - 0.5) * 0.6, BALL_R, T, 0.05, 'tip', 2, true); return;
+        }
+      }
       let ap = vmPos(P.attacker) || { z: 0 }, call = a.team === 0 && VM.call && VM.t - VM.call.t < 8 ? VM.call.n : 0, pick = null;
       const callV = call ? VM.call.v : null, mb3 = callV === 'high3' && VM.six ? VM.team[a.team].find((id) => id !== a.id && VM.role[id] === 'MB' && vm6Front(id)) : null;   // 喊平球／3 號位高球
       if (VM.six) { pick = mb3 ? { n: 2, id: mb3 } : early ? { n: 2, id: qmb.id } : vm6ChooseSet(a, B); if (mb3) VM.call = null; call = pick.n; ap = vmPos(pick.id) || ap; if (early && VM.call) VM.call = null; } else if (call) VM.call = null;
       if (VM.six && pick && (vmSmallCount() || !vm6Front(pick.id))) { vmAiSetAttack(a, P, B, pick, false); return; }
       // 修正球：傳得不到位（C）、離網太遠、或不是舉球員在舉（舉球員追不到、第一球是他接的）→ 又高又慢的高球到兩邊（大多 4 號位），比較不準
-      const far = Math.max(0, Math.abs(a.x) - 2.6), fixS = !early && call !== 2 && (P.fix || far > 0.8 || (VM.six && !vmSmallCount() && VM.role[a.id] !== 'S'));   // 小人數沒有專職舉球員：誰舉都照正常舉
+      const far = Math.max(0, Math.abs(a.x) - 2.6), fixS = !early && call !== 2 && (P.fix || far > 0.8 || (VM.six && !vmSmallCount() && VM.role[a.id] !== 'S' && !vmPro(a)));   // 小人數沒有專職舉球員：誰舉都照正常舉
       if (fixS) {
         const e = vmLv(a).setErr * (VM.six && !vmSmallCount() && VM.role[a.id] !== 'S' ? 2.2 : 1.3) * (1 + 0.15 * far), lz = VM.six ? (call === 3 ? -sd : sd) * 3.0 : clamp(ap.z, -3.3, 3.3);
         vmAiTouch(a, sd * 1.3, lz, 3.1, 1.45 + far * 0.06, e, 'set', far > 2.5 || B.y < 1.6 ? 3 : 2);
@@ -10713,7 +10739,9 @@ function vmAiSpike(a, sd) {
   const fixB = !!(VM.poss[a.team] && VM.poss[a.team].fix), Lo = L.out * (fixB ? 1.6 : 1), Lt = L.tip + (fixB ? 0.08 : 0), Ln = L.net * (fixB ? 1.6 : 1);   // 修正球：打不重、出界掛網多、常常吊
   let tx = gap.tx, tz = gap.tz, spd = (L.spike[0] + Math.random() * (L.spike[1] - L.spike[0])) * (0.6 + 0.4 * aiEff(a)) * (fixB ? 0.85 : 1), tip = false;
   const mix = Math.random();
-  if (!fixB && mix < L.sweet * 0.6) { spd = L.spike[1] * 1.1 * (0.6 + 0.4 * aiEff(a)); const g2 = vmPickGap(a, sd, 2.5, 6, 3.9); tx = g2.tx; tz = g2.tz; }   // 蓄到甜蜜點的重扣：又重又釘
+  const sup = L.pro && !fixB && VM.six && ROLE_SUPER[VM.role[a.id]] && Math.random() < 0.25 ? ROLE_SUPER[VM.role[a.id]] : null;   // 企聯技能：大砲／舉對打到紫色區
+  if (sup) { spd = L.spike[1] * sup.pw * (0.6 + 0.4 * aiEff(a)); const g2 = vmPickGap(a, sd, 2.5, 6.5, 3.9); tx = g2.tx; tz = g2.tz; }
+  else if (!fixB && mix < L.sweet * 0.6) { spd = L.spike[1] * 1.1 * (0.6 + 0.4 * aiEff(a)); const g2 = vmPickGap(a, sd, 2.5, 6, 3.9); tx = g2.tx; tz = g2.tz; }   // 蓄到甜蜜點的重扣：又重又釘
   else if (mix > 0.9) { spd = 12 + Math.random() * 2.5; const g2 = vmPickGap(a, sd, 6.5, 8.2, 3.9); tx = g2.tx; tz = g2.tz; }   // 輕打：吊到後場深角
   if (r < Lo) { if (Math.random() < 0.5) tx = -sd * (9.5 + Math.random() * 1.8); else tz = Math.sign(tz || 1) * (4.8 + Math.random() * 1.2); }
   else if (!netGuard && r < Lo + Lt) { tip = true; tx = -sd * (1.5 + Math.random() * 1.5); }   // 網前沒人才吊，吊在網後
@@ -10787,10 +10815,9 @@ function vm6Menu(c, sg) {
     <div class="rk-seg"><button type="button" data-vmmode="2">2 對 2 沙排</button><button type="button" data-vmmode="6" aria-pressed="true">6 對 6 室內</button></div>
     <p class="rk-sub">你的位置（每隊：1 舉球、1 舉對、2 主攻、2 中間手）</p><p class="rk-sub" style="font-size:12px;opacity:.85">位置能力｜舉球：舉球時按右鍵貼網吊到對面三米線中間｜大砲：蓄力條有紫色區，打到是超強重扣（發球沒有）｜中間手：跳起來滯空比較久｜舉對：幫忙舉球不太會連擊，蓄力條也有紫色區（力道比大砲小）</p><div class="rk-seg">${roleBtns(VM_OPT.role, (r) => `data-vmrole="${r}"`)}</div>
     ${peers.length ? `<p class="rk-sub">房間裡的朋友</p>${peers.map((p2) => `<div class="vm6-peer"><span>${esc(p2.n)}</span><div class="rk-seg">${[[0, '我方'], [1, '對方'], [-1, '不參加']].map(([v, l]) => `<button type="button" data-vmpt="${p2.id}|${v}" aria-pressed="${asg[p2.id].team === v}">${l}</button>`).join('')}</div>${asg[p2.id].team >= 0 ? `<div class="rk-seg">${roleBtns(asg[p2.id].role, (r) => `data-vmpr="${p2.id}|${r}"`)}</div>` : ''}</div>`).join('')}` : `<p class="rk-sub">要跟朋友打：先開「多人連線」進同一個房間，再按一次這個按鈕就能幫每個人選隊伍和位置</p>`}
-    <p class="rk-sub">局數</p><div class="rk-seg">${[[1, '一局'], [3, '三局兩勝'], [5, '五局三勝']].map(([n, l]) => `<button type="button" data-vmsets="${n}" aria-pressed="${VM_OPT.sets === n}">${l}</button>`).join('')}</div>
-    <p class="rk-sub">每局幾分（決勝局 15 分）</p><div class="rk-seg">${[15, 21, 25].map((n) => `<button type="button" data-vmto6="${n}" aria-pressed="${VM_OPT.to6 === n}">${n} 分</button>`).join('')}</div>
-    <p class="rk-sub">對手 AI 強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === +k}">${L.name}</button>`).join('')}</div>
-    <p class="rk-sub">AI 隊友強度</p><div class="rk-seg">${Object.entries(VM_LEVELS).map(([k, L]) => `<button type="button" data-vmmate="${k}" aria-pressed="${VM_OPT.mate === +k}">${L.name}</button>`).join('')}</div>
+    <p class="rk-sub">局數</p><div class="rk-seg">${[[1, '一局'], [3, '三戰兩勝'], [5, '五戰三勝']].map(([n, l]) => `<button type="button" data-vmsets="${n}" aria-pressed="${VM_OPT.sets === n}">${l}</button>`).join('')}</div>
+    <p class="rk-sub">每局幾分（決勝局 15 分）</p><div class="rk-seg">${[15, 20, 25].map((n) => `<button type="button" data-vmto6="${n}" aria-pressed="${VM_OPT.to6 === n}">${n} 分</button>`).join('')}</div>
+    <p class="rk-sub">AI 強度（隊友和對手一樣）</p><div class="rk-seg">${vmLvChoices().map((k) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === k}">${VM_LEVELS[k].name}</button>`).join('')}</div>
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
     <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：每個動作耗多少、做自己專長少耗多少、回多快都可以在「⚙️ 體力設定」改。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
     <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
@@ -10833,7 +10860,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
   if (count !== 6) { toast(`${count} 對 ${count} 開始${roomSpectator() ? ' · 你是觀眾' : ' · '+vmSmallLabel(vmMe())}`,3600); return; }
-  toast(roomSpectator() ? '6 對 6 開始 · 你是觀眾' : `6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三局兩勝・' : '五局三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
+  toast(roomSpectator() ? '6 對 6 開始 · 你是觀眾' : `6 對 6 開始！${VM.bestOf > 1 ? (VM.bestOf === 3 ? '三戰兩勝・' : '五戰三勝・') : ''}每局 ${VM.to} 分・你是${V6_NAME[VM.role[vmMe()]]}（${vm6Idx(vmMe()) + 1} 號位，${vm6Front(vmMe()) ? '前排' : '後排'}）${clash.length ? '・位置重複，改成：' + clash.join('、') : ''}`, 3600);
 }
 // 輪轉：2 號位的人轉到 1 號位發球，其他人順時針跟著轉
 function vm6Rotate(t) {
@@ -10960,6 +10987,7 @@ function vm6Possession(team, B) {
   return VM.poss[team];
 }
 function vm6SetterFor(team, passer) {
+  { const pr = vmProSetter(team, passer); if (pr) return pr; }   // 企聯：誰離舉球點近誰舉
   if (vmSmallCount() > 1 || VM.tactics === 'rotation') {
     const order = vmPositionSetters(team);
     return order.find(id => id !== passer) || null;
@@ -10976,6 +11004,7 @@ function vm6AttackerFor(team, b, setterId) {
     const q = vmPos(id); if (!q) continue;
     if (!vm6Front(id) && sp.x * sd < 2.9) continue;
     const cost = Math.hypot(q.x - sp.x, q.z - sp.z) * (VM.ai.has(id) ? 1 : 0.6) + (VM.role[id] === 'S' ? 4 : 0);
+    if (VM.role[id] === 'S' && vmProLv()) { if (!best || cost - 4 < best.cost) best = { id, cost: cost - 4 }; continue; }   // 企聯：舉球員也會打（不再避開 S）
     if (!best || cost < best.cost) best = { id, cost };
   }
   return best ? best.id : null;
@@ -11006,6 +11035,7 @@ function vm6ChooseSet(a, B) {
   if (oppB && good) opt.push([5, oppB, 2]);
   if (pipe && good) opt.push([4, pipe, 1.5]);
   { const p5 = ids.find((id) => vm6Idx(id) === 4); if (p5 && good) opt.push([7, p5, 0.35]); }   // 後排 5 號位：少量變化球，不能取代 OP／後排中間／老三
+  if (vmPro(a)) for (const id of ids) if (vm6Front(id) && !opt.some((q) => q[1] === id)) { const k = vm6Idx(id); opt.push([k === 3 ? 1 : k === 1 ? 3 : 6, id, 1.5]); }   // 企聯：前排每個人都可能被舉（包含平常不攻擊的位置）
   if (Pg.fix || Math.abs(B.x) > 3.4) { const o2 = opt.filter((q) => q[0] === 1 || q[0] === 3).map((q) => [q[0], q[1], q[0] === 1 ? 5 : 2]); if (o2.length) opt.splice(0, opt.length, ...o2); }   // 修正球：只舉兩邊高球（大多 4 號位）
   if (!opt.length) return { n: 1, id: ids.find((id) => vm6Front(id)) || ids[0] };
   const call = a.team === vmTeamOf(vmMe()) && VM.call && VM.t - VM.call.t < 8 ? VM.call : null;

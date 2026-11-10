@@ -16,6 +16,14 @@
     tactics.innerHTML='6 人模式 <select id="room-tactics"><option value="roles">跑位模式（固定角色）</option><option value="rotation">輪轉模式（3 號位舉球）</option></select><p id="room-tactics-note"></p>';
     $('room-size').closest('label').after(tactics);
     $('room-tactics').addEventListener('change',e=>{getRoom()?.setTactics(e.target.value);render();});
+    // 房主設定：AI 強度（隊友和對手一樣；開房只有企聯／校隊／高手，練習模式五級都有）、每局分數、局數
+    const practice=new URLSearchParams(location.search).has('practice'), LV=practice?[[1,'新手'],[2,'球友'],[3,'高手'],[4,'校隊'],[5,'企聯']]:[[5,'企聯'],[4,'校隊'],[3,'高手']];
+    const rules=document.createElement('div');rules.id='room-match-rules';
+    rules.innerHTML=`<label>AI 強度 <select id="room-lv">${LV.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></label><label>每局分數 <select id="room-to">${[15,20,25].map(n=>`<option value="${n}">${n} 分</option>`).join('')}</select></label><label>局數 <select id="room-best"><option value="1">一局</option><option value="3">三戰兩勝</option><option value="5">五戰三勝</option></select></label><p id="room-rules-note">AI 隊友和對手同一個強度${practice?'':'・開房只能選企聯、校隊、高手'}</p>`;
+    tactics.after(rules);
+    $('room-lv').addEventListener('change',e=>{getRoom()?.setLevel(Number(e.target.value));render();});
+    $('room-to').addEventListener('change',e=>{getRoom()?.setPoints(Number(e.target.value));render();});
+    $('room-best').addEventListener('change',e=>{getRoom()?.setBestOf(Number(e.target.value));render();});
     function render(){
       const s=getRoom()?.snapshot;if(!s)return;
       const {flow:f,count:n}=s, mine=f.ready.includes(me()), locked=f.phase!=='waiting';
@@ -23,6 +31,10 @@
       $('room-size-note').textContent=locked?'比賽結束後才能改':'兩隊人數相同，空位補 AI';
       const rotation=s.tactics==='rotation';
       tactics.hidden=n!==6;$('room-tactics').value=s.tactics||'roles';$('room-tactics').disabled=locked||!s.isHost;
+      if(!LV.some(([v])=>v===s.lv) && s.isHost && !locked)getRoom()?.setLevel(3);   // 開房不能選的等級：改成高手
+      $('room-lv').value=String(s.lv??3);$('room-to').value=String(s.to??25);$('room-best').value=String(s.bestOf??1);
+      for(const k of ['room-lv','room-to','room-best'])$(k).disabled=locked||!s.isHost;
+      $('room-best').closest('label').hidden=n===2;   // 2 對 2 只打一局
       $('room-tactics-note').textContent=rotation?'當輪 3 號位舉球；依號位輪轉，不判越位。後排攻擊與攔網限制保留。':'固定 S／OH／OP／MB，發球後跑到專職位置；接發球時判越位。';
       panel.querySelector('header + p').textContent=n===6&&rotation?'依當輪號位分工，3 號位負責舉球；接第一球時由隊友補舉。':'發球時維持正確的前後左右相對位置，發球後依分工行動。';
       $('room-ready').hidden=locked;$('room-ready').textContent=mine?'取消準備':'準備';$('room-ready').setAttribute('aria-pressed',String(mine));

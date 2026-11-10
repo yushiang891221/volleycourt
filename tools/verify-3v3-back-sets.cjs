@@ -18,7 +18,7 @@ function setup(team, setterSlot, scenario, noise = 0, count = 3) {
     vmSide: t => t === 0 ? -1 : 1, vmW: (x, z) => [x, z],
     vmBallL: b => ({ ...b.m.position, vx: b.v.x, vy: b.v.y, vz: b.v.z }),
     vmPos: id => VM.ai.get(id), vmTeamOf: id => VM.team.findIndex(t => t.includes(id)),
-    vmLv: () => ({ setErr: .3, react: .2 }), aiPay() {}, vbMarkSet() {},
+    vmLv: () => ({ setErr: .3, react: .2 }), vmPro: () => false, vmProSetter: () => null, vmProLv: () => false, VM_OPT: { lv: 2 }, VM_LEVELS: { 2: {} }, aiPay() {}, vbMarkSet() {},
     vmAiOwnSide: () => true, aiJump: (a, vy) => vy,
     vmAiFree() { throw Error('A valid rear teammate is available; do not replace the set with a free ball'); },
     vbLaunch(b, p, v, kind) { b.m.position = p; b.v = v; launches.push({ p: p.clone(), v: v.clone(), kind }); },
