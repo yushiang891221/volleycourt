@@ -214,7 +214,7 @@ def pants(body, sex=0):
     res = []
     for kind, g, hem in ((0, 0.016, HIP_H - 0.16), (1, 0.022, 0.11)):
         # 兩條褲管直接從腰分出去（中間不放骨盆節點：那裡會多一團，蹲下時從褲底凸出來）
-        top = [((0, 0, HIP_H + 0.13), 0.155 * (0.7 if F else 1) + g, 0.122 * (0.84 if F else 1) + g)]
+        top = [((0, 0, HIP_H + 0.13), 0.155 * (0.62 if F else 1) + g, 0.122 * (0.84 if F else 1) + g)]
         lg = legs(g, kind == 1); n = len(lg) // 2
         nodes = top + lg
         edges = []

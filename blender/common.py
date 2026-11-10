@@ -12,7 +12,7 @@ os.makedirs(SHOT, exist_ok=True)
 HIP_H, L1, KN_ANK = 0.62, 0.29, 0.27
 SPINE_Z = 0.66
 _SEX = int(sys.argv[sys.argv.index('--') + 1]) if '--' in sys.argv and len(sys.argv) > sys.argv.index('--') + 1 and sys.argv[sys.argv.index('--') + 1].isdigit() else 0
-SH_X, SH_Z = (0.215 if _SEX == 1 else 0.255), SPINE_Z + 0.34   # 女生肩膀比男生窄（網頁照各自 json 的關節位置）
+SH_X, SH_Z = (0.2 if _SEX == 1 else 0.255), SPINE_Z + 0.34   # 女生肩膀比男生窄（網頁照各自 json 的關節位置）
 UA, FA = 0.25, 0.22   # 手臂加長（之前太短，攔網像用頭擋）
 HEAD_BASE = SPINE_Z + 0.41
 HEAD_R = 0.27
