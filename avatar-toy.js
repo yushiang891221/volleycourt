@@ -495,24 +495,41 @@ function accMat(color, o = {}) {
 function addAccessories(rig, eq, meta, meshes = []) {
   const hc = webPoint(meta.headC).sub(webPoint(meta.joints.head[0])), R = meta.headR;   // 頭中心（head 骨頭座標）
   const mesh = (geo, mat, parent, pos, rot) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (pos) m.position.copy(pos); if (rot) m.rotation.set(...rot); parent.add(m); return m; };
-  if (eq.hat) {   // 運動帽：頭髮壓進帽子裡（超出帽子的髮絲往內收），帽緣在眉毛上面不遮眼睛；內面也畫，帽簷接在帽身前緣
+  if (eq.hat) {   // 運動帽：頭髮壓進帽子；後面開洞讓馬尾穿出來（洞開在馬尾實際的位置）；帽緣在眉毛上面不遮眼睛；內面也畫
     const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', inner = eq.hat === 1 ? '#15171B' : '#D9D9D4';
-    const cc = new THREE.Vector3(0, R * 0.3, -R * 0.04), cap = { r: R * 1.1, sx: 1.05, sy: 0.88, sz: 1.06 }, phi = Math.PI * 0.56;   // 帽緣在眉毛上面
+    const cc = new THREE.Vector3(0, R * 0.3, -R * 0.04), cap = { r: R * 1.1, sx: 1.05, sy: 0.88, sz: 1.06 }, phi = Math.PI * 0.56;
     const g = new THREE.Group(); g.position.copy(hc).add(cc); rig.head.add(g);
-    const shell = new THREE.SphereGeometry(cap.r, 40, 18, 0, Math.PI * 2, 0, phi);
+    const rimY = Math.cos(phi) * cap.r * cap.sy, head0 = webPoint(meta.joints.head[0]), cw = head0.clone().add(hc).add(cc);
+    const ax = cap.r * cap.sx * 0.94, ay = cap.r * cap.sy * 0.94, az = cap.r * cap.sz * 0.94;
+    const hairs = meshes.filter((m) => /^(hair|headband)/.test(m.userData.avatarPart || ''));
+    const sm = (v, e0, e1) => { const q = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return q * q * (3 - 2 * q); };
+    const ell = (x, y, z) => Math.sqrt((x / ax) ** 2 + (y / ay) ** 2 + (z / az) ** 2), azOf = (x, z) => Math.abs(Math.atan2(x, -z));
+    // 找馬尾：後面、離頭比較遠的頭髮在穿過帽子那一帶的範圍 → 洞開在那裡；沒有馬尾就用帽子後面的小洞
+    let hole = null, ys = [], azs = [], tail = 0;   // 沒有馬尾的髮型：帽子後面不開洞
+    for (const m of hairs) { const a = m.geometry.attributes.position; for (let k = 0; k < a.count; k++) { const x = a.getX(k) - cw.x, y = a.getY(k) - cw.y, z = a.getZ(k) - cw.z, d = ell(x, y, z); if (y > rimY && azOf(x, z) < 1.0) { if (d > 1.4) tail++; if (d > 1.0 && d < 1.3) { ys.push(y); azs.push(azOf(x, z)); } } } }
+    if (tail > 30 && ys.length > 30) {   /* 真的有馬尾（往後伸很遠）才照馬尾位置開洞 */ ys.sort((p, q) => p - q); azs.sort((p, q) => p - q); const q = (arr, f) => arr[Math.floor(f * (arr.length - 1))];
+      hole = { az: Math.min(0.75, q(azs, 0.9) + 0.12), lo: Math.max(rimY + R * 0.04, q(ys, 0.05) - R * 0.06), hi: q(ys, 0.95) + R * 0.06 }; }
+    const holeW = (x, y, z) => !hole ? 0 : (1 - sm(azOf(x, z), hole.az - 0.1, hole.az + 0.15)) * sm(y, hole.lo - R * 0.06, hole.lo + R * 0.04) * (1 - sm(y, hole.hi - R * 0.04, hole.hi + R * 0.08));
+    // 帽身（挖掉洞）
+    const shell = new THREE.SphereGeometry(cap.r, 48, 22, 0, Math.PI * 2, 0, phi);
+    { const ia = shell.index.array, pa = shell.attributes.position, keep = [];
+      for (let k = 0; k < ia.length; k += 3) { let cx = 0, cy = 0, cz = 0; for (let t = 0; t < 3; t++) { cx += pa.getX(ia[k + t]); cy += pa.getY(ia[k + t]); cz += pa.getZ(ia[k + t]); }
+        if (holeW((cx / 3) * cap.sx, (cy / 3) * cap.sy, (cz / 3) * cap.sz) < 0.5) keep.push(ia[k], ia[k + 1], ia[k + 2]); }
+      shell.setIndex(keep); }
     const dome = mesh(shell, accMat(col, { r: 0.6 }), g); dome.scale.set(cap.sx, cap.sy, cap.sz);
     const lining = mesh(shell, new THREE.MeshStandardMaterial({ color: inner, roughness: 0.9, side: THREE.BackSide }), g); lining.scale.copy(dome.scale);   // 帽子內面
     mesh(new THREE.SphereGeometry(R * 0.1, 12, 8), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, cap.r * cap.sy, 0));   // 頂端扣子
-    // 頭髮壓進帽子：帽緣以上的頭髮頂點，超出帽子（縮小 6%）的就拉回帽子裡；每個角色自己一份頭髮形狀（不影響別人）
-    const rimY = Math.cos(phi) * cap.r * cap.sy, head0 = webPoint(meta.joints.head[0]), cw = head0.clone().add(hc).add(cc);
-    const ax = cap.r * cap.sx * 0.94, ay = cap.r * cap.sy * 0.94, az = cap.r * cap.sz * 0.94;
-    for (const m of meshes) {
-      if (!/^(hair|headband)/.test(m.userData.avatarPart || '')) continue;
+    // 頭髮壓進帽子：每個角色自己一份頭髮形狀。洞那裡只有離頭遠的（馬尾）不壓；帽緣下面 0.3R 也往內收（不會從帽子邊緣戳出尖尖的髮絲）
+    for (const m of hairs) {
       m.geometry = m.geometry.clone(); const a = m.geometry.attributes.position;
       for (let k = 0; k < a.count; k++) {
-        const x = a.getX(k) - cw.x, y = a.getY(k) - cw.y, z = a.getZ(k) - cw.z; if (y < rimY + R * 0.02) continue;
-        const d = Math.sqrt((x / ax) ** 2 + (y / ay) ** 2 + (z / az) ** 2); if (d <= 1) continue;
-        a.setXYZ(k, cw.x + x / d, cw.y + y / d, cw.z + z / d);
+        const x = a.getX(k) - cw.x, y = a.getY(k) - cw.y, z = a.getZ(k) - cw.z, d0 = ell(x, y, z);
+        const keepOut = holeW(x, y, z) * sm(d0, 0.98, 1.12);
+        if (keepOut > 0.99) continue;
+        if (y >= rimY + R * 0.02) { if (d0 > 1) { const f = 1 - (1 - 1 / d0) * (1 - keepOut); a.setXYZ(k, cw.x + x * f, cw.y + y * f, cw.z + z * f); } continue; }
+        const t = Math.max(0, 1 - (rimY + R * 0.02 - y) / (R * 0.3)) * (1 - keepOut); if (t <= 0) continue;
+        const rr = Math.hypot(x / ax, z / az); if (rr <= 1) continue;
+        const k2 = 1 - (1 - 1 / rr) * t; a.setXYZ(k, cw.x + x * k2, cw.y + y, cw.z + z * k2);
       }
       a.needsUpdate = true; m.geometry.computeBoundingSphere();
     }
