@@ -10,7 +10,7 @@ export const ACHIEVEMENTS = {
   cannon2: { name: '重砲手 II', desc: '扣球得分累計 500 分', title: '重砲達人' },
   cannon3: { name: '重砲手 III', desc: '扣球得分累計 1000 分', title: '重砲之王' },
   setter: { name: '精準舉球', desc: '一局舉球 10 次以上、沒有連擊或持球', title: '精準舉球員' },
-  wall: { name: '人牆', desc: '同一球之內攔網碰到球 5 次', title: '人牆' },
+  wall: { name: '禁止通行', desc: '同一球之內攔網碰到球 5 次', title: '禁止通行' },
   server: { name: '發球機器', desc: '發球得分累計 50 分', title: '發球機器' },
   libero1: { name: '自由人 I', desc: '完美接球累計 100 次', title: '守護神' },
   libero2: { name: '自由人 II', desc: '完美接球累計 500 次', title: '地板守門員' },
@@ -36,7 +36,7 @@ export const ACHIEVEMENTS = {
 
 // 成就中心：成就整理成「系列」，每個系列有一到多階（照順序）；每階給成就點數
 export const ACH_POINTS = { cannon1: 10, cannon2: 30, cannon3: 60, setter: 30, wall: 30, server: 25, libero1: 15, libero2: 40, libero3: 80, pro1: 20, pro10: 60, streak5: 25, cb1: 20, cb5: 30, cb10: 45, cb15: 60, cb30: 100, iron1: 15, iron2: 40, iron3: 80, line1: 15, line2: 40, line3: 80, sky1: 15, sky2: 40, sky3: 80 };
-export const ACH_CATS = [['all', '全部項目'], ['atk', '扣球進攻系列'], ['def', '防守與舉球系列'], ['pro', '企聯特訓系列'], ['mind', '心態系列']];
+export const ACH_CATS = [['all', '全部項目'], ['atk', '扣球進攻系列'], ['def', '防守與舉球系列'], ['pro', '企聯特訓系列'], ['mind', '心態系列'], ['special', '特殊成就']];
 export const ACH_SERIES = [
   { id: 'cannon', cat: 'atk', icon: '🏐', name: '重砲手精神（扣球累計）', desc: '扣球得分從 100 分到 1000 分的重砲考驗', tiers: ['cannon1', 'cannon2', 'cannon3'] },
   { id: 'line', cat: 'atk', icon: '📏', name: '直線魔人（直線得分）', desc: '貼著邊線扣直線拿分', tiers: ['line1', 'line2', 'line3'] },
@@ -45,7 +45,7 @@ export const ACH_SERIES = [
   { id: 'libero', cat: 'def', icon: '🛡️', name: '守護神領域（完美接球）', desc: '一球一球接到位，打造後場鐵壁', tiers: ['libero1', 'libero2', 'libero3'] },
   { id: 'setter', cat: 'def', icon: '🎯', name: '場上指揮官（精準舉球）', desc: '一局舉 10 球以上都沒有連擊或持球', tiers: ['setter'] },
   { id: 'iron', cat: 'def', icon: '🛡', name: '銅牆鐵壁（攔網累計）', desc: '攔網得分從 100 分到 1000 分', tiers: ['iron1', 'iron2', 'iron3'] },
-  { id: 'wall', cat: 'def', icon: '🧱', name: '人牆（連續攔網）', desc: '同一球之內攔網碰到球 5 次', tiers: ['wall'] },
+  { id: 'wall', cat: 'special', icon: '🧱', name: '禁止通行（連續攔網）', desc: '同一球之內攔網碰到球 5 次', tiers: ['wall'] },
   { id: 'pro', cat: 'pro', icon: '👑', name: '企聯特訓與魔性挑戰', desc: '擊敗最高難度的企聯 AI', tiers: ['pro1', 'pro10'] },
   { id: 'streak', cat: 'pro', icon: '🔥', name: '氣勢如虹（連勝）', desc: '開房比賽連續贏 5 場', tiers: ['streak5'] },
   { id: 'comeback', cat: 'mind', icon: '💪', name: '絕處逢生（逆轉勝）', desc: '對方到局末點、我方落後 5 分以上，最後逆轉拿下這局', tiers: ['cb1', 'cb5', 'cb10', 'cb15', 'cb30'] },
