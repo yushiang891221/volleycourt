@@ -18,12 +18,18 @@ export async function addFriend(nickname) {
 
 // 大廳底下「好友」按鈕的未讀／邀請數字
 let badgeTimer = 0;
+let badgeLite = true;   // 有 friend_badge（007）就只拿一個數字；還沒建就退回抓整份清單
 export async function refreshBadge() {
   const b = document.getElementById('friends-badge'); if (!b) return;
-  try { const list = await call('friend_list'); const n = list.reduce((s, f) => s + (f.unread | 0) + (f.state === 'incoming' ? 1 : 0), 0); b.textContent = n > 99 ? '99+' : String(n); b.hidden = !n; }
-  catch { b.hidden = true; }
+  try {
+    let n;
+    if (badgeLite) { try { n = await call('friend_badge'); } catch (x) { if (/還沒開通/.test(x.message)) badgeLite = false; else throw x; } }
+    if (n == null) { const list = await call('friend_list'); n = list.reduce((s, f) => s + (f.unread | 0) + (f.state === 'incoming' ? 1 : 0), 0); }
+    n = n | 0; b.textContent = n > 99 ? '99+' : String(n); b.hidden = !n;
+  } catch { b.hidden = true; }
 }
-export function startBadge() { if (badgeTimer) return; refreshBadge(); badgeTimer = setInterval(() => { if (!document.hidden) refreshBadge(); }, 30000); }
+// 60 秒查一次（省流量）；切回這個分頁時馬上查一次
+export function startBadge() { if (badgeTimer) return; refreshBadge(); badgeTimer = setInterval(() => { if (!document.hidden) refreshBadge(); }, 60000); addEventListener('visibilitychange', () => { if (!document.hidden) refreshBadge(); }); }
 
 // 好友面板：左＝好友／邀請清單＋用暱稱加好友；右＝和選中好友的私訊
 export async function openFriendsPanel(onlineNames = () => []) {

@@ -1,6 +1,7 @@
 -- WEB-010 更新：①修正戰績寫不進去（解鎖成就時 text[] || '代碼' 會報錯，改用 array_append）
 --              ②新成就：絕處逢生（逆轉拿下的局數 1／5／10／15／30）、銅牆鐵壁（攔網得分 100／500／1000）、
 --                直線魔人（直線得分 30／150／500）、天空打點（扣進三米線內得分 30／150／500）、
+--              ③每人只保留最近 50 場比賽紀錄（等級、勝負、成就等累計資料不受影響）
 --                自由人改成三階（完美接球 100／500／1000）、飛身救球（救回場外球 10／50／200）、魔術師（二次進攻吊球得分）、影子排球員（快攻直接落地 1／50／200）、我自己來好了（第二下自己扣球得分）
 -- 在 Supabase → SQL Editor 貼上整段執行一次即可（可重複執行）。要先執行過 004_progress.sql。
 begin;
@@ -42,6 +43,8 @@ begin
     values (uid, p_match, jsonb_build_object('lv', p_level, 'human', p_human, 'won', p_won, 'sets', p_sets, 'pts', p_points, 'sec', p_seconds, 'perf', p_perf), xp, coin)
     on conflict (user_id, match_id) do nothing;
   if not found then return jsonb_build_object('dup', true); end if;
+  -- 每人只保留最近 50 場的比賽紀錄（累計數字、成就都在 player_progress，不受影響）
+  delete from public.match_records where user_id = uid and match_id not in (select match_id from public.match_records where user_id = uid order by created_at desc limit 50);
   insert into public.player_progress(user_id) values (uid) on conflict (user_id) do nothing;
   select * into r from public.player_progress where user_id = uid for update;
   before_lv := r.exp / 500 + 1;

@@ -1,6 +1,6 @@
 // WEB-007：同一個帳號只能在一個地方登入（後登入的把先登入的踢掉）
 // claim()：登入完成時呼叫（account-flow 的閘門），登記「現在是這台裝置」。
-// watch()：已登入的頁面（大廳、球場）每 10 秒、切回視窗時檢查；被別處登記走了就回首頁並提示。
+// watch()：已登入的頁面（大廳、球場）每 30 秒、切回視窗時檢查；被別處登記走了就回首頁並提示。
 // 資料表（server/supabase/002_single_session.sql）還沒建時，登記會失敗 → 不啟用，遊戲照常。
 import { authMode, getAccountService } from './auth.js';
 
@@ -37,7 +37,7 @@ export async function watch() {
     catch { /* 網路暫時不通：下次再查 */ }
     busy = false;
   };
-  timer = setInterval(check, 10000);
+  timer = setInterval(check, 30000);   // 30 秒查一次（省流量）；切回分頁時也會馬上查
   addEventListener('visibilitychange', check);
   check();
 }
