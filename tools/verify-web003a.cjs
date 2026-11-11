@@ -17,7 +17,7 @@ function engine(){
  const VM={ai:new Map()},messages=[];let serves=0;
  const c={VM,vmPerfTouch(){},vmPerfPoint(){},vmSendResult(){},mrecReset(){},vmProSetter:()=>null,vmProLv:()=>false,VB:{ts:.7},STA:{},STA_CFG:{},ROOM:null,VM_OPT:{to:7,to6:25,sets:1,role:'S',lv:1,mate:1},VM_LEVELS:{1:{name:'standard'}},NET:{on:true,name:'房主',peers:new Map([['guest',{n:'球友'}]]),tx:{publish:(t,d)=>messages.push(structuredClone(d))}},scene:{remove(){}},myChar:()=>null,vmMe:()=> 'host',vmStop(){VM.ai.clear();VM.on=false;},vmPickChar:()=>null,
  vmMkAi(id,team,name,color){const a={id,team,name,color,av:{g:{}},tag:{element:{remove(){}}}};VM.ai.set(id,a);VM.names[id]=name;return a;},$:()=>({classList:{add(){}},hidden:false}),vmSetupServe(){serves++;},toast(){},vmName:id=>id,peerTagsAll(){},vm6Spot:()=>({x:1,z:2}),vm6Idx:()=>0,vm6Front:()=>false,roomSpectator:()=>!VM.team.flat().includes('host')};
- vm.createContext(c);vm.runInContext(read('court-formations.js')+block('function vmSmallCount()',"const SITE_ID ="),c);vm.runInContext(block('const V6_ROLES =','// 開局選單'),c);
+ vm.createContext(c);vm.runInContext(block('const MREC =', 'const mrecPf ='),c);vm.runInContext(read('court-formations.js')+block('function vmSmallCount()',"const SITE_ID ="),c);vm.runInContext(block('const V6_ROLES =','// 開局選單'),c);
  vm.runInContext(block('function vmStart(','function vmPickChar(')+block('function vm6Start(','// 輪轉：2 號位'),c);
  return {c,VM,messages,get serves(){return serves;}};
 }
