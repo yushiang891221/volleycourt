@@ -127,6 +127,9 @@ await check('unmodified physics, scoring, rotation and transports match baseline
     .replace('  globalThis.VBTutorial?.stop();\n', '');
   /* WEB-011 只正規化跳發排除旗標及還原鏡頭的清除入口；行為由 verify-web011 驗證。 */
   current=current.replace('block: false, serve: true, t: 0', 'block: false, t: 0').replaceAll('vbClearAir();', 'walk.air = null;');
+  /* WEB-015 接收端播放由 verify-web015 驗證；主機更新、判分與輪轉仍逐字比較。 */
+  const noRemoteRender = t => { const marker=t.indexOf('// WEB-015: receiver-only snapshot timeline.'), start=marker>=0?marker:t.indexOf('function vmRenderAi('), end=t.indexOf('// 隊友腳下',start); return start>=0&&end>start?t.slice(0,start)+t.slice(end):t; };
+  current=noRemoteRender(current);previous=noRemoteRender(previous);
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));

@@ -6923,11 +6923,11 @@ window.VBGameLobby?.start(() => ({
 }));
 const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C', '#8E4EC6', '#F76B15', '#12A594', '#D6409F', '#0090FF', '#978365', '#E54666', '#46A758'];
 function loadScript(src) { return new Promise((ok, bad) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = ok; s2.onerror = bad; document.head.appendChild(s2); }); }
-// 流量：每個人自己最多每分鐘約 240 則；超過就把位置更新放慢一倍（球和比分照常送）
+// 流量保護：比賽每分鐘 660 則、其他時間 240 則；超量才放慢位置更新。
 const NETQ = { ts: [], slow: 1, warned: false, sent: 0 };
 function netCount() {
   const now = performance.now(); NETQ.ts.push(now); NETQ.sent++; while (NETQ.ts.length && now - NETQ.ts[0] > 60000) NETQ.ts.shift();
-  const lim = VM.on ? 600 : 240, n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 600 則）
+  const lim = VM.on ? 660 : 240, n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
   if (slow > NETQ.slow && !NETQ.warned) { NETQ.warned = true; console.info('[即時] 訊息太多，自動放慢位置更新'); }
   NETQ.slow = slow;
 }
@@ -7703,7 +7703,7 @@ function netBallMsg(b, kind) {
 function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
 function netTick(dt, now) {
   if (!NET.on) return;
-  if (NET.peers.size && now - NET.pingT > 3000) { NET.pingT = now; NET.tx.publish('ping', { t: now }); }   // 每 3 秒量一次延遲
+  if (NET.peers.size && now - NET.pingT > (VM.on ? 5000 : 3000)) { NET.pingT = now; NET.tx.publish('ping', { t: now }); }   /* 比賽每 5 秒量一次延遲 */
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
@@ -7714,7 +7714,7 @@ function netTick(dt, now) {
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
   if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
   const rally = VM.on && VM.phase === 'rally';
-  const gap = toss ? 80 : (document.hidden ? 10000 : rally ? (VM.host ? 120 : moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;   // 回合中送密一點：動作才順
+  const gap = toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
   if (NET.forceSt || (poseChanged && now - NET.lastSt > 120) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = NET.ownBall && balls.find((q) => q.room);
@@ -10869,7 +10869,15 @@ function vmAiOwnSide(a) { const [lx] = vmL(VM.ball.m.position.x, VM.ball.m.posit
 // AI 的體力（跟玩家同一套扣法）：累了跳得矮、跑得慢、扣得慢；連線時跟著狀態送給大家（隊友腳下的圓環）
 function aiEff(a) { return 0.8 + 0.2 * clamp((a.sta ?? 1) / 0.3, 0, 1); }
 function aiPay(a, kind) { const f = aiEff(a); a.sta = Math.max(0, (a.sta ?? 1) - staCost(kind, a.id)); return f; }
-function aiJump(a, vy, kind) { return vy * (0.4 + 0.6 * aiPay(a, kind)); }
+function aiJump(a, vy, kind) {
+  const v = vy * (0.4 + 0.6 * aiPay(a, kind));
+  if (VM.host && a.y <= 0 && a.vy <= 0 && v > 0) {
+    const [jx, jz] = vmW(a.x, a.z);
+    a.jp = { s: (a.jp?.s || 0) + 1, vy: v, g: JUMP_G, down: VM.six && VM.role[a.id] === 'MB' && vmPro(a) ? 0.6 : 1, t: VM.t, x: +jx.toFixed(2), z: +jz.toFixed(2) };
+    if (NET.on) NET.forceSt = true;
+  }
+  return v;
+}
 function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose, free = false, backSet = false) {
   if (!vmAiOwnSide(a)) return;
   if (!free && (kind === 'set' || (kind === 'bump' && ty > 1)) && tlx * vmSide(a.team) < 0.7) tlx = vmSide(a.team) * 0.7;   // 傳、舉都留在自己這邊（free＝接過頭撞網那種）
@@ -11350,17 +11358,60 @@ function vmUpdate(dt) {
   vmRenderAi(dt);
   vbWallFx();
 }
+// WEB-015: receiver-only snapshot timeline.
+function vmAiSnapshot(a, row, now) {
+  const [id, x, z, y, pose, sta, bs, jp, stamp] = row;
+  const buf = a.netBuf || (a.netBuf = []), last = buf[buf.length - 1];
+  if (last && stamp != null && last.stamp != null && stamp <= last.stamp) return;
+  if (last) a.netGap = (a.netGap || 150) * 0.85 + Math.min(500, now - last.arrival) * 0.15;
+  if (a.netOffset == null && stamp != null) a.netOffset = now - stamp * 1000;
+  const t = stamp == null ? now : stamp * 1000 + a.netOffset;
+  buf.push({ t, arrival: now, stamp, x, z, y, pose, sta, bs });
+  while (buf.length > 2 && buf[1].t < t - 1000) buf.shift();
+  a.netY = y; a.wx = x; a.wz = z;
+  if (jp && jp.s > (a.jpS || 0)) {
+    a.jpS = jp.s; a.netLanded = false;
+    const age = Math.max(0, (stamp ?? jp.t) - jp.t) + netLat(VM.hostId);
+    a.netJump = { ...jp, age };
+  }
+}
+function vmAiJumpHeight(j, t) {
+  const top = j.vy / j.g;
+  return Math.max(0, t <= top ? j.vy * t - 0.5 * j.g * t * t : j.vy * j.vy / (2 * j.g) - 0.5 * j.g * j.down * (t - top) ** 2);
+}
+function vmAiPlayback(a, dt, now, ox, oz) {
+  const buf = a.netBuf;
+  if (!buf?.length) return [ox, oz];
+  const delay = clamp(1.5 * (a.netGap || 150), 120, 300);
+  a.netDelay = (a.netDelay ?? delay) + (delay - (a.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
+  const time = Math.max(a.netTime ?? -Infinity, now - a.netDelay); a.netTime = time;
+  let l = buf[0], r = l;
+  for (const q of buf) { if (q.t <= time) l = q; r = q; if (q.t >= time) break; }
+  let x = l.x, z = l.z, y = l.y;
+  if (r.t > l.t) { const f = clamp((time - l.t) / (r.t - l.t), 0, 1); x += (r.x - x) * f; z += (r.z - z) * f; y += (r.y - y) * f; }
+  else if (time > l.t && buf.length > 1) {
+    const prev = buf[buf.length - 2], span = Math.max(0.05, (l.t - prev.t) / 1000), age = clamp((time - l.t) / 1000, 0, 0.2);
+    x += clamp((l.x - prev.x) / span, -8, 8) * age; z += clamp((l.z - prev.z) / span, -8, 8) * age;
+  }
+  if (a.netJump && a.netJump.x != null) { x = a.netJump.x; z = a.netJump.z; }   // 起跳中：跳的弧線照現在時間播，人也直接靠到起跳點（不然會在助跑途中先跳）
+  const err = Math.hypot(x - ox, z - oz), k = err > 3 ? 1 : Math.min(1 - Math.exp(-dt * 18), 8 * dt / Math.max(err, 0.001));
+  x = ox + (x - ox) * k; z = oz + (z - oz) * k;
+  const lp = buf[buf.length - 1];   // 動作用最新一筆：跟球（照現在時間）對得上，不會球飛走了才揮手
+  if (a.poseC !== lp.pose) { a.poseC = lp.pose; a.poseT = 0; }
+  a.poseT = (a.poseT || 0) + dt; a.pose = lp.pose; a.bs = lp.bs || 0; if (lp.sta != null) a.sta = lp.sta;
+  if (a.netJump) { const j = a.netJump; j.age += dt; y = vmAiJumpHeight(j, j.age); if (j.age > j.vy / j.g && y === 0) { a.netJump = null; a.netLanded = true; a.netGroundAt = j.t + j.vy / j.g * (1 + 1 / Math.sqrt(j.down)); } }
+  else if (a.netLanded) y = buf[buf.length - 1].stamp < a.netGroundAt ? 0 : a.netY;
+  a.y = y;
+  return [x, z];
+}
 function vmRenderAi(dt) {
   const k = 1 - Math.exp(-dt * 12);
   for (const a of VM.ai.values()) {
     const av = a.av; let x, z;
     if (VM.host) [x, z] = vmW(a.x, a.z);
-    else {   // 加入的人：照速度往前推算（加上主機的延遲），再快速貼上去
-      const age = a.wT != null ? Math.min(0.3, (performance.now() - a.wT) / 1000 + netLat(VM.hostId)) : 0, tx = (a.wx ?? av.g.position.x) + (a.wvx || 0) * age, tz = (a.wz ?? av.g.position.z) + (a.wvz || 0) * age;
-      const k2 = Math.hypot(tx - av.g.position.x, tz - av.g.position.z) > 3 ? 1 : 1 - Math.exp(-dt * 12); x = av.g.position.x + (tx - av.g.position.x) * k2; z = av.g.position.z + (tz - av.g.position.z) * k2;
-    }
+    else [x, z] = vmAiPlayback(a, dt, performance.now(), av.g.position.x, av.g.position.z);
     const sp = Math.hypot(x - av.g.position.x, z - av.g.position.z) / Math.max(dt, 1e-3);
-    av.g.position.set(x, 0, z); av.body.position.y += (a.y - av.body.position.y) * 0.6;
+    av.g.position.set(x, 0, z); av.body.position.y += (a.y - av.body.position.y) * (VM.host ? 0.6 : 1);
     const sd = vmSide(a.team), [ax, az] = vmW(0, 0), [bx, bz] = vmW(sd, 0); let ry = Math.atan2(ax - bx, az - bz);
     const bb = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find((q) => q.room);
     if (bb) { const ddx = bb.m.position.x - x, ddz = bb.m.position.z - z, dd = Math.hypot(ddx, ddz), [blx] = vmL(bb.m.position.x, bb.m.position.z); if (dd > 0.3 && dd < 10 && Math.sign(blx) === sd) ry = Math.atan2(ddx, ddz); }
@@ -11369,13 +11420,13 @@ function vmRenderAi(dt) {
     av.phase += dt * Math.min(12, sp * 5.5);
     // AI：碰球那一下照動作做（swingT 從 0.35～0.4 倒數＝動作進度）；攔網的人在網前雙手舉在肩前；球在場上時低重心準備
     if (VM.host && (a.y > 0 || ((VM.poss[a.team] || {}).attacker !== a.id && (VM.poss[a.team] || {}).qk !== a.id))) a.appr = false;
-    const P2 = a.swingT > 0 || a.y > 0 ? a.pose : VM.host && a.appr ? 13 : 0, pr2 = P2 === 5 && VM.host ? clamp(1 - (a.vy - 1.5) / 3, 0, 1) : 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
+    const P2 = !VM.host ? a.pose : a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, pr2 = !VM.host ? a.poseT / 0.45 : P2 === 5 ? clamp(1 - (a.vy - 1.5) / 3, 0, 1) : 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
     // AI：只有這一球輪到他接、球正往他那邊來才蹲
     const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && ((Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team)) || (VM.six && Pa.stage === 2 && Pa.attacker && Pa.attacker !== a.id && Pa.setter !== a.id && VM.touch.team === a.team));   // 6 對 6：隊友攻擊時，cover 的人蹲低準備救球
     let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
     if (P2 === 9 && a.bs) { const [ox, oz] = vmW(0, a.bs), [cx, cz] = vmW(0, 0), r = av.g.rotation.y; pz = avBlockPose((ox - cx) * -Math.cos(r) + (oz - cz) * Math.sin(r)); }   // 攔網雙手往左右移（換算成人物的右手邊）
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
-    av.fall = P2 >= 10 && P2 <= 12 ? { a: 1, d: DIVE_D[P2 - 10], t: VM.host ? 1.25 - a.swingT : null } : null;   // 撲救：整個人往撲的方向倒
+    av.fall = P2 >= 10 && P2 <= 12 ? { a: 1, d: DIVE_D[P2 - 10], t: VM.host ? 1.25 - a.swingT : a.poseT } : null;   // 撲救：整個人往撲的方向倒
     avDrive(av, pz, kk, sp, a.y > 0.05);
   }
   vmStaRings();
@@ -11402,9 +11453,9 @@ function vmStaRings() {
   }
   for (const [id, r] of STA_RING) if (!seen.has(id)) r.visible = false;
 }
-// ---- 連線：開局的人每 0.1 秒送比分與 AI 位置；其他人照著顯示
+// ---- 連線：主機回合中每 150 ms、等待時每 400 ms 帶上比分與 AI 快照。
 function vmStatePayload() {
-  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0]; });
+  const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0, a.jp || null, VM.t]; });
   return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
@@ -11448,7 +11499,7 @@ function vmOnNet(d, from) {
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
     const nowS = performance.now();
-    for (const [id, x, z, y, pose, sta, bs] of d.ai) { const a = VM.ai.get(id); if (a) { if (a.wT != null && a.wx != null) { const dts = Math.max(0.05, (nowS - a.wT) / 1000), kv = 0.6; a.wvx = (a.wvx || 0) * (1 - kv) + ((x - a.wx) / dts) * kv; a.wvz = (a.wvz || 0) * (1 - kv) + ((z - a.wz) / dts) * kv; } a.wT = nowS; a.wx = x; a.wz = z; a.y = y; a.pose = pose; a.swingT = pose ? 0.2 : 0; if (sta != null) a.sta = sta; a.bs = bs || 0; } }
+    for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
     if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     if (d.ph === 'over') vmOver();
