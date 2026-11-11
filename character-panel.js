@@ -98,6 +98,27 @@ export function openEquipPanel() {
   draw(); d.showModal();
   preloadAvatars().then(() => { if (d.open) draw(); }, () => {});   // 模型載好再畫一次（配件只有正式模型才有）
 }
+// WEB-010 成就系統：每個成就的條件、進度、解鎖後的稱號（開房比賽才會累積）
+export async function openAchievementPanel() {
+  if (!document.getElementById('lobby-shell') || editing) return;
+  let d = document.getElementById('ach-panel');
+  if (!d) {
+    d = document.createElement('dialog'); d.id = 'ach-panel'; d.setAttribute('aria-labelledby', 'ach-title');
+    d.innerHTML = '<form method="dialog"><h2 id="ach-title">成就系統</h2><p class="ach-sum"></p><div class="ach-list"></div><p class="eq-note">只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p><div class="buttons"><button class="orange">關閉</button></div></form>';
+    document.body.append(d);
+  }
+  const P = await import('./progress.js'), list = d.querySelector('.ach-list');
+  const draw = (prog) => {
+    prog = prog || {}; const got = prog.achievements || [], keys = Object.keys(P.ACHIEVEMENTS);
+    d.querySelector('.ach-sum').textContent = `已解鎖 ${keys.filter((k) => got.includes(k)).length} / ${keys.length}`;
+    list.innerHTML = keys.map((k) => {
+      const a = P.ACHIEVEMENTS[k], ok = got.includes(k), pr = P.achProgress(k, prog), pct = pr ? Math.min(100, (pr[0] / pr[1]) * 100) : ok ? 100 : 0;
+      return `<div class="ach${ok ? ' ok' : ''}"><div class="ach-ic">${ok ? '🏆' : '🔒'}</div><div class="ach-tx"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span><div class="ach-bar"><i style="width:${pct}%"></i></div><small>${pr ? `${Math.min(pr[0], pr[1])} / ${pr[1]}` : ok ? '已完成' : '一場比賽內達成'}・稱號「${esc(a.title)}」</small></div></div>`;
+    }).join('');
+  };
+  draw(P.cachedProgress()); d.showModal();
+  draw(await P.loadProgress());
+}
 // WEB-010 球隊（Lv10 解鎖）：建立／用邀請碼加入、成員名單、隊長設計球衣並取名、穿上球隊球衣、離開
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export async function openTeamPanel() {

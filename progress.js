@@ -18,6 +18,11 @@ export const ACHIEVEMENTS = {
   streak5: { name: '氣勢如虹', desc: '連贏 5 場', title: '氣勢如虹' },
 };
 
+// 成就目前的進度（顯示用）：[現在, 目標]；一場內完成的成就沒有累計進度
+export function achProgress(key, p = {}) {
+  const w5 = (p.stats && p.stats.w && p.stats.w['5']) | 0;
+  return { cannon1: [p.kills | 0, 100], cannon2: [p.kills | 0, 500], cannon3: [p.kills | 0, 1000], server: [p.aces | 0, 50], libero: [p.perfects | 0, 200], pro1: [w5, 1], pro10: [w5, 10], streak5: [p.streak | 0, 5] }[key] || null;
+}
 // 表情／動作（T 輪盤）：hi5、taunt 一開始就有；其他照等級或成就解鎖
 export const EMOTES = {
   hi5: { name: '擊掌', icon: '🙌' },

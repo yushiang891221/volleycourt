@@ -92,6 +92,7 @@ const client=VBLobby.connect({hello:()=>({name:nickname||'球友',status:'大廳
  if(m.k==='chat')appendChat(m.chat,true);if(m.k==='error')notify(m.reason);if(m.k==='joined')enter(m);
 }});
 function send(m){if(!client.send(m))notify('大廳尚未連線，請稍後再試');}
+$('ach-open').addEventListener('click', () => import('./character-panel.js').then(({ openAchievementPanel }) => openAchievementPanel()).catch(() => notify('成就載入失敗，請稍後重試')));
 $('team-open').addEventListener('click', () => import('./character-panel.js').then(({ openTeamPanel }) => openTeamPanel()).catch(() => notify('球隊載入失敗，請稍後重試')));
 $('equip-open').addEventListener('click', () => import('./character-panel.js').then(({ openEquipPanel }) => openEquipPanel()).catch(() => notify('裝備載入失敗，請稍後重試')));
 import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCard($('character-info'))).catch(() => { const e = $('character-info').querySelector('.me-err'); if (e) e.textContent = '角色資訊載入失敗，請重新整理'; });
