@@ -9942,7 +9942,7 @@ function vmPerfTouch(id, kind) {   // 房主：每次有效觸球
   if (!MREC.id) return;
   MREC.last = { id, kind, team: vmTeamOf(id) };
   if (kind === 'spike') { const q = vmPos(id); MREC.last.az = q ? q.z : null; }   // 扣球時攻擊手站的左右位置（判斷直線）
-  if (kind === 'block') { MREC.blkR[id] = (MREC.blkR[id] || 0) + 1; if (MREC.blkR[id] >= 5) mrecPf(id).wall = true; }
+  if (kind === 'block') { MREC.blkR[id] = (MREC.blkR[id] || 0) + 1; if (MREC.blkR[id] >= 10) mrecPf(id).wall = true;   /* 禁止通行：同一球內攔網碰到 10 次 */ }
 }
 function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人）；順便記絕處逢生
   const L = MREC.last; MREC.blkR = {}; MREC.last = null;
