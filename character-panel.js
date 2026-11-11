@@ -53,18 +53,20 @@ function livePreview(canvas, bg = '#101a2a') {
   scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
   const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
-  let av = null, ang = 0, drag = null, raf = 0;
+  // 鏡頭繞著角色轉：左右拖＝繞一圈、上下拖＝從上面／下面看（不會翻過頭頂）
+  let av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
+  const target = new THREE.Vector3(0, 0.8, 0), dist = 2.68;
   const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
-  const draw = () => { raf = 0; size(); if (av) av.g.rotation.y = ang; renderer.render(scene, camera); };
+  const draw = () => { raf = 0; size(); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target); renderer.render(scene, camera); };
   const ask = () => { if (!raf) raf = requestAnimationFrame(draw); };
   canvas.style.cursor = 'grab'; canvas.style.touchAction = 'none';
-  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, a: ang }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
-  canvas.addEventListener('pointermove', (e) => { if (!drag) return; ang = drag.a + (e.clientX - drag.x) * 0.012; ask(); });
+  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
+  canvas.addEventListener('pointermove', (e) => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.012; pitch = Math.max(-1.2, Math.min(1.35, drag.pitch + (e.clientY - drag.y) * 0.01)); ask(); });
+  canvas.addEventListener('dblclick', () => { yaw = 0.1; pitch = 0.08; ask(); });   // 點兩下轉回正面
   const up = () => { drag = null; canvas.style.cursor = 'grab'; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   return {
     rebuild(code) { if (av) scene.remove(av.g); av = makeToyAvatar(decodeLook(code), readTeamJersey() || 'orange'); scene.add(av.g); ask(); },
-    turn(d) { ang = d === 0 ? 0 : ang + d; ask(); },
     redraw: ask,
     dispose() { cancelAnimationFrame(raf); renderer.dispose(); renderer.forceContextLoss(); },
   };
@@ -84,8 +86,8 @@ export async function openEquipPanel() {
       <header class="eqx-top"><button class="eqx-back" aria-label="關閉">←</button><h2 id="equip-title">球衣與裝備</h2><div class="eqx-money"><span title="成就點數">🎖️ <b data-pt>0</b> PT</span><span title="金幣">🪙 <b data-coin>0</b></span></div></header>
       <div class="eqx-cols">
         <section class="eqx-left">
-          <div class="eqx-stage"><div class="eqx-tools"><button type="button" data-rot="-1" title="往左轉">⟲</button><button type="button" data-rot="1" title="往右轉">⟳</button><button type="button" data-rot="0" title="轉回正面">◎</button></div>
-            <canvas class="eqx-img" aria-label="目前穿戴的角色（按住拖曳可以轉）"></canvas><span class="eqx-drag">🖱️ 按住拖曳轉 360°</span><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
+          <div class="eqx-stage">
+            <canvas class="eqx-img" aria-label="目前穿戴的角色（按住拖曳可以轉）"></canvas><span class="eqx-drag">🖱️ 按住拖曳轉動（上下左右）・點兩下回正面</span><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
           <div class="eqx-card"><div class="eqx-name"><input data-nick maxlength="12" aria-label="暱稱"><button type="button" data-rename>改名</button></div><p class="eqx-err" role="status"></p>
             <dl><dt>👤 稱號</dt><dd data-title-now>—</dd><dt>🛡️ 球隊</dt><dd data-team>—</dd><dt>🏐 位置</dt><dd data-role>—</dd><dt>⭐ 等級</dt><dd><span data-lv>Lv1</span><span class="eqx-bar"><i></i></span><small data-exp>0 / 500</small></dd></dl></div>
           <button type="button" class="orange eqx-look" data-edit-look>👕 調整外觀（捏臉）</button>
@@ -136,7 +138,6 @@ export async function openEquipPanel() {
   const drawAll = () => { drawStage(); drawWorn(); drawMid(); drawRight(); drawInfo(); };
   d.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
-    if (b.dataset.rot !== undefined) { d._live.turn(b.dataset.rot === '0' ? 0 : (+b.dataset.rot) * (Math.PI / 4)); return; }
     if (b.dataset.tab) { tab = b.dataset.tab; drawMid(); return; }
     if (b.dataset.k) {
       const k = b.dataset.k, i = +b.dataset.i; setErr('');
