@@ -9951,14 +9951,14 @@ function vbCue() {
 //   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
 const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };   // cbF／cb＝絕處逢生：這局有沒有落後到對方局末點、我方 to−5 以下；逆轉拿下幾局
 function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
-const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });   // es 發球失誤、t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
+const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, kc: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });   // es 發球失誤、t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
 function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
   if (!MREC.id) return;
   const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
   P.t++; if (['spike', 'tip', 'hit'].includes(kind)) P.sp++; else if (kind === 'serve') P.sv++; else if (kind === 'bump') P.rc++; else if (kind === 'set') P.st++; else if (kind === 'block') P.bt++;
   if (MREC.save && MREC.save.id !== id) mrecPf(MREC.save.id).fs++;   // 救起來的球有人再碰到＝救球成功
   MREC.save = null;
-  MREC.last = { id, kind, team, t: performance.now() };
+  MREC.last = { id, kind, team, role: VM.six ? VM.role?.[id] : null, t: performance.now() };
   if (kind === 'spike' && prev && prev.kind === 'set' && prev.team === team && MREC.last.t - prev.t < 700) MREC.last.quick = true;
   if ((kind === 'spike' || kind === 'tip') && prev && prev.kind === 'set' && prev.team === team && prev.id !== id) MREC.last.setBy = prev.id;   // 這球是誰舉的（請享用吧！）   // 快攻：舉球到扣球不到 0.7 秒
   if (kind === 'tip' && VM.touch && VM.touch.team === team && VM.touch.n === 1) MREC.last.dump = true;   // 第二下就吊過去＝二次進攻
@@ -9980,6 +9980,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
   if (!MREC.id || !L || L.team < 0) return;
   if (L.team === win) {
     if (L.kind === 'serve') mrecPf(L.id).a++; else if (L.kind === 'block') mrecPf(L.id).b++; else if (['spike', 'tip', 'hit'].includes(L.kind)) mrecPf(L.id).k++;
+    if (L.kind === 'spike' && !L.quick && !L.self && L.role === 'OH') mrecPf(L.id).kc++;
     if (L.dump) mrecPf(L.id).md++;   // 二次進攻吊球得分
     if (L.quick) mrecPf(L.id).qk++;
     if (L.self) mrecPf(L.id).ss++;
@@ -10027,7 +10028,7 @@ async function vmGotResult(d) {
   const A = d.six && d.sets ? d.sets : d.sc, won = A[team] > A[1 - team], sets = d.six && d.sets ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
   const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
   const my = (d.rate && d.rate[me]) || null, mvp = d.mvp === me;
-  const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
+  const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, kc: hp.kc | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
   MREC.local = { p: 0, sets: {} };
   const MR = my ? await import('./match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
   if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); } catch (x) { console.warn('結算面板', x); } }
