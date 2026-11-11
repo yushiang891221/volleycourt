@@ -481,7 +481,6 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .vb-cue[data-k="set"] { background: #8E4EC6; animation: cuePop .2s ease-out; }
 @keyframes cuePop { from { transform: translate(-50%, -50%) scale(1.4); } to { transform: translate(-50%, -50%) scale(1); } }
 .walk-ui.rk .vb-cue, .walk-ui.rk .vb-keycue { display: none !important; }
-#room-list .mp-add { margin-left: 8px; padding: 1px 7px; font-size: 11px; border-radius: 6px; border: 1px solid #4c607b; background: #1a2638; color: #9fd5ff; cursor: pointer; }   /* WEB-011 加好友 */
 /* 比賽中的大按鍵提示：這一球可以做什麼（灰色按鍵＋動作，直排在畫面右側；例如對方發球過來＝「V 接球」） */
 .vb-keycue { position: absolute; right: 7%; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; pointer-events: none !important; }
 .vb-keycue[hidden] { display: none !important; }
@@ -7072,8 +7071,7 @@ function netLeave(quiet) {
 }
 function renderMpList() {
   const ul = $('room-list'); if (!ul) return;
-  ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i>${esc(p2.n)}<button type="button" class="mp-add" data-friend="${esc(p2.n)}" title="加好友">＋好友</button></li>`)].join('') : '';
-  ul.onclick = async (e) => { const b = e.target.closest('[data-friend]'); if (!b) return; b.disabled = true; try { const { addFriend } = await import('./friends.js'); toast(await addFriend(b.dataset.friend), 2200); } catch (x) { toast((x && x.message) || '加好友失敗', 2200); } b.disabled = false; };   // WEB-011 比賽中的玩家清單也能加好友
+  ul.innerHTML = NET.on ? [`<li><i style="background:${NET.color}"></i>${esc(NET.name)}（你）</li>`, ...[...NET.peers.values()].map((p2) => `<li><i style="background:${p2.c}"></i><span data-player="${esc(p2.n)}" title="按右鍵查看更多">${esc(p2.n)}</span></li>`)].join('') : '';
   $('room-count').textContent = `${NET.on ? NET.peers.size + 1 : 1} / 20 人 · 名單`;
   if (NET.on) netStatus(`房間 ${NET.room}：${NET.peers.size + 1}/${NET_MAX} 人${NET.tx && /backup/.test(NET.tx.kind || '') ? '・備用線路' : ''}`, 'ok');
 }
@@ -11758,6 +11756,7 @@ function fpsTick(now) {
   FPS.el.hidden = false; if (FPS.last) FPS.worst = Math.max(FPS.worst, now - FPS.last); FPS.last = now; FPS.n++;
   if (!FPS.t0) FPS.t0 = now; else if (now - FPS.t0 >= 500) { FPS.el.textContent = `FPS ${Math.round(FPS.n * 1000 / (now - FPS.t0))}・最慢一格 ${Math.round(FPS.worst)} ms`; FPS.n = 0; FPS.t0 = now; FPS.worst = 0; }
 }
+import('./friends.js').then(({ startBadge }) => startBadge(() => ROOM?.snapshot.flow.phase === 'playing'));
 function tick(now) { requestAnimationFrame(tick); fpsTick(now || performance.now()); drawFrame(false); }
 function drawFrame(force) {
   if (CREATOR_SHOT) return; // 拍照模式由 prepareCreatorShot 單次繪製，不進遊戲更新。

@@ -146,6 +146,7 @@ export function createAccountService(client) {
       const { data, error } = await client.rpc(name, args);
       if (error) {
         const m = error.message || '';
+        if (name === 'public_profile') throw new Error(error.code === 'PGRST202' ? '個人檔案功能還沒開通' : '個人檔案暫時連不上，請稍後重試');
         throw new Error(error.code === 'PGRST202' ? '好友功能還沒開通' : m.includes('no user') ? '找不到這個暱稱' : m.includes('self') ? '不能加自己好友' : m.includes('too many') ? '好友數量到上限了' : m.includes('not friends') ? '要先成為好友才能私訊' : m.includes('too fast') ? '訊息傳太快了，休息一下' : m.includes('bad text') ? '訊息要 1～300 字' : '好友功能暫時連不上');
       }
       return data;

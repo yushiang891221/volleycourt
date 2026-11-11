@@ -50,10 +50,9 @@ function renderPlayers(){
  for(const p of all.slice(playerPage*8,playerPage*8+8)){
   const row=document.createElement('div');row.className='player'+(p.id===VBLobby.id?' self':'');
   row.innerHTML=`<span class="avatar">${icon('user')}</span><div class="player-identity"><strong></strong><div class="player-level"></div></div><span class="state"></span>`;
-  const label=p.name+(p.id===VBLobby.id?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title=label;
+  const label=p.name+(p.id===VBLobby.id?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title='按右鍵查看更多';if(p.id!==VBLobby.id)row.querySelector('strong').dataset.player=p.name;
   row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
   const state=row.querySelector('.state');state.textContent=p.status;
-  if(p.id!==VBLobby.id){const add=document.createElement('button');add.type='button';add.className='add-friend';add.textContent='＋好友';add.title=`加「${p.name}」好友`;add.onclick=async e=>{e.stopPropagation();add.disabled=true;try{const {addFriend}=await import('./friends.js');notify(await addFriend(p.name));}catch(x){notify((x&&x.message)||'加好友失敗');}add.disabled=false;};row.append(add);}
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
  }
  $('player-count').textContent=`${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';

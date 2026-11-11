@@ -29,7 +29,7 @@ export function editAppearance(mode = 'edit') {
   });
 }
 
-function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾度（弧度）、w／h＝圖片大小
+export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾度（弧度）、w／h＝圖片大小
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   try {
     const W = opt.w || 240, H = opt.h || 300;
@@ -38,7 +38,7 @@ function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾�
     const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#152236');
     scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
     const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
-    const av = makeToyAvatar(decodeLook(code), readTeamJersey() || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
+    const av = makeToyAvatar(decodeLook(code), opt.jersey === undefined ? readTeamJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
     const camera = new THREE.PerspectiveCamera(32, W / H, .05, 20);
     if (opt.tight) { camera.position.set(.25, 1.0, 2.65); camera.lookAt(0, .8, 0); } else { camera.position.set(.35, 1.0, 2.95); camera.lookAt(0, .78, 0); }   // 角色整個人（含頭頂、帽子）都在預覽圖裡；tight＝裝備面板的大預覽
     renderer.render(scene, camera); img.src = renderer.domElement.toDataURL();
