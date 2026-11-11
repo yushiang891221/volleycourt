@@ -244,6 +244,7 @@ function engine() {
     walk, state: { items: [court], building: { H: 12 }, net: 'men' }, CAT: { vb: { court: 'vb' } },
     camera: new Object3D(), scene: new Object3D(), ballsGroup: new Object3D(), balls: [],
     VM: { on: false }, NET: { on: false }, VB: { ts: 0.7, assist: true, dt: 1 / 60 },
+    VBSettings: { values: { cameraAssist: true } },
     EYE: 1.62, BALL_R: 0.105, JUMP_G: 8.4, NETS: { men: { h: 2.43 } },
     VB_REACH: { atk: 1, recv: 0.95, set: 0.9 }, SETM: {}, SET_DEF: { 1: 'high', 2: 'quick', 3: 'high' },
     CHG: { sw0: 0.72, sw1: 0.88, over: 1, max: 1.2 },
@@ -267,9 +268,10 @@ function engine() {
   };
   c.vbFwd = () => [-Math.sin(walk.yaw), -Math.cos(walk.yaw)];
   vm.createContext(c);
+  vm.runInContext(gym.match(/const CAM_SPIKE_MAX = [^;]+;/)[0], c);
   vm.runInContext('Math.random = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', c);   /* 固定亂數：教練落點每次一樣，測試結果穩定 */
   for (const name of ['toWorldOf', 'toLocalOf', 'courtAt', 'vbCourt', 'solveShot', 'vbPredict', 'vbMine', 'vbLaunch',
-    'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
+    'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbSpikeCamOffset', 'vbClearAir', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
     'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
     'vbSet', 'vbSetStep', 'vbSpot', 'vbSendSet', 'vbDoSet', 'vbBlockTest', 'vbBlockOutcome', 'vbBlockApply',
     'staGame', 'staPay', 'staUse', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {

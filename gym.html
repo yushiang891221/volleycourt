@@ -6664,7 +6664,7 @@ function updateJumpServe(dt) {
     b.position.set(s.from.x + s.v0.x * t, s.from.y + s.v0.y * t - 4.9 * t * t, s.from.z + s.v0.z * t); b.rotation.y += dt * 4;
     // 助跑兩步（0.25～0.72 秒往前約 0.9 m），0.72 秒起跳；這樣跳到最高點時球剛好掉到手的高度
     if (t > 0.25 && t < 0.72 && !walk.air) { const sp = s.appr / 0.47, [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
-    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, t: 0 }; staPay('jserve'); if (walk.chargeArm) { const k2 = walk.chargeArm; walk.chargeArm = null; vbChargeStart(k2); } }
+    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, serve: true, t: 0 }; staPay('jserve'); if (walk.chargeArm) { const k2 = walk.chargeArm; walk.chargeArm = null; vbChargeStart(k2); } }
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮
     const near = walk.air && b.position.distanceTo(vbHand()) < 0.7; b.material = near ? ballHot : ballMat;
@@ -9238,15 +9238,29 @@ function vbJumpVy(hs) { return 3.5 + 0.35 * Math.min(4.2, hs); }
 function vbMyRole() { return VM.on ? (VM.six && VM.role ? VM.role[vmMe()] || null : null) : VM_OPT.role; }
 const ROLE_SUPER = { OH: { lo: 0.78, hi: 0.86, pw: 1.3, sta: 1.9 }, OPP: { lo: 0.78, hi: 0.86, pw: 1.15, sta: 1.7 } };   // 紫色：在金色甜蜜點裡面、更窄
 const vbHangK = () => (vbMyRole() === 'MB' ? 0.75 : 1);   // 中間手：重力×0.75、起跳速度×√0.75＝一樣高、滯空多約 15%
+const CAM_SPIKE_MAX = 0.21;
+function vbSpikeCamOffset(a, off) {
+  const base = walk.pitch - (a.camOff || 0);
+  walk.pitch = clamp(base + off, -1.2, 1.1);
+  a.camOff = walk.pitch - base;   /* 記錄實際套用量，碰到視角上限也不殘留偏移 */
+}
+function vbClearAir() {
+  if (walk.air) vbSpikeCamOffset(walk.air, 0);
+  walk.air = null;
+}
 function vbJump(kind) {
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   if (walk.dive || walk.down > 0) return;
   const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', ck = block ? 'block' : 'jump';
-  let tired = 1;   // 體力：夠就照體力跳（30% 以下開始變矮），不夠就只能小跳一下
-  if (staGame()) { if (STA.v >= staCost(ck, vmMe())) tired = 0.4 + 0.6 * staPay(ck); else { staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
+  let camK = staGame() ? clamp(STA.v, 0, 1) : 1;   /* 起跳前體力，上限為 1 */
+  let tired = 1;   /* 體力：夠就照體力跳，不夠就只能小跳一下 */
+  if (staGame()) { if (STA.v >= staCost(ck, vmMe())) tired = 0.4 + 0.6 * staPay(ck); else { camK = 0; staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
   walk.blkShift = 0; walk.blkAim = 0;
   const hk = vbHangK();
   walk.air = { g: JUMP_G * hk, y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired * Math.sqrt(hk), vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
+  const a = walk.air;
+  a.camK = !block && VBSettings.values.cameraAssist && balls.some(b => b.rest <= 0.2 && b.v.lengthSq() > 0 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) <= 4) ? camK : 0;
+  a.camT = 2 * a.vy / a.g; a.camOff = 0;
   tutEv('jump', { block, speed: hs });
   if (NET.on) { NET.jp = { s: (NET.jp ? NET.jp.s : 0) + 1, vy: +walk.air.vy.toFixed(2), g: +walk.air.g.toFixed(2) }; NET.forceSt = true; }   // 起跳：只送一次，別人自己算弧線   // 助跑的速度大多變成高度，空中只往前飄約 1 m
   if (block) { pose = 'block'; hands.visible = true; }
@@ -9256,7 +9270,9 @@ function vbJump(kind) {
 function vbAirStep(dt) {
   const a = walk.air; if (!a) return 0;
   a.t += dt; a.vy -= (a.g || JUMP_G) * dt; a.y += a.vy * dt;
-  if (a.y <= 0) { walk.air = null; walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
+  if (a.y <= 0) { vbClearAir(); walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
+  const off = !a.block && !a.serve && a.camK && VBSettings.values.cameraAssist ? -CAM_SPIKE_MAX * a.camK * Math.sin(Math.PI * Math.min(1, a.t / a.camT)) : 0;
+  vbSpikeCamOffset(a, off);
   return a.y;
 }
 // ---- 攻擊：按 V 揮臂，0.22 秒內手（頭上前方）碰到球才算；碰到的位置決定好不好
@@ -9936,11 +9952,12 @@ function vbCue() {
 // ---- WEB-010 比賽紀錄：開房比賽（練習不算）結束時，每個真人把自己的結果記進帳號
 //   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
 const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };   // cbF／cb＝絕處逢生：這局有沒有落後到對方局末點、我方 to−5 以下；逆轉拿下幾局
-function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
-const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, wall: false });   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
+function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
+const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, wall: false });   // t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
 function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
   if (!MREC.id) return;
-  const prev = MREC.last, team = vmTeamOf(id);
+  const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
+  P.t++; if (['spike', 'tip', 'hit'].includes(kind)) P.sp++; else if (kind === 'serve') P.sv++; else if (kind === 'bump') P.rc++; else if (kind === 'set') P.st++; else if (kind === 'block') P.bt++;
   if (MREC.save && MREC.save.id !== id) mrecPf(MREC.save.id).fs++;   // 救起來的球有人再碰到＝救球成功
   MREC.save = null;
   MREC.last = { id, kind, team, t: performance.now() };
@@ -9961,6 +9978,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
     for (const t of [0, 1]) for (const S of [VM.sc, sc]) if (S[1 - t] >= to - 1 && S[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
     if (Math.max(...sc) >= to && Math.abs(sc[0] - sc[1]) >= 2) { const w = sc[0] > sc[1] ? 0 : 1; if (MREC.cbF[w]) MREC.cb[w]++; MREC.cbF = [false, false]; }
   }
+  if (MREC.id) MREC.tp[win] = (MREC.tp[win] || 0) + 1;
   if (!MREC.id || !L || L.team < 0) return;
   if (L.team === win) {
     if (L.kind === 'serve') mrecPf(L.id).a++; else if (L.kind === 'block') mrecPf(L.id).b++; else if (['spike', 'tip', 'hit'].includes(L.kind)) mrecPf(L.id).k++;
@@ -9973,11 +9991,32 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
       if (Math.abs(B.x) < 3) mrecPf(L.id).ks++;
     }
   }
-  else mrecPf(L.id).e++;
+  else { mrecPf(L.id).e++; if (L.kind === 'bump') mrecPf(L.id).eb++; }
+}
+// 整場評分（0～100）：得分貢獻 35%＋效率 25%＋參與度 20%＋位置表現 20%；等級 S≥90、A≥75、B≥60、C≥40、D；全場最高＝MVP
+function vmRateMatch() {
+  const cl = (v) => Math.max(0, Math.min(100, v)), out = {};
+  for (const t of [0, 1]) {
+    const ids = (VM.team[t] || []).filter(Boolean), n = Math.max(1, ids.length), tp = Math.max(1, MREC.tp[t] || 0);
+    const touches = ids.reduce((sum, id) => sum + (mrecPf(id).t || 0), 0) || 1;
+    for (const id of ids) {
+      const P = mrecPf(id), pts = P.k + P.b + P.a;
+      const contrib = cl(((pts + P.as * 0.5 + P.fs + Math.max(0, P.rc - P.eb) * 0.2) / tp) * n * 50);   // 自己得分＋助攻＋救球＋好的接球；跟隊上平均一樣＝50，兩倍＝100
+      const eff = P.t ? cl(100 * (1 - (1.5 * P.e) / P.t)) : 0;   // 碰球裡失誤越少越高
+      const part = cl((P.t / (touches / n)) * 50);   // 碰球次數跟隊上平均一樣＝50
+      const main = [['st', P.st], ['rc', P.rc], ['sp', P.sp], ['bt', P.bt]].sort((x, y) => y[1] - x[1])[0];   // 這場主要在做什麼
+      const role = !main[1] ? 50 : main[0] === 'st' ? cl((P.as / P.st) * 200) : main[0] === 'rc' ? cl((1 - P.eb / P.rc) * 100) : main[0] === 'sp' ? cl((P.k / P.sp) * 160) : cl((P.b / P.bt) * 200);
+      const rt = Math.round(0.35 * contrib + 0.25 * eff + 0.2 * part + 0.2 * role);
+      out[id] = { rt, gr: rt >= 90 ? 'S' : rt >= 75 ? 'A' : rt >= 60 ? 'B' : rt >= 40 ? 'C' : 'D' };
+    }
+  }
+  let mvp = null; for (const [id, r] of Object.entries(out)) if (!mvp || r.rt > out[mvp].rt) mvp = id;
+  return { rate: out, mvp };
 }
 function vmSendResult() {   // 房主：比賽結束，把結果送給大家（也給自己）
   if (!ROOM || !ROOM.isHost || vmIsPractice() || !MREC.id) return;
-  const d = { e: 'result', id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+  const RT = vmRateMatch();
+  const d = { e: 'result', rate: RT.rate, mvp: RT.mvp, id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
   if (NET.on) NET.tx.publish('vm', d);
   vmGotResult(d); MREC.id = '';
 }
@@ -9986,13 +10025,14 @@ async function vmGotResult(d) {
   const me = vmMe(), team = Array.isArray(d.team) ? d.team.findIndex((t) => Array.isArray(t) && t.includes(me)) : -1; if (team < 0) return;   // 觀眾不記
   const A = d.six && d.sets ? d.sets : d.sc, won = A[team] > A[1 - team], sets = d.six && d.sets ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
   const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
-  const perf = { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
+  const my = (d.rate && d.rate[me]) || null, mvp = d.mvp === me;
+  const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
   MREC.local = { p: 0, sets: {} };
   try {
     const { recordMatch, ACHIEVEMENTS } = await import('./progress.js');
     const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
     if (!r || r.dup) return;
-    toast(`${won ? '🏆 贏了！' : '比賽結束'}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 4200);
+    toast(`${won ? '🏆 贏了！' : '比賽結束'}${my ? `　評分 ${my.gr}・${my.rt}` : ''}${mvp ? '　⭐MVP' : ''}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 5200);
     (r.new || []).forEach((k, i) => setTimeout(() => toast(`🎖 解鎖成就「${ACHIEVEMENTS[k]?.name || k}」・可以套用稱號「${ACHIEVEMENTS[k]?.title || ''}」`, 3600), 4400 + i * 3800));
   } catch (e) { toast((e && e.message) || '戰績記錄失敗', 2600); }
 }
@@ -10137,7 +10177,7 @@ function tpEnd() {
   const S0 = TP.saved; if (!S0) return;
   camera.position.copy(S0.p); camera.quaternion.copy(S0.q); hands.visible = S0.hv; if (walk.hold) walk.hold.visible = true; camera.updateMatrixWorld(true); TP.saved = null;
 }
-function vbStop() { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } TP.manual = null; walk.air = null; walk.swing = null; walk.recv = null; walk.setQ = null; VB.setSpot = null; VB.target = null; if (VB.ringLand) { VB.ringLand.visible = false; VB.ringSet.visible = false; } if (VB.npc) vbNpcToggle(); }
+function vbStop() { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } TP.manual = null; vbClearAir(); walk.swing = null; walk.recv = null; walk.setQ = null; VB.setSpot = null; VB.target = null; if (VB.ringLand) { VB.ringLand.visible = false; VB.ringSet.visible = false; } if (VB.npc) vbNpcToggle(); }
 // ---- 旁觀：別人的羽球／匹克球對戰，球照同一套物理飛給大家看
 const RKV = new Map();
 function rkSpectate(d) {
@@ -10346,7 +10386,7 @@ function vmPrepServe(s = VM.sg) {
   if (walk.jserve && walk.jserve.ball && !walk.jserve.hit) ballsGroup.remove(walk.jserve.ball);   // 上一個還沒打完的拋球收掉
   walk.jserve = null; walk.serve = null; walk.charge = null; walk.chargeArm = null;
   if (walk.hold) { camera.remove(walk.hold); walk.hold = null; }
-  const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; walk.air = null;
+  const [x, z] = vmW(s * 9.8, -s * 1.0); walk.x = x; walk.z = z; vbClearAir();
   const [ax, az] = vmW(0, 0); walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
   VM.grabOK = true; grabBall(); VM.grabOK = false; toast('輪到你發球：等裁判吹哨，8 秒內發出去。對面紅圈是落點（轉頭調左右、滾輪調深淺）。左鍵站發、右鍵站飄、空白鍵拋球起跳後按住左鍵跳發／右鍵跳飄', 4600);
 }
@@ -11039,7 +11079,7 @@ function vm6PlaceHumans(srv) {
 }
 function vm6GoSpot(sp) {
   if (!sp || !VM.on) return;
-  const [x, z] = vmW(sp[0], sp[1]), [ax, az] = vmW(0, sp[1]); walk.x = x; walk.z = z; walk.air = null; walk.vel = [0, 0];
+  const [x, z] = vmW(sp[0], sp[1]), [ax, az] = vmW(0, sp[1]); walk.x = x; walk.z = z; vbClearAir(); walk.vel = [0, 0];
   walk.yaw = Math.atan2(-(ax - x), -(az - z)); walk.pitch = 0.05;
   if (vmSmallCount()) { toast(vmSmallLabel(vmMe()),1600); return; } // WEB003B
   const k = vm6Idx(vmMe()); if (k >= 0) toast(`你在 ${k + 1} 號位（${k >= 1 && k <= 3 ? '前排' : '後排'}・${V6_NAME[VM.role[vmMe()]]}）`, 1600);
@@ -11548,7 +11588,7 @@ const TUT_COACH = {
     }
     walk.serve = null; walk.jserve = null; walk.recv = null; walk.setQ = null;
     walk.swing = null; walk.charge = null; walk.chargeArm = null; walk.chargeArmGround = false;
-    walk.air = null; walk.dive = null; walk.down = 0; walk.blkAim = 0; walk.blkShift = 0;
+    vbClearAir(); walk.dive = null; walk.down = 0; walk.blkAim = 0; walk.blkShift = 0;
     setMenuClose(false); pose = 'hold'; hands.visible = !!walk.hold;
   },
   start(id) {
