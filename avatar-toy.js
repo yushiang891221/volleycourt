@@ -35,7 +35,7 @@ export function decodeLook(code) {
 // 護膝還是存在外觀代碼（knee），其他配件存在外觀代碼後面的「~e＋4 碼」：帽子、眼鏡、項鍊、護腕，0＝沒戴
 export const EQUIP = {
   hat: { name: '帽子', items: ['不戴', '運動帽（黑）', '運動帽（白）'] },
-  glasses: { name: '眼鏡', items: ['不戴', '運動眼鏡（黑）', '運動眼鏡（炫彩）'] },
+  glasses: { name: '眼鏡', items: ['不戴', '粗框眼鏡（黑）', '細框眼鏡（金）', '運動墨鏡'] },
   neck: { name: '項鍊', items: ['不戴', '運動項鍊（銀）', '運動項鍊（金）'] },
   wrist: { name: '護腕', items: ['不戴', '護腕（白）', '護腕（黑）'] },
 };
@@ -511,11 +511,24 @@ function addAccessories(rig, eq, meta, meshes = []) {
     const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
     mesh(bg, new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, side: THREE.DoubleSide }), g);
   }
-  if (eq.glasses) {   // 運動眼鏡：包覆式鏡片＋上緣鏡框
+  if (eq.glasses) {   // 眼鏡：兩個鏡框＋鼻樑架＋鏡腳勾到耳朵，鏡片透明（運動墨鏡是深色）；照臉的弧度往兩邊轉
+    const kind = eq.glasses, thick = kind === 1 ? 0.034 : kind === 2 ? 0.014 : 0.026, frameC = kind === 2 ? '#D4AF5A' : '#1C1E24';
+    const frame = accMat(frameC, { r: kind === 2 ? 0.25 : 0.45, m: kind === 2 ? 0.9 : 0.1 });
+    const glass = new THREE.MeshStandardMaterial({ color: kind === 3 ? '#14171C' : '#CFE6FF', roughness: 0.05, metalness: 0.3, transparent: true, opacity: kind === 3 ? 0.88 : 0.16, depthWrite: false });
     const g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, -R * 0.06, 0)); rig.head.add(g);
-    const lens = eq.glasses === 1 ? accMat('#15181E', { r: 0.15, m: 0.6, op: 0.9 }) : accMat('#3E8EDB', { r: 0.1, m: 0.9, op: 0.92 });
-    const band = mesh(new THREE.CylinderGeometry(R * 1.05, R * 1.03, R * 0.26, 36, 1, true, -1.15, 2.3), lens, g); band.scale.set(1.05, 1, 1.02); band.material.side = THREE.DoubleSide;
-    const rim = mesh(new THREE.TorusGeometry(R * 1.06, R * 0.025, 6, 40, 2.3), accMat('#1C1E24', { r: 0.4 }), g, new THREE.Vector3(0, R * 0.13, 0), [Math.PI / 2, 0, Math.PI / 2 - 1.15]); rim.scale.set(1.02, 1.05, 1);
+    const lensR = R * (kind === 3 ? 0.21 : 0.19), ex = R * 0.34, turn = 0.36, fz = R * 0.985;
+    for (const sd of [-1, 1]) {
+      const lens = new THREE.Group(); lens.position.set(sd * ex, 0, fz * Math.cos(turn * 0.9)); lens.rotation.y = sd * turn; g.add(lens);
+      const ring = mesh(new THREE.TorusGeometry(lensR, R * thick, 8, 40), frame, lens); if (kind === 3) ring.scale.set(1.12, 0.86, 1);   // 墨鏡：橫的橢圓
+      const disc = mesh(new THREE.CircleGeometry(lensR, 32), glass, lens); disc.scale.copy(ring.scale); disc.castShadow = false;
+      // 鏡腳：從鏡框外側往後到耳朵
+      const ox = sd * (ex + lensR * Math.cos(turn) * (kind === 3 ? 1.12 : 1)), oz = fz * Math.cos(turn * 0.9) - lensR * Math.sin(turn) * 0.9;
+      const ax = sd * R * 1.0, az = -R * 0.12, len = Math.hypot(ax - ox, az - oz);
+      const arm = mesh(new THREE.BoxGeometry(R * thick * 1.4, R * thick * 1.6, len), frame, g, new THREE.Vector3((ox + ax) / 2, R * 0.05, (oz + az) / 2));
+      arm.rotation.y = Math.atan2(ax - ox, az - oz);
+    }
+    // 鼻樑架：兩個鏡框中間往上拱一點
+    const bridge = mesh(new THREE.TorusGeometry(R * 0.075, R * thick * 0.8, 6, 16, Math.PI), frame, g, new THREE.Vector3(0, R * 0.03, fz * 1.01)); bridge.rotation.z = 0;
   }
   if (eq.neck) {   // 運動項鍊：沿著脖子後面、肩膀、胸口的衣服表面繞一圈（不穿過脖子和衣服）；跳起來往下掉時往上飄、落地彈回胸口
     const col = eq.neck === 1 ? '#D9DDE3' : '#E8B94A', metal = accMat(col, { r: 0.25, m: 0.9 }), neck = webPoint(meta.joints.head[0]), sp = webPoint(meta.joints.spine[0]);
