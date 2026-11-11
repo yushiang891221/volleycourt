@@ -5,10 +5,11 @@
 import { authMode, getAccountService } from './auth.js';
 
 const KEY = 'vb.account.sid';
+// 每個分頁各自一個代碼（sessionStorage）：同一個瀏覽器開兩個分頁也算兩個地方，後進大廳的把前面的踢掉
 const ls = {
-  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
-  del: k => { try { localStorage.removeItem(k); } catch {} }
+  get: k => { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch {} }
 };
 const on = () => { try { return authMode() === 'account'; } catch { return false; } };
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`);
@@ -32,7 +33,7 @@ export async function watch() {
   try { svc = svc || await getAccountService(); if (!(await svc.signedIn())) return; } catch { return; }
   const check = async () => {
     if (busy || document.hidden) return; busy = true;
-    try { const cur = await svc.activeSession(); if (cur && cur !== mine && cur !== ls.get(KEY)) kicked(); }
+    try { const cur = await svc.activeSession(); if (cur && cur !== mine) kicked(); }
     catch { /* 網路暫時不通：下次再查 */ }
     busy = false;
   };

@@ -482,7 +482,7 @@ function makeGLBAvatar(L, team, asset) {
   }
   rig.arms.forEach(a => { a.rotation.z = 0; }); rig.g.updateMatrixWorld(true);
   rig.head.scale.setScalar(0.64);   // 頭縮小一點（太大會擋視野）；頭和頭髮都綁在 head 骨頭，一起縮
-  if (L.eq) addAccessories(rig, L.eq, asset.meta);
+  if (L.eq) addAccessories(rig, L.eq, asset.meta, meshes);
   return { ...rig, kit, look: L, phase: 0, rig: true, chibi: true, glb: true,
     L1: 0.29, L2: 0.33, hipH: 0.62, _skull: skull, _faceM: skull?.material };
 }
@@ -492,14 +492,24 @@ function accMat(color, o = {}) {
   const key = color + JSON.stringify(o); if (!ACC_MAT.has(key)) ACC_MAT.set(key, new THREE.MeshStandardMaterial({ color, roughness: o.r ?? 0.45, metalness: o.m ?? 0, transparent: !!o.op, opacity: o.op ?? 1 }));
   return ACC_MAT.get(key);
 }
-function addAccessories(rig, eq, meta) {
+function addAccessories(rig, eq, meta, meshes = []) {
   const hc = webPoint(meta.headC).sub(webPoint(meta.joints.head[0])), R = meta.headR;   // 頭中心（head 骨頭座標）
   const mesh = (geo, mat, parent, pos, rot) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (pos) m.position.copy(pos); if (rot) m.rotation.set(...rot); parent.add(m); return m; };
-  if (eq.hat) {   // 運動帽：圓頂蓋住頭髮＋前面帽簷
-    const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, R * 0.2, -R * 0.03)); rig.head.add(g);
-    const dome = mesh(new THREE.SphereGeometry(R * 1.3, 32, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), accMat(col, { r: 0.6 }), g); dome.scale.set(1.04, 0.92, 1.04);   // 夠大才蓋得住刺蝟頭
+  if (eq.hat) {   // 運動帽：帽身往下包過頭的一半（內面也畫，從下面、後面看不會透空）＋從帽身前緣伸出去的帽簷
+    const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', inner = eq.hat === 1 ? '#15171B' : '#D9D9D4', g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, R * 0.18, -R * 0.03)); rig.head.add(g);
+    const shell = new THREE.SphereGeometry(R * 1.3, 40, 18, 0, Math.PI * 2, 0, Math.PI * 0.6);
+    const dome = mesh(shell, accMat(col, { r: 0.6 }), g); dome.scale.set(1.04, 0.92, 1.04);
+    const lining = mesh(shell, new THREE.MeshStandardMaterial({ color: inner, roughness: 0.9, side: THREE.BackSide }), g); lining.scale.copy(dome.scale);   // 帽子內面
     mesh(new THREE.SphereGeometry(R * 0.11, 12, 8), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, R * 1.18, 0));   // 頂端扣子
-    const brim = mesh(new THREE.CylinderGeometry(R * 1.62, R * 1.62, R * 0.05, 40, 1, false, -1.05, 2.1), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, R * 0.01, R * 0.05), [0.1, 0, 0]); brim.scale.set(0.86, 1, 0.95);
+    // 帽簷：半月形，內緣貼著帽身前面那一圈（帽身在這個高度的半徑），往前伸 0.62R、稍微往下壓
+    const rimY = -R * 0.12, rIn = R * 1.3 * 1.04 * Math.sqrt(Math.max(0, 1 - (rimY / (R * 1.3 * 0.92)) ** 2)) * 0.98, rOut = rIn + R * 0.62;
+    const pts = [], seg = 28, a0 = -1.15, a1 = 1.15;
+    for (let k = 0; k <= seg; k++) { const a = a0 + ((a1 - a0) * k) / seg, w = Math.cos(((k / seg) - 0.5) * Math.PI); pts.push([Math.sin(a) * rIn, Math.cos(a) * rIn, Math.sin(a) * (rIn + (rOut - rIn) * w), Math.cos(a) * (rIn + (rOut - rIn) * w)]); }
+    const pos = [], idx = [], th = R * 0.045;
+    pts.forEach(([xi, zi, xo, zo]) => { pos.push(xi, rimY, zi, xo, rimY - R * 0.1 * 0.6, zo, xi, rimY - th, zi, xo, rimY - R * 0.1 * 0.6 - th, zo); });
+    for (let k = 0; k < seg; k++) { const a = k * 4, b = a + 4; idx.push(a, b, a + 1, a + 1, b, b + 1, a + 2, a + 3, b + 2, a + 3, b + 3, b + 2, a + 1, b + 1, a + 3, a + 3, b + 1, b + 3); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
+    mesh(bg, new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, side: THREE.DoubleSide }), g);
   }
   if (eq.glasses) {   // 運動眼鏡：包覆式鏡片＋上緣鏡框
     const g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, -R * 0.06, 0)); rig.head.add(g);
@@ -507,11 +517,34 @@ function addAccessories(rig, eq, meta) {
     const band = mesh(new THREE.CylinderGeometry(R * 1.05, R * 1.03, R * 0.26, 36, 1, true, -1.15, 2.3), lens, g); band.scale.set(1.05, 1, 1.02); band.material.side = THREE.DoubleSide;
     const rim = mesh(new THREE.TorusGeometry(R * 1.06, R * 0.025, 6, 40, 2.3), accMat('#1C1E24', { r: 0.4 }), g, new THREE.Vector3(0, R * 0.13, 0), [Math.PI / 2, 0, Math.PI / 2 - 1.15]); rim.scale.set(1.02, 1.05, 1);
   }
-  if (eq.neck) {   // 運動項鍊：脖子底部一圈細鍊＋前面小墜子
-    const col = eq.neck === 1 ? '#D9DDE3' : '#E8B94A', base = webPoint(meta.joints.head[0]).sub(webPoint(meta.joints.spine[0]));
-    const g = new THREE.Group(); g.position.copy(base).add(new THREE.Vector3(0, 0.012, 0.004)); g.rotation.x = 0.38; rig.spine.add(g);   // 掛在衣領上面一點的脖子上
-    const ring = mesh(new THREE.TorusGeometry(0.074, 0.0045, 6, 40), accMat(col, { r: 0.25, m: 0.9 }), g, null, [Math.PI / 2, 0, 0]); ring.scale.set(1.05, 0.95, 1);
-    mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.005, 16), accMat(col, { r: 0.2, m: 0.95 }), g, new THREE.Vector3(0, -0.012, 0.078), [Math.PI / 2 - 0.38, 0, 0]);
+  if (eq.neck) {   // 運動項鍊：沿著脖子後面、肩膀、胸口的衣服表面繞一圈（不穿過脖子和衣服）；跳起來往下掉時往上飄、落地彈回胸口
+    const col = eq.neck === 1 ? '#D9DDE3' : '#E8B94A', metal = accMat(col, { r: 0.25, m: 0.9 }), neck = webPoint(meta.joints.head[0]), sp = webPoint(meta.joints.spine[0]);
+    const cloth = meshes.filter((m) => /^(body|top)/.test(m.userData.avatarPart || ''));   // 身體＋穿著的上衣（綁定姿勢的頂點）
+    const surf = (x, z) => {   // 這一點往下看，最上面那層表面的高度（只看脖子底下、肩膀一帶）
+      let best = -1; for (const m of cloth) { const a = m.geometry.attributes.position; for (let k = 0; k < a.count; k++) { const vy = a.getY(k); if (vy > neck.y + 0.02 || vy < neck.y - 0.3) continue; if (Math.abs(a.getX(k) - x) < 0.012 && Math.abs(a.getZ(k) - z) < 0.012 && vy > best) best = vy; } } return best;
+    };
+    const N = 36, rest = [];
+    for (let k = 0; k < N; k++) {   // 角度 0＝正前方；前面離脖子遠一點（垂到胸口），後面貼著後頸
+      const a = (k / N) * Math.PI * 2, f = (1 + Math.cos(a)) / 2, r = 0.074 + 0.042 * f * f, x = neck.x + Math.sin(a) * r, z = neck.z + Math.cos(a) * r;
+      let y = surf(x, z); if (y < 0) y = neck.y - 0.02 - 0.06 * f; rest.push(new THREE.Vector3(x, y + 0.006, z));
+    }
+    // 鍊子像真的一樣垂掛：每一點往兩邊平均、再受一點重力往下，但不能低於底下的衣服／身體表面（反覆算到穩定）
+    const floor = rest.map((v) => v.y);
+    for (let it = 0; it < 60; it++) { const ys = rest.map((v) => v.y); for (let k = 0; k < N; k++) rest[k].y = Math.max(floor[k], (ys[(k + N - 1) % N] + ys[(k + 1) % N]) / 2 - 0.0012); }
+    const back = rest[N / 2].clone(), g = new THREE.Group(); g.position.copy(back).sub(sp); rig.spine.add(g);   // 以後頸那點為軸：前面往上飄＝整圈繞著後頸轉
+    const local = rest.map((v) => v.clone().sub(back));
+    mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(local, true), 96, 0.0035, 6, true), metal, g);
+    const front = local[0], tag = mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.004, 16), metal, g, front.clone().add(new THREE.Vector3(0, -0.016, 0.004)), [Math.PI / 2 - 0.25, 0, 0]);
+    // 物理：彈簧＋阻尼。身體往上加速（起跳、落地）＝壓回胸口；自由落下（a≈−g）＝往上飄
+    const st = { a: 0, v: 0, y0: null, vy: 0, t: 0 }, W = new THREE.Vector3();
+    tag.onBeforeRender = () => {
+      const now = performance.now() / 1000, dt = st.t ? Math.min(0.05, now - st.t) : 0; st.t = now; if (!dt) return;
+      g.parent.getWorldPosition(W); const vy = st.y0 == null ? 0 : (W.y - st.y0) / dt, acc = (vy - st.vy) / dt; st.y0 = W.y; st.vy = vy;
+      const drive = -Math.max(-30, Math.min(30, acc + 0.0)) * 0.6;   // 自由落下 acc≈−9.8 → 往上 5.9
+      st.v += (-12 * st.a - 3 * st.v + drive * (Math.abs(acc) > 2 ? 1 : 0)) * dt; st.a += st.v * dt;
+      if (st.a < 0) { st.a = 0; st.v = st.v < 0 ? -st.v * 0.3 : st.v; }   /* 撞回胸口：小小彈一下 */ if (st.a > 0.9) { st.a = 0.9; st.v = 0; }
+      g.rotation.x = -st.a;   // 繞後頸往上翹
+    };
   }
   if (eq.wrist) {   // 護腕：兩手手腕各一圈
     const col = eq.wrist === 1 ? '#F4F4F0' : '#22252B';
