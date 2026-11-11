@@ -46,7 +46,9 @@ function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾�
 }
 
 // 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
-function livePreview(canvas, bg = '#101a2a') {
+function livePreview(old, bg = '#101a2a') {
+  // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
+  const canvas = document.createElement('canvas'); canvas.className = old.className; canvas.setAttribute('aria-label', old.getAttribute('aria-label') || ''); old.replaceWith(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   const scene = new THREE.Scene(); scene.background = new THREE.Color(bg);
@@ -55,14 +57,15 @@ function livePreview(canvas, bg = '#101a2a') {
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
   // 鏡頭繞著角色轉：左右拖＝繞一圈、上下拖＝從上面／下面看（不會翻過頭頂）
   let av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
-  const target = new THREE.Vector3(0, 0.8, 0), dist = 2.68;
+  const target = new THREE.Vector3(0, 0.78, 0), DIST0 = 3.0; let dist = DIST0;   // 滾輪縮放遠近（1.2～5 公尺）
   const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
-  const draw = () => { raf = 0; size(); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target); renderer.render(scene, camera); };
+  const draw = () => { raf = 0; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target); renderer.render(scene, camera); };
   const ask = () => { if (!raf) raf = requestAnimationFrame(draw); };
   canvas.style.cursor = 'grab'; canvas.style.touchAction = 'none';
   canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
   canvas.addEventListener('pointermove', (e) => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.012; pitch = Math.max(-1.2, Math.min(1.35, drag.pitch + (e.clientY - drag.y) * 0.01)); ask(); });
-  canvas.addEventListener('dblclick', () => { yaw = 0.1; pitch = 0.08; ask(); });   // 點兩下轉回正面
+  canvas.addEventListener('dblclick', () => { yaw = 0.1; pitch = 0.08; dist = DIST0; ask(); });   // 點兩下轉回正面、距離還原
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.max(1.2, Math.min(5, dist * Math.exp(e.deltaY * 0.0012))); ask(); }, { passive: false });   // 滾輪拉近拉遠
   const up = () => { drag = null; canvas.style.cursor = 'grab'; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   return {
@@ -87,7 +90,7 @@ export async function openEquipPanel() {
       <div class="eqx-cols">
         <section class="eqx-left">
           <div class="eqx-stage">
-            <canvas class="eqx-img" aria-label="目前穿戴的角色（按住拖曳可以轉）"></canvas><span class="eqx-drag">🖱️ 按住拖曳轉動（上下左右）・點兩下回正面</span><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
+            <canvas class="eqx-img" aria-label="目前穿戴的角色（按住拖曳可以轉）"></canvas><span class="eqx-drag">🖱️ 拖曳轉動・滾輪拉近拉遠・點兩下還原</span><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
           <div class="eqx-card"><div class="eqx-name"><input data-nick maxlength="12" aria-label="暱稱"><button type="button" data-rename>改名</button></div><p class="eqx-err" role="status"></p>
             <dl><dt>👤 稱號</dt><dd data-title-now>—</dd><dt>🛡️ 球隊</dt><dd data-team>—</dd><dt>🏐 位置</dt><dd data-role>—</dd><dt>⭐ 等級</dt><dd><span data-lv>Lv1</span><span class="eqx-bar"><i></i></span><small data-exp>0 / 500</small></dd></dl></div>
           <button type="button" class="orange eqx-look" data-edit-look>👕 調整外觀（捏臉）</button>
@@ -103,7 +106,7 @@ export async function openEquipPanel() {
   const $q = (sel) => d.querySelector(sel), P = await import('./progress.js');
   let tab = 'jersey', ang = 0, prog = P.cachedProgress() || {}, team = undefined, ttIdx = 0;
   const setErr = (t) => { $q('.eqx-err').textContent = t || ''; };
-  if (!d._live) { d._live = livePreview($q('.eqx-img')); d.addEventListener('close', () => { d._live?.dispose(); d._live = null; }); }   // 關面板就釋放 WebGL，下次開再建
+  if (!d._live) { d._live = livePreview($q('.eqx-img')); d.addEventListener('close', () => { d._live?.dispose(); d._live = null; }, { once: true }); }   // 關面板就釋放 WebGL，下次開再建（換新畫布）
   const drawStage = () => { try { d._live.rebuild(myLookCode()); } catch { setErr('角色預覽載入失敗'); } };
   const itemsOf = (k) => {
     if (k === 'jersey') { const tj = readTeamJersey(); return [{ i: 0, name: '比賽隊服（橘黑）', icon: '👕', tint: '#F07C24', on: !tj }, { i: 1, name: team ? `球隊球衣「${team.jersey?.name || ''}」` : '球隊球衣', icon: '🎽', tint: team?.jersey?.body || '#2B6CB0', on: !!tj, lock: !team ? '加入球隊後解鎖' : '' }]; }

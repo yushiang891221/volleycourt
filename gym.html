@@ -9937,14 +9937,15 @@ function vbCue() {
 //   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
 const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };   // cbF／cb＝絕處逢生：這局有沒有落後到對方局末點、我方 to−5 以下；逆轉拿下幾局
 function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
-const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, wall: false });   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
+const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, wall: false });   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
 function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
   if (!MREC.id) return;
   const prev = MREC.last, team = vmTeamOf(id);
   if (MREC.save && MREC.save.id !== id) mrecPf(MREC.save.id).fs++;   // 救起來的球有人再碰到＝救球成功
   MREC.save = null;
   MREC.last = { id, kind, team, t: performance.now() };
-  if (kind === 'spike' && prev && prev.kind === 'set' && prev.team === team && MREC.last.t - prev.t < 700) MREC.last.quick = true;   // 快攻：舉球到扣球不到 0.7 秒
+  if (kind === 'spike' && prev && prev.kind === 'set' && prev.team === team && MREC.last.t - prev.t < 700) MREC.last.quick = true;
+  if ((kind === 'spike' || kind === 'tip') && prev && prev.kind === 'set' && prev.team === team && prev.id !== id) MREC.last.setBy = prev.id;   // 這球是誰舉的（請享用吧！）   // 快攻：舉球到扣球不到 0.7 秒
   if (kind === 'tip' && VM.touch && VM.touch.team === team && VM.touch.n === 1) MREC.last.dump = true;   // 第二下就吊過去＝二次進攻
   if (kind === 'spike' && VM.touch && VM.touch.team === team && VM.touch.n === 1) MREC.last.self = true;   // 第二下就自己扣＝我自己來好了
   // 救回場外球：球在場外 2 m 以外，而且是被打飛出去的（前一下是自己隊碰的，或攔網碰出來的 touch out）
@@ -9965,7 +9966,8 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
     if (L.kind === 'serve') mrecPf(L.id).a++; else if (L.kind === 'block') mrecPf(L.id).b++; else if (['spike', 'tip', 'hit'].includes(L.kind)) mrecPf(L.id).k++;
     if (L.dump) mrecPf(L.id).md++;   // 二次進攻吊球得分
     if (L.quick) mrecPf(L.id).qk++;
-    if (L.self) mrecPf(L.id).ss++;   // 快攻直接落地得分（最後一下就是扣球，中間沒被攔網碰到）
+    if (L.self) mrecPf(L.id).ss++;
+    if (L.setBy) mrecPf(L.setBy).as++;   // 舉球助攻：攻擊手得分，舉球員記一顆   // 快攻直接落地得分（最後一下就是扣球，中間沒被攔網碰到）
     if (L.kind === 'spike' && VM.ball && VM.c) {   // 落點（球場座標）：直線＝攻擊手靠邊線、球沿同一條邊線下去；三米內＝落在對方三米線以內
       const B = vmBallL(VM.ball); if (L.az != null && Math.abs(L.az) > 2.2 && Math.abs(B.z - L.az) < 1.0 && Math.sign(B.z) === Math.sign(L.az)) mrecPf(L.id).kl++;
       if (Math.abs(B.x) < 3) mrecPf(L.id).ks++;
@@ -9984,7 +9986,7 @@ async function vmGotResult(d) {
   const me = vmMe(), team = Array.isArray(d.team) ? d.team.findIndex((t) => Array.isArray(t) && t.includes(me)) : -1; if (team < 0) return;   // 觀眾不記
   const A = d.six && d.sets ? d.sets : d.sc, won = A[team] > A[1 - team], sets = d.six && d.sets ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
   const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
-  const perf = { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
+  const perf = { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
   MREC.local = { p: 0, sets: {} };
   try {
     const { recordMatch, ACHIEVEMENTS } = await import('./progress.js');
