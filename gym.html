@@ -9953,7 +9953,7 @@ function vbCue() {
 //   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
 const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };   // cbF／cb＝絕處逢生：這局有沒有落後到對方局末點、我方 to−5 以下；逆轉拿下幾局
 function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
-const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, wall: false });   // t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
+const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });   // es 發球失誤、t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
 function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
   if (!MREC.id) return;
   const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
@@ -9991,7 +9991,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
       if (Math.abs(B.x) < 3) mrecPf(L.id).ks++;
     }
   }
-  else { mrecPf(L.id).e++; if (L.kind === 'bump') mrecPf(L.id).eb++; }
+  else { mrecPf(L.id).e++; if (L.kind === 'bump') mrecPf(L.id).eb++; else if (L.kind === 'serve') mrecPf(L.id).es++; }
 }
 // 整場評分（0～100）：得分貢獻 35%＋效率 25%＋參與度 20%＋位置表現 20%；等級 S≥90、A≥75、B≥60、C≥40、D；全場最高＝MVP
 function vmRateMatch() {
@@ -10007,7 +10007,10 @@ function vmRateMatch() {
       const main = [['st', P.st], ['rc', P.rc], ['sp', P.sp], ['bt', P.bt]].sort((x, y) => y[1] - x[1])[0];   // 這場主要在做什麼
       const role = !main[1] ? 50 : main[0] === 'st' ? cl((P.as / P.st) * 200) : main[0] === 'rc' ? cl((1 - P.eb / P.rc) * 100) : main[0] === 'sp' ? cl((P.k / P.sp) * 160) : cl((P.b / P.bt) * 200);
       const rt = Math.round(0.35 * contrib + 0.25 * eff + 0.2 * part + 0.2 * role);
-      out[id] = { rt, gr: rt >= 90 ? 'S' : rt >= 75 ? 'A' : rt >= 60 ? 'B' : rt >= 40 ? 'C' : 'D' };
+      // 戰力六角圖：攻擊、攔網、發球、接球、舉球、穩定（各 0～100）
+      const hx = [P.sp ? cl((P.k / P.sp) * 110 + Math.min(P.k, 12) * 3.5) : 0, cl(P.b * 22 + P.bt * 4), P.sv ? cl((1 - P.es / P.sv) * 65 + P.a * 15) : 0,
+        P.rc ? cl((1 - P.eb / P.rc) * 65 + Math.min(P.rc, 20) * 1.75 + P.fs * 8) : 0, P.st ? cl((P.as / P.st) * 130 + Math.min(P.st, 25) * 1.4) : 0, Math.round(eff)].map((v) => Math.round(v));
+      out[id] = { rt, gr: rt >= 90 ? 'S' : rt >= 75 ? 'A' : rt >= 60 ? 'B' : rt >= 40 ? 'C' : 'D', c: Math.round(contrib), f: Math.round(eff), p: Math.round(part), r: Math.round(role), m: main[1] ? main[0] : '', hx };
     }
   }
   let mvp = null; for (const [id, r] of Object.entries(out)) if (!mvp || r.rt > out[mvp].rt) mvp = id;
@@ -10028,13 +10031,16 @@ async function vmGotResult(d) {
   const my = (d.rate && d.rate[me]) || null, mvp = d.mvp === me;
   const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
   MREC.local = { p: 0, sets: {} };
+  const MR = my ? await import('./match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
+  if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); } catch (x) { console.warn('結算面板', x); } }
   try {
-    const { recordMatch, ACHIEVEMENTS } = await import('./progress.js');
+    const { recordMatch, ACHIEVEMENTS, cachedProgress, EXP_PER_LEVEL } = await import('./progress.js');
     const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
+    if (MR) { if (!r) MR.setMatchReward(null); else if (r.dup) MR.setMatchRewardError('這場已經記過了'); else MR.setMatchReward(r, cachedProgress(), EXP_PER_LEVEL); }
     if (!r || r.dup) return;
-    toast(`${won ? '🏆 贏了！' : '比賽結束'}${my ? `　評分 ${my.gr}・${my.rt}` : ''}${mvp ? '　⭐MVP' : ''}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 5200);
+    if (!MR) toast(`${won ? '🏆 贏了！' : '比賽結束'}${my ? `　評分 ${my.gr}・${my.rt}` : ''}${mvp ? '　⭐MVP' : ''}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 5200);
     (r.new || []).forEach((k, i) => setTimeout(() => toast(`🎖 解鎖成就「${ACHIEVEMENTS[k]?.name || k}」・可以套用稱號「${ACHIEVEMENTS[k]?.title || ''}」`, 3600), 4400 + i * 3800));
-  } catch (e) { toast((e && e.message) || '戰績記錄失敗', 2600); }
+  } catch (e) { if (MR) MR.setMatchRewardError((e && e.message) || '戰績記錄失敗'); toast((e && e.message) || '戰績記錄失敗', 2600); }
 }
 // 我是不是這一波的舉球員（比賽：這一波指定的舉球員，或六人制專職舉球；練習：都算）
 function vbIsSetter() {
