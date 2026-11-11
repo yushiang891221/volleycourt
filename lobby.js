@@ -53,6 +53,7 @@ function renderPlayers(){
   const label=p.name+(p.id===VBLobby.id?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title=label;
   row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
   const state=row.querySelector('.state');state.textContent=p.status;
+  if(p.id!==VBLobby.id){const add=document.createElement('button');add.type='button';add.className='add-friend';add.textContent='＋好友';add.title=`加「${p.name}」好友`;add.onclick=async e=>{e.stopPropagation();add.disabled=true;try{const {addFriend}=await import('./friends.js');notify(await addFriend(p.name));}catch(x){notify((x&&x.message)||'加好友失敗');}add.disabled=false;};row.append(add);}
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
  }
  $('player-count').textContent=`${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
@@ -95,6 +96,9 @@ function connectLobby(){if(client)return;client=VBLobby.connect({hello:()=>({nam
 }});}
 if(globalThis.VBIntro?.entered)connectLobby();else addEventListener('vb-lobby-enter',connectLobby,{once:true});
 function send(m){if(!client||!client.send(m))notify('大廳尚未連線，請稍後再試');}
+// WEB-011 好友：底下按鈕開好友面板（在大廳的好友會亮綠點）、在線玩家清單上可以直接加好友
+$('friends-open').addEventListener('click', () => import('./friends.js').then(({ openFriendsPanel }) => openFriendsPanel(() => players.map(p => p.name))).catch(() => notify('好友載入失敗，請稍後重試')));
+addEventListener('vb-lobby-enter', () => import('./friends.js').then(({ startBadge }) => startBadge()).catch(() => {}), { once: true });
 $('ach-open').addEventListener('click', () => import('./character-panel.js').then(({ openAchievementPanel }) => openAchievementPanel()).catch(() => notify('成就載入失敗，請稍後重試')));
 $('team-open').addEventListener('click', () => import('./character-panel.js').then(({ openTeamPanel }) => openTeamPanel()).catch(() => notify('球隊載入失敗，請稍後重試')));
 $('equip-open').addEventListener('click', () => import('./character-panel.js').then(({ openEquipPanel }) => openEquipPanel()).catch(() => notify('裝備載入失敗，請稍後重試')));

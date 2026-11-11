@@ -140,6 +140,16 @@ export function createAccountService(client) {
       }
       return data;
     },
+    // WEB-011 好友、私訊（server/supabase/005_friends.sql）：通用呼叫，錯誤轉成中文
+    async rpc(name, args = {}) {
+      await userId();
+      const { data, error } = await client.rpc(name, args);
+      if (error) {
+        const m = error.message || '';
+        throw new Error(error.code === 'PGRST202' ? '好友功能還沒開通' : m.includes('no user') ? '找不到這個暱稱' : m.includes('self') ? '不能加自己好友' : m.includes('too many') ? '好友數量到上限了' : m.includes('not friends') ? '要先成為好友才能私訊' : m.includes('too fast') ? '訊息傳太快了，休息一下' : m.includes('bad text') ? '訊息要 1～300 字' : '好友功能暫時連不上');
+      }
+      return data;
+    },
     // WEB-008 刪除帳號：只能刪自己（server/supabase/003_delete_account.sql），刪完把本機登入狀態也清掉
     async deleteAccount() {
       await userId();
