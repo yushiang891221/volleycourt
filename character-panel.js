@@ -45,6 +45,30 @@ function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾�
   } finally { renderer.dispose(); renderer.forceContextLoss(); }
 }
 
+// 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
+function livePreview(canvas, bg = '#101a2a') {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(bg);
+  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
+  const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
+  const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
+  let av = null, ang = 0, drag = null, raf = 0;
+  const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+  const draw = () => { raf = 0; size(); if (av) av.g.rotation.y = ang; renderer.render(scene, camera); };
+  const ask = () => { if (!raf) raf = requestAnimationFrame(draw); };
+  canvas.style.cursor = 'grab'; canvas.style.touchAction = 'none';
+  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, a: ang }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
+  canvas.addEventListener('pointermove', (e) => { if (!drag) return; ang = drag.a + (e.clientX - drag.x) * 0.012; ask(); });
+  const up = () => { drag = null; canvas.style.cursor = 'grab'; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  return {
+    rebuild(code) { if (av) scene.remove(av.g); av = makeToyAvatar(decodeLook(code), readTeamJersey() || 'orange'); scene.add(av.g); ask(); },
+    turn(d) { ang = d === 0 ? 0 : ang + d; ask(); },
+    redraw: ask,
+    dispose() { cancelAnimationFrame(raf); renderer.dispose(); renderer.forceContextLoss(); },
+  };
+}
 // 球衣與裝備（三欄）：左＝角色預覽（可轉）、目前穿戴、玩家資料（可改暱稱）、調整外觀；中＝分類＋物品格；右＝稱號、T 輪盤動作
 //   護膝存在外觀裡（會同步到帳號）；帽子、眼鏡、項鍊、護腕存在這台電腦；球隊球衣要加入球隊才有
 const EQ_TABS = [['jersey', '球衣', '👕'], ['knee', '護膝', '🦵'], ['hat', '帽子', '🧢'], ['glasses', '眼鏡', '🕶️'], ['neck', '項鍊', '📿'], ['wrist', '護腕', '🎽']];
@@ -61,7 +85,7 @@ export async function openEquipPanel() {
       <div class="eqx-cols">
         <section class="eqx-left">
           <div class="eqx-stage"><div class="eqx-tools"><button type="button" data-rot="-1" title="往左轉">⟲</button><button type="button" data-rot="1" title="往右轉">⟳</button><button type="button" data-rot="0" title="轉回正面">◎</button></div>
-            <img class="eqx-img" alt="目前穿戴的角色" width="300" height="420"><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
+            <canvas class="eqx-img" aria-label="目前穿戴的角色（按住拖曳可以轉）"></canvas><span class="eqx-drag">🖱️ 按住拖曳轉 360°</span><div class="eqx-worn"><h4>目前穿戴 ✓</h4><ul></ul></div></div>
           <div class="eqx-card"><div class="eqx-name"><input data-nick maxlength="12" aria-label="暱稱"><button type="button" data-rename>改名</button></div><p class="eqx-err" role="status"></p>
             <dl><dt>👤 稱號</dt><dd data-title-now>—</dd><dt>🛡️ 球隊</dt><dd data-team>—</dd><dt>🏐 位置</dt><dd data-role>—</dd><dt>⭐ 等級</dt><dd><span data-lv>Lv1</span><span class="eqx-bar"><i></i></span><small data-exp>0 / 500</small></dd></dl></div>
           <button type="button" class="orange eqx-look" data-edit-look>👕 調整外觀（捏臉）</button>
@@ -77,7 +101,8 @@ export async function openEquipPanel() {
   const $q = (sel) => d.querySelector(sel), P = await import('./progress.js');
   let tab = 'jersey', ang = 0, prog = P.cachedProgress() || {}, team = undefined, ttIdx = 0;
   const setErr = (t) => { $q('.eqx-err').textContent = t || ''; };
-  const drawStage = () => { try { preview($q('.eqx-img'), myLookCode(), { ang, w: 360, h: 480, bg: '#101a2a', tight: true }); } catch { setErr('角色預覽載入失敗'); } };
+  if (!d._live) { d._live = livePreview($q('.eqx-img')); d.addEventListener('close', () => { d._live?.dispose(); d._live = null; }); }   // 關面板就釋放 WebGL，下次開再建
+  const drawStage = () => { try { d._live.rebuild(myLookCode()); } catch { setErr('角色預覽載入失敗'); } };
   const itemsOf = (k) => {
     if (k === 'jersey') { const tj = readTeamJersey(); return [{ i: 0, name: '比賽隊服（橘黑）', icon: '👕', tint: '#F07C24', on: !tj }, { i: 1, name: team ? `球隊球衣「${team.jersey?.name || ''}」` : '球隊球衣', icon: '🎽', tint: team?.jersey?.body || '#2B6CB0', on: !!tj, lock: !team ? '加入球隊後解鎖' : '' }]; }
     const L = decodeLook(readLook()), eq = readEquip(), list = k === 'knee' ? OPTIONS.knee : EQUIP[k].items, cur = k === 'knee' ? L.knee : eq[k] | 0;
@@ -111,7 +136,7 @@ export async function openEquipPanel() {
   const drawAll = () => { drawStage(); drawWorn(); drawMid(); drawRight(); drawInfo(); };
   d.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
-    if (b.dataset.rot !== undefined) { ang = b.dataset.rot === '0' ? 0 : ang + (+b.dataset.rot) * (Math.PI / 4); drawStage(); return; }
+    if (b.dataset.rot !== undefined) { d._live.turn(b.dataset.rot === '0' ? 0 : (+b.dataset.rot) * (Math.PI / 4)); return; }
     if (b.dataset.tab) { tab = b.dataset.tab; drawMid(); return; }
     if (b.dataset.k) {
       const k = b.dataset.k, i = +b.dataset.i; setErr('');

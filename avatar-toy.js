@@ -495,18 +495,34 @@ function accMat(color, o = {}) {
 function addAccessories(rig, eq, meta, meshes = []) {
   const hc = webPoint(meta.headC).sub(webPoint(meta.joints.head[0])), R = meta.headR;   // 頭中心（head 骨頭座標）
   const mesh = (geo, mat, parent, pos, rot) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (pos) m.position.copy(pos); if (rot) m.rotation.set(...rot); parent.add(m); return m; };
-  if (eq.hat) {   // 運動帽：帽身往下包過頭的一半（內面也畫，從下面、後面看不會透空）＋從帽身前緣伸出去的帽簷
-    const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', inner = eq.hat === 1 ? '#15171B' : '#D9D9D4', g = new THREE.Group(); g.position.copy(hc).add(new THREE.Vector3(0, R * 0.18, -R * 0.03)); rig.head.add(g);
-    const shell = new THREE.SphereGeometry(R * 1.3, 40, 18, 0, Math.PI * 2, 0, Math.PI * 0.6);
-    const dome = mesh(shell, accMat(col, { r: 0.6 }), g); dome.scale.set(1.04, 0.92, 1.04);
+  if (eq.hat) {   // 運動帽：頭髮壓進帽子裡（超出帽子的髮絲往內收），帽緣在眉毛上面不遮眼睛；內面也畫，帽簷接在帽身前緣
+    const col = eq.hat === 1 ? '#22252B' : '#F2F2EE', inner = eq.hat === 1 ? '#15171B' : '#D9D9D4';
+    const cc = new THREE.Vector3(0, R * 0.3, -R * 0.04), cap = { r: R * 1.1, sx: 1.05, sy: 0.88, sz: 1.06 }, phi = Math.PI * 0.56;   // 帽緣在眉毛上面
+    const g = new THREE.Group(); g.position.copy(hc).add(cc); rig.head.add(g);
+    const shell = new THREE.SphereGeometry(cap.r, 40, 18, 0, Math.PI * 2, 0, phi);
+    const dome = mesh(shell, accMat(col, { r: 0.6 }), g); dome.scale.set(cap.sx, cap.sy, cap.sz);
     const lining = mesh(shell, new THREE.MeshStandardMaterial({ color: inner, roughness: 0.9, side: THREE.BackSide }), g); lining.scale.copy(dome.scale);   // 帽子內面
-    mesh(new THREE.SphereGeometry(R * 0.11, 12, 8), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, R * 1.18, 0));   // 頂端扣子
-    // 帽簷：半月形，內緣貼著帽身前面那一圈（帽身在這個高度的半徑），往前伸 0.62R、稍微往下壓
-    const rimY = -R * 0.12, rIn = R * 1.3 * 1.04 * Math.sqrt(Math.max(0, 1 - (rimY / (R * 1.3 * 0.92)) ** 2)) * 0.98, rOut = rIn + R * 0.62;
-    const pts = [], seg = 28, a0 = -1.15, a1 = 1.15;
-    for (let k = 0; k <= seg; k++) { const a = a0 + ((a1 - a0) * k) / seg, w = Math.cos(((k / seg) - 0.5) * Math.PI); pts.push([Math.sin(a) * rIn, Math.cos(a) * rIn, Math.sin(a) * (rIn + (rOut - rIn) * w), Math.cos(a) * (rIn + (rOut - rIn) * w)]); }
-    const pos = [], idx = [], th = R * 0.045;
-    pts.forEach(([xi, zi, xo, zo]) => { pos.push(xi, rimY, zi, xo, rimY - R * 0.1 * 0.6, zo, xi, rimY - th, zi, xo, rimY - R * 0.1 * 0.6 - th, zo); });
+    mesh(new THREE.SphereGeometry(R * 0.1, 12, 8), accMat(col, { r: 0.6 }), g, new THREE.Vector3(0, cap.r * cap.sy, 0));   // 頂端扣子
+    // 頭髮壓進帽子：帽緣以上的頭髮頂點，超出帽子（縮小 6%）的就拉回帽子裡；每個角色自己一份頭髮形狀（不影響別人）
+    const rimY = Math.cos(phi) * cap.r * cap.sy, head0 = webPoint(meta.joints.head[0]), cw = head0.clone().add(hc).add(cc);
+    const ax = cap.r * cap.sx * 0.94, ay = cap.r * cap.sy * 0.94, az = cap.r * cap.sz * 0.94;
+    for (const m of meshes) {
+      if (!/^(hair|headband)/.test(m.userData.avatarPart || '')) continue;
+      m.geometry = m.geometry.clone(); const a = m.geometry.attributes.position;
+      for (let k = 0; k < a.count; k++) {
+        const x = a.getX(k) - cw.x, y = a.getY(k) - cw.y, z = a.getZ(k) - cw.z; if (y < rimY + R * 0.02) continue;
+        const d = Math.sqrt((x / ax) ** 2 + (y / ay) ** 2 + (z / az) ** 2); if (d <= 1) continue;
+        a.setXYZ(k, cw.x + x / d, cw.y + y / d, cw.z + z / d);
+      }
+      a.needsUpdate = true; m.geometry.computeBoundingSphere();
+    }
+    // 帽簷：半月形，內緣貼著帽身前緣（帽緣那一圈），往前伸 0.6R、稍微往下壓
+    const rIn = cap.r * cap.sz * Math.sin(phi) * 0.99, rOut = rIn + R * 0.6, seg = 28, a0 = -1.15, a1 = 1.15, th = R * 0.045, drop = R * 0.025, pos = [], idx = [];
+    for (let k = 0; k <= seg; k++) {
+      const an = a0 + ((a1 - a0) * k) / seg, w = Math.cos((k / seg - 0.5) * Math.PI), ro = rIn + (rOut - rIn) * w;
+      const xi = Math.sin(an) * rIn * (cap.sx / cap.sz), zi = Math.cos(an) * rIn, xo = Math.sin(an) * ro * (cap.sx / cap.sz), zo = Math.cos(an) * ro;
+      pos.push(xi, rimY, zi, xo, rimY - drop * w, zo, xi, rimY - th, zi, xo, rimY - drop * w - th, zo);
+    }
     for (let k = 0; k < seg; k++) { const a = k * 4, b = a + 4; idx.push(a, b, a + 1, a + 1, b, b + 1, a + 2, a + 3, b + 2, a + 3, b + 3, b + 2, a + 1, b + 1, a + 3, a + 3, b + 1, b + 3); }
     const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
     mesh(bg, new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, side: THREE.DoubleSide }), g);
