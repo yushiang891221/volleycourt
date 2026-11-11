@@ -29,22 +29,34 @@ export const ACHIEVEMENTS = {
   sky1: { name: '天空打點 I', desc: '扣進對方三米線內得分累計 30 分', title: '天空打點' },
   sky2: { name: '天空打點 II', desc: '扣進對方三米線內得分累計 150 分', title: '巨人之力' },
   sky3: { name: '天空打點 III', desc: '扣進對方三米線內得分累計 500 分', title: '擎天巨人' },
+  save1: { name: '飛身救球 I', desc: '救回場外 2 公尺以外的球（接噴、touch out）累計 10 次', title: '救球王' },
+  save2: { name: '飛身救球 II', desc: '救回場外球累計 50 次', title: '不放棄的人' },
+  save3: { name: '飛身救球 III', desc: '救回場外球累計 200 次', title: '地板也是我的' },
+  quick1: { name: '影子排球員 I', desc: '快攻（舉球到扣球不到 0.7 秒）直接落地得分 1 次', title: '影子排球員' },
+  quick2: { name: '影子排球員 II', desc: '快攻直接落地得分累計 50 次', title: '光速快攻' },
+  quick3: { name: '影子排球員 III', desc: '快攻直接落地得分累計 200 次', title: '影子之王' },
+  selfspike: { name: '我自己來好了', desc: '第二下觸球（本來該舉球）直接自己扣球得分', title: '我自己來好了' },
+  magic: { name: '魔術師', desc: '二次進攻：第二下觸球就直接吊過網得分', title: '魔術師' },
   iron1: { name: '銅牆鐵壁 I', desc: '攔網得分累計 100 分', title: '銅牆' },
   iron2: { name: '銅牆鐵壁 II', desc: '攔網得分累計 500 分', title: '鐵壁' },
   iron3: { name: '銅牆鐵壁 III', desc: '攔網得分累計 1000 分', title: '銅牆鐵壁' },
 };
 
 // 成就中心：成就整理成「系列」，每個系列有一到多階（照順序）；每階給成就點數
-export const ACH_POINTS = { cannon1: 10, cannon2: 30, cannon3: 60, setter: 30, wall: 30, server: 25, libero1: 15, libero2: 40, libero3: 80, pro1: 20, pro10: 60, streak5: 25, cb1: 20, cb5: 30, cb10: 45, cb15: 60, cb30: 100, iron1: 15, iron2: 40, iron3: 80, line1: 15, line2: 40, line3: 80, sky1: 15, sky2: 40, sky3: 80 };
+export const ACH_POINTS = { cannon1: 10, cannon2: 30, cannon3: 60, setter: 30, wall: 30, server: 25, libero1: 15, libero2: 40, libero3: 80, pro1: 20, pro10: 60, streak5: 25, cb1: 20, cb5: 30, cb10: 45, cb15: 60, cb30: 100, iron1: 15, iron2: 40, iron3: 80, line1: 15, line2: 40, line3: 80, save1: 15, save2: 40, save3: 80, magic: 30, selfspike: 30, quick1: 20, quick2: 40, quick3: 80, sky1: 15, sky2: 40, sky3: 80 };
 export const ACH_CATS = [['all', '全部項目'], ['atk', '扣球進攻系列'], ['def', '防守與舉球系列'], ['pro', '企聯特訓系列'], ['mind', '心態系列'], ['special', '特殊成就']];
 export const ACH_SERIES = [
   { id: 'cannon', cat: 'atk', icon: '🏐', name: '重砲手精神（扣球累計）', desc: '扣球得分從 100 分到 1000 分的重砲考驗', tiers: ['cannon1', 'cannon2', 'cannon3'] },
   { id: 'line', cat: 'atk', icon: '📏', name: '直線魔人（直線得分）', desc: '貼著邊線扣直線拿分', tiers: ['line1', 'line2', 'line3'] },
   { id: 'sky', cat: 'atk', icon: '☄️', name: '天空打點（三米內得分）', desc: '從高處往下壓，扣進對方三米線內', tiers: ['sky1', 'sky2', 'sky3'] },
+  { id: 'quick', cat: 'atk', icon: '⚡', name: '影子排球員（快攻得分）', desc: '攔中打快攻，球直接落地得分', tiers: ['quick1', 'quick2', 'quick3'] },
   { id: 'server', cat: 'atk', icon: '🚀', name: '發球機器（發球得分）', desc: '用發球直接拿下 50 分', tiers: ['server'] },
   { id: 'libero', cat: 'def', icon: '🛡️', name: '守護神領域（完美接球）', desc: '一球一球接到位，打造後場鐵壁', tiers: ['libero1', 'libero2', 'libero3'] },
   { id: 'setter', cat: 'def', icon: '🎯', name: '場上指揮官（精準舉球）', desc: '一局舉 10 球以上都沒有連擊或持球', tiers: ['setter'] },
   { id: 'iron', cat: 'def', icon: '🛡', name: '銅牆鐵壁（攔網累計）', desc: '攔網得分從 100 分到 1000 分', tiers: ['iron1', 'iron2', 'iron3'] },
+  { id: 'save', cat: 'def', icon: '🤸', name: '飛身救球（場外救回）', desc: '把接噴、touch out 飛到場外很遠的球救回來', tiers: ['save1', 'save2', 'save3'] },
+  { id: 'magic', cat: 'special', icon: '🎩', name: '魔術師（二次進攻）', desc: '第二下觸球就直接吊過網得分', tiers: ['magic'] },
+  { id: 'selfspike', cat: 'special', icon: '😤', name: '我自己來好了（舉球自己扣）', desc: '第二下觸球直接自己扣球得分', tiers: ['selfspike'] },
   { id: 'wall', cat: 'special', icon: '🧱', name: '禁止通行（連續攔網）', desc: '同一球之內攔網碰到球 10 次', tiers: ['wall'] },
   { id: 'pro', cat: 'pro', icon: '👑', name: '企聯特訓與魔性挑戰', desc: '擊敗最高難度的企聯 AI', tiers: ['pro1', 'pro10'] },
   { id: 'streak', cat: 'pro', icon: '🔥', name: '氣勢如虹（連勝）', desc: '開房比賽連續贏 5 場', tiers: ['streak5'] },
@@ -54,7 +66,7 @@ export const achPoints = (got = []) => got.reduce((n, k) => n + (ACH_POINTS[k] |
 // 成就目前的進度（顯示用）：[現在, 目標]；一場內完成的成就沒有累計進度
 export function achProgress(key, p = {}) {
   const w5 = (p.stats && p.stats.w && p.stats.w['5']) | 0;
-  return { cannon1: [p.kills | 0, 100], cannon2: [p.kills | 0, 500], cannon3: [p.kills | 0, 1000], server: [p.aces | 0, 50], libero1: [p.perfects | 0, 100], libero2: [p.perfects | 0, 500], libero3: [p.perfects | 0, 1000], pro1: [w5, 1], pro10: [w5, 10], streak5: [p.streak | 0, 5], cb1: [p.comebacks | 0, 1], cb5: [p.comebacks | 0, 5], cb10: [p.comebacks | 0, 10], cb15: [p.comebacks | 0, 15], cb30: [p.comebacks | 0, 30], line1: [p.kills_line | 0, 30], line2: [p.kills_line | 0, 150], line3: [p.kills_line | 0, 500], sky1: [p.kills_steep | 0, 30], sky2: [p.kills_steep | 0, 150], sky3: [p.kills_steep | 0, 500], iron1: [p.blocks | 0, 100], iron2: [p.blocks | 0, 500], iron3: [p.blocks | 0, 1000] }[key] || null;
+  return { cannon1: [p.kills | 0, 100], cannon2: [p.kills | 0, 500], cannon3: [p.kills | 0, 1000], server: [p.aces | 0, 50], libero1: [p.perfects | 0, 100], libero2: [p.perfects | 0, 500], libero3: [p.perfects | 0, 1000], pro1: [w5, 1], pro10: [w5, 10], streak5: [p.streak | 0, 5], cb1: [p.comebacks | 0, 1], cb5: [p.comebacks | 0, 5], cb10: [p.comebacks | 0, 10], cb15: [p.comebacks | 0, 15], cb30: [p.comebacks | 0, 30], line1: [p.kills_line | 0, 30], line2: [p.kills_line | 0, 150], line3: [p.kills_line | 0, 500], sky1: [p.kills_steep | 0, 30], sky2: [p.kills_steep | 0, 150], sky3: [p.kills_steep | 0, 500], quick1: [p.quicks | 0, 1], quick2: [p.quicks | 0, 50], quick3: [p.quicks | 0, 200], save1: [p.saves_far | 0, 10], save2: [p.saves_far | 0, 50], save3: [p.saves_far | 0, 200], iron1: [p.blocks | 0, 100], iron2: [p.blocks | 0, 500], iron3: [p.blocks | 0, 1000] }[key] || null;
 }
 // 表情／動作（T 輪盤）：hi5、taunt 一開始就有；其他照等級或成就解鎖
 export const EMOTES = {
