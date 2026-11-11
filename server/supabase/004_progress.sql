@@ -92,16 +92,16 @@ begin
   r.streak := case when p_won then r.streak + 1 else 0 end;
   -- 成就
   ach := r.achievements;
-  if r.kills >= 100 and not 'cannon1' = any(ach) then got := got || 'cannon1'; end if;
-  if r.kills >= 500 and not 'cannon2' = any(ach) then got := got || 'cannon2'; end if;
-  if r.kills >= 1000 and not 'cannon3' = any(ach) then got := got || 'cannon3'; end if;
-  if r.aces >= 50 and not 'server' = any(ach) then got := got || 'server'; end if;
-  if r.perfects >= 200 and not 'libero' = any(ach) then got := got || 'libero'; end if;
-  if coalesce((p_perf->>'clean')::boolean, false) and not 'setter' = any(ach) then got := got || 'setter'; end if;
-  if coalesce((p_perf->>'wall')::boolean, false) and not 'wall' = any(ach) then got := got || 'wall'; end if;
-  if p_won and not p_human and p_level = 5 and not 'pro1' = any(ach) then got := got || 'pro1'; end if;
-  if coalesce((r.stats #>> '{w,5}')::int, 0) >= 10 and not 'pro10' = any(ach) then got := got || 'pro10'; end if;
-  if r.streak >= 5 and not 'streak5' = any(ach) then got := got || 'streak5'; end if;
+  if r.kills >= 100 and not 'cannon1' = any(ach) then got := array_append(got, 'cannon1'); end if;
+  if r.kills >= 500 and not 'cannon2' = any(ach) then got := array_append(got, 'cannon2'); end if;
+  if r.kills >= 1000 and not 'cannon3' = any(ach) then got := array_append(got, 'cannon3'); end if;
+  if r.aces >= 50 and not 'server' = any(ach) then got := array_append(got, 'server'); end if;
+  if r.perfects >= 200 and not 'libero' = any(ach) then got := array_append(got, 'libero'); end if;
+  if coalesce((p_perf->>'clean')::boolean, false) and not 'setter' = any(ach) then got := array_append(got, 'setter'); end if;
+  if coalesce((p_perf->>'wall')::boolean, false) and not 'wall' = any(ach) then got := array_append(got, 'wall'); end if;
+  if p_won and not p_human and p_level = 5 and not 'pro1' = any(ach) then got := array_append(got, 'pro1'); end if;
+  if coalesce((r.stats #>> '{w,5}')::int, 0) >= 10 and not 'pro10' = any(ach) then got := array_append(got, 'pro10'); end if;
+  if r.streak >= 5 and not 'streak5' = any(ach) then got := array_append(got, 'streak5'); end if;
   r.achievements := ach || got;
   update public.player_progress set exp = r.exp, coins = r.coins, stats = r.stats, play_seconds = r.play_seconds,
     kills = r.kills, blocks = r.blocks, aces = r.aces, perfects = r.perfects, streak = r.streak,

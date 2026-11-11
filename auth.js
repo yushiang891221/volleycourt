@@ -125,7 +125,7 @@ export function createAccountService(client) {
     async recordMatch(m) {
       await userId();
       const { data, error } = await client.rpc('record_match', { p_match: m.id, p_level: m.level, p_human: !!m.human, p_won: !!m.won, p_sets: m.sets, p_points: m.points, p_seconds: m.seconds, p_perf: m.perf || {} });
-      if (error) throw new Error(error.code === 'PGRST202' ? '戰績功能還沒開通' : error.message.includes('daily') ? '今天記錄的場數到上限了' : '戰績記錄失敗');
+      if (error) throw new Error(error.code === 'PGRST202' ? '戰績功能還沒開通' : error.message.includes('daily') ? '今天記錄的場數到上限了' : `戰績記錄失敗（${String(error.message || error.code || '').slice(0, 60)}）`);   // 附上原因，方便查
       return data;
     },
     async setTitle(key) { await userId(); const { error } = await client.rpc('set_title', { p_title: key }); if (error) throw new Error(error.message.includes('locked') ? '這個稱號還沒解鎖' : '套用稱號失敗'); },
