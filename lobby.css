@@ -220,3 +220,9 @@ main { grid-template-rows: minmax(0, 1.25fr) minmax(170px, 1fr); }
 .me-side button { margin-top: 4px; padding: 6px 10px; }
 .me-lv { grid-template-columns: auto 1fr auto; } .me-exp { grid-column: auto; }
 .me-card { flex: 1.9 1 0; } .me-coins { font-size: 11px; }
+/* 角色卡：每一行都不能被壓扁（名字之前在空間不夠時被壓成 0 高度）；調整外觀按鈕疊在角色圖下方，右欄多出一行空間 */
+.me-side > * { flex-shrink: 0; }
+.me-body { position: relative; }
+.me-side [data-edit] { position: absolute; left: 14px; bottom: 14px; width: calc(46% - 12px); margin: 0; opacity: .95; }
+.me-side .me-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+.me-side [data-edit] { display: none; }

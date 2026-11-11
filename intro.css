@@ -26,6 +26,7 @@ body.intro-active:not(.intro-skip) #lobby-shell { visibility: hidden; }
 #intro-subtitle { margin: 0; font-size: 17px; color: #aebdcd; }
 #ball-start { padding: 0; border: 0; background: none; box-shadow: none; border-radius: 50%; }
 #ball { display: block; width: min(32vh, 340px); height: min(32vh, 340px); filter: drop-shadow(0 22px 26px #0007); }
+.intro-account { margin: 10px 0 0; font-size: 13px; color: #9fb2c8; } .intro-account b { color: #e8eef8; font-weight: 600; } .intro-account button { margin-left: 8px; padding: 3px 10px; font-size: 12px; background: transparent; color: #F2A65A; border: 1px solid #F2A65A88; border-radius: 6px; cursor: pointer; }
 #start { min-width: 280px; padding: 15px 48px; font-size: 22px; letter-spacing: .12em; border-radius: 6px; }
 #intro .intro-skip { border: 0; background: transparent; box-shadow: none; color: #aebdcd; font-weight: 400; text-decoration: underline; text-underline-offset: 4px; }
 #intro .intro-skip:hover { color: white; }

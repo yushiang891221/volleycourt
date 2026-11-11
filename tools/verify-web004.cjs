@@ -74,7 +74,7 @@ function fake(profile = { id: 'A', nickname: null, appearance: null }) {
   await assert.rejects(service.read(), error => /重試/.test(error.message) && !error.message.includes('PRIVATE'));
   state.fail = false;
   await service.signIn('https://example.com/index.html?demo=1&code=secret&error_description=private#lobby');
-  assert.deepEqual(state.oauth, { provider: 'google', options: { redirectTo: 'https://example.com/index.html?demo=1' } });
+  assert.deepEqual(state.oauth, { provider: 'google', options: { redirectTo: 'https://example.com/index.html?demo=1', queryParams: { prompt: 'select_account' } } });   // 每次讓玩家選 Google 帳號（可以切換帳號）
   await service.signOut();
   await assert.rejects(service.read(), /尚未登入/);
   console.log('PASS 假 Supabase 讀寫、遷移不覆蓋、欄位白名單、錯誤訊息、OAuth 與登出');

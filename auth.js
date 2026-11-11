@@ -70,6 +70,9 @@ export function createAccountService(client) {
   }
   return {
     read, save,
+    async whoami() {   // 目前登入的帳號（給玩家自己看：信箱、Google 名字）
+      try { const { data } = await client.auth.getSession(); const u = data?.session?.user; return u ? { email: u.email || '', name: u.user_metadata?.full_name || u.user_metadata?.name || '' } : null; } catch { return null; }
+    },
     async signedIn() {   // 只判斷有沒有登入，不丟錯
       try { const { data } = await client.auth.getSession(); return data?.session?.user?.id || null; } catch { return null; }
     },
@@ -97,7 +100,7 @@ export function createAccountService(client) {
       const target = new URL(redirectTo);
       for (const key of ['code', 'error', 'error_code', 'error_description']) target.searchParams.delete(key);
       target.hash = '';
-      const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: target.href } });
+      const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: target.href, queryParams: { prompt: 'select_account' } } });   // 每次都讓玩家選 Google 帳號（可以換帳號）
       if (error) throw new Error('Google 登入未能開始，請確認網路後重試。');
     },
     // WEB-007 單一登入：登記「目前是這台裝置在用」、查目前登記的是誰（資料表還沒建會丟錯，呼叫端當作功能未開）

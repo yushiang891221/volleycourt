@@ -124,6 +124,17 @@ export async function signOut() {
   await service.signOut(); store.del(OWNER_KEY); location.href = location.pathname;
 }
 
+// 目前登入的帳號、切換帳號（登出後馬上開 Google 選擇帳戶）
+export async function accountInfo() {
+  if (!accountEnabled()) return null;
+  try { service = service || await getAccountService(); return service ? await service.whoami() : null; } catch { return null; }
+}
+export async function switchAccount() {
+  service = service || await getAccountService(); if (!service) return;
+  try { await service.signOut(); } catch { /* 已經登出也沒關係 */ }
+  for (const k of [OWNER_KEY, 'vb.account.sid', 'vb.progress']) store.del(k);
+  await service.signIn(location.href.replace(/#.*$/, ''));
+}
 // WEB-008 刪除帳號：資料庫刪掉後，本機的帳號標記、登入裝置代碼、暱稱和外觀也清掉，回首頁
 export async function deleteAccount() {
   if (!service) service = await getAccountService();

@@ -50,9 +50,14 @@ export function openEquipPanel() {
   let d = document.getElementById('equip-panel');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'equip-panel'; d.setAttribute('aria-labelledby', 'equip-title');
-    d.innerHTML = '<form method="dialog"><h2 id="equip-title">球衣與裝備</h2><nav class="eq-tabs" role="tablist"><button type="button" role="tab" data-tab="acc" aria-selected="true">配件</button><button type="button" role="tab" data-tab="title" aria-selected="false">稱號</button><button type="button" role="tab" data-tab="emo" aria-selected="false">動作與表情</button></nav><div class="eq-body"><img alt="穿上裝備的角色" width="240" height="300"><div class="eq-slots"></div></div><p class="form-error" role="status"></p><div class="buttons"><button class="orange">完成</button></div></form>';
+    d.innerHTML = '<form method="dialog"><h2 id="equip-title">球衣與裝備</h2><nav class="eq-tabs" role="tablist"><button type="button" role="tab" data-tab="acc" aria-selected="true">配件</button><button type="button" role="tab" data-tab="title" aria-selected="false">稱號</button><button type="button" role="tab" data-tab="emo" aria-selected="false">動作與表情</button></nav><div class="eq-body"><img alt="穿上裝備的角色" width="240" height="300"><div class="eq-slots"></div></div><p class="form-error" role="status"></p><div class="buttons"><button type="button" data-edit-look>調整外觀（捏臉）</button><button class="orange">完成</button></div></form>';
     document.body.append(d);
   }
+  d.querySelector('[data-edit-look]').onclick = async () => {   // 調整外觀從角色卡移到這裡：關掉面板 → 捏臉 → 回來
+    d.close();
+    try { await editAppearance('edit'); } catch (e) { alert((e && e.message) || '外觀儲存失敗，請重試。'); }
+    openEquipPanel();
+  };
   const slots = d.querySelector('.eq-slots'), img = d.querySelector('img'), err = d.querySelector('.form-error');
   const rows = [['knee', '護膝', OPTIONS.knee]].concat(Object.entries(EQUIP).map(([k, v]) => [k, v.name, v.items]));
   let tab = 'acc';
@@ -153,9 +158,4 @@ export function mountCharacterCard(card) {
   preloadAvatars().then(draw, () => {});   // 模型載好再畫一次（一開始可能還是備用角色）
   addEventListener('vb-settings-change', setName);
   addEventListener('vb-look-change', draw);   // 從帳號同步回來的外觀
-  card.querySelector('[data-edit]').onclick = async () => {
-    err.textContent = '';
-    try { await editAppearance('edit'); draw(); }
-    catch (e) { draw(); err.textContent = (e && e.message) || '外觀儲存失敗，請重試。'; }
-  };
 }
