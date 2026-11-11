@@ -98,26 +98,53 @@ export function openEquipPanel() {
   draw(); d.showModal();
   preloadAvatars().then(() => { if (d.open) draw(); }, () => {});   // 模型載好再畫一次（配件只有正式模型才有）
 }
-// WEB-010 成就系統：每個成就的條件、進度、解鎖後的稱號（開房比賽才會累積）
+// WEB-010 成就中心：左＝選中系列的詳情與每一階進度；右＝名字框（等級、成就點數、稱號）、分類分頁、系列清單（開房比賽才會累積）
 export async function openAchievementPanel() {
   if (!document.getElementById('lobby-shell') || editing) return;
   let d = document.getElementById('ach-panel');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'ach-panel'; d.setAttribute('aria-labelledby', 'ach-title');
-    d.innerHTML = '<form method="dialog"><h2 id="ach-title">成就系統</h2><p class="ach-sum"></p><div class="ach-list"></div><p class="eq-note">只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p><div class="buttons"><button class="orange">關閉</button></div></form>';
+    d.innerHTML = '<form method="dialog"><header class="ach-top"><button class="ach-back" aria-label="關閉">←</button><h2 id="ach-title">成就中心</h2></header><div class="ach-cols"><section class="ach-detail"></section><section class="ach-right"><div class="ach-me"></div><nav class="ach-cats" role="tablist"></nav><div class="ach-series"></div></section></div><p class="ach-tip">💡 只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p></form>';
     document.body.append(d);
   }
-  const P = await import('./progress.js'), list = d.querySelector('.ach-list');
-  const draw = (prog) => {
-    prog = prog || {}; const got = prog.achievements || [], keys = Object.keys(P.ACHIEVEMENTS);
-    d.querySelector('.ach-sum').textContent = `已解鎖 ${keys.filter((k) => got.includes(k)).length} / ${keys.length}`;
-    list.innerHTML = keys.map((k) => {
-      const a = P.ACHIEVEMENTS[k], ok = got.includes(k), pr = P.achProgress(k, prog), pct = pr ? Math.min(100, (pr[0] / pr[1]) * 100) : ok ? 100 : 0;
-      return `<div class="ach${ok ? ' ok' : ''}"><div class="ach-ic">${ok ? '🏆' : '🔒'}</div><div class="ach-tx"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span><div class="ach-bar"><i style="width:${pct}%"></i></div><small>${pr ? `${Math.min(pr[0], pr[1])} / ${pr[1]}` : ok ? '已完成' : '一場比賽內達成'}・稱號「${esc(a.title)}」</small></div></div>`;
+  const P = await import('./progress.js');
+  let cat = 'all', sel = P.ACH_SERIES[0].id, prog = P.cachedProgress() || {};
+  const got = () => prog.achievements || [];
+  const tierPr = (k) => { const pr = P.achProgress(k, prog), ok = got().includes(k); return { ok, cur: pr ? Math.min(pr[0], pr[1]) : ok ? 1 : 0, need: pr ? pr[1] : 1, one: !pr }; };
+  const seriesPr = (S) => {
+    const t = S.tiers.map(tierPr), done = t.filter((x) => x.ok).length, next = t[done];
+    const pct = Math.round(((done + (next && !next.one ? next.cur / next.need : 0)) / t.length) * 100);
+    return { done, total: t.length, pct, badge: done === t.length ? `${done} / ${t.length} 已完成` : next.one ? `${done} / ${t.length}` : `${next.cur} / ${next.need}` };
+  };
+  const drawMe = () => {
+    const nick = (window.VBSettings && window.VBSettings.values.nickname) || '球友', lv = P.levelOf(prog.exp), t = prog.title && P.ACHIEVEMENTS[prog.title];
+    d.querySelector('.ach-me').innerHTML = `<div class="ach-me-ic">🏐</div><div class="ach-me-tx"><b>${esc(nick)}</b><span>Lv${lv}・總成就點數 ${P.achPoints(got())} PT・已解鎖 ${got().length} / ${Object.keys(P.ACHIEVEMENTS).length}</span></div>${t ? `<span class="ach-badge">${esc(t.title)}</span>` : '<span class="ach-badge off">未套用稱號</span>'}`;
+  };
+  const drawCats = () => { d.querySelector('.ach-cats').innerHTML = P.ACH_CATS.map(([k, name]) => `<button type="button" role="tab" data-cat="${k}" aria-selected="${cat === k}">${name}${k === 'all' ? `（${P.ACH_SERIES.length}）` : ''}</button>`).join(''); };
+  const drawList = () => {
+    d.querySelector('.ach-series').innerHTML = P.ACH_SERIES.filter((S) => cat === 'all' || S.cat === cat).map((S) => {
+      const pr = seriesPr(S);
+      return `<button type="button" class="ach-s${S.id === sel ? ' on' : ''}${pr.done === pr.total ? ' done' : ''}" data-s="${S.id}"><span class="ach-s-ic">${S.icon}</span><span class="ach-s-tx"><b>${esc(S.name)}</b><small>${esc(S.desc)}</small></span><span class="ach-s-b">${pr.badge}</span><span class="ach-s-ar">${S.id === sel ? '◀' : '›'}</span></button>`;
     }).join('');
   };
-  draw(P.cachedProgress()); d.showModal();
-  draw(await P.loadProgress());
+  const drawDetail = () => {
+    const S = P.ACH_SERIES.find((x) => x.id === sel), pr = seriesPr(S);
+    const tiers = S.tiers.map((k, i) => {
+      const a = P.ACHIEVEMENTS[k], t = tierPr(k), pct = t.ok ? 100 : Math.round((t.cur / t.need) * 100);
+      const foot = t.ok ? '<div class="ach-t-done">✓ 已達成</div>' : t.one ? '<div class="ach-t-one">一場比賽內達成就解鎖</div>' : `<div class="ach-t-pr"><span>進度：${t.cur} / ${t.need}</span><span>${pct}%</span></div><div class="ach-bar"><i style="width:${pct}%"></i></div>`;
+      return `<div class="ach-t${t.ok ? ' ok' : ''}"><div class="ach-t-h"><span class="ach-t-n">${i + 1}</span><b>${esc(a.name)}</b><span class="ach-badge sm">稱號「${esc(a.title)}」</span></div><p>${esc(a.desc)}・${P.ACH_POINTS[k] || 0} PT</p>${foot}</div>`;
+    }).join('');
+    d.querySelector('.ach-detail').innerHTML = `<div class="ach-hero"><div class="ach-hero-ic">${S.icon}</div><h3>${esc(S.name)}</h3><p>${esc(S.desc)}</p><div class="ach-hero-pr"><span>項目總進度</span><b>${pr.pct}%</b></div><div class="ach-bar big"><i style="width:${pr.pct}%"></i></div></div><div class="ach-tiers-h"><span>階梯式成就進度（點右邊切換項目）</span><b>已達成 ${pr.done} / ${pr.total}</b></div><div class="ach-tiers">${tiers}</div>`;
+  };
+  const drawAll = () => { drawMe(); drawCats(); drawList(); drawDetail(); };
+  d.querySelector('.ach-cats').onclick = (e) => {
+    const b = e.target.closest('[data-cat]'); if (!b) return; cat = b.dataset.cat;
+    if (!P.ACH_SERIES.some((S) => S.id === sel && (cat === 'all' || S.cat === cat))) sel = (P.ACH_SERIES.find((S) => cat === 'all' || S.cat === cat) || P.ACH_SERIES[0]).id;
+    drawCats(); drawList(); drawDetail();
+  };
+  d.querySelector('.ach-series').onclick = (e) => { const b = e.target.closest('[data-s]'); if (!b) return; sel = b.dataset.s; drawList(); drawDetail(); };
+  drawAll(); d.showModal();
+  prog = (await P.loadProgress()) || prog; drawAll();
 }
 // WEB-010 球隊（Lv10 解鎖）：建立／用邀請碼加入、成員名單、隊長設計球衣並取名、穿上球隊球衣、離開
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

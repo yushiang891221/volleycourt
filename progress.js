@@ -18,6 +18,19 @@ export const ACHIEVEMENTS = {
   streak5: { name: '氣勢如虹', desc: '連贏 5 場', title: '氣勢如虹' },
 };
 
+// 成就中心：成就整理成「系列」，每個系列有一到多階（照順序）；每階給成就點數
+export const ACH_POINTS = { cannon1: 10, cannon2: 30, cannon3: 60, setter: 30, wall: 30, server: 25, libero: 30, pro1: 20, pro10: 60, streak5: 25 };
+export const ACH_CATS = [['all', '全部項目'], ['atk', '扣球進攻系列'], ['def', '防守與舉球系列'], ['pro', '企聯特訓系列']];
+export const ACH_SERIES = [
+  { id: 'cannon', cat: 'atk', icon: '🏐', name: '重砲手精神（扣球累計）', desc: '扣球得分從 100 分到 1000 分的重砲考驗', tiers: ['cannon1', 'cannon2', 'cannon3'] },
+  { id: 'server', cat: 'atk', icon: '🚀', name: '發球機器（發球得分）', desc: '用發球直接拿下 50 分', tiers: ['server'] },
+  { id: 'libero', cat: 'def', icon: '🛡️', name: '守護神領域（完美接球）', desc: '一球一球接到位，打造後場鐵壁', tiers: ['libero'] },
+  { id: 'setter', cat: 'def', icon: '🎯', name: '場上指揮官（精準舉球）', desc: '一局舉 10 球以上都沒有連擊或持球', tiers: ['setter'] },
+  { id: 'wall', cat: 'def', icon: '🧱', name: '人牆（連續攔網）', desc: '同一球之內攔網碰到球 5 次', tiers: ['wall'] },
+  { id: 'pro', cat: 'pro', icon: '👑', name: '企聯特訓與魔性挑戰', desc: '擊敗最高難度的企聯 AI', tiers: ['pro1', 'pro10'] },
+  { id: 'streak', cat: 'pro', icon: '🔥', name: '氣勢如虹（連勝）', desc: '開房比賽連續贏 5 場', tiers: ['streak5'] },
+];
+export const achPoints = (got = []) => got.reduce((n, k) => n + (ACH_POINTS[k] || 0), 0);
 // 成就目前的進度（顯示用）：[現在, 目標]；一場內完成的成就沒有累計進度
 export function achProgress(key, p = {}) {
   const w5 = (p.stats && p.stats.w && p.stats.w['5']) | 0;
