@@ -234,3 +234,26 @@ main { grid-template-rows: minmax(0, 1.25fr) minmax(170px, 1fr); }
 .me-side [data-edit] { position: absolute; left: 14px; bottom: 14px; width: calc(46% - 12px); margin: 0; opacity: .95; }
 .me-side .me-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
 .me-side [data-edit] { display: none; }
+
+/* 三欄版面：左＝大廳在線玩家、中＝房間列表＋留言板、右＝我的角色資訊（整欄高） */
+main { grid-template-columns: minmax(210px, 0.8fr) minmax(0, 2.6fr) minmax(250px, 1fr); }
+.players { grid-column: 1; grid-row: 1 / 3; }
+.rooms { grid-column: 2; grid-row: 1; }
+.chat { grid-column: 2; grid-row: 2; }
+.me-col { grid-column: 3; grid-row: 1 / 3; display: flex; flex-direction: column; min-height: 0; }
+.me-col .me-card { flex: 1 1 auto; border-top: 0; margin-top: 0; padding-top: 0; }
+.me-col .me-body { flex-direction: column; align-items: stretch; gap: 10px; }
+.me-col .me-body img { width: 100%; height: auto; flex: 1 1 0; min-height: 120px; }
+.me-col .me-side { flex: 0 0 auto; overflow: visible; }
+.me-col .me-side .me-name { font-size: 17px; }
+/* 右欄角色資訊：圖片限高、資料字放大、行距拉開 */
+main { grid-template-columns: minmax(200px, 0.75fr) minmax(0, 2.5fr) minmax(260px, 1.05fr); }
+.me-col .me-body { gap: 12px; padding: 10px; }
+.me-col .me-body img { flex: 1 1 0; min-height: 140px; max-height: 46%; object-fit: contain; }
+.me-col .me-side { gap: 9px; padding: 0 4px 4px; }
+.me-col .me-side .me-name { font-size: 18px; margin: 0; }
+.me-col .me-title { font-size: 13px; margin: -4px 0 0; }
+.me-col .me-lv { font-size: 13px; gap: 4px 10px; } .me-col .me-lvn { font-size: 16px; } .me-col .me-bar { height: 9px; } .me-col .me-exp { font-size: 11px; }
+.me-col .me-coins { font-size: 12px; color: #c5d2e2; }
+.me-col .me-stats { font-size: 13px; } .me-col .me-stats th { font-size: 11px; padding-bottom: 4px; }
+.me-col .me-stats td { padding: 5px 0; border-top: 1px solid #1f2c40; }
