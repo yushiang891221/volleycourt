@@ -3,7 +3,7 @@ body.intro-active { overflow: hidden; }
 /* 開場還沒結束前大廳完全不畫出來（腳本載入前也一樣） */
 body.intro-active:not(.intro-skip) #lobby-shell { visibility: hidden; }
 #intro {
-  position: fixed; inset: 0; width: 100vw; height: 100dvh;
+  position: fixed; inset: 0; width: calc(100vw / var(--z, 1)); height: calc(100dvh / var(--z, 1));   /* 大廳整體放大（zoom）時 vw／dvh 也被放大：除回去才剛好填滿畫面、內容置中 */
   max-width: none; max-height: none; margin: 0; padding: 0;
   border: 0; border-radius: 0; overflow: hidden; color: #dce5ef;
   background: radial-gradient(ellipse at 50% 44%, #24384a 0, #111b2a 42%, #080c13 82%);
