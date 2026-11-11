@@ -298,3 +298,63 @@ dialog { max-height: calc((100dvh - 36px) / var(--z, 1)); }
 /* 成就系統面板固定大小：切換分類、系列時不會變大變小（內容在兩欄裡各自捲動） */
 #ach-panel { width: min(1060px, 94vw); height: calc(86dvh / var(--z, 1)); }
 #ach-panel form { height: 100%; }
+
+/* 球衣與裝備（三欄，固定大小）：左＝預覽＋目前穿戴＋玩家資料、中＝分類＋物品格、右＝稱號＋動作 */
+#equip-panel { width: min(1280px, 96vw); height: calc(90dvh / var(--z, 1)); max-height: none; padding: 0; background: #0f1826; color: #e5edf7; border: 1px solid #2c3b52; border-radius: 14px; }
+#equip-panel form { display: flex; flex-direction: column; height: 100%; }
+.eqx-top { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid #22314a; }
+.eqx-top h2 { margin: 0; font-size: 20px; color: #fff; flex: 1; }
+.eqx-back { background: transparent; border: 0; color: #e5edf7; font-size: 22px; cursor: pointer; padding: 0 6px; }
+.eqx-money { display: flex; gap: 10px; } .eqx-money span { padding: 6px 14px; border: 1px solid #2c3b52; border-radius: 10px; background: #121d2e; font-size: 13px; color: #c5d2e2; } .eqx-money b { color: #fff; }
+.eqx-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.45fr 0.95fr; gap: 14px; padding: 14px; }
+.eqx-cols > section { min-height: 0; border: 1px solid #22314a; border-radius: 14px; background: #121c2b; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.eqx-stage { position: relative; flex: 1; min-height: 0; display: flex; gap: 10px; border-radius: 12px; background: radial-gradient(circle at 40% 30%, #1d2c44, #0f1826 70%); overflow: hidden; }
+.eqx-img { flex: 1; min-width: 0; height: 100%; object-fit: contain; }
+.eqx-tools { position: absolute; left: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 1; }
+.eqx-tools button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid #2c3b52; background: #121d2ecc; color: #e5edf7; font-size: 16px; cursor: pointer; padding: 0; }
+.eqx-worn { width: 46%; max-width: 170px; margin: 8px 8px 8px 0; padding: 8px; border: 1px solid #f9952899; border-radius: 12px; background: #171f2ccc; overflow: auto; }
+.eqx-worn h4 { margin: 0 0 6px; font-size: 13px; color: #ffb363; }
+.eqx-worn ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.eqx-worn li { display: flex; align-items: center; gap: 8px; } .eqx-worn li.off { opacity: .55; }
+.eqx-worn li > span:last-child { display: flex; flex-direction: column; min-width: 0; } .eqx-worn small { font-size: 10px; color: #9bafc0; } .eqx-worn b { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eqx-wi { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 8px; border: 1px solid #2a3a52; background: linear-gradient(135deg, color-mix(in srgb, var(--t) 45%, #0b1220), #0b1220); font-size: 15px; }
+.eqx-card { border: 1px solid #22314a; border-radius: 12px; padding: 10px 12px; background: #0f1826; }
+.eqx-name { display: flex; gap: 8px; } .eqx-name input { flex: 1; min-width: 0; font: inherit; font-size: 16px; font-weight: 700; color: #fff; background: #0b1220; border: 1px solid #2c3b52; border-radius: 8px; padding: 6px 10px; }
+.eqx-name button { padding: 6px 12px; border-radius: 8px; border: 1px solid #f99528; background: #2a1e15; color: #ffb363; font: inherit; font-size: 12px; cursor: pointer; }
+.eqx-err { margin: 4px 0 0; min-height: 16px; font-size: 11px; color: #ffb363; }
+.eqx-card dl { margin: 2px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; } .eqx-card dt { color: #9bafc0; } .eqx-card dd { margin: 0; display: flex; align-items: center; gap: 8px; }
+.eqx-bar { flex: 1; height: 7px; background: #1d2a3d; border-radius: 4px; overflow: hidden; } .eqx-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f39227, #ffd092); }
+.eqx-card dd small { font-size: 10px; color: #7d91aa; }
+.eqx-look { padding: 11px; border-radius: 10px; font-size: 15px; }
+.eqx-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.eqx-tabs button { padding: 8px 14px; border-radius: 9px; border: 1px solid #2c3b52; background: #1a2638; color: #c5d2e2; font: inherit; font-size: 13px; cursor: pointer; }
+.eqx-tabs button[aria-selected="true"] { background: #f07c24; border-color: #f07c24; color: #fff; font-weight: 700; }
+.eqx-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); grid-auto-rows: 150px; gap: 10px; align-content: start; }
+.eqx-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px solid #2a3a52; border-radius: 12px; background: #141f30; color: inherit; font: inherit; cursor: pointer; padding: 10px; }
+.eqx-item:hover { border-color: #4c607b; } .eqx-item.on { border-color: #f99528; box-shadow: 0 0 0 1px #f9952866, 0 0 16px #f9952833; }
+.eqx-item.lock { opacity: .5; cursor: not-allowed; }
+.eqx-ii { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 14px; border: 1px solid #2a3a52; background: linear-gradient(135deg, color-mix(in srgb, var(--t) 55%, #0b1220), #0b1220); font-size: 30px; }
+.eqx-item b { font-size: 12px; text-align: center; } .eqx-item small { font-size: 10px; color: #9bafc0; }
+.eqx-check { position: absolute; right: 8px; top: 8px; width: 20px; height: 20px; border-radius: 50%; background: #f07c24; color: #fff; font-style: normal; font-size: 12px; display: grid; place-items: center; }
+.eqx-hint { margin: 0; }
+.eqx-right { gap: 12px !important; overflow: auto !important; }
+.eqx-box { border: 1px solid #22314a; border-radius: 12px; padding: 12px; background: #0f1826; }
+.eqx-box h3 { margin: 0 0 10px; font-size: 15px; color: #ffb363; }
+.eqx-badge { display: flex; align-items: center; gap: 8px; text-align: center; } .eqx-badge > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.eqx-badge button { width: 30px; height: 30px; border: 0; background: transparent; color: #f99528; font-size: 24px; cursor: pointer; }
+.eqx-medal { font-size: 52px; line-height: 1.1; filter: drop-shadow(0 4px 10px #f9952855); }
+.eqx-badge b { padding: 4px 16px; border: 1px solid #2c3b52; border-radius: 8px; background: #121d2e; color: #ffcf9a; font-size: 14px; } .eqx-badge small { font-size: 10px; color: #9bafc0; }
+.eqx-apply { width: 100%; margin-top: 10px; padding: 8px; border-radius: 9px; border: 1px solid #f99528; background: #2a1e15; color: #ffb363; font: inherit; font-size: 13px; cursor: pointer; } .eqx-apply:disabled { opacity: .6; cursor: default; }
+.eqx-wheel { position: relative; width: 190px; height: 190px; margin: 0 auto 10px; border-radius: 50%; border: 1px solid #2c3b52; background: radial-gradient(circle, #1a2638, #0f1826); }
+.eqx-hub { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; border: 2px solid #f99528; display: grid; place-items: center; color: #ffb363; font-weight: 900; }
+.eqx-slot { position: absolute; width: 64px; margin-left: -32px; text-align: center; display: flex; flex-direction: column; align-items: center; } .eqx-slot b { font-size: 22px; } .eqx-slot small { font-size: 9px; color: #7d91aa; } .eqx-slot span { font-size: 10px; color: #c5d2e2; }
+.eqx-slot.s0 { left: 22%; top: 34%; } .eqx-slot.s1 { left: 78%; top: 34%; } .eqx-slot.s2 { left: 50%; top: 4%; } .eqx-slot.s3 { left: 50%; top: 64%; }
+.eqx-emos { display: flex; flex-wrap: wrap; gap: 6px; } .eqx-emos button { padding: 5px 9px; font-size: 12px; border-radius: 8px; border: 1px solid #2c3b52; background: #1a2638; color: #e5edf7; font-family: inherit; cursor: pointer; }
+.eqx-emos button[aria-pressed="true"] { border-color: #f99528; background: #3a2615; color: #ffcf9a; } .eqx-emos button:disabled { opacity: .45; cursor: not-allowed; }
+/* 裝備面板微調：預覽大一點、目前穿戴縮窄、輪盤四格不重疊、分頁一行 */
+.eqx-worn { width: 132px; flex-shrink: 0; }
+.eqx-img { min-height: 0; }
+.eqx-tabs { flex-wrap: nowrap; overflow-x: auto; } .eqx-tabs button { padding: 7px 11px; font-size: 12px; white-space: nowrap; }
+.eqx-wheel { width: 210px; height: 210px; }
+.eqx-slot { width: 70px; margin-left: -35px; gap: 1px; line-height: 1.15; }
+.eqx-slot.s0 { left: 19%; top: 37%; } .eqx-slot.s1 { left: 81%; top: 37%; } .eqx-slot.s2 { left: 50%; top: 5%; } .eqx-slot.s3 { left: 50%; top: 69%; }
