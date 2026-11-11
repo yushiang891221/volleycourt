@@ -250,7 +250,7 @@ main { grid-template-columns: minmax(200px, 0.75fr) minmax(0, 2.5fr) minmax(260p
 .me-col .me-stats { font-size: 13px; } .me-col .me-stats th { font-size: 11px; padding-bottom: 4px; }
 .me-col .me-stats td { padding: 5px 0; border-top: 1px solid #1f2c40; }
 
-/* 成就中心（兩欄：左＝系列詳情與階梯進度、右＝名字框＋分類＋系列清單） */
+/* 成就系統（兩欄：左＝系列詳情與階梯進度、右＝名字框＋分類＋系列清單） */
 #ach-panel { width: min(1060px, 94vw); max-height: 90dvh; padding: 0; background: #121c2b; color: #e5edf7; border: 1px solid #2c3b52; border-radius: 14px; }
 #ach-panel form { display: flex; flex-direction: column; max-height: 90dvh; }
 .ach-top { display: flex; align-items: center; gap: 14px; padding: 16px 22px; border-bottom: 1px solid #22314a; }
@@ -295,3 +295,6 @@ main { grid-template-columns: minmax(200px, 0.75fr) minmax(0, 2.5fr) minmax(260p
 @media (min-width: 1500px) and (min-height: 860px) { body { --z: 1.25; } }
 dialog { max-height: calc((100dvh - 36px) / var(--z, 1)); }
 #ach-panel, #ach-panel form { max-height: calc(92dvh / var(--z, 1)); }
+/* 成就系統面板固定大小：切換分類、系列時不會變大變小（內容在兩欄裡各自捲動） */
+#ach-panel { width: min(1060px, 94vw); height: calc(86dvh / var(--z, 1)); }
+#ach-panel form { height: 100%; }

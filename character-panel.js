@@ -98,13 +98,13 @@ export function openEquipPanel() {
   draw(); d.showModal();
   preloadAvatars().then(() => { if (d.open) draw(); }, () => {});   // 模型載好再畫一次（配件只有正式模型才有）
 }
-// WEB-010 成就中心：左＝選中系列的詳情與每一階進度；右＝名字框（等級、成就點數、稱號）、分類分頁、系列清單（開房比賽才會累積）
+// WEB-010 成就系統：左＝選中系列的詳情與每一階進度；右＝名字框（等級、成就點數、稱號）、分類分頁、系列清單（開房比賽才會累積）
 export async function openAchievementPanel() {
   if (!document.getElementById('lobby-shell') || editing) return;
   let d = document.getElementById('ach-panel');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'ach-panel'; d.setAttribute('aria-labelledby', 'ach-title');
-    d.innerHTML = '<form method="dialog"><header class="ach-top"><button class="ach-back" aria-label="關閉">←</button><h2 id="ach-title">成就中心</h2></header><div class="ach-cols"><section class="ach-detail"></section><section class="ach-right"><div class="ach-me"></div><nav class="ach-cats" role="tablist"></nav><div class="ach-series"></div></section></div><p class="ach-tip">💡 只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p></form>';
+    d.innerHTML = '<form method="dialog"><header class="ach-top"><button class="ach-back" aria-label="關閉">←</button><h2 id="ach-title">成就系統</h2></header><div class="ach-cols"><section class="ach-detail"></section><section class="ach-right"><div class="ach-me"></div><nav class="ach-cats" role="tablist"></nav><div class="ach-series"></div></section></div><p class="ach-tip">💡 只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p></form>';
     document.body.append(d);
   }
   const P = await import('./progress.js');
