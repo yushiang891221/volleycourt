@@ -26,6 +26,7 @@ const paths = {
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.user}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); });
 ﻿let nickname=VBSettings.values.nickname, rooms=[], players=[], roomPage=0, playerPage=0, connected=false, selectedRoom=null;
+let accounts=null, accountTimer=null;
 let sound=false, audioContext;
 const demo=new URLSearchParams(location.search).get('demo')==='1';
 const samples=Array.from({length:8},(_,i)=>({no:101+i,name:`開發示範練球室 ${i+1}`,mode:i%2?'6v6':'2v2',count:i+1,max:20,status:i%3?'waiting':'playing',locked:i===2,latency:20+i}));
@@ -43,19 +44,46 @@ function page(prefix,index,total,size){
  $(prefix+'-page').textContent=`${current+1} / ${pages}`;
  $(prefix+'-prev').disabled=current===0;$(prefix+'-next').disabled=current===pages-1;return current;
 }
+function offlineStatus(lastSeen, now=Date.now()){
+ if(!lastSeen || !Number.isFinite(Date.parse(lastSeen)))return '離線';
+ const minutes=Math.max(0,Math.floor((now-Date.parse(lastSeen))/60000));
+ return '離線・'+(minutes<5?'剛剛':minutes<60?`${minutes} 分鐘前`:minutes<1440?`${Math.floor(minutes/60)} 小時前`:`${Math.floor(minutes/1440)} 天前`);
+}
+function mergePlayers(online, accounts, selfId, selfName, now=Date.now()){
+ const byName=new Map();
+ for(const p of online)byName.set(p.name,{...p,offline:false,self:p.id===selfId});
+ for(const a of accounts||[])if(!byName.has(a.nickname))byName.set(a.nickname,{name:a.nickname,last_seen_at:a.last_seen_at,status:offlineStatus(a.last_seen_at,now),offline:true,self:a.nickname===selfName});
+ const seen=p=>Date.parse(p.last_seen_at)||0;
+ return [...byName.values()].sort((a,b)=>Number(b.self)-Number(a.self)||Number(a.offline)-Number(b.offline)||(a.offline?seen(b)-seen(a):0)||a.name.localeCompare(b.name));
+}
+async function refreshAccounts(){
+ try{
+  const {getAccountService}=await import('./auth.js');
+  const service=await getAccountService();
+  accounts=service?await service.rpc('lobby_accounts'):null;
+ }catch{accounts=null;}
+ renderPlayers();
+}
+function startAccountList(){
+ if(accountTimer!==null)return;
+ import('./last-seen.js').then(({startLastSeen})=>startLastSeen()).catch(()=>{});
+ refreshAccounts();
+ accountTimer=setInterval(refreshAccounts,2*60*1000);
+ setInterval(renderPlayers,60*1000);
+}
 function renderPlayers(){
  const list=$('players');list.replaceChildren();
- const all=[...players].sort((a,b)=>Number(b.id===VBLobby.id)-Number(a.id===VBLobby.id)||a.name.localeCompare(b.name));
+ const all=mergePlayers(players,accounts,VBLobby.id,nickname);
  playerPage=page('players',playerPage,all.length,8);
  for(const p of all.slice(playerPage*8,playerPage*8+8)){
-  const row=document.createElement('div');row.className='player'+(p.id===VBLobby.id?' self':'');
+  const row=document.createElement('div');row.className='player'+(p.self?' self':'')+(p.offline?' offline':'');
   row.innerHTML=`<span class="avatar">${icon('user')}</span><div class="player-identity"><strong></strong><div class="player-level"></div></div><span class="state"></span>`;
-  const label=p.name+(p.id===VBLobby.id?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title='按右鍵查看更多';if(p.id!==VBLobby.id)row.querySelector('strong').dataset.player=p.name;
+  const label=p.name+(p.self?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title='按右鍵查看更多';if(!p.self)row.querySelector('strong').dataset.player=p.name;
   row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
   const state=row.querySelector('.state');state.textContent=p.status;
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
  }
- $('player-count').textContent=`${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
+ $('player-count').textContent=accounts===null?`${all.length} 人`:`在線 ${all.filter(p=>!p.offline).length} 人・共 ${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
 }
 function renderRooms(){
  const target=$('rooms');target.replaceChildren();
@@ -86,7 +114,7 @@ function appendChat(c,play=false){
 function enter(m){const q=new URLSearchParams({site:'bs-shenjing',room:m.code,mode:m.mode});if(m.host)q.set('host','1');VBLobby.carry(q);location.href=`gym.html?${q}`;}
 // 真的進到大廳（登入、取好暱稱之後）才連上大廳名單：被別處登入踢回首頁的分頁、還沒登入的人不會掛在在線名單上
 let client=null;
-function connectLobby(){if(client)return;client=VBLobby.connect({hello:()=>({name:nickname||'球友',status:'大廳中'}),onstate:state=>{
+function connectLobby(){if(client)return;startAccountList();client=VBLobby.connect({hello:()=>({name:nickname||'球友',status:'大廳中'}),onstate:state=>{
  connected=state==='online';$('connection-status').textContent=({online:'已連線',connecting:'連線中…',offline:'連不上 · 自動重試中'})[state];$('connection-dot').dataset.state=state;renderRooms();renderPlayers();
 },onmessage:m=>{
  if(m.k==='state'){rooms=m.rooms;players=m.players;$('messages').querySelectorAll('.chat-line').forEach(p=>p.remove());m.chats.forEach(c=>appendChat(c));renderRooms();renderPlayers();}

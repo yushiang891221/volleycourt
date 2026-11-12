@@ -66,7 +66,7 @@ await check('real lobby handlers: pagination, filtering, safe text, dialogs and 
  const context={document:{getElementById:id=>{assert(elements[id],id);return elements[id];},querySelectorAll:()=>[],createElement:()=>new Element()},
   VBSettings:{values:{nickname:'測試球友'},open(){},nicknameError:()=>'',update:()=>true},VBLobby:{id:'self',carry(){},connect(o){options=o;return {send(m){sent.push(m);return true;},close(){}};}},
   VBIntro:{entered:true},   /* 大廳要進到大廳後才連線（WEB-010 修正：被踢掉、沒登入的分頁不掛在在線名單） */
-  location:{search:'?demo=1',href:''},URLSearchParams,addEventListener(){},setTimeout(){},clearTimeout(){}};
+  location:{search:'?demo=1',href:''},URLSearchParams,addEventListener(){},setTimeout(){},clearTimeout(){},setInterval(){return 1;}};
  vm.runInNewContext(read('lobby.js'),context);
  assert.equal(elements.rooms.children.length,6);options.onstate('online');assert.equal(elements.rooms.children.length,0);
  const rooms=Array.from({length:8},(_,i)=>({no:101+i,name:i===0?'<script>房名</script>':'房'+i,mode:i%2?'6v6':'2v2',count:1,max:20,status:'waiting',locked:i===0,latency:null}));
