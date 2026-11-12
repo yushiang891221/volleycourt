@@ -207,7 +207,7 @@
     }
     function frame(state) {
       snapshot = state;
-      if (phase === 'success') { if (now() - successAt >= 800) advance(); return; }
+      if (phase === 'success') { if (now() - successAt >= (skipped ? 800 : 1800)) advance(); return; }   // 做到了：停 1.8 秒讓球飛完、看清楚結果再換下一步（按跳過不用等）
       if (phase !== 'running') return;
       coach.frame?.(state);
       const dt = previous ? Math.max(0, Math.min(0.1, (now() - previous.time) / 1000)) : 0;

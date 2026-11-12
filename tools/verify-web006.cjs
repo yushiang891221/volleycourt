@@ -22,12 +22,13 @@ function fixture(raw = null, blocked = false) {
   });
   const state = { x: 0, z: 0, yaw: 0, tp: false, locked: false, crouch: false, sprint: false, incoming: null };
   const tick = (patch = {}, ms = 100) => { Object.assign(state, patch); time += ms; api.frame({ ...state }); };
-  const advance = () => { assert.equal(api.view().phase, 'success'); tick({}, 800); };
+  const advance = () => { assert.equal(api.view().phase, 'success'); tick({}, 1800); };   /* 做到了停 1.8 秒（略過仍 0.8 秒，見下方 delay 測試） */
   return { api, tick, advance, memory, settings, calls };
 }
 
 const t = fixture();
 const delay = fixture(); delay.api.start('move'); delay.api.skip();
+const real = fixture(); real.api.start('move'); real.tick({ locked: true }); real.tick({}, 1799); assert.equal(real.api.view().phase, 'success'); real.tick({}, 1); assert.equal(real.api.view().step, 1);
 delay.tick({}, 799); assert.equal(delay.api.view().phase, 'success');
 delay.tick({}, 1); assert.equal(delay.api.view().step, 1);
 assert.equal(sections.length, 6);
@@ -379,8 +380,8 @@ for (const type of ['std', 'float', 'jump']) {
   until(() => api.view().phase === 'success', () => {
     if (type === 'jump' && walk.air && walk.jserve?.ball.position.distanceTo(c.vbHand()) < 0.7) c.jumpServeHit('jump', .8);
   });
+  if (type !== 'jump') for (let i = 0; i < 84; i++) { tick(1 / 60); assert.equal(walk.hold, null, '跨步仍須等發球後 1.5 秒'); }   /* 做到了會停 1.8 秒，這段期間前 1.4 秒還不能拿到球 */
   advance();
-  if (type !== 'jump') { assert.equal(walk.hold, null, '跨步仍須等發球後 1.5 秒'); }
 }
 assert(api.progress().done.serve);
 
