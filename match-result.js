@@ -1,8 +1,8 @@
-// WEB-010 比賽結算面板：等級＋分數、戰力六角圖、四個評分面向長條圖、這場數據、文字解說、經驗金幣、全場排名
+// WEB-010 比賽結算面板：等級＋分數、戰力六角圖、五個評分面向長條圖、這場數據、文字解說、經驗金幣、全場排名
 // gym.html 在開房比賽結束時呼叫 showMatchResult(...)；經驗算好後再呼叫 setMatchReward(...)
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const HEX = ['攻擊', '攔網', '發球', '接球', '舉球', '穩定'];
-const BARS = [['c', '得分貢獻', 35], ['f', '效率', 25], ['p', '參與度', 20], ['r', '位置表現', 20]];
+const BARS = [['c', '得分貢獻', 30], ['f', '效率', 20], ['p', '參與度', 15], ['r', '位置表現', 20], ['w', '比賽結果', 15]];
 const ROLE = { st: '舉球', rc: '接球', sp: '攻擊', bt: '攔網' };
 const GRADE_COL = { S: '#FFD84F', A: '#7CE0A3', B: '#6FB7FF', C: '#C9B6FF', D: '#FF8A80' };
 
@@ -18,6 +18,7 @@ function css() {
 .mr-ttl h3 { margin: 0; font-size: 21px; } .mr-ttl p { margin: 4px 0 0; color: #B8C2D0; font-size: 13.5px; }
 .mr-score { margin-left: auto; text-align: right; } .mr-score b { font-size: 34px; line-height: 1; } .mr-score small { display: block; color: #B8C2D0; font-size: 12px; margin-top: 2px; }
 .mr-mvp { display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #F2B705; color: #1B2638; font-size: 13px; font-weight: 900; vertical-align: 3px; }
+.mr-best-loser { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #6FB7FF; color: #1B2638; font-size: 12px; font-weight: 800; }
 .mr-cols { display: grid; grid-template-columns: 300px 1fr; gap: 20px; margin-top: 14px; }
 .mr-cols h4 { margin: 0 0 8px; font-size: 13.5px; color: #F2B705; letter-spacing: .04em; }
 .mr-hex svg { width: 100%; height: auto; display: block; }
@@ -54,7 +55,7 @@ function hexSvg(v) {
 }
 
 // 文字解說：整體一句＋最強項＋最該加強的一項
-function commentary(my, st, isMvp) {
+function commentary(my, st, isMvp, won) {
   const open = { S: '幾乎完美的一場，攻守都打在高水準！', A: '表現很亮眼，是隊上的重要戰力。', B: '穩定發揮，該做的事都有做到。', C: '有做出貢獻，但還有不少進步空間。', D: '這場比較辛苦，下一場再加油！' }[my.gr] || '';
   const hx = my.hx || [0, 0, 0, 0, 0, 0], top = hx.indexOf(Math.max(...hx));
   const strong = Math.max(...hx) < 30 ? '' : [
@@ -66,25 +67,27 @@ function commentary(my, st, isMvp) {
     `整場失誤只有 ${st.e} 次，打得非常穩。`,
   ][top];
   const low = BARS.map(([k, n]) => [k, n, my[k] | 0]).sort((a, b) => a[2] - b[2])[0];
-  const tip = low[2] >= 70 ? '四個面向都很平均，沒有明顯弱點。' : {
+  const tip = low[2] >= 70 ? '五個面向都很平均，沒有明顯弱點。' : {
+    w: '比賽結果也算進評分：多拿分、少送分，和隊友一起把比分拉開。',
     c: '得分貢獻偏低：多找機會進攻、或把球舉給好位置的攻擊手，分數會明顯提高。',
     f: `效率偏低：這場失誤 ${st.e} 次，少一點冒險的球，評分會上升很多。`,
     p: '參與度偏低：碰球次數比隊友少，多跑位、主動去接球。',
     r: `位置表現偏低：你這場主要在${ROLE[my.m] || '打球'}，${{ st: '舉出好球讓攻擊手得分會加分', rc: '接球時注意時機、減少接飛', sp: '多看對面空檔、別硬扣進攔網', bt: '攔網時機再抓準一點' }[my.m] || '多參與自己位置的工作'}。`,
   }[low[0]];
-  return `<p>${esc(open)}${isMvp ? '　<b>全場最佳 MVP！</b>' : ''}</p>${strong ? `<p>💪 ${esc(strong)}</p>` : ''}<p>📈 ${esc(tip)}</p>`;
+  const resultText = my.w == null ? '' : !won ? '這場沒贏下來，整隊評分會往下修；多拿分、少送分就會回來。' : my.w >= 85 ? '這場贏得漂亮！和隊友一起拉開比分，整隊評分也跟著加分。' : '贏下這場了！比賽結果也幫評分加分，繼續和隊友一起拿分。';
+  return `<p>${esc(resultText)}</p><p>${esc(open)}${isMvp ? '　<b>全場最佳 MVP！</b>' : ''}</p>${strong ? `<p>💪 ${esc(strong)}</p>` : ''}<p>📈 ${esc(tip)}</p>`;
 }
 
 // 開面板
-export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, teams, myTeam, me, nameOf, teamLabel }) {
+export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLoser, teams, myTeam, me, nameOf, teamLabel }) {
   css();
   let d = document.getElementById('mr-panel');
   if (!d) { d = document.createElement('div'); d.id = 'mr-panel'; document.body.append(d); }
   const g = my.gr, col = GRADE_COL[g] || '#fff';
-  const rows = (t) => (teams[t] || []).filter((id) => rate[id]).sort((a, b) => rate[b].rt - rate[a].rt).map((id) => `<div class="row${id === me ? ' me' : ''}"><span class="g" style="color:${GRADE_COL[rate[id].gr]}">${rate[id].gr}</span><span class="n">${esc(nameOf(id))}${id === mvp ? ' ⭐' : ''}</span><span class="s">${rate[id].rt}</span></div>`).join('');
+  const rows = (t) => (teams[t] || []).filter((id) => rate[id]).sort((a, b) => rate[b].rt - rate[a].rt).map((id) => `<div class="row${id === me ? ' me' : ''}"><span class="g" style="color:${GRADE_COL[rate[id].gr]}">${rate[id].gr}</span><span class="n">${esc(nameOf(id))}${id === mvp ? ' ⭐' : ''}${id === bestLoser ? '<span class="mr-best-loser">敗方最佳</span>' : ''}</span><span class="s">${rate[id].rt}</span></div>`).join('');
   d.innerHTML = `<div class="mr-box" role="dialog" aria-modal="true" aria-labelledby="mr-t">
     <div class="mr-head"><div class="mr-grade" style="background:${col}">${g}</div>
-      <div class="mr-ttl"><h3 id="mr-t">${won ? '🏆 贏了！' : '比賽結束'}${isMvp ? '<span class="mr-mvp">⭐ MVP</span>' : ''}</h3><p>${esc(final)}・這場主要負責：${ROLE[my.m] || '—'}</p></div>
+      <div class="mr-ttl"><h3 id="mr-t">${won ? '🏆 贏了！' : '比賽結束'}${isMvp ? '<span class="mr-mvp">⭐ MVP</span>' : ''}${me === bestLoser ? '<span class="mr-best-loser">敗方最佳</span>' : ''}</h3><p>${esc(final)}・這場主要負責：${ROLE[my.m] || '—'}</p></div>
       <div class="mr-score"><b>${my.rt}</b><small>整場評分（滿分 100）</small></div></div>
     <div class="mr-cols">
       <section class="mr-hex"><h4>戰力六角圖</h4>${hexSvg(my.hx || [])}</section>
@@ -95,7 +98,7 @@ export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, teams, m
           <div><b>${st.k}</b><small>扣球得分</small></div><div><b>${st.b}</b><small>攔網得分</small></div><div><b>${st.a}</b><small>發球得分</small></div><div><b>${st.as}</b><small>助攻</small></div>
           <div><b>${st.rc}</b><small>接球</small></div><div><b>${st.fs}</b><small>救球</small></div><div><b>${st.t}</b><small>碰球</small></div><div><b>${st.e}</b><small>失誤</small></div>
         </div>
-        <div class="mr-say">${commentary(my, st, isMvp)}</div>
+        <div class="mr-say">${commentary(my, st, isMvp, won)}</div>
         <div class="mr-reward" data-reward><small>經驗值計算中…</small></div>
       </section>
     </div>
