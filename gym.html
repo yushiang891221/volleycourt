@@ -6790,11 +6790,7 @@ function updateBalls(dt) {
       }
       vbBlockTest(b, h); vmBlockTest(b, h);
     }
-    if (b.err) {
-      const kk = Math.min(1, dt * 10), before = b.m.position.clone(); b.m.position.addScaledVector(b.err, kk); b.err.multiplyScalar(1 - kk); if (b.err.lengthSq() < 1e-5) b.err = null;
-      // 拉的途中不能低低的穿過網子：那就直接跳到對方那邊的位置（很少發生）
-      for (const c of netCourts) { const [a0, z0] = toLocalOf(c, before.x, before.z), [a1] = toLocalOf(c, b.m.position.x, b.m.position.z); if (b.err && Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3 && before.y < NETS[state.net].h + 0.2) { b.m.position.add(b.err); b.err = null; } }
-    }
+    if (b.err) netSmoothBall(b, dt, netCourts);
     const sp = Math.hypot(b.v.x, b.v.z);
     if (b.netEv) { b.netEv = false; if (NET.on && NET.ownBall && b.room) { const m = netBallMsg(b); m.n = 1; NET.tx.publish('ball', m); NET.lastBall = performance.now(); } }   // 碰網：負責這顆球的人馬上把結果送出去
     if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * dt); }   // 空中：照擊球時的旋轉
@@ -7664,6 +7660,87 @@ function emoPose(k, t) {
   return AVP.hi5Up;
 }
 function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+// WEB-018 network correction only.
+function netSmoothBall(b, dt, courts) {
+  const p = b.m.position, before = p.clone();
+  const dx = p.x - walk.x, dz = p.z - walk.z;
+  const speed2 = b.v.x * b.v.x + b.v.z * b.v.z;
+  const ahead = clamp(-(dx * b.v.x + dz * b.v.z) / Math.max(speed2, 0.001), 0, 0.4 * VB.ts);
+  const near = Math.hypot(dx, dz) <= 3 || Math.hypot(dx + b.v.x * ahead, dz + b.v.z * ahead) <= 3;
+  const age = b.errTime || 0, next = Math.min(0.25, age + dt);
+  const remaining = t => 1 - 3 * (t / 0.25) ** 2 + 2 * (t / 0.25) ** 3;
+  const k = near ? Math.min(1, dt * 10) : 1 - remaining(next) / Math.max(1e-9, remaining(age));
+  b.errTime = near ? 0 : next;
+  p.addScaledVector(b.err, k); b.err.multiplyScalar(1 - k);
+  for (const c of courts) {
+    const [a0, z0] = toLocalOf(c, before.x, before.z), [a1, z1] = toLocalOf(c, p.x, p.z);
+    if (a0 * a1 >= 0) continue;
+    const f = a0 / (a0 - a1), y = before.y + (p.y - before.y) * f, z = z0 + (z1 - z0) * f;
+    if (Math.abs(z) < 5.3 && y < NETS[state.net].h + BALL_R) { p.add(b.err); b.err = null; break; }
+  }
+  if (b.err && b.err.lengthSq() < 1e-5) b.err = null;
+}
+function netPeerSnapshot(p2, d, now) {
+  const stamp = Number.isFinite(d.tm) ? d.tm * 1000 : null;
+  if (stamp != null && p2.netStamp != null && stamp <= p2.netStamp) return false;
+  const hadState = !!p2.last, buf = p2.buf || (p2.buf = []);
+  if (p2.last) p2.netGap = (p2.netGap || 150) * 0.85 + clamp(now - p2.last.t, 0, 500) * 0.15;
+  if (stamp != null && p2.netOffset == null) p2.netOffset = now - stamp;
+  const t = Math.max((buf[buf.length - 1]?.t ?? -Infinity) + 0.001, stamp == null ? now : stamp + p2.netOffset);
+  if (stamp != null) p2.netStamp = stamp;
+  const row = { t, x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx || 0, vz: d.vz || 0 };
+  buf.push(row);
+  while (buf.length > 2 && (buf[1].t < t - 1000 || buf.length > 30)) buf.shift();
+  p2.last = { ...row, t: now };
+  if (d.jp && d.jp.s !== p2.jpS) {
+    const first = p2.jpS == null; p2.jpS = d.jp.s;
+    if (!first || hadState || row.y > 0) {
+      const L = netLat(p2.id), g = d.jp.g || JUMP_G;
+      p2.jump = d.jp.vy ? { g, vy: d.jp.vy - g * L, y: d.jp.vy * L - 0.5 * g * L * L } : { h: d.jp.h, T: d.jp.T, t: L };
+      p2.jump.x = d.x; p2.jump.z = d.z; p2.netLanded = false;
+      p2.x = d.x; p2.z = d.z;
+    }
+  }
+  if (!p2.jump && row.y === 0) p2.netLanded = false;
+  return true;
+}
+function netPeerPlayback(p2, dt, now) {
+  const buf = p2.buf, latest = buf[buf.length - 1];
+  const delay = clamp(1.5 * (p2.netGap || 150), 120, 300);
+  p2.netDelay = (p2.netDelay ?? delay) + (delay - (p2.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
+  const time = Math.max(p2.netTime ?? -Infinity, now - p2.netDelay); p2.netTime = time;
+  let l = buf[0], r = l;
+  for (const row of buf) { if (row.t <= time) l = row; r = row; if (row.t >= time) break; }
+  let x = l.x, z = l.z, yaw = l.yaw;
+  if (r.t > l.t) {
+    const f = clamp((time - l.t) / (r.t - l.t), 0, 1);
+    x += (r.x - x) * f; z += (r.z - z) * f;
+    yaw += Math.atan2(Math.sin(r.yaw - yaw), Math.cos(r.yaw - yaw)) * f;
+  } else if (time > l.t) {
+    /* Bound missing-stop overshoot to 4 cm as well as 0.2 seconds. */
+    const age = Math.min(0.2, (time - l.t) / 1000), speed = Math.hypot(l.vx, l.vz);
+    const span = Math.min(age, 0.04 / Math.max(speed, 0.001));
+    x += l.vx * span; z += l.vz * span;
+  }
+  if (Math.hypot(latest.x - p2.x, latest.z - p2.z) > 3) { x = latest.x; z = latest.z; p2.netTime = latest.t; }
+  const err = Math.hypot(x - p2.x, z - p2.z);
+  const k = p2.seen == null || err > 3 ? 1 : Math.min(1 - Math.exp(-dt * 18), 8 * dt / Math.max(err, 0.001));
+  x = p2.x + (x - p2.x) * k; z = p2.z + (z - p2.z) * k;
+  yaw = p2.yaw + Math.atan2(Math.sin(yaw - p2.yaw), Math.cos(yaw - p2.yaw)) * k;
+  p2.seen = true;
+  let y = p2.netLanded ? 0 : p2.last.y;
+  const j = p2.jump;
+  if (j) {
+    x = j.x; z = j.z;
+    if (j.vy != null) { j.y += j.vy * dt - 0.5 * j.g * dt * dt; j.vy -= j.g * dt; y = Math.max(0, j.y); }
+    else { j.t += dt; y = j.h * Math.sin(Math.PI * Math.min(1, j.t / j.T)); }
+    if ((j.vy != null && j.y <= 0 && j.vy < 0) || (j.vy == null && j.t >= j.T)) {
+      y = 0; p2.jump = null; p2.netLanded = true;
+      p2.netTime = Math.max(p2.netTime, latest.t); p2.buf = [latest];
+    }
+  }
+  return [x, z, yaw, y];
+}
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
   if (t === 'chat') { RoomChat.receive(d, from); return; }
@@ -7673,10 +7750,8 @@ function netOnMessage(t, d, from) {
   if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); } return; }
   if (t === 'st') {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
-    // 收到的位置放進時間軸，畫面上落後 130 ms 播放，兩筆之間內插 → 動作連續不跳
-    p2.buf.push({ t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw }); if (p2.buf.length > 30) p2.buf.shift();
-    p2.last = { t: performance.now(), x: d.x, z: d.z, y: d.y || 0, yaw: d.yaw, vx: d.vx, vz: d.vz };
-    if (d.jp && d.jp.s !== p2.jpS) { const first = p2.jpS == null; p2.jpS = d.jp.s; if (!first) { const L = netLat(from); p2.jump = d.jp.vy ? { g: d.jp.g || JUMP_G, vy: d.jp.vy - (d.jp.g || JUMP_G) * L, y: d.jp.vy * L - 0.5 * (d.jp.g || JUMP_G) * L * L } : { h: d.jp.h, T: d.jp.T, t: L }; } }   // 照延遲往前推
+    // 位置與朝向依個別真人時間軸播放，動作保留最新狀態。
+    if (!netPeerSnapshot(p2, d, performance.now())) return;
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
     const dch = normalizeLook(d.ch);
     p2.ch = dch; refreshPeerAppearance(p2);
@@ -7700,14 +7775,14 @@ function netOnMessage(t, d, from) {
     const P = new THREE.Vector3(d.p[0], d.p[1], d.p[2]);
     if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); b.m.position.copy(P); }
     // 訊息裡的球是對方「送出那一刻」的位置；傳到我這裡已經過了一小段時間（約 0.1 秒），不能照舊位置把球拉回去（會閃）
-    //   新的擊球：沿著新的路線往前補上延遲那一段，再在 0.1 秒內平滑靠過去
+    //   新的擊球：沿著新的路線往前補上延遲那一段，再在約 0.25 秒內平滑靠過去
     //   一般校正：在對方的路線上找離我這顆球最近的一點；差不到 35 cm 就不動，差多了才慢慢拉過去
     const V = new THREE.Vector3(d.v[0], d.v[1], d.v[2]), A = d.a ? new THREE.Vector3(d.a[0], d.a[1], d.a[2]) : new THREE.Vector3(), gy = -9.8 + A.y;
     const at = (tau) => [new THREE.Vector3(P.x + V.x * tau + 0.5 * A.x * tau * tau, Math.max(BALL_R, P.y + V.y * tau + 0.5 * gy * tau * tau), P.z + V.z * tau + 0.5 * A.z * tau * tau), new THREE.Vector3(V.x + A.x * tau, V.y + gy * tau, V.z + A.z * tau)];
     const cur = b.m.position; let tgt = null, vel = null;
     if (newer || tie) [tgt, vel] = at(netLat(from) * VB.ts);   // 照這個人實際的延遲往前補
     else { let best = 1e9; for (let tau = 0; tau <= 0.6 * VB.ts; tau += 0.01) { const [q, w] = at(tau), dd = q.distanceTo(cur); if (dd < best) { best = dd; tgt = q; vel = w; } } if (best < 0.35) tgt = null; }
-    if (tgt) { const err = tgt.clone().sub(cur); if (err.length() > 4) { cur.copy(tgt); b.err = null; } else b.err = err; b.v.copy(vel); }
+    if (tgt) { b.err = tgt.clone().sub(cur); b.errTime = 0; b.v.copy(vel); }
     b.acc = d.a ? A.clone() : null; if (newer || tie || !b.float) b.float = d.f ? { t: d.f[0], w: d.f[1], ph: d.f[2], a: d.f[3] } : null; if (newer || tie) b.floorHit = null;
     b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
@@ -7753,7 +7828,7 @@ function netTick(dt, now) {
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
   let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, tj: VM.on ? undefined : readTeamJersey() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, tj: VM.on ? undefined : readTeamJersey() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
@@ -7764,23 +7839,17 @@ function netTick(dt, now) {
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > (VM.on && VM.phase === 'rally' ? 400 : 1000) * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
-  // 對方的人形：最新一筆位置＋速度往前推算到「現在」（最多 0.5 秒），畫面平滑靠過去；差太多（瞬移、剛進來）就直接跳過去
-  const k = 1 - Math.exp(-dt * 14), kp = 1 - Math.exp(-dt * 15);
+  // 對方的人形：緩衝位置與朝向；起跳、動作維持現在時間。
+  const k = 1 - Math.exp(-dt * 14);
   for (const p2 of NET.peers.values()) {
     refreshPeerAppearance(p2);
     const Ls = p2.last; if (!Ls) continue;
-    const age = Math.min(0.5, (now - Ls.t) / 1000 + netLat(p2.id)), vx = Ls.vx || 0, vz = Ls.vz || 0, tx = Ls.x + vx * age, tz = Ls.z + vz * age;
-    const ox = p2.x, oz = p2.z, far = p2.seen == null || Math.hypot(tx - p2.x, tz - p2.z) > 3; p2.seen = true;
-    const x = far ? tx : p2.x + (tx - p2.x) * kp, z = far ? tz : p2.z + (tz - p2.z) * kp;
-    let dy = Ls.yaw - p2.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); const yaw = far ? Ls.yaw : p2.yaw + dy * Math.min(1, dt * 12);
-    // 高度：有起跳事件就自己照物理算弧線（不會因為取樣少變矮）；沒有就跟著收到的高度
-    let y = Ls.y;
-    const J = p2.jump;
-    if (J) { if (J.vy != null) { J.vy -= (J.g || JUMP_G) * dt; J.y += J.vy * dt; y = Math.max(0, J.y); if (J.y <= 0 && J.vy < 0) p2.jump = null; } else { J.t += dt; y = J.h * Math.sin(Math.PI * Math.min(1, J.t / J.T)); if (J.t >= J.T) p2.jump = null; } }
-    p2.vx = vx; p2.vz = vz;
-    const sp = Math.hypot(x - ox, z - oz) / Math.max(dt, 1e-3);
+    const ox = p2.x, oz = p2.z;
+    const [x, z, yaw, y] = netPeerPlayback(p2, dt, now);
+    p2.vx = (x - ox) / Math.max(dt, 1e-3); p2.vz = (z - oz) / Math.max(dt, 1e-3);
+    const sp = Math.hypot(p2.vx, p2.vz);
     p2.x = x; p2.z = z; p2.y = y; p2.yaw = yaw;
-    const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y += (y - av.body.position.y) * (p2.jump ? 1 : k);
+    const av = p2.av; av.g.position.set(x, 0, z); av.g.rotation.y = yaw + Math.PI; av.body.position.y = y;
     // 走路：速度越快腿擺越大；空中時兩腳收起
     av.phase += dt * Math.min(12, sp * 5.5);
     // 手臂：0 一般（跟著走路擺）、1 拿球、2 舉球（兩手高舉）、3 墊球（兩手併攏往前下）、4 攻擊（右手高舉）、5 跳

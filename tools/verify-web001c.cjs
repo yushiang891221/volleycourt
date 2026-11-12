@@ -130,6 +130,9 @@ await check('unmodified physics, scoring, rotation and transports match baseline
   /* WEB-015 接收端播放由 verify-web015 驗證；主機更新、判分與輪轉仍逐字比較。 */
   const noRemoteRender = t => { const marker=t.indexOf('// WEB-015: receiver-only snapshot timeline.'), start=marker>=0?marker:t.indexOf('function vmRenderAi('), end=t.indexOf('// 隊友腳下',start); return start>=0&&end>start?t.slice(0,start)+t.slice(end):t; };
   current=noRemoteRender(current);previous=noRemoteRender(previous);
+  /* WEB-018 只排除網路誤差修正區段，球的物理與碰撞仍逐字比對。 */
+  const noBallCorrection = t => t.replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
+  current=noBallCorrection(current);previous=noBallCorrection(previous);
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));
