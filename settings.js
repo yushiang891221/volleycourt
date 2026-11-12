@@ -9,7 +9,7 @@
     ['1','舉球：4 號位','Digit1'],['2','舉球：快攻','Digit2'],['3','舉球：2 號位','Digit3'],['4','舉球：後排中間','Digit4'],['5','舉球：老三','Digit5'],['6','舉球：後排 5 號位（左後）','Digit6'],
     ['[','視野變窄','BracketLeft'],[']','視野變廣','BracketRight'],
     ['j','羽球／匹克球：軟球','KeyJ'],['k','羽球／匹克球：抽球','KeyK'],['l','羽球／匹克球：挑球','KeyL']
-    ,['ready','準備／取消準備','KeyR'],['start','房主開始遊戲','Enter']
+    ,['ready','準備／取消準備','KeyR'],['start','房主開始遊戲','KeyG']
   ];
   const defaultKeys = () => Object.fromEntries(bindings.map(([a,,k]) => [a,k]));
   const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true, showFps:false, nameTags:true, bloom:true,
@@ -31,6 +31,14 @@
         v.keys=keys;
       }
     }
+    if (v.keys.start === 'Enter') {
+      const displaced = bindings.find(([a]) => a !== 'start' && v.keys[a] === 'KeyG')?.[0];
+      v.keys.start = 'KeyG';
+      if (displaced) v.keys[displaced] = 'Enter';
+    }
+    for (const [action] of bindings) if (v.keys[action] === 'Enter') {
+      v.keys[action] = [...bindings.map(b => b[2]), 'KeyZ','KeyX','KeyC','KeyH','KeyU','KeyI','KeyO'].find(k => !Object.values(v.keys).includes(k));
+    }
     return v;
   }
   function validCode(c) { return typeof c==='string' && /^(Key[A-Z]|Digit[0-9]|Arrow(Up|Down|Left|Right)|Shift|Control|Space|Bracket(Left|Right)|Backquote|Minus|Equal|Backslash|Semicolon|Quote|Comma|Period|Slash|Tab|Enter|Backspace|Delete|Home|End|PageUp|PageDown|Numpad[0-9])$/.test(c); }
@@ -44,7 +52,7 @@
   const code = e => /^Shift/.test(e.code) ? 'Shift' : /^Control/.test(e.code) ? 'Control' : e.code || bindings.find(([a])=>a===e.key.toLowerCase())?.[2];
   const key = e => e.key==='Escape' ? 'escape' : bindings.find(([a])=>values.keys[a]===code(e))?.[0] || '';
   const keyName = c => ({Space:'空白鍵',Shift:'Shift',BracketLeft:'[',BracketRight:']',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'}[c] || c.replace(/^Key|^Digit/,''));
-  function bind(action,c) { if (!validCode(c) || !Object.hasOwn(values.keys,action)) return false; const keys={...values.keys}, other=bindings.find(([a])=>a!==action && keys[a]===c)?.[0]; if(other) keys[other]=keys[action]; keys[action]=c; update({keys}); return true; }
+  function bind(action,c) { if (c === 'Enter' || !validCode(c) || !Object.hasOwn(values.keys,action)) return false; const keys={...values.keys}, other=bindings.find(([a])=>a!==action && keys[a]===c)?.[0]; if(other) keys[other]=keys[action]; keys[action]=c; update({keys}); return true; }
   function render() {
     for(const el of dialog.querySelectorAll('[data-pref]')) { const val=values[el.dataset.pref]; if(el.type==='checkbox') el.checked=val; else el.value=val; if(el.type==='range') el.nextElementSibling.textContent=val; }
     for(const b of dialog.querySelectorAll('[data-bind]')) b.textContent=capture===b.dataset.bind?'按下新按鍵…':keyName(values.keys[b.dataset.bind]);
@@ -58,7 +66,7 @@
     const pages=[
       ['遊戲',check('assist','接球輔助：身體輕輕帶向落點')+check('cameraAssist','視角輔助')+check('landing','落點圈')+check('cues','按鍵提示')+check('third','比賽／陪練預設第三人稱')+check('rings','顯示隊友耐力圈')+check('nameTags','顯示球員名牌')],
       ['畫面','<div class="settings-row"><span>顯示模式</span><button data-fullscreen>進入全螢幕</button></div><label class="settings-row"><span>畫質</span><select data-pref="quality"><option value="high">高</option><option value="low">省電</option></select></label>'+check('showFps','顯示 FPS（畫面右上角）')+check('bloom','泛光效果（亮的地方會暈開；關掉畫面比較清楚、不霧）')+slider('fov','視野（廣角）',60,100,1)],
-      ['控制',slider('sensitivity','滑鼠靈敏度',.1,5,.05)+'<p>點按鍵，再按新鍵；重複時互換。Esc 取消。滑鼠按鈕維持原操作。</p><div class="settings-bindings">'+bindings.filter(([a])=>!['j','k','l'].includes(a)).map(([a,t])=>`<div class="settings-row"><span>${t}</span><button data-bind="${a}"></button></div>`).join('')+'</div><h3>舉球面板左右</h3>'+['4 號位','快攻','2 號位'].map((t,i)=>`<div class="settings-row"><span>${t}</span><button data-swap="${i}"></button></div>`).join('')+'<button data-reset-keys>全部還原預設按鍵</button>'],
+      ['控制',slider('sensitivity','滑鼠靈敏度',.1,5,.05)+'<p>點按鍵，再按新鍵；重複時互換。Esc 取消。滑鼠按鈕維持原操作。</p><div class="settings-bindings">'+bindings.filter(([a])=>!['j','k','l'].includes(a)).map(([a,t])=>`<div class="settings-row"><span>${t}</span><button data-bind="${a}"></button></div>`).join('')+'<div class="settings-row"><span>聊天（房間中，固定按鍵）</span><span>Enter</span></div></div><h3>舉球面板左右</h3>'+['4 號位','快攻','2 號位'].map((t,i)=>`<div class="settings-row"><span>${t}</span><button data-swap="${i}"></button></div>`).join('')+'<button data-reset-keys>全部還原預設按鍵</button>'],
       ['音效',slider('volume','主音量',0,100,1)+check('mute','靜音')],
       ['其他','<label class="settings-row"><span>暱稱（2～12 字）</span><input data-pref="nickname" maxlength="48" autocomplete="off"></label><button data-reset>還原所有設定</button><div class="settings-account" data-account hidden><h3>帳號</h3><div class="settings-row"><span data-who>目前登入：—</span><button data-switch>切換帳號</button></div><div class="settings-row"><span>登出這個 Google 帳號</span><button data-logout>登出</button></div><div class="settings-row"><span>永久刪除帳號、暱稱和角色外觀（無法復原）・<a href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></span><button data-delete-account class="settings-danger">刪除帳號</button></div><p class="settings-account-err" role="status"></p></div>']
     ];

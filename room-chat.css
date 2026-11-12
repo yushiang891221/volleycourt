@@ -1,0 +1,11 @@
+.walk-ui > .room-chat { position:absolute; left:14px; bottom:100px; width:min(340px,38vw); z-index:15; pointer-events:none; font-size:13px; line-height:1.45; }
+.room-chat-log { max-height:min(200px,28vh); overflow:auto; scrollbar-width:thin; }
+.room-chat-line { padding:4px 8px; background:rgba(12,22,38,.78); color:#f1f4fa; overflow-wrap:anywhere; transition:opacity .6s; }
+.room-chat-line.self { color:#8ee8ce; }
+.room-chat-line.expired { opacity:0; }
+.room-chat.typing .room-chat-line { opacity:1; }
+.room-chat.typing .room-chat-log { pointer-events:auto; }
+.room-chat input { width:100%; box-sizing:border-box; margin-top:6px; padding:8px; background:#142236; color:#fff; border:1px solid #8ee8ce; border-radius:6px; pointer-events:auto; }
+.room-chat input[hidden] { display:none; }
+.room-chat-bubble { max-width:240px; padding:6px 10px; border-radius:12px; background:rgba(248,251,255,.94); color:#142236; font-size:14px; white-space:normal; overflow-wrap:anywhere; text-align:center; }
+@media (pointer:coarse) { .room-chat { display:none; } }

@@ -4,6 +4,8 @@
 <script>if (!location.search) location.replace("index.html#lobby");</script>
 <meta charset="utf-8">
 <link rel="stylesheet" href="settings.css">
+<script src="room-chat.js"></script>
+<link rel="stylesheet" href="room-chat.css">
 <script src="settings.js"></script>
 <script src="room-settings.js"></script>
 <script src="court-formations.js"></script>
@@ -863,7 +865,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div id="room-panel" hidden><label>全房間球速 <select id="room-speed"><option value="0.55">很慢（55%）</option><option value="0.7">慢（70%）</option><option value="1">正常（100%）</option></select></label><p>人跑、跳的速度不變</p><label class="room-size">每隊人數 <output id="room-size-value">2 對 2</output><input id="room-size" type="range" min="1" max="6" step="1" value="2"><span id="room-size-note"></span></label><button id="room-close" type="button">完成</button></div>
       <div id="room-flow"><button id="room-ready" type="button">準備</button> <button id="room-start" type="button" hidden>開始遊戲</button><p id="room-flow-note">走到球場上按準備</p><p id="room-ready-list"></p></div>
       <div class="wk-keys" id="wk-keys" aria-label="按鍵"><span><kbd>WASD</kbd>移動</span><span><kbd data-key="shift">Shift</kbd>衝刺（比賽耗體力）</span><span><kbd>滑鼠</kbd>轉頭</span><span><kbd data-key="e">E</kbd>互動／拿球</span><span><kbd data-key=" ">空白</kbd>跳</span><span><kbd>左鍵</kbd>攻擊／發球</span><span><kbd>右鍵</kbd>吊球／飄球</span><span>拿球按<kbd data-key=" ">空白</kbd>跳發（空中左鍵跳發、右鍵跳飄）</span><span><kbd>滾輪</kbd>調發球深淺</span><span><kbd data-key="s">S</kbd>按著打短</span><span><kbd data-key="v">V</kbd>接球</span><span><kbd data-key="shift">Shift</kbd>＋<kbd data-key="v">V</kbd>撲救</span><span><kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd>舉到 4 號位／快攻／2 號位／後排中間</span><span><kbd data-key="p">P</kbd>第一／第三人稱</span><span>按住<kbd data-key="t">T</kbd>往左擊掌／往右嘲諷</span><span><kbd data-key="b">B</kbd>攔網</span><span><kbd data-key="f">F</kbd>拋給隊友</span><span><kbd>Esc</kbd>放開滑鼠／離開全螢幕</span></div>
-      <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 或方向鍵走路，按住 <kbd data-key="shift">Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭；按 <kbd>Esc</kbd> 放開滑鼠・準星對著地板點一下就走過去<br>看著物件按 <kbd data-key="e">E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd data-key="v">V</kbd> 接球、<kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd data-key="p">P</kbd> 切換第一／第三人稱、<kbd data-key="w">W</kbd> 助跑＋<kbd data-key=" ">空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd data-key="s">S</kbd> 打短；<kbd>右鍵</kbd>吊球）、舉球員在網前舉球時按<kbd>右鍵</kbd>＝舉球員吊球（自動往網子那側吊過去）、<kbd data-key="b">B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd data-key=" ">空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd data-key="f">F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd data-key="v">V</kbd> 下手送高球過網、<kbd data-key="e">E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只放開滑鼠，不會離開；設定在右上角 ⚙）</p>
+      <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 或方向鍵走路，按住 <kbd data-key="shift">Shift</kbd> 跑步<br>點一下畫面後，移動滑鼠就是轉頭；按 <kbd>Esc</kbd> 放開滑鼠・準星對著地板點一下就走過去<br>看著物件按 <kbd data-key="e">E</kbd>（或點它）互動；球館設備可在場景內互動<br>排球：<kbd data-key="v">V</kbd> 接球、<kbd data-key="1">1</kbd><kbd data-key="2">2</kbd><kbd data-key="3">3</kbd><kbd data-key="4">4</kbd> 舉到 4 號位／快攻／2 號位／後排中間（固定位置）、<kbd data-key="p">P</kbd> 切換第一／第三人稱、<kbd data-key="w">W</kbd> 助跑＋<kbd data-key=" ">空白鍵</kbd> 起跳、空中按滑鼠<kbd>左鍵</kbd>攻擊（往哪看打哪，按著 <kbd data-key="s">S</kbd> 打短；<kbd>右鍵</kbd>吊球）、舉球員在網前舉球時按<kbd>右鍵</kbd>＝舉球員吊球（自動往網子那側吊過去）、<kbd data-key="b">B</kbd> 攔網、拿著球按<kbd>左鍵</kbd>站發、<kbd>右鍵</kbd>站飄，按<kbd data-key=" ">空白鍵</kbd>拋球起跳、空中<kbd>左鍵</kbd>跳發／<kbd>右鍵</kbd>跳飄（對面的紅圈是落點：轉頭調左右、滑鼠滾輪調深淺）、<kbd data-key="f">F</kbd> 拋給隊友（或陪練）<br>比賽第三球攻擊不了：<kbd data-key="v">V</kbd> 下手送高球過網、<kbd data-key="e">E</kbd> 雙手推平過網・場邊「🤝 陪練對碰」：拋給他→他墊給你，你舉他就打你、你扣他就接起來<br>聊天：<kbd>Enter</kbd> 開啟／送出、<kbd>Esc</kbd> 取消（房間中）<br>要離開遊戲：按右上角「回大廳」（<kbd>Esc</kbd> 只放開滑鼠，不會離開；設定在右上角 ⚙）</p>
       <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
       <div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div>
       <div class="emo-menu" id="emo-menu" hidden><i id="emo-cur"></i></div>
@@ -5744,6 +5746,7 @@ function updateWalk(dt) {
   else if (walk.air) { vx = walk.air.vx + vx * 0.12; vz = walk.air.vz + vz * 0.12; walk.target = null; }
   else if (SETM.m) { vx = vz = 0; walk.vel = [0, 0]; }   // 舉球轉盤開著：腳站住，專心選球路
   else { walk.vel = [vx, vz]; const as = vbAssist(mag); if (as) { vx += as[0]; vz += as[1]; } }
+  if (RoomChat.isOpen) { vx = vz = 0; walk.vel = [0, 0]; }
   if (game && !walk.air && !walk.dive) {   // 急停、急轉（速度掉一半、或方向轉超過 60°）：球鞋「唧」
     const pv = walk.pv || [0, 0], ps = Math.hypot(pv[0], pv[1]), cs = Math.hypot(vx, vz), cosA = ps > 0.1 && cs > 0.1 ? (pv[0] * vx + pv[1] * vz) / (ps * cs) : 1;
     // 急停、急轉、突然起跑都會「吱」（球場上最常聽到的聲音）
@@ -7061,6 +7064,9 @@ async function netJoin(room) {
   toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
 }
 function netLeave(quiet) {
+  RoomChat.reset();
+  for (const bubble of chatBubbles.values()) { clearTimeout(bubble.timer); scene.remove(bubble.label); bubble.label.element.remove(); }
+  chatBubbles.clear();
   window.VBGameLobby?.leave();
   if (!NET.on) return;
   if (ROOM) { ROOM.close(); ROOM = null; }
@@ -7604,6 +7610,43 @@ function emoStep() {
     } else if (now > H.end + 3000) EMO.hi5.delete(sid);
   }
 }
+/* Chat labels are independent of name tags, which can be hidden or refreshed. */
+const chatBubbles = new Map();
+function chatBubble(id, text) {
+  if (id !== NET.me && !NET.peers.has(id)) return;
+  let bubble = chatBubbles.get(id);
+  if (!bubble) {
+    const el = document.createElement('div'); el.className = 'room-chat-bubble';
+    bubble = { label: new CSS2DObject(el), timer: null }; chatBubbles.set(id, bubble); scene.add(bubble.label);
+  }
+  bubble.label.element.textContent = text;
+  clearTimeout(bubble.timer);
+  bubble.timer = setTimeout(() => { scene.remove(bubble.label); bubble.label.element.remove(); chatBubbles.delete(id); }, 4000);
+  chatBubbleStep();
+}
+function chatBubbleStep() {
+  for (const [id, bubble] of chatBubbles) {
+    const peer = NET.peers.get(id), self = id === NET.me;
+    bubble.label.visible = self ? tpActive() : !!peer;
+    if (self) bubble.label.position.set(walk.x, 2.5 + (walk.air?.y || 0), walk.z);
+    else if (peer) { bubble.label.position.copy(peer.av.g.position); bubble.label.position.y += 2.5; }
+  }
+}
+RoomChat.configure({
+  online: () => NET.on,
+  available: () => walk.on && !coarse() && !walk.paused && !VBSettings.isOpen,
+  mount: () => $('walk-ui'),
+  identity: () => ({ id: NET.me, n: NET.name }),
+  publish: data => NET.tx.publish('chat', data),
+  notice: text => toast(text),
+  hold: () => {
+    walk.keys.clear(); fly.keys.clear(); walk.target = null; walk.vel = [0, 0]; walk.crouch = false;
+    walk.joy.x = walk.joy.y = 0; targetMark.visible = false;
+    setMenuClose(false); emoMenuClose(false); unlockMouse();
+  },
+  release: () => { walk.keys.clear(); updateLockHint(); },
+  bubble: chatBubble
+});
 function emoBubble(id, txt) {
   const a = VM.ai.get(id), p2 = NET.peers.get(id), el = (a && a.tag && a.tag.element) || (p2 && p2.tag && p2.tag.element); if (!el) return;
   let b = el.querySelector('.emo-b'); if (!b) { b = document.createElement('span'); b.className = 'emo-b'; el.prepend(b); }
@@ -7623,6 +7666,7 @@ function emoPose(k, t) {
 function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
+  if (t === 'chat') { RoomChat.receive(d, from); return; }
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
   if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t }); return; }   // 量延遲
@@ -11856,6 +11900,7 @@ function drawFrame(force) {
   if (walk.on) vbChgPlace();
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   renderScene();
+  chatBubbleStep();
   labelRenderer.render(scene, camera);
   if (walk.on) vbDomFx();
   if (tp) tpEnd();
