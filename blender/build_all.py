@@ -11,6 +11,7 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build_body2.
 import clothes as C
 tops = C.tops(body, SEX); pts = C.pants(body, SEX); kn = C.kneepads(body); sk = C.socks(body); sh = C.shoes()
 C.hide_under_pants(body)   # 褲子蓋住的身體刪掉（衣服都做完之後才刪）
+C.body_like_pants(body, pts[0])   # 褲子裡面那段大腿跟褲子用一樣的權重（蹲下不會從褲子前面穿出來）
 for o in tops + pts + kn + [sk]:
     o.parent = rig; m = o.modifiers.new('rig', 'ARMATURE'); m.object = rig
 for o, b in sh: bind_to(rig, o, b)

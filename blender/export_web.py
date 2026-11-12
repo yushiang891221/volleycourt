@@ -6,7 +6,8 @@ import bpy, json
 from common import *
 
 SEX = int(sys.argv[sys.argv.index('--') + 1]) if '--' in sys.argv else 0
-TARGET = {'body': 6000, 'head': 3000, 'hair': 9000, 'top': 7000, 'collar': 1200, 'pants': 20000, 'knee': 2500, 'socks': 1500, 'shoe': 1200, 'headband': 600}
+# 護膝不減面（原本 6300 面）：減到 2500 面時大三角形在膝蓋大彎（蹲低 112°）會切進皮膚，護膝上冒出一塊塊白斑
+TARGET = {'body': 6000, 'head': 3000, 'hair': 9000, 'top': 7000, 'collar': 1200, 'pants': 20000, 'knee': 7000, 'socks': 1500, 'shoe': 1200, 'headband': 600}
 rig = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 parts = [o for o in bpy.data.objects if o.type == 'MESH' and o.parent == rig]
 for o in parts:

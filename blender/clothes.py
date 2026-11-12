@@ -188,6 +188,43 @@ def tops(body, sex):
     return out
 
 
+def pants_weights(c):
+    """褲子的骨頭權重（只看位置）：腰以上照身體（spine/root 漸變）；往下漸漸改跟大腿（長褲再照膝蓋分大腿/小腿）。
+    兩腿中間（|x| < 3.5 公分）漸變分給左右大腿，不再只跟骨盆：褲襠在站姿時垂到褲管口附近，
+    以前中間只跟骨盆、兩邊跟大腿，蹲下時褲管抬起來、中間那片留在原地往下垂成尖角"""
+    back = max(0.0, min(1.0, c.y / 0.1))   # 屁股那側（+Y）早一點跟大腿動：蹲下時褲子後面整片撐開，不會在褲管口夾成一條
+    wl = _ss(HIP_H + 0.02 + 0.08 * back - c.z, 0.0, 0.1 + 0.06 * back)
+    t = _ss(c.z, HIP_H, HIP_H + 0.24); sl = _ss(c.x, -0.035, 0.035)
+    out = {'spine': (1 - wl) * t, 'root': (1 - wl) * (1 - t)}
+    for side, k in (('R', 1 - sl), ('L', sl)):
+        if k <= 0: continue
+        for n, w in limb_weights(c, f'thigh.{side}').items(): out[n] = out.get(n, 0) + wl * k * w
+    return {n: w for n, w in out.items() if w > 0.001}
+
+
+def body_like_pants(body, pants):
+    """褲子裡面那段大腿皮膚改用跟褲子一樣的權重：以前皮膚 100% 跟大腿、褲子靠腰那段一半跟骨盆，
+    蹲下時大腿前側的皮膚比褲子多轉一截，從褲子前面穿出來（兩塊肉色）"""
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get(); tree = BVHTree.FromObject(pants, dg)
+    names = {g.index: g.name for g in body.vertex_groups}; G = {g.name: g for g in body.vertex_groups}
+    hem = HIP_H - 0.16; n_ = 0
+    for v in body.data.vertices:
+        ws = {names[g.group]: g.weight for g in v.groups if g.group in names}
+        if not ws or not max(ws, key=ws.get).startswith('thigh') or v.co.z < hem - 0.02: continue
+        h = tree.find_nearest(v.co)
+        if h[0] is None or h[3] > 0.06: continue
+        p = h[0]; k = _ss(v.co.z, hem - 0.02, hem + 0.01)   # 褲管口以下照舊（本來就只跟腿）
+        new = pants_weights(p); old = limb_weights(v.co, 'thigh.' + ('L' if v.co.x > 0 else 'R'))
+        for gname in set(new) | set(old) | set(ws):
+            w = k * new.get(gname, 0) + (1 - k) * old.get(gname, 0)
+            g = G.get(gname) or G.setdefault(gname, body.vertex_groups.new(name=gname))
+            if w > 0.001: g.add([v.index], w, 'REPLACE')
+            elif gname in ws: g.remove([v.index])
+        n_ += 1
+    print('body_like_pants', n_)
+
+
 def _shell(name, nodes, edges, top_z, hem_z, thick, body=None):
     """用 Skin 修改器做一整塊平滑的褲子（腰→骨盆→兩條褲管），切掉上下開口、加厚度。沒有分層、沒有接縫"""
     K = 1.32
@@ -227,12 +264,7 @@ def _shell(name, nodes, edges, top_z, hem_z, thick, body=None):
     def add(n, i, w):
         if w > 0.001: (G.get(n) or G.setdefault(n, ob.vertex_groups.new(name=n))).add([i], w, 'REPLACE')
     for v in ob.data.vertices:
-        c = v.co; side = 'L' if c.x > 0 else 'R'
-        back = max(0.0, min(1.0, c.y / 0.1))   # 屁股那側（+Y）早一點跟大腿動：蹲下時褲子後面整片撐開，不會在褲管口夾成一條
-        wl = _ss(HIP_H + 0.02 + 0.08 * back - c.z, 0.0, 0.1 + 0.06 * back) * _ss(abs(c.x), 0.0, 0.035)
-        t = _ss(c.z, HIP_H, HIP_H + 0.24)
-        add('spine', v.index, (1 - wl) * t); add('root', v.index, (1 - wl) * (1 - t))
-        for n, w in limb_weights(c, f'thigh.{side}').items(): add(n, v.index, wl * w)
+        for n, w in pants_weights(v.co).items(): add(n, v.index, w)
     ob.data.materials.append(mat('pants', '#1C1C21', 0.78)); ob.data.materials.append(mat('ptrim', '#F07C24', 0.75))
     so = ob.modifiers.new('so', 'SOLIDIFY'); so.thickness = thick; so.offset = -1; so.use_even_offset = False
     sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.4; sm.iterations = 3
@@ -279,10 +311,11 @@ def hide_under_pants(body):
 
 
 def kneepads(body):
+    # 離皮膚 2.1 公分（往內加厚 1.2 公分後內面離皮膚約 9 毫米）：以前只剩 4 毫米，網頁版減面後膝蓋一彎皮膚就從護膝穿出來一塊塊白斑
     out = []
     for kind in (0, 1):
         ob = make(body, f'knee_{kind}', {'thigh', 'shin'},
-                  [((0, 0, HIP_H - L1 + 0.06), (0, 0, 1), None, False), ((0, 0, HIP_H - L1 - 0.065), (0, 0, -1), None, False)], 0.016, thick=0.012, colors=('pad' + str(kind), 'pad' + str(kind)), cols=(('#24262C', '#F2F2EE')[kind],) * 2, plain=True)
+                  [((0, 0, HIP_H - L1 + 0.06), (0, 0, 1), None, False), ((0, 0, HIP_H - L1 - 0.065), (0, 0, -1), None, False)], 0.021, thick=0.012, colors=('pad' + str(kind), 'pad' + str(kind)), cols=(('#24262C', '#F2F2EE')[kind],) * 2, plain=True)
         out.append(ob)
     return out
 

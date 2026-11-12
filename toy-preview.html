@@ -32,8 +32,10 @@ const AVP = {
   serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35 },
   block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, shy: [0.08, 0.08] },
   land: { sh: [[-0.55, 0.35], [-0.55, 0.35]], el: [0.75, 0.75], hip: [0.9, 0.9], kn: [1.5, 1.5], hab: [0.16, 0.16], sp: 0.45, tw: 0 },
+  crouch: { sh: [[-0.75, 0.2], [-0.75, 0.2]], el: [0.7, 0.7], hip: [1.25, 1.25], kn: [1.95, 1.95], hab: [0.28, 0.28], sp: 0.72, tw: 0 },
+  kneel: { sh: [[-1.25, 0.22], [-1.25, 0.22]], el: [0.15, 0.15], hip: [1.45, 1.45], kn: [2.3, 2.3], hab: [0.14, 0.14], sp: 0.45, tw: 0 },
 };
-const POSE_NAMES = { idle: '站立', ready: '接球準備', bump: '低手接球', setReady: '舉球準備', setPush: '舉球推出', approach: '助跑', airUp: '空中拉弓', spikeHit: '扣球', serveToss: '發球拋球', block: '攔網', land: '落地' };
+const POSE_NAMES = { idle: '站立', ready: '接球準備', bump: '低手接球', setReady: '舉球準備', setPush: '舉球推出', approach: '助跑', airUp: '空中拉弓', spikeHit: '扣球', serveToss: '發球拋球', block: '攔網', land: '落地', crouch: '蹲低', kneel: '跪地' };
 // 跟 avDrive 靜止時一樣的套法
 function pose(av, P) {
   const ext = [0, 0];
