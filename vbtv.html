@@ -9,11 +9,10 @@
 </head>
 <body>
 <header><h1>球館 TV</h1><span>VOLLEYBALL · 比賽放映室</span></header>
-<main><section><video id="player" controls playsinline preload="metadata" src="video/nandian-2022-fcu-vs-nsysu-v2.mp4"></video><h2 id="title">排球比賽｜逢甲 × 中山</h2><p id="description">一起看比賽，觀察跑位、配合與每一次攻防。</p></section><aside aria-label="影片清單"><button data-video="match" aria-pressed="true">排球比賽<small>逢甲 × 中山 · 完整影片</small></button><button data-video="rally" aria-pressed="false">回合精華<small>發球、接球與攻防片段</small></button></aside></main>
+<main><section><video id="player" controls playsinline preload="metadata" src="video/nandian-2022-fcu-vs-nsysu-v2.mp4"></video><h2 id="title">排球比賽｜逢甲 × 中山</h2><p id="description">一起看比賽，觀察跑位、配合與每一次攻防。</p></section><aside aria-label="影片清單"><button data-video="match" aria-pressed="true">排球比賽<small>逢甲 × 中山 · 完整影片</small></button></aside></main>
 <script>
 const videos = {
   match: ['video/nandian-2022-fcu-vs-nsysu-v2.mp4', '排球比賽｜逢甲 × 中山', '一起看比賽，觀察跑位、配合與每一次攻防。'],
-  rally: ['video/rally-demo.mp4', '排球回合精華', '看看球員如何串連接球、舉球與攻擊。']
 };
 document.querySelectorAll('[data-video]').forEach(button => button.addEventListener('click', () => {
   const [src, title, description] = videos[button.dataset.video];
