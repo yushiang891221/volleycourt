@@ -7598,6 +7598,7 @@ function emoKeyPose(pose) {
   return { ...AVP.idle, ...(typeof pose === 'string' ? AVP[pose] : pose), arm: 0, gait: 0 };
 }
 function emoKeySpline(P, u) {
+  P = P.map((p) => avMix(p, p, 0));   /* 先補齊所有欄位（腳踝、肩、頭、側傾…），左右鏡像才不會讀到空的 */
   const w = [(-u * u * u + 2 * u * u - u) / 2, (3 * u * u * u - 5 * u * u + 2) / 2, (-3 * u * u * u + 4 * u * u + u) / 2, (u * u * u - u * u) / 2];
   const mix = (vals) => typeof vals[1] === 'number' ? vals.reduce((sum, v, k) => sum + (typeof v === 'number' ? v : vals[1]) * w[k], 0) : Array.isArray(vals[1]) ? vals[1].map((_, j) => mix(vals.map((v) => (Array.isArray(v) ? v[j] : undefined)))) : vals[2];
   const out = {}; for (const key of Object.keys(P[1])) out[key] = mix(P.map((p) => p[key])); return out;

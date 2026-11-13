@@ -132,4 +132,18 @@ vm.runInNewContext(progress.slice(progress.indexOf('export const EMOTES'), progr
 assert(progressContext.unlocked('shanshen', null)); assert(/^[a-z0-9]{1,12}$/.test('shanshen'));
 assert.equal(progressContext.entries.shanshen.name, '閃身步'); assert.equal(JSON.stringify(progressContext.wheel), '["hi5","taunt"]');
 console.log('PASS 操作入口阻擋、鏡頭移動、免費解鎖與預設輪盤');
+/* 所有表情動作 × 往右／往左 × 從頭到尾每 0.02 秒抽樣：不能出錯、數值都要是正常數字（2026-11-14 狗熊哆嗦毛往左跳時讀到空欄位當掉過） */
+{
+  const keys = run('Object.keys(EMO_KEYS)'); assert(keys.length >= 3);
+  const bad = (v) => (typeof v === 'number' ? !Number.isFinite(v) : Array.isArray(v) ? v.some(bad) : false);
+  for (const k of keys) {
+    const total = context.emoKeyDuration(k);
+    for (const dir of [1, -1]) for (let t = 0; t <= total + 0.05; t += 0.02) {
+      const s = context.emoKeySample(k, t, dir);
+      for (const f of ['sh', 'el', 'hip', 'kn', 'hab', 'shy', 'ankle', 'head', 'tw', 'lean', 'sp']) assert(s.pose[f] !== undefined && !bad(s.pose[f]), `${k} dir=${dir} t=${t.toFixed(2)} 的 ${f} 不正常`);
+      assert(!bad(s.move), `${k} 的位移不正常`);
+    }
+  }
+  console.log('PASS 所有表情動作往右、往左整段抽樣都正常：' + keys.join('、'));
+}
 console.log('WEB-021 passed');
