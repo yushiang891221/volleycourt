@@ -173,6 +173,8 @@ assert.equal(block(gym, 'function vmAiSnapshot(', 'function vmRenderAi('), block
 function withoutCorrection(source) {
   /* WEB-021 的互動入口鎖定由 verify-web021 驗證，保留其餘逐字比較。 */
   source = source.replace(/\n  if \(walk\.emote\?\.keyframes\) return;/g, '');
+  /* WEB-023 的單行掛勾（等落地、腳步聲、近身判斷）由 verify-web023 驗證，其餘逐字比較。 */
+  source = source.replace(/^.*WEB-023.*\n/gm, '').replaceAll(' b.waitFloor = null;', '');
 
   /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
   const beforeWeb020 = t => t
