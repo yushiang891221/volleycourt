@@ -110,6 +110,7 @@ export function achProgress(key, p = {}) {
 export const EMOTES = {
   hi5: { name: '擊掌', icon: '🙌' },
   taunt: { name: '嘲諷', icon: '😜' },
+  shanshen: { name: '閃身步', icon: '💨' },
   thumb: { name: '比讚', icon: '👍', lv: 2 },
   clap: { name: '拍手', icon: '👏', lv: 3 },
   cheer: { name: '歡呼', icon: '🎉', lv: 5 },

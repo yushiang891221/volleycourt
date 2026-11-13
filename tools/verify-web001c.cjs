@@ -92,6 +92,8 @@ await check('unmodified physics, scoring, rotation and transports match baseline
  // Keep exact comparisons for every intervening physics, scoring and AI section.
  for(const [a,b] of [['function standUp()','const NET ='],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['// 輪轉：2 號位','function vmStaRings()']]){
   let current=segment(gym,a,b),previous=segment(old,a,b);
+  /* WEB-021 只排除新增的表情播放鎖定，原有入口函式本體仍逐字比較。 */
+  current=current.replace(/\n  if \(walk\.emote\?\.keyframes\) return;/g, '');
   if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
   // 球館計分板跟著比賽比分（只是顯示），不算物理／玩法：兩邊都拿掉 drawScore 這段再比
   const noScore=t=>{const i=t.indexOf('function drawScore() {'),j=t.indexOf('function addPoint(');return i>=0&&j>i?t.slice(0,i)+t.slice(j):t;};current=noScore(current);previous=noScore(previous);

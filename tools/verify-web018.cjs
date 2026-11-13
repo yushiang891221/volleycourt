@@ -171,6 +171,8 @@ for (const scenario of ['match', 'continuous']) for (const host of [true, false]
 assert.equal(block(gym, 'function vmAiSnapshot(', 'function vmRenderAi('), block(baseline, 'function vmAiSnapshot(', 'function vmRenderAi('));
 /* Physics integration and collision rules remain byte-identical outside the correction block. */
 function withoutCorrection(source) {
+  /* WEB-021 的互動入口鎖定由 verify-web021 驗證，保留其餘逐字比較。 */
+  source = source.replace(/\n  if \(walk\.emote\?\.keyframes\) return;/g, '');
 
   /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
   const beforeWeb020 = t => t

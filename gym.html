@@ -5701,6 +5701,7 @@ function collide(x, z) {
   return [clamp(x, B.x0 - 8, B.x1 + 8), clamp(z, B.z0 - 8, B.z1 + 8)];
 }
 function updateWalk(dt) {
+  const keyMoving = emoKeyWalk();
   if (window.VBTutorial?.active && (walk.spike || walk.sit || VM.on || window.__rkOn || NET.on)) window.VBTutorial.stop();
   const k = walk.keys;
   if (walk.spike) { updateSpike(dt); applyPose(dt); if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); } return; }
@@ -5747,6 +5748,7 @@ function updateWalk(dt) {
   else if (SETM.m) { vx = vz = 0; walk.vel = [0, 0]; }   // 舉球轉盤開著：腳站住，專心選球路
   else { walk.vel = [vx, vz]; const as = vbAssist(mag); if (as) { vx += as[0]; vz += as[1]; } }
   if (RoomChat.isOpen) { vx = vz = 0; walk.vel = [0, 0]; }
+  if (keyMoving) { vx = vz = 0; walk.vel = [0, 0]; walk.target = null; }
   if (game && !walk.air && !walk.dive) {   // 急停、急轉（速度掉一半、或方向轉超過 60°）：球鞋「唧」
     const pv = walk.pv || [0, 0], ps = Math.hypot(pv[0], pv[1]), cs = Math.hypot(vx, vz), cosA = ps > 0.1 && cs > 0.1 ? (pv[0] * vx + pv[1] * vz) / (ps * cs) : 1;
     // 急停、急轉、突然起跑都會「吱」（球場上最常聽到的聲音）
@@ -5760,8 +5762,8 @@ function updateWalk(dt) {
     walk.x = nx; walk.z = nz;
     vbBodyPush();
   }
-  vbServeZone();
-  const bob = mag > 0.01 || walk.target ? Math.sin(performance.now() / 160) * 0.015 : 0;
+  if (!keyMoving) vbServeZone();
+  const bob = !keyMoving && (mag > 0.01 || walk.target) ? Math.sin(performance.now() / 160) * 0.015 : 0;
   camera.position.set(walk.x, EYE + bob - (skill.dip || 0) - (walk.low || 0) + jumpY(dt), walk.z);
   if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a; }
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
@@ -5839,6 +5841,7 @@ function updateFocus() {
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
 function doInteract(tg) {
+  if (walk.emote?.keyframes) return;
   if (walk.spike || walk.serve || reachState) return;
   tg = tg || walk.focus;
   if (!walk.hold && !tg) { const nb = incomingBall('set'); if (nb) return hitWorldBall(nb, 'set'); }
@@ -6285,6 +6288,7 @@ function releaseBall(v) {
   recHit({ x: m.position.x, y: m.position.y, z: m.position.z, v: v.length(), kind: 'throw' });
 }
 function throwBall() {
+  if (walk.emote?.keyframes) return;
   if (!walk.hold || skill.mode) return;
   const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   releaseBall(fwd.multiplyScalar(9.5).add(new THREE.Vector3(0, 2.2, 0)));
@@ -6301,6 +6305,7 @@ function pickBall(b) {
 // 判定：球往下掉、離觸球點在 -0.38～0.6 m 之間按就算接到（球會亮）；剛觸球後 0.22 秒內的連按不算
 const inWindow = () => skill.v < 0 && skill.h < 0.6 && skill.h > -0.38;
 function skillPress(kind) {
+  if (walk.emote?.keyframes) return;
   if (walk.spike) return;
   // 有球飛到手邊：直接碰出去（不用先拿著球）
   if (!skill.mode) { const nb = incomingBall(kind); if (nb) return hitWorldBall(nb, kind); }
@@ -6367,6 +6372,7 @@ function solveShot(p0, tx, tz, court, sg, Tmin) {
   return new THREE.Vector3((tx - p0.x) / 2.6, (BALL_R - p0.y) / 2.6 + 4.9 * 2.6, (tz - p0.z) / 2.6);
 }
 function startSpike(jump) {
+  if (walk.emote?.keyframes) return;
   if (walk.spike || walk.sit || walk.serve) return;
   let own = null, incoming = null;
   if (walk.hold) { const p0 = new THREE.Vector3(); walk.hold.getWorldPosition(p0); own = walk.hold; camera.remove(own); own.position.copy(p0); own.material = ballMat; delete own.userData.noPick; ballsGroup.add(own); walk.hold = null; skill.mode = null; $('wk-combo').hidden = true; }
@@ -6442,7 +6448,8 @@ function updateSpike(dt) {
   if (t > s.endT) { walk.spike = null; hands.visible = !!walk.hold; pose = 'hold'; if (s.jump) walk.pitch = -0.04; }
 }
 // ---- 跳（空白鍵）：原地或邊走邊跳，0.6 秒、最高 0.5 m；跳起來時按 R 就是跳扣
-function startJump() { if (walk.jump || walk.spike || walk.sit || walk.serve || walk.paused) return; walk.jump = { t: 0 }; }
+function startJump() {
+  if (walk.emote?.keyframes) return; if (walk.jump || walk.spike || walk.sit || walk.serve || walk.paused) return; walk.jump = { t: 0 }; }
 function jumpY(dt) { return vbAirStep(dt); }
 // ---- 伸手：右手（洗手是兩手）伸向看著的地方，手上可以拿著東西；手到了才觸發效果
 let reachState = null;
@@ -6628,6 +6635,7 @@ function vbServeInside() {
   return false;
 }
 function startServe(type = 'std') {
+  if (walk.emote?.keyframes) return;
   if (walk.serve || walk.spike || walk.sit) return;
   if (walk.hold && !vmServeOK()) return;
   if (!walk.hold) { toast('先拿一顆球（看著球車按 E）才能發球'); return; }
@@ -6644,6 +6652,7 @@ function startServe(type = 'std') {
 // ---- 跳發／跳飄：拿著球按空白鍵＝拋球（往前上方拋高），自動跑兩步起跳；在空中按左鍵＝跳發（重、上旋下墜）、右鍵＝跳飄（不轉、會飄）
 //      球最好打的時候：你跳到最高點、球剛好掉到手的高度（球會發亮）；拋了沒打到＝發球失誤
 function startJumpServe() {
+  if (walk.emote?.keyframes) return;
   if (walk.serve || walk.jserve || walk.air || walk.sit || !walk.hold) return;
   if (!vmServeOK()) return;
   if (vbServeInside()) return;
@@ -6825,6 +6834,7 @@ function facingPeer(maxAng = 0.44) {
 }
 // F：手上的球用下手拋給面前的人（沒有人就往前 6 m）
 function passToFacing() {
+  if (walk.emote?.keyframes) return;
   if (VM.on) { toast('比賽中：球在身邊時按 E 把球推過網', 1500); return; }
   if (!walk.hold || walk.spike || walk.serve) { toast('先拿一顆球，再面向要傳的人按 F'); return; }
   if (skill.mode) { skill.mode = null; $('wk-combo').hidden = true; }
@@ -6838,6 +6848,7 @@ function passToFacing() {
   toast(peer && peer.n === '陪練' ? '拋給陪練了' : peer ? `拋給 ${peer.n}：等他用 E（舉球）或 Q（墊球）接` : '拋出去了（面向隊友再按 F 就會拋給他）');
 }
 function hitWorldBall(b, kind) {
+  if (walk.emote?.keyframes) return;
   const p = b.m.position, up = walk.pitch > 0.55;
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
   // 傳球距離與滯空時間：舉球高而短、墊球遠一點；往上看就原地往上；大致面向隊友時直接傳到他手上
@@ -7524,6 +7535,113 @@ function netDropPeer(id) {
 //     → 時間到大家往中間靠、面對面（兩個人相隔不到 1 m，人多就圍一圈），雙手一起拍；太遠的人不算、旁邊沒人回就放下手
 //   嘲諷：對對面挺胸比「來啊」，名條上冒表情（大家都看得到）
 const EMO = { menu: null, hi5: new Map(), WIN: 2500, R: 2.5 };
+/* 關鍵格的 dt 是從上一格到這一格的秒數，ease 控制該段，move 為角色右方／前方公尺。 */
+const EMO_KEYS = {
+  shanshen: [
+    { dt: 0, pose: 'idle', move: [0, 0] },
+    { dt: 0.15, pose: { sh: [[0, 0.12], [0, 0.12]], el: [0.12, 0.12] }, ease: 'smooth', move: [0, 0] },
+    { dt: 0.25, pose: { sh: [[-0.35, -0.5], [-0.1, 0.5]], el: [0.65, 0.2], tw: 0.2 }, ease: 'smooth', move: [0, 0] },
+    { dt: 0.05, pose: { sh: [[-0.15, 0.9], [-0.3, -0.9]], el: [0.12, 0.2], hip: [0.08, -0.18], kn: [0.2, 0.12], hab: [-0.25, -0.18], tw: -0.08 }, ease: 'linear', move: [0.28, 0] },
+    { dt: 0.07, pose: { sh: [[-0.1, 1.5], [-0.28, -1.4]], el: [0.12, 0.18], hip: [0.25, -0.25], kn: [0.48, 0.08], hab: [0.48, 0.65], tw: -0.12 }, ease: 'out', move: [0.7, 0] },
+    { dt: 0.15, pose: { sh: [[-0.1, 1.5], [-0.28, -1.4]], el: [0.12, 0.18], hip: [0.25, -0.25], kn: [0.48, 0.08], hab: [0.48, 0.65], tw: -0.12 }, ease: 'linear', move: [0.7, 0] },
+    { dt: 0.3, pose: 'idle', ease: 'smooth', move: [0.7, 0] },
+  ],
+};
+function emoKeyDuration(key) { return EMO_KEYS[key].reduce((sum, frame) => sum + frame.dt, 0); }
+function emoKeyPose(pose) {
+  return { ...AVP.idle, ...(typeof pose === 'string' ? AVP[pose] : pose), arm: 0, gait: 0 };
+}
+function emoKeySample(key, time, dir = 1) {
+  const frames = EMO_KEYS[key];
+  let start = 0, i = 1;
+  while (i < frames.length - 1 && time > start + frames[i].dt) { start += frames[i].dt; i++; }
+  const a = frames[i - 1], b = frames[i], u = clamp((time - start) / b.dt, 0, 1);
+  const ease = b.ease === 'linear' ? u : b.ease === 'out' ? 1 - (1 - u) ** 2 : u * u * (3 - 2 * u);
+  let pose = avMix(emoKeyPose(a.pose), emoKeyPose(b.pose), ease);
+  if (dir < 0) pose = { ...pose, sh: [pose.sh[1], pose.sh[0]], el: [pose.el[1], pose.el[0]], hip: [pose.hip[1], pose.hip[0]], kn: [pose.kn[1], pose.kn[0]], hab: [pose.hab[1], pose.hab[0]], shy: [pose.shy[1], pose.shy[0]], tw: -pose.tw };
+  return { pose, move: [dir * (a.move[0] + (b.move[0] - a.move[0]) * ease), a.move[1] + (b.move[1] - a.move[1]) * ease], done: time >= emoKeyDuration(key) };
+}
+function emoKeyPosition(event, time) {
+  /* 從起點以固定 1 cm 子步重播曲線，碰到阻擋就停，與兩端 FPS 無關。 */
+  let x = event.x, z = event.z, start = 0;
+  const frames = EMO_KEYS[event.k];
+  for (let i = 1; i < frames.length; i++) {
+    const end = Math.min(time, start + frames[i].dt), sample = emoKeySample(event.k, end, event.dir);
+    const dx = Math.cos(event.yaw) * sample.move[0] - Math.sin(event.yaw) * sample.move[1];
+    const dz = -Math.sin(event.yaw) * sample.move[0] - Math.cos(event.yaw) * sample.move[1];
+    const tx = event.x + dx, tz = event.z + dz, count = Math.max(1, Math.ceil(Math.hypot(tx - x, tz - z) / 0.01));
+    const sx = (tx - x) / count, sz = (tz - z) / count;
+    for (let j = 0; j < count; j++) {
+      const nx = x + sx, nz = z + sz, hit = collide(nx, nz);
+      if (Math.hypot(hit[0] - nx, hit[1] - nz) > 0.00001) return [x, z];
+      x = nx; z = nz;
+    }
+    start += frames[i].dt;
+    if (time <= start) break;
+  }
+  return [x, z];
+}
+function emoKeyBlocked(id) {
+  if (!VM.on || VM.phase !== 'serve') EMO.tossLock = null;
+  if (!VM.on || vmTeamOf(id) < 0) return false;
+  if (VM.phase === 'rally') return true;
+  if (VM.phase !== 'serve') return false;
+  const server = VM.host ? vmServer() : VM.srvId;
+  const tossing = server === vmMe() ? !!(walk.serve || walk.jserve) : !!NET.peers.get(server)?.tossing;
+  if (tossing) EMO.tossLock = { server, seq: VM.srvSeq };
+  return tossing || !!(EMO.tossLock && EMO.tossLock.server === server && EMO.tossLock.seq === VM.srvSeq);
+}
+function emoKeyDirection() {
+  const right = walk.keys.has('d') || walk.keys.has('arrowright'), left = walk.keys.has('a') || walk.keys.has('arrowleft');
+  if (right !== left) return right ? 1 : -1;
+  EMO.nextDir = -(EMO.nextDir || -1);
+  return EMO.nextDir;
+}
+function emoKeyActive() { return !!walk.emote?.keyframes; }
+function emoKeyStart(key) {
+  if (emoKeyBlocked(vmMe())) { toast('發球後到死球前不能用'); return; }
+  if (emoKeyActive() || walk.air || walk.dive || walk.down > 0 || walk.sit || walk.paused || walk.spike || walk.serve || walk.jserve || window.__rkOn) return;
+  const now = performance.now(), dir = emoKeyDirection();
+  walk.emote = { k: key, keyframes: true, t0: now, until: now + emoKeyDuration(key) * 1000, dir, x: walk.x, z: walk.z, yaw: walk.yaw, match: VM.on };
+  walk.target = null; targetMark.visible = false; walk.vel = [0, 0];
+  walk.recv = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
+  if (skill.mode) { skill.mode = null; skill.dip = 0; $('wk-combo').hidden = true; }
+  if (SETM.m) setMenuClose(false);
+  if (NET.on) NET.tx.publish('emo', { e: 'em', k: key, id: vmMe(), dir, x: walk.x, z: walk.z, yaw: walk.yaw });
+}
+function emoKeyWalk() {
+  const event = walk.emote;
+  if (!event?.keyframes) return false;
+  if (emoKeyInterrupted(event, vmMe(), walk.x, walk.z) || walk.dive || walk.down > 0) { walk.emote = null; return false; }
+  const time = (performance.now() - event.t0) / 1000;
+  [walk.x, walk.z] = emoKeyPosition(event, time); walk.vel = [0, 0]; walk.target = null; walk.yaw = event.yaw;
+  if (time >= emoKeyDuration(event.k)) walk.emote = null;
+  return true;
+}
+function emoKeyReceive(d) {
+  if (![d.x, d.z, d.yaw].every(Number.isFinite) || ![-1, 1].includes(d.dir) || emoKeyBlocked(d.id)) return;
+  const peer = NET.peers.get(d.id) || netPeer(d.id, {});
+  if (!peer.last) { peer.last = { t: performance.now(), x: d.x, z: d.z, yaw: d.yaw, y: 0, vx: 0, vz: 0 }; peer.buf = [peer.last]; }
+  peer.keyEmote = { k: d.k, dir: d.dir, x: d.x, z: d.z, yaw: d.yaw, t0: performance.now() - netLat(d.id) * 1000, match: VM.on };
+  peer.jump = null;
+}
+function emoKeyInterrupted(event, id, x, z) {
+  return emoKeyBlocked(id) || event.match !== VM.on || balls.some((ball) => ball.rest < 0.3 && ball.m.position.y > 0.2 && ball.m.position.y < 2.1 && Math.hypot(ball.m.position.x - x, ball.m.position.z - z) < 0.35);
+}
+function emoKeyPeer(peer, now) {
+  const event = peer.keyEmote, time = Math.max(0, (now - event.t0) / 1000);
+  const stop = emoKeyInterrupted(event, peer.id, peer.x, peer.z);
+  const [x, z] = stop ? [peer.x, peer.z] : emoKeyPosition(event, time);
+  peer.keyPose = stop ? AVP.idle : emoKeySample(event.k, time, event.dir).pose;
+  if (stop || time >= emoKeyDuration(event.k)) {
+    peer.keyEmote = null; peer.pose = 0;
+    /* 丟掉動作前的延遲位置，下一筆狀態才恢復一般同步。 */
+    const row = { ...peer.last, t: now, x, z, yaw: event.yaw, y: 0, vx: 0, vz: 0 };
+    peer.buf = [row]; peer.netTime = now; peer.netLanded = true;
+    peer.keyStateAfter = now + netLat(peer.id) * 1000;
+  }
+  return [x, z, event.yaw, 0];
+}
 const emoTeam = (id) => (VM.on ? vmTeamOf(id) : 'all');
 const emoName = (id) => (VM.names && VM.names[id]) || (NET.peers.get(id) || {}).n || '隊友';
 const emoD = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
@@ -7542,6 +7660,7 @@ function emoMenuMove(dx, dy = 0) {
 function emoMenuDraw() { const m = EMO.menu; if (!m) return; $('emo-cur').style.transform = `translate(${m.dx}px, ${m.dy}px)`; for (const el of $('emo-menu').querySelectorAll('[data-emo]')) el.classList.toggle('on', el.dataset.emo === m.pick); }
 function emoMenuClose(ok) { const m = EMO.menu; if (!m) return; EMO.menu = null; $('emo-menu').hidden = true; if (ok && m.pick) emoDo(m.pick); }
 function emoDo(k) {
+  if (Object.hasOwn(EMO_KEYS, k)) { emoKeyStart(k); return; }
   const me = vmMe(), now = performance.now();
   if (k === 'taunt') { walk.emote = { k: 'taunt', t0: now, until: now + 1600 }; toast('😜 嘲諷！', 1100); if (NET.on) NET.tx.publish('emo', { e: 'taunt', id: me }); return; }
   if (k !== 'hi5' && EMOTES[k]) { walk.emote = { k: 'up', t0: now, until: now + 1100 }; toast(`${EMOTES[k].icon} ${EMOTES[k].name}`, 1100); if (NET.on) NET.tx.publish('emo', { e: 'em', k, id: me }); return; }   // WEB-010 解鎖的表情：頭上冒圖示
@@ -7650,7 +7769,8 @@ function emoBubble(id, txt) {
   let b = el.querySelector('.emo-b'); if (!b) { b = document.createElement('span'); b.className = 'emo-b'; el.prepend(b); }
   b.textContent = txt; clearTimeout(b._t); b._t = setTimeout(() => b.remove(), 2200);
 }
-function emoOnNet(d) {
+function emoOnNet(d, from) {
+  if (d.e === 'em' && Object.hasOwn(EMO_KEYS, d.k)) { emoKeyReceive({ ...d, id: from || d.id }); return; }
   if (d.e === 'taunt') { emoBubble(d.id, '😜'); if (VM.on && emoTeam(d.id) >= 0 && emoTeam(d.id) !== emoTeam(vmMe())) toast(`${emoName(d.id)} 在嘲諷你們 😜`, 1400); }
   else if (d.e === 'hi5') emoHi5Join(d.s || d.id, d.id, d.tm);
   else if (d.e === 'em' && EMOTES[d.k]) emoBubble(d.id, EMOTES[d.k].icon);   // WEB-010
@@ -7661,7 +7781,7 @@ function emoPose(k, t) {
   if (k === 'taunt') { const w = Math.sin(t * 9); return { ...AVP.taunt, el: [1.3 + 0.45 * w, 1.3 + 0.45 * w] }; }   // 手掌朝上一勾一勾
   return AVP.hi5Up;
 }
-function myPoseCode() { if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 // WEB-018 network correction only.
 function netSmoothBall(b, dt, courts) {
   const p = b.m.position, before = p.clone();
@@ -7685,6 +7805,8 @@ function netSmoothBall(b, dt, courts) {
 }
 function netPeerSnapshot(p2, d, now) {
   const stamp = Number.isFinite(d.tm) ? d.tm * 1000 : null;
+  if (p2.keyStateAfter != null && (stamp == null ? now : stamp + (p2.netOffset ?? now - stamp)) < p2.keyStateAfter) return false;
+  p2.keyStateAfter = null;
   if (stamp != null && p2.netStamp != null && stamp <= p2.netStamp) return false;
   const hadState = !!p2.last, buf = p2.buf || (p2.buf = []);
   if (p2.last) p2.netGap = (p2.netGap || 150) * 0.85 + clamp(now - p2.last.t, 0, 500) * 0.15;
@@ -7708,6 +7830,7 @@ function netPeerSnapshot(p2, d, now) {
   return true;
 }
 function netPeerPlayback(p2, dt, now) {
+  if (p2.keyEmote) return emoKeyPeer(p2, now);
   const buf = p2.buf, latest = buf[buf.length - 1];
   const delay = clamp(1.5 * (p2.netGap || 150), 120, 300);
   p2.netDelay = (p2.netDelay ?? delay) + (delay - (p2.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
@@ -7800,7 +7923,7 @@ function netOnMessage(t, d, from) {
     }
     if (newer) { b.jump0 = d.j || null; b.setFault = d.sf || null; vmOnTouch(b, d.by, d.w); }
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
-  } else if (t === 'emo') { emoOnNet(d);
+  } else if (t === 'emo') { emoOnNet(d, from);
   } else if (t === 'vm') { vmOnNet(d, from);
   } else if (t === 'rk') { rkOnNet(d, from);
   } else if (t === 'grab') {
@@ -7861,6 +7984,7 @@ function netTick(dt, now) {
     refreshPeerAppearance(p2);
     const Ls = p2.last; if (!Ls) continue;
     const ox = p2.x, oz = p2.z;
+    p2.keyPose = null;
     const [x, z, yaw, y] = netPeerPlayback(p2, dt, now);
     p2.vx = (x - ox) / Math.max(dt, 1e-3); p2.vz = (z - oz) / Math.max(dt, 1e-3);
     const sp = Math.hypot(p2.vx, p2.vz);
@@ -7874,7 +7998,7 @@ function netTick(dt, now) {
     // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
     if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
     av.fall = p2.pose >= 10 && p2.pose <= 12 ? { a: 1, d: DIVE_D[p2.pose - 10], t: p2.poseT } : null;   // 撲救：整個人往撲的方向倒
-    avDrive(av, p2.pose === 9 ? avBlockPose(p2.bs) : avPoseOf(p2.pose, p2.poseT / 0.45), Math.min(1, k * 1.3), sp, y > 0.08);   // 攔網：照他雙手的偏移畫
+    avDrive(av, p2.keyPose || (p2.pose === 9 ? avBlockPose(p2.bs) : avPoseOf(p2.pose, p2.poseT / 0.45)), p2.keyPose ? 1 : Math.min(1, k * 1.3), p2.keyPose ? 0 : sp, y > 0.08);   /* 攔網偏移與關鍵影格姿勢 */
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
     if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
   }
@@ -9379,6 +9503,7 @@ function vbClearAir() {
   walk.air = null;
 }
 function vbJump(kind) {
+  if (walk.emote?.keyframes) return;
   if (walk.air || walk.sit || walk.serve || walk.paused || walk.spike) return;
   if (walk.dive || walk.down > 0) return;
   const hv = walk.vel || [0, 0], hs = Math.min(4.2, Math.hypot(hv[0], hv[1])), block = kind === 'block', ck = block ? 'block' : 'jump';
@@ -9408,6 +9533,7 @@ function vbAirStep(dt) {
 // ---- 攻擊：按 V 揮臂，0.22 秒內手（頭上前方）碰到球才算；碰到的位置決定好不好
 function vbHand() { const [fx, fz] = vbFwd(); return new THREE.Vector3(walk.x + fx * 0.35 - fz * 0.12, camera.position.y + 0.75, walk.z + fz * 0.35 + fx * 0.12); }
 function vbAttack(tip, chg = null) {
+  if (walk.emote?.keyframes) return;
   if (walk.jserve && !walk.jserve.hit) { jumpServeHit(tip ? 'float' : 'jump'); return; }
   if (walk.hold && !walk.air) { startServe(tip ? 'float' : 'std'); return; }
   if ((walk.swing && !walk.swing.done) || walk.sit || walk.serve) return;   // 上一下揮完了（收手中）可以馬上再揮
@@ -9428,6 +9554,7 @@ function vbChargeOf(c, sup = null) {   // 蓄力值 → 力道倍數 pw、失準
   return { pw: 1 + 0.06 * k, err: c <= CHG.over ? (0.3 * (c - CHG.sw1)) / (CHG.over - CHG.sw1) : 0.55 + 1.0 * k, sta: 1.5 + 0.25 * k, zone: c <= CHG.over ? 'late' : 'over' };
 }
 function vbChargeStart(kind = 'jump') {   // kind：jump＝左鍵（扣球、跳發），float＝右鍵（只有跳飄能蓄力，平常右鍵是吊球）
+  if (walk.emote?.keyframes) return false;
   const js = walk.jserve && !walk.jserve.hit; if (js && walk.jserve.swung) return false;
   if (kind === 'float' && !js) return false;
   if (!walk.air || walk.air.block || (walk.swing && !walk.swing.done) || walk.hold || walk.spike || walk.charge) return false;
@@ -9544,6 +9671,7 @@ function vbHitAttack(b, d, tip, chg = null) {
 }
 // ---- 接球（V）：提早按，球進到手臂前面時自動接；看球在不在身體正前方、高度、來球速度、有沒有面向舉球區
 function vbReceive() {
+  if (walk.emote?.keyframes) return;
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   if (walk.hold || skill.mode) { skillPress('bump'); return; }
   if ((walk.keys.has('shift') || walk.joyRun) && vbDive()) return;   // 衝刺中按接球＝撲救
@@ -9552,6 +9680,7 @@ function vbReceive() {
 }
 // 撲救：往最近一顆來球會掉到地上的地方撲（5 m 內），接的範圍變大、可以撈到很低的球，但回球品質打八折
 function vbDive() {
+  if (walk.emote?.keyframes) return false;
   if (walk.air || walk.sit || walk.dive || walk.down > 0 || walk.serve || walk.spike) return false;
   let tx = null, tz = null, bd = 9;
   for (const b of balls) { if (b.rest > 0.3 || (b.mine && performance.now() - b.mineT < 400)) continue; const pr = vbPredict(b.m.position, b.v, 0.3); if (!pr) continue; const d = Math.hypot(pr.x - walk.x, pr.z - walk.z); if (d < 5 && d < bd) { bd = d; tx = pr.x; tz = pr.z; } }
@@ -9709,6 +9838,7 @@ function vbFacingOverVel(cp, ct, high, err = 0) {
 }
 // 比賽中按 E：身邊的球用雙手推平送過網（算一次觸球）
 function vmFreeBall() {
+  if (walk.emote?.keyframes) return;
   if (walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null, ct = vbCourt();
   if (!b || b.floorHit || !ct) { toast('E：球在身邊時，把球推過網', 1400); return; }
@@ -9759,6 +9889,7 @@ const setMenuHolds = () => !!SETM.m || performance.now() < (SETM.until || 0);
 // 放開數字鍵：有亮著的選項就用它，沒有＝最後一個（原本的舉法）
 function setMenuClose(pickDefault) { const m = SETM.m; if (!m) return; if (pickDefault) setMenuPick(m.hov >= 0 ? m.hov : Math.max(0, SET_OPT[m.n].findIndex(([v]) => v === SET_DEF[m.n]))); else { SETM.m = null; clearTimeout(SETM.to); $('set-menu').hidden = true; } }
 function vbSet(n, v = null, menu = false) {
+  if (walk.emote?.keyframes) return;
   if (VM.on && walk.hold) { toast('拿著球：按 V 發球', 1400); return; }
   // 2 對 2：這一球是 AI 隊友舉（你接的、或球還在對面），按 1／2／3＝喊球
   if (VM.on && VM.host && !walk.hold && !skill.mode) {
@@ -10294,6 +10425,7 @@ function vbApproachK() {
 // 空中：起跳前 0.12 秒雙手往上甩，接著 0.18 秒內變成拉弓躬身
 function vbAirPose() { const t = walk.air ? walk.air.t : 1; return t < 0.12 ? AVP.takeoff : t < 0.3 ? avMix(AVP.takeoff, AVP.airUp, (t - 0.12) / 0.18) : AVP.airUp; }
 function myAvPose() {
+  if (walk.emote?.keyframes) return [emoKeySample(walk.emote.k, (performance.now() - walk.emote.t0) / 1000, walk.emote.dir).pose, 1];
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
   if (walk.dive || walk.down > 0) { const dp = avDivePose(walk.diveDir || 0, !walk.dive); return [!walk.dive && walk.down < 0.3 ? avMix(dp, AVP.ready, 1 - walk.down / 0.3) : dp, fast]; }   // 撲出去→倒地→撐起來
   if (walk.emote && performance.now() < walk.emote.until) return [emoPose(walk.emote.k, (performance.now() - walk.emote.t0) / 1000), k];   // 擊掌、嘲諷
@@ -12061,7 +12193,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), emo: (k) => emoDo(k), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {
