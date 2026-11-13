@@ -167,7 +167,7 @@ for (const n of [0, 1]) for (const yaw of [0, Math.PI / 2, Math.PI]) {
   assert(b.floorHit && c.vmL(...b.floorHit)[0] < 0, '極差品質撲救仍過網');
 }
 /* 攔網實際碰手測試沿用 WEB-006，全段與 WEB-019 逐字相等，並檢查取得球權入口。 */
-for (const name of ['vbBlockTest', 'vbBlockApply', 'vmBlockTest', 'vmAiTouch', 'vmAiFree', 'vmAiRole']) assert.equal(source(name), source(name, baseline), name);
+for (const name of ['vbBlockTest', 'vbBlockApply', 'vmBlockTest', 'vmAiTouch', 'vmAiFree', 'vmAiRole']) assert.equal(source(name).replace("  if (b.langzi && VM.on) return; /* WEB-022 裝飾球不觸發攔網。 */\n", ''), source(name, baseline), name);
 assert(source('vbBlockTest').includes('netBallHit(b,'));
 assert(source('updateBalls').includes('vbBlockTest(b, h); vmBlockTest(b, h);'));
 assert(!source('computeChecks').includes('NET.ownBall'));

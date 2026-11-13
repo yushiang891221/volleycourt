@@ -191,15 +191,15 @@ export async function openAchievementPanel() {
   const drawCats = () => { d.querySelector('.ach-cats').innerHTML = P.ACH_CATS.map(([k, name]) => `<button type="button" role="tab" data-cat="${k}" aria-selected="${cat === k}">${name}${k === 'all' ? `（${P.ACH_SERIES.length}）` : ''}</button>`).join(''); };
   const drawList = () => {
     d.querySelector('.ach-series').innerHTML = P.ACH_SERIES.filter((S) => cat === 'all' || S.cat === cat).map((S) => {
-      const pr = seriesPr(S);
+      const pr = seriesPr(S); S = P.achVisible(S, pr.done > 0);
       return `<button type="button" class="ach-s${S.id === sel ? ' on' : ''}${pr.done === pr.total ? ' done' : ''}" data-s="${S.id}"><span class="ach-s-ic">${S.icon}</span><span class="ach-s-tx"><b>${esc(S.name)}</b><small>${esc(S.desc)}</small></span><span class="ach-s-b">${pr.badge}</span><span class="ach-s-ar">${S.id === sel ? '◀' : '›'}</span></button>`;
     }).join('');
   };
   const drawDetail = () => {
-    const S = P.ACH_SERIES.find((x) => x.id === sel), pr = seriesPr(S);
+    const original = P.ACH_SERIES.find((x) => x.id === sel), pr = seriesPr(original), S = P.achVisible(original, pr.done > 0);
     const tiers = S.tiers.map((k, i) => {
-      const a = P.ACHIEVEMENTS[k], t = tierPr(k), pct = t.ok ? 100 : Math.round((t.cur / t.need) * 100);
-      const foot = t.ok ? '<div class="ach-t-done">✓ 已達成</div>' : t.one ? '<div class="ach-t-one">一場比賽內達成就解鎖</div>' : `<div class="ach-t-pr"><span>進度：${t.cur} / ${t.need}</span><span>${pct}%</span></div><div class="ach-bar"><i style="width:${pct}%"></i></div>`;
+      const t = tierPr(k), a = P.achVisible(P.ACHIEVEMENTS[k], t.ok), pct = t.ok ? 100 : Math.round((t.cur / t.need) * 100);
+      const foot = P.ACHIEVEMENTS[k].hidden && !t.ok ? '' : t.ok ? '<div class="ach-t-done">✓ 已達成</div>' : t.one ? '<div class="ach-t-one">一場比賽內達成就解鎖</div>' : `<div class="ach-t-pr"><span>進度：${t.cur} / ${t.need}</span><span>${pct}%</span></div><div class="ach-bar"><i style="width:${pct}%"></i></div>`;
       return `<div class="ach-t${t.ok ? ' ok' : ''}"><div class="ach-t-h"><span class="ach-t-n">${i + 1}</span><b>${esc(a.name)}</b><span class="ach-badge sm">稱號「${esc(a.title)}」</span></div><p>${esc(a.desc)}・${P.ACH_POINTS[k] || 0} PT</p>${foot}</div>`;
     }).join('');
     d.querySelector('.ach-detail').innerHTML = `<div class="ach-hero"><div class="ach-hero-ic">${S.icon}</div><h3>${esc(S.name)}</h3><p>${esc(S.desc)}</p><div class="ach-hero-pr"><span>項目總進度</span><b>${pr.pct}%</b></div><div class="ach-bar big"><i style="width:${pr.pct}%"></i></div></div><div class="ach-tiers-h"><span>階梯式成就進度（點右邊切換項目）</span><b>已達成 ${pr.done} / ${pr.total}</b></div><div class="ach-tiers">${tiers}</div>`;

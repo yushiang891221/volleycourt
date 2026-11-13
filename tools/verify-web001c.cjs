@@ -142,6 +142,8 @@ await check('unmodified physics, scoring, rotation and transports match baseline
     .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
     .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');
   current=beforeWeb020(current);
+  /* WEB-022 僅排除新動作入口與訊息欄位，由 verify-web022 執行驗證。 */
+  current=current.replace(/^.*\/\* WEB-022 [^\n]*\n/gm, '').replace('lz: [VM.langziMatch, VM.srvSeq], ', '');
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));

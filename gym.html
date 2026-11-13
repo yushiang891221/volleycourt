@@ -6849,6 +6849,7 @@ function passToFacing() {
 }
 function hitWorldBall(b, kind) {
   if (walk.emote?.keyframes) return;
+  if (b.langzi && VM.on) return; /* WEB-022 裝飾球排除自由推球。 */
   const p = b.m.position, up = walk.pitch > 0.55;
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
   // 傳球距離與滯空時間：舉球高而短、墊球遠一點；往上看就原地往上；大致面向隊友時直接傳到他手上
@@ -7380,7 +7381,7 @@ const AVP = {
 };
 function avMix(a, b, t) {
   t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t, ha = a.hab || [0, 0], hb = b.hab || [0, 0];
-  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])) };
+  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), ankle: [0, 1].map(i => L(a.ankle?.[i] || 0, b.ankle?.[i] || 0)), head: [0, 1].map(i => L(a.head?.[i] || 0, b.head?.[i] || 0)), lean: L(a.lean || 0, b.lean || 0), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])) };
 }
 // 左右對調的姿勢（往左撲＝往右撲的鏡像）
 const AVP_MIR = new Map();
@@ -7437,6 +7438,8 @@ function avDrive(av, P, k, sp = 0, air = false) {
   const L = (a, b) => a + (b - a) * k;
   for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); B.shy[i] = L(B.shy[i], (P.shy || [0, 0])[i]); }
   B.sp = L(B.sp, P.sp); B.tw = L(B.tw, P.tw || 0); B.arm = L(B.arm, P.arm ?? 1); B.gait = L(B.gait, P.gait ?? 1);
+  B.ankle = [0, 1].map(i => L(B.ankle?.[i] || 0, P.ankle?.[i] || 0));
+  B.head = [0, 1].map(i => L(B.head?.[i] || 0, P.head?.[i] || 0)); B.lean = L(B.lean || 0, P.lean || 0);
   // 速度、加速度、轉彎速度（都平滑過，不會一頓一頓）
   av._v = (av._v ?? 0) + ((air ? 0 : sp) - (av._v ?? 0)) * (1 - Math.exp(-dt * 7)); const v = av._v;
   const accRaw = (v - (av._vp ?? v)) / dt; av._vp = v; av._acc = (av._acc || 0) + (accRaw - (av._acc || 0)) * Math.min(1, dt * 5);
@@ -7457,6 +7460,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     if (av.feet) av.feet[i].rotation.z = -h.rotation.z;
     if (av.feet) av.feet[i].rotation.x = air ? 0.45 : -(h.rotation.x + kn.rotation.x) * 0.9 + on * (0.2 + 0.4 * w) * Math.max(0, -s) * (c > 0 ? 1 : 0.35);   // 腳掌貼地；後腳離地前踮腳尖；空中腳尖朝下
   }
+  if (av.feet) for (let i = 0; i < 2; i++) av.feet[i].rotation.x += B.ankle[i];
   // 身體：加速前傾、轉彎內倒（以腳底為軸）、骨盆扭轉；上身反向扭、往前傾；頭保持看前方
   const R = av.root, lean = air ? 0 : clamp(av._acc * 0.035, -0.12, 0.2) + 0.08 * w * on, bank = air ? 0 : clamp(-av._turn * v * 0.03, -0.2, 0.2), idle = 1 - on;
   av._lean = (av._lean || 0) + (lean - (av._lean || 0)) * Math.min(1, dt * 8); av._bank = (av._bank || 0) + (bank + idle * 0.012 * Math.sin(now / 1400) - (av._bank || 0)) * Math.min(1, dt * 8);
@@ -7469,8 +7473,10 @@ function avDrive(av, P, k, sp = 0, air = false) {
   }
   R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa), rz);
   av.spine.rotation.x = B.sp + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
+  av.spine.rotation.z = B.lean;
   av.spine.rotation.y = B.tw - on * (0.16 + 0.1 * w) * Math.sin(av.gp);
   av.head.rotation.x = -B.sp * 0.6 - R.rotation.x * 0.7 * (1 - 0.6 * fa) - 0.1 * w * on; av.head.rotation.z = -R.rotation.z * 0.6 * (1 - fa);
+  av.head.rotation.x += B.head[0]; av.head.rotation.y = B.head[1];
   const drop = air ? 0 : Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1]));
   if (DK) {   // 髖要在關鍵格的位置：根節點（腳底）＝髖的位置 − 轉過的「腳底到髖」
     const hp = DIVE_HV.set(0, av.hipH || 0.9, 0).applyEuler(R.rotation), tx = Math.sin(fd) * DK.d, tz = Math.cos(fd) * DK.d;
@@ -7537,6 +7543,18 @@ function netDropPeer(id) {
 const EMO = { menu: null, hi5: new Map(), WIN: 2500, R: 2.5 };
 /* 關鍵格的 dt 是從上一格到這一格的秒數，ease 控制該段，move 為角色右方／前方公尺。 */
 const EMO_KEYS = {
+  langzi: [
+    { dt: 0, pose: 'idle', move: [0, 0] },
+    { dt: 0.22, pose: { sh: [[0, 0.18], [0, 0.18]], el: [0.1, 0.1] }, move: [0, 0] },
+    { dt: 0.36, pose: { sh: [[0.45, 1.3], [0.45, 1.3]], el: [0.85, 0.85], hip: [0.12, 0.05], kn: [0.4, 0.15], ankle: [0.35, 0] }, move: [0, 0] },
+    { dt: 0.12, pose: { sh: [[-0.6, 1.45], [0.65, 1.1]], el: [1.15, 0.35], hip: [0.1, 0.35], kn: [0.8, 0.6], sp: 0.22, tw: -0.3, lean: -0.18, head: [0.3, -0.65], ankle: [-0.65, 0] }, move: [0, 0] },
+    { dt: 0.09, pose: { sh: [[-0.75, 1.5], [0.5, 1.15]], el: [0.65, 0.25], hip: [-0.4, 0.35], kn: [0.45, 0.65], hab: [0.7, 0.05], sp: 0.22, tw: -0.4, lean: -0.22, head: [0.35, -0.85], ankle: [-0.75, 0] }, ease: 'out', kick: 0, move: [0, 0] },
+    { dt: 0.19, pose: { sh: [[-0.75, 1.5], [0.5, 1.15]], el: [0.65, 0.25], hip: [-0.4, 0.35], kn: [0.45, 0.65], hab: [0.7, 0.05], sp: 0.22, tw: -0.4, lean: -0.22, head: [0.35, -0.85], ankle: [-0.75, 0] }, move: [0, 0] },
+    { dt: 0.18, pose: { sh: [[-1.5, 1.25], [-1.5, 1.25]], el: [1.5, 1.5], hip: [0.3, 0.4], kn: [0.55, 0.9], sp: 0.12, tw: 0.2, lean: 0.12, head: [0.2, 0.6], ankle: [0, -0.7] }, move: [0, 0] },
+    { dt: 0.09, pose: { sh: [[-1.65, 1.25], [-1.65, 1.25]], el: [1.5, 1.5], hip: [0.3, 0.9], kn: [0.5, 0.2], hab: [0.06, -0.65], sp: 0.1, tw: 0.35, lean: 0.16, head: [0.3, 0.8], ankle: [0, -0.75] }, ease: 'out', kick: 1, move: [0, 0] },
+    { dt: 0.18, pose: { sh: [[-1.65, 1.25], [-1.65, 1.25]], el: [1.5, 1.5], hip: [0.3, 0.9], kn: [0.5, 0.2], hab: [0.06, -0.65], sp: 0.1, tw: 0.35, lean: 0.16, head: [0.3, 0.8], ankle: [0, -0.75] }, move: [0, 0] },
+    { dt: 0.37, pose: 'idle', move: [0, 0] },
+  ],
   shanshen: [
     { dt: 0, pose: 'idle', move: [0, 0] },
     { dt: 0.15, pose: { sh: [[0, 0.12], [0, 0.12]], el: [0.12, 0.12] }, ease: 'smooth', move: [0, 0] },
@@ -7558,7 +7576,7 @@ function emoKeySample(key, time, dir = 1) {
   const a = frames[i - 1], b = frames[i], u = clamp((time - start) / b.dt, 0, 1);
   const ease = b.ease === 'linear' ? u : b.ease === 'out' ? 1 - (1 - u) ** 2 : u * u * (3 - 2 * u);
   let pose = avMix(emoKeyPose(a.pose), emoKeyPose(b.pose), ease);
-  if (dir < 0) pose = { ...pose, sh: [pose.sh[1], pose.sh[0]], el: [pose.el[1], pose.el[0]], hip: [pose.hip[1], pose.hip[0]], kn: [pose.kn[1], pose.kn[0]], hab: [pose.hab[1], pose.hab[0]], shy: [pose.shy[1], pose.shy[0]], tw: -pose.tw };
+  if (dir < 0) pose = { ...pose, sh: [pose.sh[1], pose.sh[0]], el: [pose.el[1], pose.el[0]], hip: [pose.hip[1], pose.hip[0]], kn: [pose.kn[1], pose.kn[0]], hab: [pose.hab[1], pose.hab[0]], shy: [pose.shy[1], pose.shy[0]], tw: -pose.tw, ankle: [pose.ankle[1], pose.ankle[0]], head: [pose.head[0], -pose.head[1]], lean: -pose.lean };
   return { pose, move: [dir * (a.move[0] + (b.move[0] - a.move[0]) * ease), a.move[1] + (b.move[1] - a.move[1]) * ease], done: time >= emoKeyDuration(key) };
 }
 function emoKeyPosition(event, time) {
@@ -7601,7 +7619,7 @@ function emoKeyActive() { return !!walk.emote?.keyframes; }
 function emoKeyStart(key) {
   if (emoKeyBlocked(vmMe())) { toast('發球後到死球前不能用'); return; }
   if (emoKeyActive() || walk.air || walk.dive || walk.down > 0 || walk.sit || walk.paused || walk.spike || walk.serve || walk.jserve || window.__rkOn) return;
-  const now = performance.now(), dir = emoKeyDirection();
+  const now = performance.now(), dir = key === 'langzi' ? 1 : emoKeyDirection();
   walk.emote = { k: key, keyframes: true, t0: now, until: now + emoKeyDuration(key) * 1000, dir, x: walk.x, z: walk.z, yaw: walk.yaw, match: VM.on };
   walk.target = null; targetMark.visible = false; walk.vel = [0, 0];
   walk.recv = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
@@ -7615,8 +7633,71 @@ function emoKeyWalk() {
   if (emoKeyInterrupted(event, vmMe(), walk.x, walk.z) || walk.dive || walk.down > 0) { walk.emote = null; return false; }
   const time = (performance.now() - event.t0) / 1000;
   [walk.x, walk.z] = emoKeyPosition(event, time); walk.vel = [0, 0]; walk.target = null; walk.yaw = event.yaw;
+  if (event.k === 'langzi') langziStep(event, time);
   if (time >= emoKeyDuration(event.k)) walk.emote = null;
   return true;
+}
+/* WEB-022：由髖、膝與外展角算踢腳接觸點，座標為人物右方／前方。 */
+function langziFoot(event, frame) {
+  const i = frame.kick, p = emoKeyPose(frame.pose), side = i === 0 ? 1 : -1;
+  const extension = 0.44 * Math.cos(p.hip[i]) + 0.46 * Math.cos(p.hip[i] - p.kn[i]);
+  const right = event.dir * side * (0.12 + extension * Math.sin(p.hab[i]));
+  const forward = 0.44 * Math.sin(p.hip[i]) + 0.46 * Math.sin(p.hip[i] - p.kn[i]);
+  const dx = Math.cos(event.yaw) * right - Math.sin(event.yaw) * forward;
+  const dz = -Math.sin(event.yaw) * right - Math.cos(event.yaw) * forward;
+  return { x: event.x + dx, z: event.z + dz, dx, dz };
+}
+function langziCanKick() {
+  if (!VM.on) return true;
+  return ['point', 'serve'].includes(VM.phase) && !emoKeyBlocked(VM.host ? vmServer() : VM.srvId);
+}
+function langziLaunch(b, velocity) {
+  b.v.set(...velocity); b.rest = 0; b.room = false; b.langzi = true;
+  b.spike = null; b.acc = null; b.float = null; b.spinW = null; b.snap = null; b.err = null;
+  b.floorHit = null; b.floorReport = null; b.floorEv = false; b.mine = false;
+  if (VM.ball === b) VM.ball = null;
+}
+function langziStep(event, time) {
+  if (event.kicked || !langziCanKick()) return;
+  let at = 0;
+  for (const frame of EMO_KEYS.langzi) {
+    at += frame.dt;
+    if (frame.kick == null || at > time || at <= (event.kickTime || 0)) continue;
+    event.kickTime = at;
+    const foot = langziFoot(event, frame);
+    const b = balls.find(q => q.m.position.y <= BALL_R + 0.08 && q.v.length() < 1.5 && Math.hypot(q.m.position.x - foot.x, q.m.position.z - foot.z) <= 0.8);
+    if (!b) continue;
+    const speed = 7 + Math.random() * 3, angle = (25 + Math.random() * 15) * Math.PI / 180;
+    const yaw = Math.atan2(foot.dx, foot.dz) + (Math.random() - 0.5) * 0.12, horizontal = speed * Math.cos(angle);
+    b.kickSource = { p: b.m.position.toArray(), room: !!b.room, h: NET.hitN, by: NET.hitBy, id: b.kickId || null };
+    langziLaunch(b, [Math.sin(yaw) * horizontal, speed * Math.sin(angle), Math.cos(yaw) * horizontal]);
+    event.kicked = true;
+    if (VM.on && !vmIsPractice() && vmTeamOf(vmMe()) >= 0) MREC.local.lk = (MREC.local.lk || 0) + 1;
+    if (NET.on) netBallHit(b, 'kick');
+    return;
+  }
+}
+function langziSend(b) {
+  b.kickId = NET.me + '-' + Date.now() + '-' + (NET.kickN = (NET.kickN || 0) + 1);
+  const message = netBallMsg(b, 'kick');
+  Object.assign(message, { kid: b.kickId, source: b.kickSource, match: VM.on ? (VM.host ? MREC.id : VM.langziMatch) : '', seq: VM.on ? (VM.host ? VM.srvSeq : VM.langziSeq) : null });
+  NET.tx.publish('ball', message);
+}
+function langziReceive(d, from) {
+  if (!langziCanKick() || d.by !== from || typeof d.kid !== 'string' || d.kid.length > 120) return;
+  if (d.match !== (VM.on ? (VM.host ? MREC.id : VM.langziMatch) : '') || (VM.on && d.seq !== (VM.host ? VM.srvSeq : VM.langziSeq))) return;
+  if (![d.p, d.v, d.source?.p].every(a => Array.isArray(a) && a.length === 3 && a.every(Number.isFinite))) return;
+  const speed = Math.hypot(...d.v);
+  if (speed < 6.99 || speed > 10.01 || d.p[1] > BALL_R + 0.08) return;
+  if (d.source.room && (d.source.h !== NET.hitN || d.source.by !== NET.hitBy)) return;
+  const seen = NET.kickSeen || (NET.kickSeen = new Set());
+  if (seen.has(d.kid)) return;
+  seen.add(d.kid); if (seen.size > 256) seen.delete(seen.values().next().value);
+  let b = d.source.id ? balls.find(q => q.kickId === d.source.id) : null;
+  if (!b && d.source.room && d.source.h === NET.hitN && d.source.by === NET.hitBy) b = balls.find(q => q.room);
+  if (!b) b = balls.find(q => !q.room && q.v.length() < 1.5 && q.m.position.distanceTo(new THREE.Vector3(...d.source.p)) < 0.8);
+  if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3() }; m.userData.ball = b; balls.push(b); }
+  b.kickSource = d.source; b.m.position.set(...d.p); langziLaunch(b, d.v); b.kickId = d.kid;
 }
 function emoKeyReceive(d) {
   if (![d.x, d.z, d.yaw].every(Number.isFinite) || ![-1, 1].includes(d.dir) || emoKeyBlocked(d.id)) return;
@@ -7889,6 +7970,8 @@ function netOnMessage(t, d, from) {
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
+    if (d.w === 'kick') { langziReceive(d, from); return; }
+    if (d.w !== 'serve' && balls.some(q => q.langzi && q.kickSource?.room && q.kickSource.h === d.h && q.kickSource.by === d.by)) return;
     if (VM.on && vmTeamOf(from) < 0 && from !== VM.hostId) return;
     // 擊球序號：比我新的＝別人打到了；一樣的序號而且是現在負責的人＝一般位置更新；一樣的序號但不同人＝同時打到，代號大的算
     if (VM.on && d.w === 'throw') return;   // 比賽中有人把手上的球丟出來：不理，不會取代比賽球
@@ -7941,6 +8024,9 @@ function netFloorHit(b) {
   NET.tx.publish('ball', m); /* 每段球權第一次落地才送，不更動一般校正節奏。 */
 }
 function netBallHit(b, kind) {
+  if (kind === 'kick') { if (NET.on) langziSend(b); return; }
+  if (b.langzi && VM.on) return;
+  b.langzi = false;
   if (!NET.on) return;
   for (const q of balls) if (q !== b && q.room) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   b.floorHit = null; b.floorReport = null; b.floorEv = false;
@@ -9993,6 +10079,7 @@ function vbBlockHands(dt) {
   walk.blkShift = (walk.blkShift || 0) + clamp(d, -m, m);
 }
 function vbBlockTest(b, h) {
+  if (b.langzi && VM.on) return; /* WEB-022 裝飾球不觸發攔網。 */
   if (!walk.air || !walk.air.block || (b.mine && performance.now() - b.mineT < 300)) return;
   const ct = vbCourt(); if (!ct || Math.abs(ct.lx) > 1.3) return;
   const sg = Math.sign(ct.lx) || 1, p = b.m.position, [lx, lz] = toLocalOf(ct.c, p.x, p.z), [l0] = toLocalOf(ct.c, p.x - b.v.x * h, p.z - b.v.z * h), plane = sg * 0.12;
@@ -10328,6 +10415,7 @@ async function vmGotResult(d) {
   const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
   const my = (d.rate && d.rate[me]) || null, mvp = d.mvp === me;
   const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, kc: hp.kc | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
+  if (MREC.local.lk > 0) perf.lk = MREC.local.lk;
   if (d.six && d.team.every(ids => ids.length === 6) && ['OH', 'S', 'MB', 'OPP'].includes(d.roles?.[me])) perf.role = d.roles[me];
   MREC.local = { p: 0, sets: {} };
   const MR = my ? await import('./match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
@@ -10406,6 +10494,7 @@ function vbFx(b, q, word) {
 function vbTurn(dt) { const t = walk.turn; if (!t) return; t.t -= dt; let d = t.yaw - walk.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); walk.yaw += d * Math.min(1, dt * 9); walk.pitch += (0.32 - walk.pitch) * Math.min(1, dt * 6); if (t.t <= 0) walk.turn = null; }
 // 比賽中：球在對面那一邊（越過網子那個平面）就碰不到，手不能伸過網接、舉、打、推；攔網另外算
 function vbOwnSide(b) {
+  if (b.langzi && VM.on) return false; /* WEB-022 裝飾球排除接球、舉球與攻擊選球。 */
   if (!VM.on || !VM.c) return true;
   const team = vmTeamOf(vmMe()); if (team < 0) return true;
   const [lx] = toLocalOf(VM.c, b.m.position.x, b.m.position.z); return lx * vmSide(team) > -0.02;
@@ -10533,6 +10622,7 @@ const VM_ROOM_LV = [5, 4, 3];   // 開房只能選企聯、校隊、高手；練
 // 房主設定：AI 強度（隊友和對手一樣；開房只能企聯／校隊／高手）、每局分數、局數
 function vmApplyRoomRules(rules) {
   mrecReset(vmIsPractice() ? '' : `${NET.room || 'room'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);   // WEB-010：房主開賽＝新的比賽代碼
+  VM.langziMatch = MREC.id; /* WEB-022 比賽識別。 */
   VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
 const vmIsPractice = () => new URLSearchParams(location.search).has('practice');
 const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
@@ -10688,6 +10778,7 @@ function vmServeOK() {
   return true;
 }
 function vmPrepServe(s = VM.sg) {
+  if (walk.emote?.k === 'langzi') walk.emote = null; /* WEB-022 換發球正常拿球。 */
   if (!VM.host) { VM.phase = 'serve'; VM.srvId = NET.me; VM.whT = Infinity; VM.srvDl = Infinity; }   // 連線：通知先到、狀態後到也沒關係（不會把等一下發出去的球當成上一球清掉）；等主機吹哨
   if (walk.jserve && walk.jserve.ball && !walk.jserve.hit) ballsGroup.remove(walk.jserve.ball);   // 上一個還沒打完的拋球收掉
   walk.jserve = null; walk.serve = null; walk.charge = null; walk.chargeArm = null;
@@ -10720,6 +10811,7 @@ function vmAiServe(a) {
 }
 // ---- 觸球紀錄（只有開局的人判）
 function vmOnTouch(b, id, kind) {
+  if (b.langzi || kind === 'kick') return; /* WEB-022 裝飾球不計比賽事件。 */
   if (!VM.on || !VM.host) return;
   const team = vmTeamOf(id); if (team < 0 || kind === 'throw') return;
   // 只有比賽球算：發球階段只認輪到的人發出去的那一下；開打之後別顆球（有人手上本來拿著的、場外的）碰到、落地都不算
@@ -11738,7 +11830,7 @@ function vmStaRings() {
 // ---- 連線：主機回合中每 150 ms、等待時每 400 ms 帶上比分與 AI 快照。
 function vmStatePayload() {
   const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0, a.jp || null, VM.t]; });
-  return { sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
+  return { lz: [VM.langziMatch, VM.srvSeq], sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
 function vmBroadcast(force, msg, pt) {
@@ -11772,6 +11864,7 @@ function vmOnNet(d, from) {
   if (!VM.on || VM.host || from !== VM.hostId) return;
   if (d.e === 'st') VM.lastStT = performance.now();
   if (d.e === 'st') {
+    if (Array.isArray(d.lz)) [VM.langziMatch, VM.langziSeq] = d.lz; /* WEB-022 死球訊息所屬的比賽與發球輪次。 */
     // 新的一球：清掉場上的球；但自己剛發出去（或正在發）的球不清——狀態比「輪到你發球」晚到時，會把剛跳發出去的球清掉（球不見）
     const mySrv = d.srv === NET.me && (walk.jserve || walk.serve || balls.some((q) => q.serve && q.room && NET.hitBy === NET.me));
     if (d.ph === 'serve' && VM.phase !== 'serve' && !mySrv) { vmClearBalls(); if (d.srv !== NET.me) vmDropHeld(); }

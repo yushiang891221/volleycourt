@@ -176,6 +176,7 @@ function withoutCorrection(source) {
 
   /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
   const beforeWeb020 = t => t
+    .replace("  if (b.langzi && VM.on) return; /* WEB-022 裝飾球排除自由推球。 */\n", '')
     .replace(' b.floorEv = true;', '')
     .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
     .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');

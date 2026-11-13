@@ -6,6 +6,7 @@ export const expInLevel = (exp) => (exp | 0) % EXP_PER_LEVEL;
 
 // 成就：代碼 → 名稱、說明、稱號
 export const ACHIEVEMENTS = {
+  langzi: { name: '花鼓燈浪子', desc: '用浪子踢球把地上的球踢飛', title: '花鼓燈浪子', hidden: true },
   oh10: { name: '初階攻擊手', desc: '在攻擊手（大砲）位置贏 10 場', title: '初階攻擊手' },
   oh100: { name: '進階攻擊手', desc: '在攻擊手（大砲）位置贏 100 場', title: '進階攻擊手' },
   oh500: { name: '優良攻擊手', desc: '在攻擊手（大砲）位置贏 500 場', title: '優良攻擊手' },
@@ -77,6 +78,7 @@ export const ACHIEVEMENTS = {
 export const ACH_POINTS = { cannon1: 10, cannon2: 30, cannon3: 60, setter: 30, wall: 30, server: 25, libero1: 15, libero2: 40, libero3: 80, pro1: 20, pro10: 60, streak5: 25, cb1: 20, cb5: 30, cb10: 45, cb15: 60, cb30: 100, iron1: 15, iron2: 40, iron3: 80, line1: 15, line2: 40, line3: 80, save1: 15, save2: 40, save3: 80, magic1: 20, magic2: 40, magic3: 80, self1: 20, self2: 40, self3: 80, cannon4: 120, cannon5: 200, libero4: 120, libero5: 200, iron4: 120, iron5: 200, assist1: 10, assist2: 40, assist3: 80, assist4: 120, assist5: 200, quick1: 20, quick2: 40, quick3: 80, sky1: 15, sky2: 40, sky3: 80 };
 export const ACH_CATS = [['all', '全部項目'], ['atk', '扣球進攻系列'], ['def', '防守與舉球系列'], ['pro', '企聯特訓系列'], ['mind', '心態系列'], ['special', '特殊成就'], ['role', '位置']];
 export const ACH_SERIES = [
+  { id: 'langzi', cat: 'special', icon: '🦶', name: '花鼓燈浪子', desc: '用浪子踢球把地上的球踢飛', hidden: true, tiers: ['langzi'] },
   { id: 'oh', cat: 'role', icon: '🏐', name: '攻擊手', desc: '六人制擔任攻擊手（大砲）累積勝場', tiers: ['oh10', 'oh100', 'oh500', 'oh1000'] },
   { id: 's', cat: 'role', icon: '🎯', name: '舉球員', desc: '六人制擔任舉球員累積勝場', tiers: ['s10', 's100', 's500', 's1000'] },
   { id: 'mb', cat: 'role', icon: '🧱', name: '中間手', desc: '六人制擔任中間手累積勝場', tiers: ['mb10', 'mb100', 'mb500', 'mb1000'] },
@@ -98,6 +100,7 @@ export const ACH_SERIES = [
   { id: 'streak', cat: 'pro', icon: '🔥', name: '氣勢如虹（連勝）', desc: '開房比賽連續贏 5 場', tiers: ['streak5'] },
   { id: 'comeback', cat: 'mind', icon: '💪', name: '絕處逢生（逆轉勝）', desc: '對方到局末點、我方落後 5 分以上，最後逆轉拿下這局', tiers: ['cb1', 'cb5', 'cb10', 'cb15', 'cb30'] },
 ];
+export function achVisible(item, unlocked) { return item.hidden && !unlocked ? { ...item, name: '???', title: '???', desc: '隱藏成就', icon: '❔' } : item; }
 export const achPoints = (got = []) => got.reduce((n, k) => n + (ACH_POINTS[k] || 0), 0);
 // 成就目前的進度（顯示用）：[現在, 目標]；一場內完成的成就沒有累計進度
 export function achProgress(key, p = {}) {
@@ -108,6 +111,7 @@ export function achProgress(key, p = {}) {
 }
 // 表情／動作（T 輪盤）：hi5、taunt 一開始就有；其他照等級或成就解鎖
 export const EMOTES = {
+  langzi: { name: '浪子踢球', icon: '🦶' },
   hi5: { name: '擊掌', icon: '🙌' },
   taunt: { name: '嘲諷', icon: '😜' },
   shanshen: { name: '閃身步', icon: '💨' },
