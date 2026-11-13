@@ -132,7 +132,11 @@ $('equip-open').addEventListener('click', () => import('./character-panel.js').t
 import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCard($('character-info'))).catch(() => { const e = $('character-info').querySelector('.me-err'); if (e) e.textContent = '角色資訊載入失敗，請重新整理'; });
 $('system-settings').addEventListener('click',()=>VBSettings.open());
 addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
-function welcome(){if(!nickname)$('nickname').showModal();}
+function welcome(){
+ const news=$('lobby-news');
+ news.addEventListener('close',()=>{if(!nickname)$('nickname').showModal();},{once:true});
+ news.showModal();
+}
 if(globalThis.VBIntro?.entered)welcome();else addEventListener('vb-lobby-enter',welcome,{once:true});
 $('nickname').addEventListener('cancel',e=>e.preventDefault());
 $('name-form').addEventListener('submit',e=>{e.preventDefault();nickname=$('name').value.trim();const error=VBSettings.nicknameError(nickname);if(error){$('name').setCustomValidity(error);$('name').reportValidity();return;}if(!VBSettings.update({nickname}))notify('瀏覽器無法儲存暱稱');send({k:'hello',name:nickname,status:'大廳中'});$('nickname').close();});
