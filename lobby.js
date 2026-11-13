@@ -130,12 +130,19 @@ $('ach-open').addEventListener('click', () => import('./character-panel.js').the
 $('team-open').addEventListener('click', () => import('./character-panel.js').then(({ openTeamPanel }) => openTeamPanel()).catch(() => notify('球隊載入失敗，請稍後重試')));
 $('equip-open').addEventListener('click', () => import('./character-panel.js').then(({ openEquipPanel }) => openEquipPanel()).catch(() => notify('裝備載入失敗，請稍後重試')));
 import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCard($('character-info'))).catch(() => { const e = $('character-info').querySelector('.me-err'); if (e) e.textContent = '角色資訊載入失敗，請重新整理'; });
+$('news-open').addEventListener('click', () => $('lobby-news').showModal());
 $('system-settings').addEventListener('click',()=>VBSettings.open());
 addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
 function welcome(){
  const news=$('lobby-news');
- news.addEventListener('close',()=>{if(!nickname)$('nickname').showModal();},{once:true});
+ const askForNickname=()=>{if(!nickname)$('nickname').showModal();};
+ let seen;
+ try { seen=sessionStorage.getItem('vb-lobby-news-seen')==='1'; }
+ catch { seen=location.hash==='#lobby'; }
+ if(seen){askForNickname();return;}
+ news.addEventListener('close',askForNickname,{once:true});
  news.showModal();
+ try { sessionStorage.setItem('vb-lobby-news-seen','1'); } catch {}
 }
 if(globalThis.VBIntro?.entered)welcome();else addEventListener('vb-lobby-enter',welcome,{once:true});
 $('nickname').addEventListener('cancel',e=>e.preventDefault());
