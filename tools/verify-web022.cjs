@@ -60,7 +60,7 @@ Object.assign(context, { THREE: { Vector3: Vector }, BALL_R: .105, MREC: { id: '
 Object.assign(context.NET, { me: 'self', hitN: 7, hitBy: 'self' });
 for (const name of ['netBallHit', 'netBallMsg', 'netOnMessage', 'vmOnTouch', 'vmClearBalls', 'vmPrepServe', 'vbBlockTest', 'vmJudge', 'vmStatePayload', 'vbOwnSide', 'hitWorldBall']) vm.runInContext(source(name), context);
 const frames = run('EMO_KEYS.langzi'), kicks = frames.filter(f => f.kick != null);
-close(context.emoKeyDuration('langzi'), 1.8);
+close(context.emoKeyDuration('langzi'), 2.01);
 assert.deepEqual(Array.from(kicks, f => f.kick), [0, 0]);   /* 使用者指定：同一隻腳先往後勾、再往前踢 */
 assert(kicks[0].pose.kn[0] > 1.2 && kicks[0].pose.hip[0] < 0, '第一下：小腿往後勾');
 assert(kicks[1].pose.hip[0] > 0.6 && kicks[1].pose.kn[0] < 0.5, '第二下：同一隻腳往前踢');
@@ -68,8 +68,10 @@ assert(kicks.every(f => f.dt < frames[2].dt / 3));
 assert(frames.every(f => f.move.every(v => v === 0)));
 assert(kicks.every(f => f.pose.ankle[f.kick] < -.6));
 assert(kicks[0].pose.head[1] < 0 && kicks[1].pose.head[1] > 0);
-assert(frames[3].pose.sh[0][0] < 0 && frames[3].pose.sh[1][0] > 0);
-const end = context.emoKeySample('langzi', 2).pose;
+assert(frames.slice(1, 6).every(f => f.pose.sh.flat().every(angle => Math.abs(angle) < 0.2)));
+assert.deepEqual(frames[4].pose, frames[5].pose);
+close(frames[5].dt, 0.40);
+const end = context.emoKeySample('langzi', 2.01).pose;
 close(end.head[0], 0); close(end.head[1], 0); close(end.lean, 0);
 end.hip.forEach((v,i)=>close(v,run('AVP.idle.hip')[i]));
 function setup(match = false) {
@@ -82,7 +84,7 @@ function ballAt(event, index = 0) {
   const b = { m: { position: new Vector(foot.x, .105, foot.z), userData: {} }, v: new Vector(), rest: 3, room: true };
   context.balls.push(b); return b;
 }
-for (const [index, time] of [[0, .79], [1, 1.25]]) {
+for (const [index, time] of [[0, .79], [1, 1.46]]) {
   const event = setup(true); event.yaw = .7; const b = ballAt(event, index);
   if (index) context.langziStep(event, .8);
   context.langziStep(event, time + 1e-6);

@@ -157,14 +157,19 @@ footer { display: flex; gap: 8px; align-items: center; padding: 6px 9px !importa
 footer nav { display: flex; gap: 7px; }
 footer button { min-height: 44px; font-size: 14px; padding: 8px 14px; white-space: nowrap; }
 footer button .icon { width: 18px; height: 18px; color: #e4b350; }
-footer button:nth-child(2) .icon { color: #f29c59; }
-footer button:nth-child(4) .icon { color: #40d3d1; }
-footer button:last-child .icon { color: #adbed1; }
+footer [data-soon] .icon { color: #f29c59; }
+footer #team-open .icon { color: #40d3d1; }
+footer #system-settings .icon { color: #adbed1; }
 footer .muted { margin-left: auto; }
 dialog { width: 440px; max-height: calc(100dvh - 36px); background: #121d2b; color: #e1e9f2; border: 1px solid #ad702c; border-top: 3px solid #f99528; border-radius: 6px; padding: 27px; box-shadow: 0 20px 100px #000; }
 dialog::backdrop { background: #03070cdd; }
 dialog h2 { font-size: 24px; color: #ffac53; margin: 9px 0; }
 dialog p { color: #9bafc0; line-height: 1.8; font-size: 12px; }
+#lobby-news { width: min(620px, calc(100vw - 32px)); padding: clamp(20px, 4vw, 36px); overflow-y: auto; }
+#lobby-news h2 { font-size: 29px; }
+#lobby-news h3 { font-size: 19px; margin: 22px 0 8px; }
+#lobby-news p { font-size: 15px; margin: 8px 0; }
+#lobby-news .news-date { font-size: 13px; }
 dialog label { display: flex; flex-direction: column; gap: 7px; margin: 17px 0; font-size: 12px; }
 dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .eyebrow { font-size: 9px; letter-spacing: 2px; color: #7895ae; }

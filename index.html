@@ -76,7 +76,15 @@
     <form id="chat"><select aria-label="聊天頻道"><option>大廳頻道</option></select><input id="message" aria-label="留言" maxlength="200" placeholder="輸入留言訊息（按 Enter 發送）…" required><button class="orange"><span data-icon="send"></span>發送</button><button type="button" id="sound" class="icon-button" aria-label="開啟留言音效" aria-pressed="false" title="開啟留言音效"><span data-icon="mute"></span></button></form>
   </section>
 </main>
-<footer class="panel"><nav aria-label="系統功能"><button id="ach-open"><span data-icon="trophy"></span>成就系統</button><button data-soon><span data-icon="rank"></span>天梯排行榜</button><button id="equip-open"><span data-icon="shirt"></span>球衣與裝備</button><button id="team-open"><span data-icon="users"></span>球隊</button><button id="friends-open"><span data-icon="user"></span>好友<b class="fr-badge" id="friends-badge" hidden>0</b></button><button id="news-open" aria-haspopup="dialog" aria-controls="lobby-news"><span data-icon="megaphone"></span>公告</button><button id="system-settings"><span data-icon="settings"></span>系統設定</button></nav><span class="muted">一起上場，打好每一球。</span></footer>
+<footer class="panel"><nav aria-label="系統功能">
+    <button id="system-settings"><span data-icon="settings"></span>系統設定</button>
+    <button id="news-open" aria-haspopup="dialog" aria-controls="lobby-news"><span data-icon="megaphone"></span>公告</button>
+    <button id="ach-open"><span data-icon="trophy"></span>成就系統</button>
+    <button id="equip-open"><span data-icon="shirt"></span>球衣與裝備</button>
+    <button id="friends-open"><span data-icon="user"></span>好友<b class="fr-badge" id="friends-badge" hidden>0</b></button>
+    <button id="team-open"><span data-icon="users"></span>球隊</button>
+    <button data-soon><span data-icon="rank"></span>天梯排行榜</button>
+  </nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>
 <dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>1v1</option><option selected>2v2</option><option>3v3</option><option>4v4</option><option>5v5</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
@@ -84,12 +92,13 @@
 </div>
 <script type="module" src="./player-menu.js"></script>
 <dialog id="lobby-news" aria-labelledby="lobby-news-title">
-  <h2 id="lobby-news-title">大廳公告</h2>
-  <h3>最近更新</h3>
+  <h2 id="lobby-news-title"><span aria-hidden="true">📣</span> 大廳公告</h2>
+  <p class="news-date">版本更新日期　<time datetime="2026-11-14">2026 年 11 月 14 日</time></p>
+  <h3><span aria-hidden="true">🏐</span> 最近更新</h3>
   <p>新手教學模式、成就系統，以及球衣與裝備都上線了！</p>
-  <p>這次還新增了四個炫技動作：狗熊哆嗦毛、閃身步、浪子踢球、搖頭晃腦。歡迎大家上場試試！</p>
-  <h3>作者想跟大家說的話</h3>
-  <p>感謝大家進來遊玩這個遊戲!有任何建議或是發現的蟲子都非常期望大家能給予回饋</p>
+  <p>這次還新增了四個炫技動作：<span aria-hidden="true">🐻</span> 狗熊哆嗦毛、<span aria-hidden="true">⚡</span> 閃身步、<span aria-hidden="true">⚽</span> 浪子踢球、<span aria-hidden="true">🎵</span> 搖頭晃腦。歡迎大家上場試試！</p>
+  <h3><span aria-hidden="true">💬</span> 作者想跟大家說的話</h3>
+  <p>感謝大家進來遊玩這個遊戲!有任何建議或是發現的蟲子<span aria-hidden="true">🐛</span>都非常期望大家能給予回饋</p>
   <p>目前遊玩伺服器是屬於測試性質的還未上架到功能健全的伺服器，期望大家給予更多支持以向前邁進！</p>
   <form method="dialog" class="buttons"><button class="orange" autofocus>知道了，進入大廳</button></form>
 </dialog>
