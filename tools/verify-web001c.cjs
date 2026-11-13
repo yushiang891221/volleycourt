@@ -133,6 +133,13 @@ await check('unmodified physics, scoring, rotation and transports match baseline
   /* WEB-018 只排除網路誤差修正區段，球的物理與碰撞仍逐字比對。 */
   const noBallCorrection = t => t.replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
   current=noBallCorrection(current);previous=noBallCorrection(previous);
+
+  /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
+  const beforeWeb020 = t => t
+    .replace(' b.floorEv = true;', '')
+    .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
+    .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');
+  current=beforeWeb020(current);
   assert.equal(current,previous,a);
  }
  assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));

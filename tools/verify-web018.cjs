@@ -148,6 +148,7 @@ for (const [x, vx] of [[2, 0], [6, -10]]) {
   ctx.netSmoothBall(b, 1 / 60, []); assert(Math.abs(b.err.x - 5 / 6) < 1e-12);
 }
 ctx.walk = { x: 100, z: 100 };
+ctx.NET.ownBall = true; /* 本機球保留原有穿網保護，遠端球由 WEB-020 驗證。 */
 for (const [position, error, snaps] of [
   [new Vector(-0.001, 1, 0), new Vector(1, 0, 0), true],
   [new Vector(-1, 1, 0), new Vector(2, 0, 0), false],
@@ -170,7 +171,13 @@ for (const scenario of ['match', 'continuous']) for (const host of [true, false]
 assert.equal(block(gym, 'function vmAiSnapshot(', 'function vmRenderAi('), block(baseline, 'function vmAiSnapshot(', 'function vmRenderAi('));
 /* Physics integration and collision rules remain byte-identical outside the correction block. */
 function withoutCorrection(source) {
-  return block(source, 'function updateBalls(', 'const NET =').replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
+
+  /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
+  const beforeWeb020 = t => t
+    .replace(' b.floorEv = true;', '')
+    .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
+    .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');
+  return beforeWeb020(block(source, 'function updateBalls(', 'const NET =')).replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
 }
 assert.equal(withoutCorrection(gym), withoutCorrection(baseline));
 assert(gym.includes('if (toss) st.ts = 1;')); assert(gym.includes('tm: +(now / 1000).toFixed(2)'));
