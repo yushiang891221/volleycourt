@@ -304,6 +304,37 @@ function engine() {
 }
 
 const game = engine(), { c, api, walk, tick, until, advance } = game;
+for (const mode of ['atk', 'set', 'block', 'defense']) {
+  const sim = engine(), env = sim.c, coach = env.coach;
+  env.THREE.BoxGeometry = env.THREE.RingGeometry;
+  env.THREE.MeshStandardMaterial = env.THREE.MeshBasicMaterial;
+  env.makeAvatar = () => {
+    const g = new Object3D(), hand = new Object3D();
+    g.add(hand); hand.position.y = 1.2;
+    hand.getWorldPosition = v => v.copy(hand.position).add(g.position);
+    return { g, hands: [hand] };
+  };
+  assert(coach.startDrill(mode, '1-high', 3));
+  sim.setTime(2000); coach.frame();
+  const first = coach.ball;
+  assert(first);
+  if (mode === 'block' || mode === 'defense') {
+    assert.equal(coach.drill.hitters.length, 3);
+    for (let i = 0; i < 200 && first.lk !== 'spike'; i++) {
+      sim.tick(); coach.frame();
+    }
+    assert.equal(first.lk, 'spike', mode);
+  }
+  if (mode === 'atk') first.floorHit = [0,0];
+  else coach.event(({ set: 'set', block: 'block', defense: 'recv' })[mode], {}, first);
+  coach.frame();
+  const due = coach.next; assert(Number.isFinite(due));
+  sim.setTime(due-1); coach.frame(); assert.equal(coach.ball, first);
+  sim.setTime(due+1); coach.frame(); assert.notEqual(coach.ball, first);
+  assert.equal(env.balls.length, 1);
+  coach.stop(); assert.equal(env.balls.length, 0); assert.equal(coach.objects.length, 0);
+}
+console.log('PASS 四種專項餵球、攻擊手扣球、回合間隔與結束清場');
 api.start('move'); tick(); advance();
 for (const step of [1, 2, 3, 4, 5]) {
   if (step === 1 || step === 3) { const target = api.view().target; walk.x = target.x; walk.z = target.z; }
@@ -496,11 +527,11 @@ const doc = { head: element(), body: element(), toolbar: element(), createElemen
 for (const id of ['w-host', 'w-settings', 'w-exit']) doc.toolbar.append(Object.assign(element(), { id }));   /* 房主設定、設定、回大廳 */
 const dom = fixture(); dom.api.mount(doc); dom.api.open();
 const [menu, panel] = doc.body.children, entry = doc.toolbar.children[0];
-assert.deepEqual(doc.toolbar.children.map(c => c.id || c.textContent), ['📘 新手教學', 'w-host', 'w-settings', 'w-exit'], '新手教學按鈕在房主設定左邊');
+assert.deepEqual(doc.toolbar.children.map(c => c.id || c.textContent), ['🏐 練習模式', 'w-host', 'w-settings', 'w-exit'], '新手教學按鈕在房主設定左邊');
 assert(menu.innerHTML.includes('🏐 自由練習') && menu.innerHTML.includes('📘 新手教學') && menu.innerHTML.includes('data-action="free"') && menu.innerHTML.includes('data-action="full"'), '大面板有自由練習、新手教學兩個選項');
-for (const id of ['move', 'recv', 'set', 'atk', 'serve', 'block']) assert(menu.innerHTML.includes(`data-start="${id}"`), '自由練習裡可以單獨選 ' + id);
+for (const id of ['move', 'recv', 'set', 'atk', 'serve', 'block']) assert(menu.innerHTML.includes(`data-start="${id}"`), '新手教學裡可以單獨選 ' + id);
 assert.equal(menu.hidden, false); assert.equal(panel.hidden, true);
-assert.equal(entry.textContent, '📘 新手教學');
+assert.equal(entry.textContent, '🏐 練習模式');
 for (const node of [menu, panel, entry]) for (const type of ['pointerdown','pointerup','mousedown','mouseup','dblclick','contextmenu','wheel']) {
   let stopped = false; node.events.get(type)({ stopPropagation() { stopped = true; } }); assert(stopped);
 }

@@ -871,6 +871,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="emo-menu" id="emo-menu" hidden><i id="emo-cur"></i></div>
       <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="sp" hidden></i><i class="ov"></i><b id="wk-chg-f"></b></div>
       <button type="button" class="wk-act" id="wk-act" hidden><kbd data-key="e">E</kbd><span id="wk-act-t"></span></button>
+      <button type="button" class="wk-act" id="wk-cart" style="top:67%;bottom:auto;pointer-events:auto" hidden>拖動球車（G）</button>
       <div class="wk-combo" id="wk-combo" hidden></div>
       <div class="rp" id="rp" hidden>
         <div class="rp-stats" id="rp-stats"></div>
@@ -5683,7 +5684,7 @@ function solidSegs(ballOnly) {
 }
 // 家具、設備（有高度、放在地上的）：走進外框就推出去
 function solidBoxes() { return state.items.filter((it) => { const def = CAT[it.type]; return def && !def.court && !def.wall && !def.ceiling && it.type !== 'netwall' && (it.h || def.h || 0) >= 0.35 && !walk.off.has(it.id); }); }
-function collide(x, z) {
+function collide(x, z, ignoreCart = null) {
   const segs = blockers().concat(solidSegs(false));
   for (let it = 0; it < 3; it++) {
     for (const [x1, z1, x2, z2] of segs) {
@@ -5693,7 +5694,9 @@ function collide(x, z) {
       if (d < RADIUS) { const k = (RADIUS - d) / (d || 1e-6); x += (d ? ex : -dz) * k; z += (d ? ez : dx) * k; }
     }
   }
-  for (const it of solidBoxes()) {
+  for (const original of solidBoxes()) {
+    if (original.id === ignoreCart) continue;
+    const it = practiceCarts.get(original.id)?.item || original;
     const { w, d } = sizeOf(it), [lx, lz] = toLocalOf(it, x, z), hx = w / 2 + RADIUS * 0.8, hz = d / 2 + RADIUS * 0.8;
     if (Math.abs(lx) < hx && Math.abs(lz) < hz) { if (hx - Math.abs(lx) < hz - Math.abs(lz)) [x, z] = toWorldOf(it, Math.sign(lx || 1) * hx, lz); else [x, z] = toWorldOf(it, lx, Math.sign(lz || 1) * hz); }
   }
@@ -5701,6 +5704,7 @@ function collide(x, z) {
   return [clamp(x, B.x0 - 8, B.x1 + 8), clamp(z, B.z0 - 8, B.z1 + 8)];
 }
 function updateWalk(dt) {
+  if (draggedCart) movePracticeCart(dt);
   const keyMoving = emoKeyWalk();
   if (window.VBTutorial?.active && (walk.spike || walk.sit || VM.on || window.__rkOn || NET.on)) window.VBTutorial.stop();
   const k = walk.keys;
@@ -5798,6 +5802,39 @@ function actionFor(t, it) {
   if (t === 'showerstall') return '開熱水';
   return '查看';
 }
+// 拖車位置只屬於本次單人球館，不改動場館設計資料。
+const practiceCarts = new Map();
+let draggedCart = null;
+function freeCartMode() {
+  return window.VBTutorial?.view().phase === 'closed' && !VM.on && !NET.on && !window.__rkOn;
+}
+function togglePracticeCart() {
+  if (draggedCart) { draggedCart = null; updateFocus(); return; }
+  const item = walk.focus?.it;
+  if (!freeCartMode() || item?.type !== 'ballcart' || walk.hold) return;
+  let cart = practiceCarts.get(item.id);
+  if (!cart) {
+    let group = itemsGroup.children.find(g => g.userData.itemId === item.id);
+    if (!group) zonesGroup.traverse(g => {
+      const fix = g.userData.zoneFix;
+      if (!group && fix && !g.parent?.userData.zoneFix && item.id === `zf:${fix.zid}:${fix.i}`) group = g;
+    });
+    if (!group) return;
+    cart = { group, item: { ...item } }; practiceCarts.set(item.id, cart);
+  }
+  draggedCart = cart; updateFocus();
+}
+function movePracticeCart(dt) {
+  if (!freeCartMode() || walk.hold || walk.sit || !draggedCart.group.parent) { draggedCart = null; return; }
+  const { item, group } = draggedCart;
+  const dx = walk.x - Math.sin(walk.yaw)*1.35 - item.x, dz = walk.z - Math.cos(walk.yaw)*1.35 - item.z;
+  const distance = Math.hypot(dx,dz);
+  if (distance > 5) { draggedCart = null; return; }
+  const scale = Math.min(1, 6*dt/Math.max(distance,0.001));
+  [item.x,item.z] = collide(item.x+dx*scale,item.z+dz*scale,item.id);
+  group.position.x=item.x; group.position.z=item.z;
+}
+$('wk-cart').addEventListener('click', togglePracticeCart);
 const centerRay = new THREE.Raycaster(); centerRay.far = 20;
 // 射線打到的東西 → 可以互動的目標（一般元件、區域的自動擺設、門、地上的球）
 function targetFromHits(hits, maxD) {
@@ -5838,6 +5875,9 @@ function updateFocus() {
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
   else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
+  const cartButton = $('wk-cart');
+  cartButton.hidden = !freeCartMode() || (!draggedCart && (walk.focus?.it?.type !== 'ballcart' || walk.hold));
+  cartButton.textContent = draggedCart ? '放下球車（G）' : '拖動球車（G）';
   $('wk-cross').classList.toggle('on', !!walk.focus);
 }
 function doInteract(tg) {
@@ -8569,6 +8609,7 @@ addEventListener('keydown', (e) => {
   if (!walk.on || VBSettings.isOpen) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = VBSettings.key(e);
+  if (e.code === 'KeyG' && !e.repeat && !walk.paused && !$('wk-cart').hidden) { e.preventDefault(); togglePracticeCart(); return; }
   if (k === 'crouch') { e.preventDefault(); if (!walk.paused) walk.crouch = true; return; }   // 蹲下（按住）：接重扣比較穩
   if ((k === 'ready' || k === 'start') && !e.repeat && !walk.paused) { e.preventDefault(); if (k === 'ready') roomReady(); else roomStart(); return; }
   if (typeof ROOM_UI !== 'undefined' && ROOM_UI?.picking) return;
@@ -10201,7 +10242,7 @@ function ballWaitFloor(b) {
 function vbTruePos(b) { return b.err ? b.m.position.clone().add(b.err) : b.m.position; }
 function vbAssist(inputMag) {
   VB.target = null;
-  if (TUT_COACH.id === 'block' || (TUT_COACH.id === 'recv' && TUT_COACH.index === 0)) return null;   // 教學攔網段：不把人從網前圈拉走；接球第 1 步：要自己走進落點圈
+  if (TUT_COACH.drill || TUT_COACH.id === 'block' || (TUT_COACH.id === 'recv' && TUT_COACH.index === 0)) return null;   // 專項要自行判讀球路與移位
   if (walk.air || walk.hold || walk.sit) return null;
   const ct = vbCourt(); if (!ct) return null;
   const sg = Math.sign(ct.lx) || 1; let best = null;
@@ -12121,6 +12162,93 @@ const TUT_COACH = {
     av.g.position.copy(p); this.face(av);
     scene.add(av.g); this.objects.push(av.g); return av;
   },
+  startDrill(mode, setType, interval) {
+    if (!this.start('drill')) return false;
+    const [slot, variant] = setType.split('-');
+    this.drill = { mode, slot: Number(slot) === 6 ? 7 : Number(slot), variant,
+      delay: Math.max(3, interval) * 1000, hitters: [], handBalls: [], hitter: null, target: null, strike: false, poseUntil: 0 };
+    const d = this.drill;
+    this.place(({ atk: 3.5, set: 1.5, block: 0.7, defense: 5.5 })[mode], 0);
+    const setter = this.world(mode === 'block' ? -1.5 : mode === 'set' ? 6 : 1, 1.2 * this.sg);
+    if (mode !== 'defense') this.coach = this.avatar(setter);
+    if (mode === 'block' || mode === 'defense') {
+      for (const z of [-3.25, 0, 3.25]) {
+        const base = this.world(-1.25, z);
+        const stool = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), new THREE.MeshStandardMaterial({ color: 0x876849 }));
+        stool.position.copy(base); stool.position.y = 0.425; scene.add(stool); this.objects.push(stool);
+        base.y = 0.85;
+        const hitter = this.avatar(base); d.hitters.push(hitter);
+        if (mode === 'defense') {
+          const mesh = newBallMesh(); hitter.hands[0].add(mesh); mesh.position.y = -BALL_R;
+          d.handBalls.push(mesh);
+        }
+      }
+    }
+    this.settled = true; this.paused = false; this.next = performance.now() + 900;
+    return true;
+  },
+  drillFeed(now) {
+    const d = this.drill;
+    const index = Math.floor(Math.random() * d.hitters.length);
+    d.hitter = d.hitters[index]; d.strike = false;
+    const from = d.mode === 'defense' ? d.handBalls[index].getWorldPosition(new THREE.Vector3()) : this.coach.g.position.clone();
+    if (d.mode !== 'defense') from.y = d.mode === 'set' ? 1.1 : 2.1;
+    const mesh = newBallMesh(); mesh.position.copy(from);
+    const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
+    mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
+    this.ball = ball; this.settled = false; this.next = Infinity; d.poseUntil = now + 500;
+    if (d.mode === 'atk') {
+      const sp = vbSpot({ lx: this.sg }, d.slot, this.sg, 1.2 * this.sg, d.variant);
+      const [x,z] = toWorldOf(this.court, sp.lx, sp.lz);
+      vbSendSet(ball, x, z, sp.y, sp.T, d.variant === 'high3' ? 6 : d.slot, '陪練', from);
+      return;
+    }
+    const send = (target, seconds, kind) => {
+      const velocity = target.clone().sub(from).multiplyScalar(1 / seconds);
+      velocity.y += 4.9 * seconds; vbLaunch(ball, from, velocity, kind);
+    };
+    if (d.mode === 'set') {
+      const good = Math.random() < 0.7;
+      const target = this.world(good ? 1.3 + Math.random() * 0.5 : 3.4 + Math.random() * 3,
+        good ? this.sg * (0.5 + Math.random()) : (Math.random() - 0.5) * 7, 2.1);
+      send(target, good ? 1.4 : 1.7, 'bump'); return;
+    }
+    const lane = [-3.25, 0, 3.25][index];
+    const cross = Math.random() < 0.5;
+    d.target = this.world(5.7 + Math.random() * 1.7, cross ? (lane === 0 ? (Math.random() < 0.5 ? -3 : 3) : -lane) : lane, BALL_R);
+    const contact = this.world(-0.95, lane, 3.25);
+    d.hitter.g.rotation.y = Math.atan2(d.target.x - contact.x, d.target.z - contact.z);
+    if (d.mode === 'defense') d.handBalls[index].visible = false;
+    send(contact, d.mode === 'defense' ? 0.95 : 1.18, 'set');
+    d.strike = true;
+  },
+  drillFrame(now) {
+    const d = this.drill, ball = this.ball;
+    if (this.coach) avDrive(this.coach, now < d.poseUntil ? (d.mode === 'set' ? AVP.bump : AVP.setPush) : AVP.ready, 0.45);
+    for (const av of d.hitters) {
+      const active = av === d.hitter;
+      avDrive(av, active && d.strike ? AVP.airUp : active && now < d.hitUntil ? AVP.spikeHit : AVP.ready, 0.45);
+    }
+    if (ball && !this.settled) {
+      if (ball.floorHit || ball.rest > 0.3 || !balls.includes(ball)) this.drillFinish(now);
+      else if (d.strike && ball.v.y < 0 && ball.m.position.y <= 3.28) {
+        const cp = ball.m.position.clone(), t = 0.55;
+        const velocity = d.target.clone().sub(cp).multiplyScalar(1 / t);
+        velocity.y += 4.9 * t; vbLaunch(ball, cp, velocity, 'spike');
+        d.strike = false; d.hitUntil = now + 420;
+      }
+    }
+    if (now < this.next || (!locked() && !coarse())) return;
+    if (ball) {
+      ball.m.removeFromParent(); this.owned.delete(ball);
+      const i = balls.indexOf(ball); if (i >= 0) balls.splice(i, 1);
+    }
+    for (const mesh of d.handBalls) mesh.visible = true;
+    this.drillFeed(now);
+  },
+  drillFinish(now) {
+    this.drill.strike = false; this.settled = true; this.next = now + this.drill.delay;
+  },
   clearStep() {
     if (this.held?.userData.ball) this.owned.add(this.held.userData.ball);
     for (const ball of this.owned) {
@@ -12224,6 +12352,11 @@ const TUT_COACH = {
       Math.hypot(mate.av.g.position.x - walk.x, mate.av.g.position.z - walk.z) <= 1.5);
   },
   event(name, data, ball) {
+    if (this.drill) {
+      const expected = { set: 'set', block: 'block', defense: 'recv' }[this.drill.mode];
+      if (!this.settled && expected === name && ball === this.ball) this.drillFinish(performance.now());
+      return false;
+    }
     if (name === 'jump' && data.block && this.mate) this.mate.jumping = true;
     if (name === 'recvMiss') {
       if (!this.ball || this.settled || this.failed) return false;
@@ -12239,6 +12372,7 @@ const TUT_COACH = {
   frame() {
     if (this.paused || !this.id) return;
     const now = performance.now();
+    if (this.drill) { this.drillFrame(now); return; }
     if (this.mate) {
       const air = this.mate.jumping && walk.air?.block ? walk.air : null;
       this.mate.av.g.position.y = air ? air.y : 0;
@@ -12268,7 +12402,7 @@ const TUT_COACH = {
     this.feed();
   },
   pause() { this.paused = true; this.next = Infinity; },
-  stop() { if (!this.id) return; this.clearStep(); this.id = null; this.court = null; this.paused = false; this.lastServe = -Infinity; },
+  stop() { if (!this.id) return; this.clearStep(); this.drill = null; this.id = null; this.court = null; this.paused = false; this.lastServe = -Infinity; },
   release() { unlockMouse(); walk.keys.clear(); }
 };
 

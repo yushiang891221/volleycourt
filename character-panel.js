@@ -172,12 +172,13 @@ export async function openAchievementPanel() {
   let d = document.getElementById('ach-panel');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'ach-panel'; d.setAttribute('aria-labelledby', 'ach-title');
-    d.innerHTML = '<form method="dialog"><header class="ach-top"><button class="ach-back" aria-label="關閉">←</button><h2 id="ach-title">成就系統</h2></header><div class="ach-cols"><section class="ach-detail"></section><section class="ach-right"><div class="ach-me"></div><nav class="ach-cats" role="tablist"></nav><div class="ach-series"></div></section></div><p class="ach-tip">💡 只有開房間的比賽會累積（練習模式不算）。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p></form>';
+    d.innerHTML = '<form method="dialog"><header class="ach-top"><button class="ach-back" aria-label="關閉">←</button><h2 id="ach-title">成就系統</h2></header><div class="ach-cols"><section class="ach-detail"></section><section class="ach-right"><div class="ach-me"></div><nav class="ach-cats" role="tablist"></nav><div class="ach-series"></div></section></div><p class="ach-tip">💡 新手教學成就依本機教學進度解鎖；比賽成就在開房比賽中累積。解鎖的稱號到「球衣與裝備 → 稱號」套用。</p></form>';
     document.body.append(d);
   }
   const P = await import('./progress.js');
   let cat = 'all', sel = P.ACH_SERIES[0].id, prog = P.cachedProgress() || {};
-  const got = () => prog.achievements || [];
+  const tutorialDone = P.achProgress('tutorial')[0] === 6;
+  const got = () => [...new Set([...(prog.achievements || []), ...(tutorialDone ? ['tutorial'] : [])])];
   const tierPr = (k) => { const pr = P.achProgress(k, prog), ok = got().includes(k); return { ok, cur: pr ? Math.min(pr[0], pr[1]) : ok ? 1 : 0, need: pr ? pr[1] : 1, one: !pr }; };
   const seriesPr = (S) => {
     const t = S.tiers.map(tierPr), done = t.filter((x) => x.ok).length, next = t[done];
@@ -200,7 +201,7 @@ export async function openAchievementPanel() {
     const tiers = S.tiers.map((k, i) => {
       const t = tierPr(k), a = P.achVisible(P.ACHIEVEMENTS[k], t.ok), pct = t.ok ? 100 : Math.round((t.cur / t.need) * 100);
       const foot = P.ACHIEVEMENTS[k].hidden && !t.ok ? '' : t.ok ? '<div class="ach-t-done">✓ 已達成</div>' : t.one ? '<div class="ach-t-one">一場比賽內達成就解鎖</div>' : `<div class="ach-t-pr"><span>進度：${t.cur} / ${t.need}</span><span>${pct}%</span></div><div class="ach-bar"><i style="width:${pct}%"></i></div>`;
-      return `<div class="ach-t${t.ok ? ' ok' : ''}"><div class="ach-t-h"><span class="ach-t-n">${i + 1}</span><b>${esc(a.name)}</b><span class="ach-badge sm">稱號「${esc(a.title)}」</span></div><p>${esc(a.desc)}・${P.ACH_POINTS[k] || 0} PT</p>${foot}</div>`;
+      return `<div class="ach-t${t.ok ? ' ok' : ''}"><div class="ach-t-h"><span class="ach-t-n">${i + 1}</span><b>${esc(a.name)}</b>${a.title ? `<span class="ach-badge sm">稱號「${esc(a.title)}」</span>` : ''}</div><p>${esc(a.desc)}${k === 'tutorial' ? '' : `・${P.ACH_POINTS[k] || 0} PT`}</p>${foot}</div>`;
     }).join('');
     d.querySelector('.ach-detail').innerHTML = `<div class="ach-hero"><div class="ach-hero-ic">${S.icon}</div><h3>${esc(S.name)}</h3><p>${esc(S.desc)}</p><div class="ach-hero-pr"><span>項目總進度</span><b>${pr.pct}%</b></div><div class="ach-bar big"><i style="width:${pr.pct}%"></i></div></div><div class="ach-tiers-h"><span>階梯式成就進度（點右邊切換項目）</span><b>已達成 ${pr.done} / ${pr.total}</b></div><div class="ach-tiers">${tiers}</div>`;
   };
@@ -259,6 +260,7 @@ export function mountCharacterCard(card) {
   const img = card.querySelector('img'), name = card.querySelector('.me-name'), err = card.querySelector('.me-err');
   const draw = () => { try { preview(img); err.textContent = ''; } catch { err.textContent = '角色預覽載入失敗，請重新整理。'; } };
   const setName = () => { name.textContent = (window.VBSettings && window.VBSettings.values.nickname) || '球友'; };
+  name.onclick = async () => (await import('./public-profile.js')).openPublicProfile(name.textContent);
   const statsEl = card.querySelector('.me-stats tbody');
   const showProgress = async (prog) => {   // WEB-010：等級、經驗條、金幣、稱號、各難度戰績、遊玩時數（開房比賽才算，練習不算）
     const P = await import('./progress.js'); prog = prog || P.cachedProgress() || {};

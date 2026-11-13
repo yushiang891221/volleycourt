@@ -1,6 +1,28 @@
 import { authMode, getAccountService } from './auth.js';
 import { bindFriendAction } from './player-menu.js';
 
+const grades = ['E','D','C','B','B+','A','A+','S','S+'];
+const thresholds = [0,1,10,30,100,250,500,1000,3000];
+function masteryPanel(stats) {
+  const section = document.createElement('section');
+  section.className = 'profile-mastery';
+  section.innerHTML = '<h3>四項技能專精</h3><dl></dl><details><summary aria-label="查看技能專精評分說明">？ 評分說明</summary><p>開房比賽結算後，每次達成該項表現累積 1 次。四項分開升級，既有戰績也計入。遊玩時數、練習球數及成就點數不重複加分。</p></details>';
+  const details = section.querySelector('details');
+  const guide = document.createElement('p');
+  guide.textContent = grades.map((g,i) => g + '：' + thresholds[i] + ' 次').join(' ／ ');
+  details.append(guide);
+  for (const [name,key,metric] of [['攻擊','kills','攻擊得分'],['舉球','assists','舉球助攻'],['攔網','blocks','攔網得分'],['接球','perfects','完美接球']]) {
+    const label = document.createElement('dt'), value = document.createElement('dd');
+    label.textContent = name;
+    if (stats && Number.isFinite(stats[key])) {
+      const count = stats[key], i = thresholds.findLastIndex(n => count >= n);
+      value.textContent = `${grades[i]} · ${metric} ${count} 次${i < grades.length-1 ? '（距 '+grades[i+1]+' 差 '+(thresholds[i+1]-count)+' 次）' : '（最高級）'}`;
+    } else value.textContent = '等待戰績資料';
+    section.querySelector('dl').append(label,value);
+  }
+  return section;
+}
+
 export async function openPublicProfile(nickname) {
   const dialog = document.createElement('dialog'); dialog.className = 'public-profile';
   dialog.setAttribute('aria-label', '個人檔案');
@@ -27,9 +49,10 @@ export async function openPublicProfile(nickname) {
     for (const id of unlocked) {
       const item = document.createElement('li'); item.textContent = `${P.ACH_SERIES.find(series => series.tiers.includes(id))?.icon || '🏆'} ${P.ACHIEVEMENTS[id].name}`; achievements.append(item);
     }
-    info.append(achievements); body.append(img, info); status.textContent = '';
+    info.append(masteryPanel(data.mastery),achievements); body.append(img, info); status.textContent = '';
     const action = dialog.querySelector('[data-action]'); action.hidden = false;
-    await bindFriendAction(action, nickname, () => dialog.close());
+    if (nickname === globalThis.VBSettings?.values.nickname) action.hidden = true;
+    else await bindFriendAction(action, nickname, () => dialog.close());
     try { await avatars.preloadAvatars(); if (dialog.open) character.preview(img, data.appearance || '', { jersey: data.team_jersey || null }); }
     catch { status.textContent = '角色預覽載入失敗'; }
   } catch (error) { status.textContent = error.message || '個人檔案載入失敗'; }

@@ -71,11 +71,23 @@ function startAccountList(){
  accountTimer=setInterval(refreshAccounts,2*60*1000);
  setInterval(renderPlayers,60*1000);
 }
+let playersPerPage=8;
+function fitPlayerPage(){
+ const list=$('players'), row=list.querySelector('.player');
+ if(!row || !row.offsetHeight || !list.clientHeight)return;
+ const css=getComputedStyle(list), gap=parseFloat(css.rowGap)||0;
+ const height=list.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);
+ const size=Math.max(1,Math.floor((height+gap)/(row.offsetHeight+gap)));
+ if(size===playersPerPage)return;
+ playerPage=Math.floor(playerPage*playersPerPage/size);
+ playersPerPage=size;
+ renderPlayers();
+}
 function renderPlayers(){
  const list=$('players');list.replaceChildren();
  const all=mergePlayers(players,accounts,VBLobby.id,nickname);
- playerPage=page('players',playerPage,all.length,8);
- for(const p of all.slice(playerPage*8,playerPage*8+8)){
+ playerPage=page('players',playerPage,all.length,playersPerPage);
+ for(const p of all.slice(playerPage*playersPerPage,(playerPage+1)*playersPerPage)){
   const row=document.createElement('div');row.className='player'+(p.self?' self':'')+(p.offline?' offline':'');
   row.innerHTML=`<span class="avatar">${icon('user')}</span><div class="player-identity"><strong></strong><div class="player-level"></div></div><span class="state"></span>`;
   const label=p.name+(p.self?'（你）':'');row.querySelector('strong').textContent=label;row.querySelector('strong').title='按右鍵查看更多';if(!p.self)row.querySelector('strong').dataset.player=p.name;
@@ -84,7 +96,9 @@ function renderPlayers(){
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
  }
  $('player-count').textContent=accounts===null?`${all.length} 人`:`在線 ${all.filter(p=>!p.offline).length} 人・共 ${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
+ fitPlayerPage();
 }
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(fitPlayerPage).observe($('players'));
 function renderRooms(){
  const target=$('rooms');target.replaceChildren();
  const all=(demo&&!connected?samples:rooms).filter(r=>$('filter').value==='all'||r.mode===$('filter').value);
