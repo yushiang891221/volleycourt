@@ -13,6 +13,7 @@ function block(start, end) {
 let now = 0, team = 0, wall = Infinity;
 const sent = [], notices = [];
 const context = {
+  practiceCarts: new Map(),
   clamp: (v, a, b) => Math.max(a, Math.min(b, v)),
   performance: { now: () => now },
   walk: { x: 0, z: 0, yaw: 0, keys: new Set(), off: new Set() },

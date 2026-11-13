@@ -68,13 +68,23 @@ assert(kicks.every(f => f.dt < frames[2].dt / 3));
 assert(frames.every(f => f.move.every(v => v === 0)));
 assert(kicks.every(f => f.pose.ankle[f.kick] < -.6));
 assert(kicks[0].pose.head[1] < 0 && kicks[1].pose.head[1] > 0);
-for (const { pose } of frames.slice(1, 6)) {
+for (const i of [0, 1]) {
+  assert(frames[1].pose.kn[i] < frames[2].pose.kn[i]);
+  close(frames[2].pose.kn[i], 0.52);
+  assert(frames[1].pose.sh[i][1] < frames[2].pose.sh[i][1]);
+}
+assert(frames[1].pose.sp > 0 && frames[1].pose.sp < frames[2].pose.sp);
+for (const { pose } of frames.slice(2, 6)) {
   for (const [i, [pitch, spread]] of pose.sh.entries()) {
     close(spread, Math.PI / 2);
     close(pose.el[i], Math.PI / 2);
     close(pitch, Math.PI / 2);
   }
 }
+assert.deepEqual(frames[1].pose.sh, run("AVP.idle.sh"));
+close(frames[1].pose.tw, frames[2].pose.tw);
+close(frames[2].pose.tw, -Math.PI / 12);
+close(context.emoKeySample('langzi', frames[1].dt + frames[2].dt, -1).pose.tw, Math.PI / 12);
 assert.deepEqual(frames[4].pose, frames[5].pose);
 close(frames[5].dt, 0.58);
 const end = context.emoKeySample('langzi', 2.19).pose;

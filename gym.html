@@ -7588,8 +7588,8 @@ const langziArmsDown = { sh: [[Math.PI / 2, Math.PI / 2], [Math.PI / 2, Math.PI 
 const EMO_KEYS = {
   langzi: [
     { dt: 0, pose: 'idle', move: [0, 0] },
-    { dt: 0.22, pose: { ...langziArmsDown, sp: 0 }, move: [0, 0] },
-    { dt: 0.36, pose: { ...langziArmsDown, hip: [0.12, 0.05], kn: [0.4, 0.15], sp: 0, ankle: [0.35, 0] }, move: [0, 0] },
+    { dt: 0.22, pose: { ...AVP.idle, hip: [0.12, 0.12], kn: [0.23, 0.23], sp: 0.12, tw: -Math.PI / 12 }, move: [0, 0] },
+    { dt: 0.36, pose: { ...langziArmsDown, hip: [0.26, 0.26], kn: [0.52, 0.52], sp: 0.26, tw: -Math.PI / 12 }, move: [0, 0] },
     { dt: 0.12, pose: { ...langziArmsDown, hip: [0.1, 0.35], kn: [0.8, 0.6], sp: 0, tw: -0.3, lean: 0, head: [0.3, -0.65], ankle: [-0.65, 0] }, move: [0, 0] },
     { dt: 0.09, pose: { ...langziArmsDown, hip: [-0.35, 0.35], kn: [1.55, 0.65], hab: [0.32, 0.05], sp: 0, tw: -0.4, lean: 0, head: [0.35, -0.85], ankle: [-0.85, 0] }, ease: 'out', kick: 0, move: [0, 0] },
     { dt: 0.58, pose: { ...langziArmsDown, hip: [-0.35, 0.35], kn: [1.55, 0.65], hab: [0.32, 0.05], sp: 0, tw: -0.4, lean: 0, head: [0.35, -0.85], ankle: [-0.85, 0] }, move: [0, 0] },
@@ -9424,7 +9424,7 @@ function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG;
 function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100; return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
 function staPay(kind, mul = 1) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe()) * mul); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
-function staGame() { if (window.VBTutorial?.active) return false; return !!(window.__rkOn || VM.on || VB.npc); }
+function staGame() { return !!(vmIsPractice() || window.__rkOn || VM.on || VB.npc); }
 function staWarn(t) { if (performance.now() - STA.warnT > 2200) { STA.warnT = performance.now(); toast(t || '沒體力了：放開 Shift 喘一下', 1400); } }
 function staUse(n) { if (!staGame()) return true; if (STA.v < n) { staWarn('體力不夠，沒辦法撲／跳那麼用力'); return false; } STA.v -= n; STA.useT = performance.now(); if (STA.v < 0.02) { STA.v = 0; STA.lock = true; } return true; }
 function staSprint(want, dt) {
@@ -9440,7 +9440,8 @@ function staTick(dt) {
   if (!on) { STA.v = 1; STA.lock = false; if (el && !el.hidden) el.hidden = true; return; }
   if (performance.now() - STA.useT > 800) {
     const live = window.__rkOn ? RK.phase === 'rally' : VM.on ? VM.phase === 'rally' : true, still = Math.hypot(...(walk.vel || [0, 0])) < 0.5;
-    const c = staCfg(); STA.v = Math.min(1, STA.v + ((live ? (still ? c.regStill : c.regMove) : c.regDead) / 100) * dt);
+    const c = staCfg(), recovery = live ? (still ? c.regStill : c.regMove) : c.regDead;
+    STA.v = Math.min(1, STA.v + recovery / 100 * dt * (vmIsPractice() ? 5 : 1));
   }
   if (STA.lock && STA.v >= 0.25) STA.lock = false;
   if (!el) return;
@@ -10294,7 +10295,7 @@ function vbNpcToggle(mode) {
   mode = mode || 'set';
   const ct = vbCourt(); if (!ct) { toast('站到排球場上再叫陪練'); return; }
   const sg = Math.sign(ct.lx) || 1, npcCh = vmPickChar(new Set([myChar()])), av = makeAvatar('#30A46C', npcCh);
-  let home = toWorldOf(ct.c, sg * 1.1, -sg * 1.2);
+  let home = toWorldOf(ct.c, sg * 1.1, -sg * 2.3);
   if (mode === 'pepper') {   // 站在你面前 5 m；前面是網子就改站在你旁邊（沿著網子的方向），都在你這半場
     const [fx, fz] = vbFwd(), [hlx, hlz] = toLocalOf(ct.c, walk.x + fx * 5, walk.z + fz * 5);
     if (Math.sign(hlx) === sg && Math.abs(hlx) > 1.5 && Math.abs(hlx) < 8.5 && Math.abs(hlz) < 4.2) home = [walk.x + fx * 5, walk.z + fz * 5];
@@ -10323,7 +10324,7 @@ function vbNpcStep(dt) {
   if (tgt) { const p = tgt.b.m.position; if (Math.hypot(p.x - n.x, p.z - n.z) < 0.9 && p.y < 2.5 && p.y > 1.5 && tgt.b.v.y < 0) vbNpcSet(tgt.b); }
   // 動作：跑步擺腿、面向網子；球來了兩手舉高
   const av = n.av, k = 1 - Math.exp(-dt * 12), spd = Math.hypot(n.vx, n.vz);
-  av.g.position.set(n.x, 0, n.z); const [ax, az] = toWorldOf(n.c, 0, 0), [bx, bz] = toWorldOf(n.c, n.sg, 0); let ry = Math.atan2(ax - bx, az - bz);
+  av.g.position.set(n.x, 0, n.z); let ry = Math.atan2(walk.x - n.x, walk.z - n.z);
   if (tgt) ry = Math.atan2(tgt.b.m.position.x - n.x, tgt.b.m.position.z - n.z);
   let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
   av.phase += dt * Math.min(12, spd * 5.5);
@@ -10766,7 +10767,8 @@ function vmApplyRoomRules(rules) {
   mrecReset(vmIsPractice() ? '' : `${NET.room || 'room'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);   // WEB-010：房主開賽＝新的比賽代碼
   VM.langziMatch = MREC.id; /* WEB-022 比賽識別。 */
   VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
-const vmIsPractice = () => new URLSearchParams(location.search).has('practice');
+const practiceRoom = new URLSearchParams(location.search).has('practice');
+function vmIsPractice() { return practiceRoom; }
 const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
 const VM_OPT = { to: 7, lv: 2, mate: 3, mode: '2', role: 'OH', sets: 3, to6: 25 };
 try { Object.assign(VM_OPT, JSON.parse(localStorage.getItem('vb.vmopt') || '{}')); } catch (e) { /* ignore */ }
@@ -12169,7 +12171,7 @@ const TUT_COACH = {
       delay: Math.max(3, interval) * 1000, hitters: [], handBalls: [], hitter: null, target: null, strike: false, poseUntil: 0 };
     const d = this.drill;
     this.place(({ atk: 3.5, set: 1.5, block: 0.7, defense: 5.5 })[mode], 0);
-    const setter = this.world(mode === 'block' ? -1.5 : mode === 'set' ? 6 : 1, 1.2 * this.sg);
+    const setter = this.world(mode === 'block' ? -1.5 : mode === 'set' ? 6 : 1, (mode === 'atk' ? -2.3 : 1.2) * this.sg);
     if (mode !== 'defense') this.coach = this.avatar(setter);
     if (mode === 'block' || mode === 'defense') {
       for (const z of [-3.25, 0, 3.25]) {
@@ -12198,7 +12200,8 @@ const TUT_COACH = {
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.next = Infinity; d.poseUntil = now + 500;
     if (d.mode === 'atk') {
-      const sp = vbSpot({ lx: this.sg }, d.slot, this.sg, 1.2 * this.sg, d.variant);
+      const [lx,lz] = toLocalOf(this.court,from.x,from.z);
+      const sp = vbSpot({ lx: this.sg }, d.slot, lx, lz, d.variant);
       const [x,z] = toWorldOf(this.court, sp.lx, sp.lz);
       vbSendSet(ball, x, z, sp.y, sp.T, d.variant === 'high3' ? 6 : d.slot, '陪練', from);
       return;
@@ -12224,6 +12227,7 @@ const TUT_COACH = {
   },
   drillFrame(now) {
     const d = this.drill, ball = this.ball;
+    if (d.mode === 'atk') this.face(this.coach);
     if (this.coach) avDrive(this.coach, now < d.poseUntil ? (d.mode === 'set' ? AVP.bump : AVP.setPush) : AVP.ready, 0.45);
     for (const av of d.hitters) {
       const active = av === d.hitter;

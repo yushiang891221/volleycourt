@@ -194,7 +194,7 @@ assert.equal((gym.match(/tutEv\('serve',/g) || []).length, 1);
 assert(source('serveLaunch').includes("tutEv('serve'"));
 assert(source('vbBlockTest').indexOf("tutEv('block'") > source('vbBlockTest').indexOf('vbBlockApply('));
 assert(source('updateWalk').includes('if (window.VBTutorial?.active) window.VBTutorial.frame(tutSnapshot());'));
-assert(source('staGame').includes('if (window.VBTutorial?.active) return false;'));
+assert(source('staGame').includes('vmIsPractice()'));
 for (const name of ['stopWalk', 'vmStart', 'vm6Start', 'rkStart']) assert(source(name).includes('globalThis.VBTutorial?.stop();'));
 const loader = gym.slice(gym.indexOf("if (new URLSearchParams(location.search).has('practice')) {\n  ROOM ="), gym.indexOf('function resize()'));
 assert(loader.includes("tutorialScript.src = 'tutorial.js'"));
@@ -252,7 +252,7 @@ function engine() {
     RECV_CROUCH: { crouchDy: -0.5, crouchDT: 0.15 }, BLK_FX: {},
     TOUCH_OUT: { outKeep: .09, outKeepPow: .08, outPast: [.15,.7], outLatMax: [2.6,1.2], topKeep: .14, topKeepPow: .14, topVy: [2,1.4], powVy: 1.6 },
     skill: {}, hands: {}, pose: 'hold', AVP: { idle: {} }, SFX: { floorT: 0 }, SPIN_AX: new Vector(),
-    STA: { v: 100 }, locked: () => true, tpActive: () => !!c.third,
+    vmIsPractice: () => true, STA: { v: 100 }, locked: () => true, tpActive: () => !!c.third,
     clamp: (x, lo, hi) => Math.max(lo, Math.min(hi, x)), rkGauss: () => 0,
     newBallMesh: () => new Object3D(), makeAvatar: () => ({ g: new Object3D() }), myChar: () => null,
     avDrive: noop, avBlockPose: () => ({}), setMenuClose: noop, unlockMouse: noop,
@@ -500,7 +500,7 @@ assert.equal(missServe.c.balls.length, 0);
 const stamina = engine(); stamina.api.start('atk'); stamina.c.VB.npc = {};
 const energy = stamina.c.STA.v;
 stamina.c.staPay('jump'); stamina.c.staUse(0.5);
-assert.equal(stamina.c.STA.v, energy);
+assert.equal(stamina.c.STA.v, energy - 5.5);
 stamina.api.stop(); assert(stamina.c.staGame()); stamina.c.staPay('jump');
 assert(stamina.c.STA.v < energy, '非教學陪練仍扣體力');
 
@@ -528,7 +528,10 @@ for (const id of ['w-host', 'w-settings', 'w-exit']) doc.toolbar.append(Object.a
 const dom = fixture(); dom.api.mount(doc); dom.api.open();
 const [menu, panel] = doc.body.children, entry = doc.toolbar.children[0];
 assert.deepEqual(doc.toolbar.children.map(c => c.id || c.textContent), ['🏐 練習模式', 'w-host', 'w-settings', 'w-exit'], '新手教學按鈕在房主設定左邊');
-assert(menu.innerHTML.includes('🏐 自由練習') && menu.innerHTML.includes('📘 新手教學') && menu.innerHTML.includes('data-action="free"') && menu.innerHTML.includes('data-action="full"'), '大面板有自由練習、新手教學兩個選項');
+assert(menu.innerHTML.includes('data-action="lessons"') && menu.innerHTML.includes('data-action="free"') && menu.innerHTML.includes('data-action="setup"'));
+assert(!menu.innerHTML.includes('data-start='));
+menu.events.get('click')({ stopPropagation() {}, target: { closest: () => ({ dataset: { action: 'lessons' } }) } });
+assert(menu.innerHTML.includes('data-action="full"'));
 for (const id of ['move', 'recv', 'set', 'atk', 'serve', 'block']) assert(menu.innerHTML.includes(`data-start="${id}"`), '新手教學裡可以單獨選 ' + id);
 assert.equal(menu.hidden, false); assert.equal(panel.hidden, true);
 assert.equal(entry.textContent, '🏐 練習模式');

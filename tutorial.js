@@ -103,7 +103,7 @@
     function render() {
       options.changed?.(view());
       if (!panel) return;
-      menu.hidden = phase !== 'menu' && phase !== 'setup';
+      menu.hidden = !['menu','lessons','setup'].includes(phase);
       panel.hidden = !['running', 'success', 'complete', 'drill'].includes(phase);
       if (phase === 'setup') {
         const choices = (items, selected) => Object.entries(items).map(([id, label]) => `<option value="${id}" ${id === selected ? 'selected' : ''}>${label}</option>`).join('');
@@ -116,20 +116,25 @@
         panel.innerHTML = `<strong>${drills[drill]}專項${drill === 'atk' ? ' · ' + sets[setType] : ''}</strong><p>${drillHints[drill]} 每球間隔 ${interval} 秒。</p><button data-action="setup">調整練習</button> <button data-action="open">結束專項</button>`;
         return;
       }
-      if (phase === 'menu') {   // 進練習模式的大面板：自由練習（也可以單獨練一段）／新手教學（從頭走完六段）
+      if (phase === 'lessons') {
         const doneCount = sections.filter(s => saved.done[s.id]).length, first = sections.find(s => !saved.done[s.id]);
-        const fullLabel = !doneCount ? '開始新手教學' : first ? `繼續新手教學（從「${first.name}」開始）` : '再走一次新手教學';
-        menu.innerHTML = '<h2>練習模式</h2><p class="vb-tut-lead">要怎麼練？</p><div class="vb-tut-cards">'
-          + '<section class="vb-tut-card vb-tut-main"><h3>📘 新手教學</h3><p>從移動、接球、舉球、攻擊、發球到攔網，六段一步一步帶你做一遍，每一步都會提示要按哪個鍵。</p>'
+        const fullLabel = !doneCount ? '開始完整新手教學' : first ? `繼續完整新手教學（從「${first.name}」開始）` : '再走一次完整新手教學';
+        menu.innerHTML = '<h2>📘 新手教學</h2>'
           + `<p class="vb-tut-sub">${doneCount === sections.length ? '恭喜！六段全部完成。' : `已完成 ${doneCount}／${sections.length} 段`}</p>`
           + `<button class="vb-tut-big" data-action="full">${fullLabel}</button>`
           + '<p class="vb-tut-sub">也可以只練其中一段新手教學：</p><div class="vb-tut-chips">'
           + sections.map(s => `<button data-start="${s.id}" ${s.enabled ? '' : 'disabled'}>${saved.done[s.id] ? '✓ ' : ''}${s.name}</button>`).join('')
-          + '</div></section>'
+          + '</div><button data-action="open">返回練習模式</button>'
+          + (doneCount || Object.keys(saved.at).length ? '<button class="vb-tut-link" data-action="reset">重設教學進度</button>' : '');
+        return;
+      }
+      if (phase === 'menu') {
+        menu.innerHTML = '<h2>練習模式</h2><p class="vb-tut-lead">要怎麼練？</p><div class="vb-tut-cards">'
+          + '<section class="vb-tut-card vb-tut-main"><h3>📘 新手教學</h3><p>從移動、接球、舉球、攻擊、發球到攔網，六段一步一步帶你做一遍，每一步都會提示要按哪個鍵。</p>'
+          + '<button class="vb-tut-big" data-action="lessons">選擇教學</button></section>'
           + '<section class="vb-tut-card"><h3>🏐 自由練習</h3><p>自己拿球發球、叫陪練舉球或對碰。靠近球車可拖著走，再放到場邊取球。</p>'
           + '<button class="vb-tut-big" data-action="free">開始自由練習</button></section>'
-          + '<section class="vb-tut-card"><h3>🎯 專項練習</h3><p>選擇攻擊、舉球、攔網或防守，讓電腦重複餵球，專心練一個動作。</p><button class="vb-tut-big" data-action="setup">選擇專項</button></section></div>'
-          + (doneCount || Object.keys(saved.at).length ? '<button class="vb-tut-link" data-action="reset">重設教學進度</button>' : '');
+          + '<section class="vb-tut-card"><h3>🎯 專項練習</h3><p>選擇攻擊、舉球、攔網或防守，讓電腦重複餵球，專心練一個動作。</p><button class="vb-tut-big" data-action="setup">選擇專項</button></section></div>';
       }
       const next = sections[sections.indexOf(section) + 1];
       const body = phase === 'complete'
@@ -247,6 +252,7 @@
       const style = document.createElement('style');
       style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%);width:min(440px,max(300px,calc(100vw - 680px)));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       style.textContent += '.vb-tut-menu{width:min(1000px,calc(100vw - 32px));max-height:92dvh;overflow:auto}.vb-tut-menu:has(select){width:min(460px,calc(100vw - 32px))}.vb-tut-menu label{display:block;margin:16px 0}.vb-tut-menu select,.vb-tut-menu input{font:inherit;padding:5px}.vb-tut-menu input{width:70px}.vb-tut-cards{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:720px){.vb-tut-cards{grid-template-columns:1fr}}';
+      style.textContent += '.vb-tut-card .vb-tut-big{margin:auto 0 0}.vb-tut-menu:has(.vb-tut-chips){width:min(480px,calc(100vw - 32px))}.vb-tut-chips{margin:8px 0 16px}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
@@ -276,7 +282,8 @@
         if (!coach.startDrill(drill, setType, interval)) return;
         phase = 'drill'; render();
       };
-      const actions = { open, setup, beginDrill, stop: quit, free: quit, full: startFull, next: nextSection, reset, skip: () => succeed(true) };
+      const lessons = () => { phase = 'lessons'; render(); };
+      const actions = { open, lessons, setup, beginDrill, stop: quit, free: quit, full: startFull, next: nextSection, reset, skip: () => succeed(true) };
       const click = event => {
         event.stopPropagation();
         const b = event.target.closest('button');
