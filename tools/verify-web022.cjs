@@ -61,7 +61,9 @@ Object.assign(context.NET, { me: 'self', hitN: 7, hitBy: 'self' });
 for (const name of ['netBallHit', 'netBallMsg', 'netOnMessage', 'vmOnTouch', 'vmClearBalls', 'vmPrepServe', 'vbBlockTest', 'vmJudge', 'vmStatePayload', 'vbOwnSide', 'hitWorldBall']) vm.runInContext(source(name), context);
 const frames = run('EMO_KEYS.langzi'), kicks = frames.filter(f => f.kick != null);
 close(context.emoKeyDuration('langzi'), 1.8);
-assert.deepEqual(Array.from(kicks, f => f.kick), [0, 1]);
+assert.deepEqual(Array.from(kicks, f => f.kick), [0, 0]);   /* 使用者指定：同一隻腳先往後勾、再往前踢 */
+assert(kicks[0].pose.kn[0] > 1.2 && kicks[0].pose.hip[0] < 0, '第一下：小腿往後勾');
+assert(kicks[1].pose.hip[0] > 0.6 && kicks[1].pose.kn[0] < 0.5, '第二下：同一隻腳往前踢');
 assert(kicks.every(f => f.dt < frames[2].dt / 3));
 assert(frames.every(f => f.move.every(v => v === 0)));
 assert(kicks.every(f => f.pose.ankle[f.kick] < -.6));
