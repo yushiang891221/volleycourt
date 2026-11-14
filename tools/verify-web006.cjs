@@ -342,6 +342,22 @@ for (const mode of ['atk', 'set', 'block', 'defense']) {
   sim.setTime(due-1); coach.frame(); assert.equal(coach.ball, first);
   sim.setTime(due+1); coach.frame(); assert.notEqual(coach.ball, first);
   assert.equal(env.balls.length, 1);
+  if (mode === 'atk') {
+    for (const lane of [-3.5, 0, 2]) {
+      coach.stop();
+      assert(coach.startDrill('atk', '2-quick', 3));
+      sim.setTime(coach.next + 1); coach.frame();
+      const quickBall = coach.ball;
+      // Move after the back-row toss: choose the target at setter contact.
+      const player = coach.world(1.2, lane);
+      sim.walk.x = player.x; sim.walk.z = player.z;
+      for (let i = 0; i < 200 && quickBall.lk !== 'set'; i++) { sim.tick(); coach.frame(); }
+      assert.equal(quickBall.lk, 'set');
+      const expected = coach.world(1.1, lane);
+      assert(Math.abs(env.VB.setSpot.x - expected.x) < 1e-6);
+      assert(Math.abs(env.VB.setSpot.z - expected.z) < 1e-6, '快攻依觸球時玩家位置舉球');
+    }
+  }
   coach.stop(); assert.equal(env.balls.length, 0); assert.equal(coach.objects.length, 0);
 }
 console.log('PASS 四種專項餵球、攻擊手扣球、回合間隔與結束清場');

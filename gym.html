@@ -12351,6 +12351,13 @@ const TUT_COACH = {
         const from = ball.m.position.clone();
         const [lx, lz] = toLocalOf(this.court, from.x, from.z);
         const spot = vbSpot({ lx: this.sg }, d.slot, lx, lz, d.variant);
+        if (d.slot === 2 && d.variant !== 'high3') {
+          const [playerX, playerZ] = toLocalOf(this.court, walk.x, walk.z);
+          spot.lx = this.sg * clamp(playerX * this.sg - 0.1, 0.7, 1.4);
+          spot.lz = clamp(playerZ, -4, 4);
+          spot.y = 3.05;
+          spot.T = clamp(0.1 + Math.hypot(spot.lx - lx, spot.lz - lz) * 0.05, 0.15, 0.3);
+        }
         const [x, z] = toWorldOf(this.court, spot.lx, spot.lz);
         vbSendSet(ball, x, z, spot.y, spot.T, d.variant === 'high3' ? 6 : d.slot, '陪練', from);
         d.awaitingSet = false;
