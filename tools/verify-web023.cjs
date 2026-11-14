@@ -119,3 +119,24 @@ console.log('WEB-023 passed — 腳步聲／落點與時機圈用真正位置／
   assert.deepEqual(audio, ['floor', 'net']);
 }
 console.log('PASS 客戶端比賽球參照／一傳提示圈／擊球音效去重／碰撞音效同步');
+
+{
+  const env = {
+    VBSettings: { values: { cameraAssist: true } }, SETM: { m: null },
+    performance: { now: () => 2000 }, balls: [], Math
+  };
+  vm.createContext(env);
+  vm.runInContext(source('vbCamAssist'), env);
+  for (const state of [{ recv: {} }, { swing: {} }, { charge: {} }, { contactUntil: 2500 }]) {
+    env.walk = { x: 0, z: 0, yaw: .4, pitch: .2, ...state };
+    env.vbCamAssist(1 / 60);
+    assert.equal(env.walk.yaw, .4);
+    assert.equal(env.walk.pitch, .2);
+  }
+  env.walk = { x: 0, z: 0, yaw: .4, pitch: .2 };
+  env.balls = [{ rest: 0, m: { position: new V3(.2, 2, .3) } }];
+  env.vbCamAssist(1 / 60);
+  assert.equal(env.walk.yaw, .4);
+  assert.equal(env.walk.pitch, .2);
+}
+console.log('PASS 接球／揮臂／蓄力／觸球後／球在身邊時保持玩家視角');

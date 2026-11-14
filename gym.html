@@ -9511,8 +9511,8 @@ function vbPredict(p, v, y) {
   const a = -4.9, b = v.y, c = p.y - y, d = b * b - 4 * a * c; if (d < 0) return null;
   const t = (-b - Math.sqrt(d)) / (2 * a); return t > 0 ? { t: t / VB.ts, x: p.x + v.x * t, z: p.z + v.z * t } : null;
 }
-function vbMine(b) { b.mine = true; b.mineT = performance.now(); }
-// 接觸：球先在幾十毫秒內「吸」到真正碰到的位置（手掌、前臂、額頭前的雙手），從那裡才飛出去；不會隔空轉彎，也不會穿過身體
+function vbMine(b) { b.mine = true; b.mineT = performance.now(); walk.contactUntil = b.mineT + 900; walk.turn = null; }
+// 接觸位置修正後立即延續球路，避免觸球校正期間暫停物理。
 const SPIN_AX = new THREE.Vector3();
 function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
   const from = b.m.position.clone(); b.acc = null; b.float = null;   // 被碰到：上旋、飄的效果就沒了
@@ -9524,9 +9524,8 @@ function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
   if (kind !== 'set') b.setFault = null;
   b.spinW = vbSpinFor(b, v, kind, q);
   if (NET.on) netBallHit(b, kind, q);   // 別人收到的是「碰到的位置＋出去的速度」
-  const d = from.distanceTo(cp);
-  if (d > 0.03) { b.m.position.copy(from); b.snap = { from, to: cp.clone(), t: 0, dur: Math.min(0.09, 0.03 + d * 0.07), kind, q }; }
-  else vbImpact(b, kind, q);
+  b.snap = null;
+  vbImpact(b, kind, q);
 }
 // 球在空中怎麼轉（看得到）：扣球強烈上旋；好的舉球幾乎不轉（兩手同時、平均出力），沒舉好、連擊就會轉；其他照品質轉一點
 function vbSpinFor(b, v, kind, q) {
@@ -9558,7 +9557,7 @@ function vbParts(dt) {
     q.t += dt; const a = q.m.geometry.attributes.position;
     for (let i = 0; i < q.V.length; i++) { q.V[i][1] -= 5 * dt; a.setXYZ(i, a.getX(i) + q.V[i][0] * dt, a.getY(i) + q.V[i][1] * dt, a.getZ(i) + q.V[i][2] * dt); }
     a.needsUpdate = true; q.m.material.opacity = Math.max(0, 1 - q.t / 0.38);
-    if (q.t > 0.38) { scene.remove(q.m); q.m.geometry.dispose(); return false; }
+    if (q.t > 0.38) { scene.remove(q.m); q.m.geometry.dispose(); q.m.material.dispose(); return false; }
     return true;
   });
 }
@@ -9791,7 +9790,7 @@ function vbAirStep(dt) {
   const a = walk.air; if (!a) return 0;
   a.t += dt; a.vy -= (a.g || JUMP_G) * dt; a.y += a.vy * dt;
   if (a.y <= 0) { vbClearAir(); walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
-  const off = !a.block && !a.serve && a.camK && VBSettings.values.cameraAssist ? -CAM_SPIKE_MAX * a.camK * Math.sin(Math.PI * Math.min(1, a.t / a.camT)) : 0;
+  const off = walk.swing || walk.charge || performance.now() < (walk.contactUntil || 0) ? (a.camOff || 0) : !a.block && !a.serve && a.camK && VBSettings.values.cameraAssist ? -CAM_SPIKE_MAX * a.camK * Math.sin(Math.PI * Math.min(1, a.t / a.camT)) : 0;
   vbSpikeCamOffset(a, off);
   return a.y;
 }
@@ -10323,7 +10322,8 @@ function vbAssist(inputMag) {
 // ---- 視角輔助：球朝你來時鏡頭輕輕轉向球；等舉球時只幫你抬頭看球，左右留給你瞄準；剛動過滑鼠就不幫
 function vbCamAssist(dt) {
   if (!VBSettings.values.cameraAssist) return;
-  if (performance.now() - (walk.lookT || 0) < 700 || walk.air || SETM.m) return;
+  if (performance.now() - (walk.lookT || 0) < 700 || walk.air || SETM.m || walk.recv || walk.swing || walk.charge || performance.now() < (walk.contactUntil || 0)) return;
+  if (balls.some(b => b.rest < 0.3 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 1.5)) return;
   let p = null, yawOk = true;
   const P0 = VM.on && VM.host ? VM.poss[0] : null, setting = walk.setQ || (P0 && P0.setter === vmMe() && P0.stage === 1);
   if (setting) { let best = null; for (const b of balls) { if (b.rest > 0.3 || b.mine) continue; const d = Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z); if (d < 8 && (!best || d < best.d)) best = { b, d }; } if (best) p = best.b.m.position; }
