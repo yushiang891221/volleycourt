@@ -46,7 +46,10 @@ export default {
     try {
       player = protocol === 'volleycourt' && await verifiedPlayer(token);
       if (!player) return new Response('login required', {status:401});
-    } catch { return new Response('authentication unavailable', {status:503}); }
+    } catch (error) {
+      console.warn('Authentication verification failed', error.name, String(error.message).replace(/[\w-]+\.[\w-]+\.[\w-]+/g, '[redacted]'));
+      return new Response('authentication unavailable', {status:503});
+    }
     if (!(await env.ACCOUNT_LIMIT.limit({key:player})).success) return new Response('too many connections', {status:429});
     req = new Request(req);
     req.headers.set('Sec-WebSocket-Protocol', 'volleycourt');
