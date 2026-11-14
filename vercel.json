@@ -1,6 +1,11 @@
 {
   "cleanUrls": false,
   "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+      { "key": "Content-Security-Policy", "value": "object-src 'none'; base-uri 'self'; frame-ancestors 'none'" }
+    ] },
     { "source": "/data/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] },
     { "source": "/video/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
   ]

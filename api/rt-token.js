@@ -12,6 +12,11 @@ function send(res, code, body) {
 }
 
 module.exports = async (req, res) => {
+  try {
+    const { verifiedPlayer } = await import('../server/verify-player.mjs');
+    const token = /^Bearer (\S+)$/i.exec(req.headers.authorization || '')?.[1];
+    if (!await verifiedPlayer(token)) return send(res, 401, {error: 'login required'});
+  } catch { return send(res, 503, {error: 'authentication unavailable'}); }
   const key = process.env.ABLY_API_KEY || '';
   const i = key.indexOf(':');
   if (i < 1) return send(res, 501, { error: 'realtime not configured' });
@@ -20,7 +25,9 @@ module.exports = async (req, res) => {
   const clientId = (q.get('clientId') || '').replace(/[^\w-]/g, '').slice(0, 40) || 'p' + crypto.randomBytes(4).toString('hex');
   const ttl = 60 * 60 * 1000;
   // Ably 的萬用權限只認「命名空間:*」：房間頻道叫 vb-room:<代碼>
-  const capability = JSON.stringify({ 'vb-room:*': ['publish', 'subscribe', 'presence'] });
+  const room = q.get('room') || '';
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(room)) return send(res, 400, {error:'invalid room'});
+  const capability = JSON.stringify({ ['vb-room:' + room]: ['publish', 'subscribe', 'presence'] });
   const timestamp = Date.now();
   const nonce = crypto.randomBytes(16).toString('hex');
   // Ably 的 TokenRequest 簽章：各欄位換行串起來，用金鑰的 secret 做 HMAC-SHA256

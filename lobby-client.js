@@ -14,7 +14,7 @@
   const user=identity();
   function override() { return local ? new URLSearchParams(location.search).get('lobby') : null; }
   async function endpoint() {
-    let base=override();
+    let base=null;
     if(!base) {
       const response=await fetch('/api/rt-config',{signal:AbortSignal.timeout(8000)});
       if(!response.ok)throw new Error('config');base=(await response.json()).cf;
@@ -34,7 +34,9 @@
     async function start(){
       if(stopped)return;onstate('connecting');
       try{
-        const url=await endpoint();if(stopped)return;ws=new WebSocket(url);
+        const url=await endpoint();const {getAccountService}=await import('./auth.js');
+        const token=await (await getAccountService()).accessToken();
+        if(stopped)return;ws=new WebSocket(url, ['volleycourt', token]);
         timeout=setTimeout(()=>ws.close(),10000);
         ws.onopen=()=>{clearTimeout(timeout);attempt=0;lastPong=Date.now();onstate('online');send({k:'hello',...hello()});ping=setInterval(()=>{if(Date.now()-lastPong>45000){ws.close();return;}if(ws.readyState===WebSocket.OPEN)ws.send('ping');},15000);};
         ws.onmessage=e=>{if(e.data==='pong'){lastPong=Date.now();return;}try{onmessage(JSON.parse(e.data));}catch(error){console.warn('大廳訊息處理失敗',error);}};

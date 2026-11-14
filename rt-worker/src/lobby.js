@@ -44,25 +44,32 @@ export class Lobby extends DurableObject {
     return this.serial(async () => {
       const q = new URL(req.url).searchParams, id=q.get('id'), token=q.get('token');
       if (!/^[\w-]{8,40}$/.test(id || '') || !/^[\w-]{24,80}$/.test(token || '')) return new Response('invalid identity', {status:400});
-      for (const ws of this.sockets()) if(this.meta(ws).id===id) {
-        if(this.meta(ws).token!==token) return new Response('identity in use', {status:409});
+      const player = req.headers.get('X-Verified-Player');
+      const active = this.sockets();
+      if (!player) return new Response('login required', {status:401});
+      const others = active.filter(ws => this.meta(ws).id !== id);
+      if (others.length >= 250 || others.filter(ws => this.meta(ws).player === player).length >= 2) return new Response('lobby full', {status:429});
+      for (const ws of active) if(this.meta(ws).id===id) {
+        if(this.meta(ws).player!==player || this.meta(ws).token!==token) return new Response('identity in use', {status:409});
         const p=this.meta(ws);p.closed=true;ws.serializeAttachment(p);ws.close(4001,'replaced');
       }
       const [client,server] = Object.values(new WebSocketPair());
       this.ctx.acceptWebSocket(server);
-      server.serializeAttachment({id,token,name:'',status:'大廳中',no:null,rateAt:0,rateN:0,chatAt:0,createAt:0});
+      server.serializeAttachment({id,token,player,name:'',status:'大廳中',no:null,rateAt:0,rateN:0,chatAt:0,createAt:0});
       await this.expire();
       this.send(server,{k:'state',players:this.players(),rooms:this.publicRooms(),chats:this.data.chats});
-      return new Response(null,{status:101,webSocket:client});
+      return new Response(null,{status:101,headers: { "Sec-WebSocket-Protocol": "volleycourt" }, webSocket: client});
     });
   }
   async webSocketMessage(ws, raw) {
     return this.serial(async () => {
       const fail = reason => this.send(ws,{k:'error',reason});
       let p=this.meta(ws); if(p.closed) return;
+      if (!p.player) { ws.close(1008, 'login required'); return; }
       const now=Date.now();
       if(now-p.rateAt>=1000){p.rateAt=now;p.rateN=0;}
       p.rateN++; ws.serializeAttachment(p);
+      if(p.rateN>24) { ws.close(1008, 'rate limit'); return; }
       if(p.rateN>12) return fail('操作太頻繁，請稍後再試');
       if(typeof raw!=='string' || raw.length>4096) return fail('訊息太長');
       let m;try{m=JSON.parse(raw);}catch(_){return fail('訊息格式錯誤');}
@@ -94,20 +101,20 @@ export class Lobby extends DurableObject {
         if(!text || [...text].length>200)return fail('留言需為 1～200 字');
         // Keep the one-second limit across page navigation / reconnect too.
         this.data.chatRates=(this.data.chatRates || []).filter(r=>now-r.at<1000);
-        if(now-p.chatAt<1000 || this.data.chatRates.some(r=>r.id===p.id && r.token===p.token))return fail('留言太頻繁，每秒最多一則');
-        this.data.chatRates.push({id:p.id,token:p.token,at:now});
+        if(now-p.chatAt<1000 || this.data.chatRates.some(r=>r.player===p.player))return fail('留言太頻繁，每秒最多一則');
+        this.data.chatRates.push({player:p.player,at:now});
         p.chatAt=now;ws.serializeAttachment(p);
         const chat={id:p.id,name:p.name,text,at:now};this.data.chats.push(chat);this.data.chats=this.data.chats.slice(-50);
         await this.save();this.cast({k:'chat',chat});return;
       } else if(m.k==='create') {
-        if(now-p.createAt<3000)return fail('開房太頻繁，請稍後再試');
+        if(this.data.rooms.some(r => r.hostPlayer === p.player && !r.hidden) || now-p.createAt<3000)return fail('開房太頻繁，請稍後再試');
         if(p.no)return fail('你已經加入房間');
         const name=clean(m.name);
         if(!name || [...name].length>30 || !/^([1-6])v\1$/.test(m.mode))return fail('請確認房名與模式');
         if(m.password!=null && (typeof m.password!=='string' || [...m.password].length>30))return fail('密碼最多 30 字');
         p.createAt=now;ws.serializeAttachment(p);
         const salt=random(), passwordHash=m.password ? await hash(salt,m.password) : '';
-        const r={no:this.data.next++,name,mode:m.mode,code:random(),salt,passwordHash,count:1,status:'waiting',host:p.id,hostToken:p.token,hostName:p.name,latency:null,lastBeat:now,hidden:false,members:[]};
+        const r={no:this.data.next++,name,mode:m.mode,code:random(),salt,passwordHash,count:1,status:'waiting',host:p.id,hostToken:p.token,hostPlayer:p.player,hostName:p.name,latency:null,lastBeat:now,hidden:false,members:[]};
         this.data.rooms.push(r);this.admit(ws,p,r,true);
       } else if(m.k==='join' || m.k==='quick') {
         const r=m.k==='quick' ? this.data.rooms.filter(r=>!r.hidden && r.status==='waiting' && !r.passwordHash && Math.max(r.count,r.members.length)<20 && (!m.mode || m.mode==='all' || r.mode===m.mode)).sort((a,b)=>b.count-a.count || a.no-b.no)[0] : room();
@@ -122,7 +129,7 @@ export class Lobby extends DurableObject {
         if((r.host!==p.id || r.hostToken!==p.token) && this.ownerOnline(r))return fail('只有房主可以更新房間');
         if(!Number.isInteger(m.count) || m.count<1 || m.count>20 || !['waiting','playing'].includes(m.status) || (m.latency!==null && (!Number.isFinite(m.latency) || m.latency<0 || m.latency>60000)))return fail('房間資料不正確');
         if(m.mode!==undefined && (!/^([1-6])v\1$/.test(m.mode) || (r.status==='playing' && m.status==='playing' && m.mode!==r.mode)))return fail('比賽模式不正確或比賽尚未結束');
-        Object.assign(r,{host:p.id,hostToken:p.token,hostName:p.name,count:m.count,status:m.status,latency:m.latency,lastBeat:now,hidden:false,...(m.mode?{mode:m.mode}:{})});
+        Object.assign(r,{host:p.id,hostToken:p.token,hostPlayer:p.player,hostName:p.name,count:m.count,status:m.status,latency:m.latency,lastBeat:now,hidden:false,...(m.mode?{mode:m.mode}:{})});
       } else if(m.k==='room-close') {
         const r=room();if(!r || r.host!==p.id || r.hostToken!==p.token || p.no!==r.no)return fail('只有房主可以關閉房間');
         // Close the owner's membership, retain a private tombstone for takeover.

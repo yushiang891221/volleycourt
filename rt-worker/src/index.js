@@ -9,6 +9,7 @@
 //                 {k:'p', a:'enter'|'leave', id, d}（有人進來／離開）
 //                 {k:'m', t, d, f:送的人}、'pong'
 import { DurableObject } from 'cloudflare:workers';
+import { verifiedPlayer } from '../../server/verify-player.mjs';
 export { Lobby } from './lobby.js';
 // Lobby JSON protocol: /lobby?id=<tab id>&token=<private reconnect token>.
 // Client: hello {name,status,code?}, status {status,no?,code?}, chat {text},
@@ -38,6 +39,18 @@ export default {
     if (allow.length && !allow.includes(origin) && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return new Response('origin not allowed', { status: 403 });
     const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
     if (!id) return new Response('missing id', { status: 400 });
+    const [protocol, token] = (req.headers.get('Sec-WebSocket-Protocol') || '').split(',').map(value => value.trim());
+    const ip = req.headers.get('CF-Connecting-IP');
+    if (ip && !(await env.CONNECT_LIMIT.limit({key:ip})).success) return new Response('too many connections', {status:429});
+    let player;
+    try {
+      player = protocol === 'volleycourt' && await verifiedPlayer(token);
+      if (!player) return new Response('login required', {status:401});
+    } catch { return new Response('authentication unavailable', {status:503}); }
+    if (!(await env.ACCOUNT_LIMIT.limit({key:player})).success) return new Response('too many connections', {status:429});
+    req = new Request(req);
+    req.headers.set('Sec-WebSocket-Protocol', 'volleycourt');
+    req.headers.set('X-Verified-Player', player);
     if (lobby) return env.LOBBY.get(env.LOBBY.idFromName('main')).fetch(req);
     // 房間建在第一個人連到的機房附近（預設）；要指定區域可以設 LOCATION_HINT（例如 apac）
     // 注意：台灣有些網路業者會把 Cloudflare 免費方案的流量送到美國機房，這時指定 apac 反而要繞一大圈
@@ -55,19 +68,27 @@ export class Room extends DurableObject {
   async fetch(req) {
     const id = new URL(req.url).searchParams.get('id');
     // 同一個人重新連上（換網路、斷線重連）：關掉舊的那條
-    for (const ws of this.ctx.getWebSockets()) if (this.meta(ws).id === id) { try { ws.close(4001, 'replaced'); } catch (e) { /* ignore */ } }
-    if (this.ctx.getWebSockets().length >= MAX_PEOPLE) return new Response('room full', { status: 429 });
+    const player = req.headers.get('X-Verified-Player');
+    if (!player) return new Response('login required', {status:401});
+    const sockets = this.ctx.getWebSockets();
+    const duplicate = sockets.find(ws => this.meta(ws).id === id);
+    if (duplicate && this.meta(duplicate).player !== player) return new Response('identity in use', {status:409});
+    const others = sockets.filter(ws => ws !== duplicate);
+    if (others.length >= MAX_PEOPLE || others.filter(ws => this.meta(ws).player === player).length >= 2) return new Response('room full', {status:429});
+    if (duplicate) duplicate.close(4001, 'replaced');
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id, d: null });
+    server.serializeAttachment({ id, player, d: null });
     server.send(JSON.stringify({ k: 'hello', members: this.members(server) }));
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, { status: 101, headers: { "Sec-WebSocket-Protocol": "volleycourt" }, webSocket: client });
   }
   async webSocketMessage(ws, msg) {
+    if (!this.meta(ws).player) { ws.close(1008, 'login required'); return; }
     if (typeof msg !== 'string' || msg.length > MAX_BYTES) return;
     const now = Date.now(), r = this.rate.get(ws) || { t: now, n: 0 };
     if (now - r.t > 1000) { r.t = now; r.n = 0; }
-    r.n++; this.rate.set(ws, r); if (r.n > MAX_RATE) return;
+    r.n++; this.rate.set(ws, r); if (r.n > MAX_RATE * 2) { ws.close(1008, 'rate limit'); return; }
+    if (r.n > MAX_RATE) return;
     let m; try { m = JSON.parse(msg); } catch (e) { return; }
     const me = this.meta(ws);
     if (m.k === 'enter') { me.d = m.d && typeof m.d === 'object' ? m.d : {}; ws.serializeAttachment(me); this.cast(ws, { k: 'p', a: 'enter', id: me.id, d: me.d }); return; }

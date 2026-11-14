@@ -36,7 +36,7 @@
     let seen = new Set(), failures = 0, dived = false, hint = '', skipped = false;
     let menu, panel, button, lastMarkup = '';
     const drills = { atk: '攻擊', set: '舉球', block: '攔網', defense: '防守' };
-    const drillHints = { atk: '電腦會反覆舉同一種球。看落點助跑、起跳扣球。', set: '移動到球下方再舉球。約七成會到舉球區，其餘需要跑動修正。', block: '看對面舉球員把球送給誰，沿網移動，在攻擊手出手時起跳攔網。', defense: '看誰拋球，再看他的身體朝向，移動到直線或斜線上蹲低接球。' };
+    const drillHints = { atk: '後中 AI 先拋球給舉球手，再舉出指定球種。看一傳到位的時機助跑、起跳扣球。', set: '移動到球下方再舉球。約七成會到舉球區，其餘需要跑動修正。', block: '看對面舉球員把球送給誰，沿網移動，在攻擊手出手時起跳攔網。', defense: '看誰拋球，再看他的身體朝向，移動到直線或斜線上蹲低接球。' };
     const sets = { '1-high': '1｜左前高球', '1-flat': '1｜左前平球', '2-quick': '2｜中間快攻', '2-high3': '2｜3 號位高球', '3-high': '3｜右前高球', '3-flat': '3｜右前平球', '4-high': '4｜後排中間', '5-high': '5｜後排右側', '6-high': '6｜後排左側' };
     let drill = 'atk', setType = '1-high', interval = 5;
     let full = false, nextTimer = 0;   // full＝「新手教學」從頭走完六段（一段做完自動接下一段）
@@ -113,6 +113,7 @@
         return;
       }
       if (phase === 'drill') {
+        panel.dataset.phase = phase;
         panel.innerHTML = `<strong>${drills[drill]}專項${drill === 'atk' ? ' · ' + sets[setType] : ''}</strong><p>${drillHints[drill]} 每球間隔 ${interval} 秒。</p><button data-action="setup">調整練習</button> <button data-action="open">結束專項</button>`;
         return;
       }
@@ -250,9 +251,23 @@
     function mount(document) {
       if (panel) return;
       const style = document.createElement('style');
-      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%);width:min(440px,max(300px,calc(100vw - 680px)));box-sizing:border-box}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       style.textContent += '.vb-tut-menu{width:min(1000px,calc(100vw - 32px));max-height:92dvh;overflow:auto}.vb-tut-menu:has(select){width:min(460px,calc(100vw - 32px))}.vb-tut-menu label{display:block;margin:16px 0}.vb-tut-menu select,.vb-tut-menu input{font:inherit;padding:5px}.vb-tut-menu input{width:70px}.vb-tut-cards{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:720px){.vb-tut-cards{grid-template-columns:1fr}}';
       style.textContent += '.vb-tut-card .vb-tut-big{margin:auto 0 0}.vb-tut-menu:has(.vb-tut-chips){width:min(480px,calc(100vw - 32px))}.vb-tut-chips{margin:8px 0 16px}';
+      style.textContent += `
+        .vb-tut-panel {
+          top: max(8px, env(safe-area-inset-top));
+          left: max(8px, env(safe-area-inset-left));
+          box-sizing: border-box;
+          width: min(220px, calc(100vw - 24px));
+          padding: 8px 10px;
+          border-radius: 8px;
+          font-size: 13px;
+          line-height: 1.4;
+        }
+        .vb-tut-panel p { margin: 4px 0 6px; }
+        .vb-tut-panel button { margin: 0; padding: 4px 8px; }
+      `;
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');

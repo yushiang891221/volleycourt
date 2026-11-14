@@ -41,6 +41,39 @@ for(const down of [1,.6]) {
 /* Exercise the actual host event and wire payload, including reduced descent gravity. */
 const hostContext = { VM:{host:true,on:true,six:true,role:{ai:'MB'},t:4,ai:new Map(),phase:'rally',touch:{team:-1}}, NET:{on:true}, JUMP_G:8.4, aiPay:()=>.8, vmPro:()=>true, vmW:(x,z)=>[x,z], vmServer:()=> 'host' };
 vm.createContext(hostContext);
+hostContext.balls = [];
+// Spectators hold the last authoritative position during packet gaps and
+// never interpolate across a new service round.
+class WatchVector {
+  constructor(x = 0, y = 0, z = 0) { this.set(x, y, z); }
+  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  lerp(other, f) { this.x += (other.x - this.x) * f; this.y += (other.y - this.y) * f; this.z += (other.z - this.z) * f; return this; }
+}
+let watchNow = 1225;
+const watchContext = {
+  VM: { watchOffset: 0, watchFrames: [
+    { t: 0.9, ball: [0, 2, 0], rally: 1 },
+    { t: 1.1, ball: [2, 1, 0], rally: 1 }
+  ] },
+  performance: { now: () => watchNow },
+  THREE: { Vector3: WatchVector }, clamp: c.clamp
+};
+vm.createContext(watchContext);
+vm.runInContext(block(gym, 'function vmWatchBallFrame(', '// 比賽有事'), watchContext);
+const watchedBall = { m: { position: new WatchVector(), visible: true } };
+watchContext.vmWatchBallFrame(watchedBall);
+assert(Math.abs(watchedBall.m.position.x - 1) < 1e-8);
+assert(Math.abs(watchedBall.m.position.y - 1.5) < 1e-8);
+watchNow = 10000;
+watchContext.vmWatchBallFrame(watchedBall);
+assert.equal(watchedBall.m.position.y, 1, '封包中斷時不自行落地或反彈');
+watchContext.VM.watchFrames[1].rally = 2;
+watchNow = 1225;
+watchContext.vmWatchBallFrame(watchedBall);
+assert.equal(watchedBall.m.position.x, 0, '不同發球回合不拉出跨場球路');
+watchContext.VM.watchFrames[0].ball = null;
+watchContext.vmWatchBallFrame(watchedBall);
+assert.equal(watchedBall.m.visible, false);
 vm.runInContext(block(gym,'function aiJump(', 'function vmAiTouch(')+block(gym,'function vmStatePayload(', '// 比賽有事'),hostContext);
 const hostAi={id:'ai',x:1,z:2,y:0,vy:0,pose:5,swingT:.4,sta:.8};hostContext.VM.ai.set('ai',hostAi);
 const speed=hostContext.aiJump(hostAi,4.7,'jump');assert.equal(speed,4.7*(.4+.6*.8));assert.equal(hostAi.jp.s,1);assert.equal(hostAi.jp.down,.6);assert(hostContext.NET.forceSt);

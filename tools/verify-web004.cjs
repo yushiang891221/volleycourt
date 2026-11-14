@@ -37,8 +37,8 @@ function fake(profile = { id: 'A', nickname: null, appearance: null }) {
 }
 (async () => {
   const auth = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
-  assert.equal(auth.authMode('', ''), 'guest');
-  assert.equal(await auth.getAccountService(), null);
+  assert.throws(() => auth.authMode('', ''));
+  await assert.rejects(auth.getAccountService());
   assert.equal(auth.authMode('https://example.supabase.co', 'public-key'), 'account');
   assert.throws(() => auth.authMode('https://example.supabase.co', ''));
   assert.throws(() => auth.authMode('', 'public-key'));

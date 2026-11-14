@@ -12,6 +12,11 @@ class V3 {
   set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
   clone() { return new V3(this.x, this.y, this.z); }
   add(o) { this.x += o.x; this.y += o.y; this.z += o.z; return this; }
+  sub(o) { this.x -= o.x; this.y -= o.y; this.z -= o.z; return this; }
+  copy(o) { return this.set(o.x, o.y, o.z); }
+  length() { return Math.hypot(this.x, this.y, this.z); }
+  distanceTo(o) { return this.clone().sub(o).length(); }
+  toArray() { return [this.x, this.y, this.z]; }
 }
 let now = 0; const sounds = [];
 const ctx = vm.createContext({ Math, THREE: { Vector3: V3 }, performance: { now: () => now }, NET: { on: true, ownBall: false }, sfx: (k, q, p) => sounds.push([k, p]) });
@@ -73,3 +78,44 @@ for (const n of ['sqFromMotion', 'ballWaitFloor', 'vbTruePos']) vm.runInContext(
 /* 5. 不增加任何網路訊息：新加的程式裡沒有 publish */
 for (const n of ['sqFromMotion', 'ballWaitFloor', 'vbTruePos']) assert(!/publish|NET\.tx/.test(source(n)), `${n} 不能送訊息`);
 console.log('WEB-023 passed — 腳步聲／落點與時機圈用真正位置／先落地停住等回報／近身判斷／不加訊息');
+
+// Exercise real incoming packets, including duplicate delivery and the
+// client-side setter target that depends on the active match ball.
+{
+  const hits = [], audio = [], sent = [];
+  const ball = { room: true, m: { position: new V3(0, 3, 0) }, v: new V3() };
+  const env = {
+    THREE: { Vector3: V3 }, Math, Number, Array, console,
+    performance: { now: () => 1000 }, BALL_R: .105,
+    NET: { me: 'client', hitN: 0, hitBy: 'host', ownBall: false, on: true,
+      peers: new Map([['host', {}]]), tx: { publish: (...args) => sent.push(args) } },
+    VM: { on: true, host: false, hostId: 'host', phase: 'rally', tc: [0, 1], remoteSetters: ['client'] },
+    VB: { ts: 1 }, balls: [ball], state: { items: [] },
+    roomSpectator: () => false, vmTeamOf: () => 0, netLat: () => 0,
+    recHit: () => {}, vmOnTouch: () => {}, vbMarkSet: () => {},
+    vbImpact: (b, kind) => hits.push(kind), sfx: kind => audio.push(kind),
+    clamp: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
+    vmMe: () => 'client', vmBallL: b => { assert.equal(b, ball); return {}; },
+    vmPredL: () => ({ x: 2, z: 1 }), vmSide: () => 1, vmW: (x, z) => [x, z]
+  };
+  vm.createContext(env);
+  for (const name of ['netOnMessage', 'vmPassRing', 'netBallSound']) vm.runInContext(source(name), env);
+  const packet = { h: 1, by: 'host', w: 'bump', p: [0, 3, 0], v: [1, 2, 0] };
+  env.netOnMessage('ball', packet, 'host');
+  assert.equal(env.VM.ball, ball);
+  assert.deepEqual(hits, ['bump']);
+  assert.equal(env.vmPassRing().x, 2, '客戶端舉球員看到一傳目標圈');
+  env.netOnMessage('ball', packet, 'host');
+  assert.equal(hits.length, 1, '重送擊球不重播');
+  env.netBallSound(ball, 'floor', 1, ball.m.position);
+  assert.equal(audio.length, 0, '接收端預測碰撞不自行播音');
+  const sound = { seq: 1, kind: 'floor', q: 1, p: [0, .105, 0] };
+  env.netOnMessage('ball-sound', sound, 'host');
+  env.netOnMessage('ball-sound', sound, 'host');
+  assert.deepEqual(audio, ['floor']);
+  env.NET.ownBall = true;
+  env.netBallSound(ball, 'net', .8, ball.m.position);
+  assert.equal(sent[0][0], 'ball-sound');
+  assert.deepEqual(audio, ['floor', 'net']);
+}
+console.log('PASS 客戶端比賽球參照／一傳提示圈／擊球音效去重／碰撞音效同步');

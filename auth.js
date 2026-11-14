@@ -1,7 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './auth-config.js';
 
 export function authMode(url = SUPABASE_URL, key = SUPABASE_ANON_KEY) {
-  if (!url.trim() && !key.trim()) return 'guest';
   if (!url.trim() || !key.trim()) throw new Error('登入設定不完整，請填寫專案網址與公開金鑰。');
   let parsed;
   try { parsed = new URL(url); } catch { throw new Error('登入專案網址格式錯誤。'); }
@@ -70,6 +69,11 @@ export function createAccountService(client) {
   }
   return {
     read, save,
+    async accessToken() {
+      const { data, error } = await client.auth.getSession();
+      if (error || !data?.session?.access_token || !data.session.user?.identities?.some(i => i.provider === 'google')) throw new Error('請先登入 Google 帳號。');
+      return data.session.access_token;
+    },
     async whoami() {   // 目前登入的帳號（給玩家自己看：信箱、Google 名字）
       try { const { data } = await client.auth.getSession(); const u = data?.session?.user; return u ? { email: u.email || '', name: u.user_metadata?.full_name || u.user_metadata?.name || '' } : null; } catch { return null; }
     },
@@ -169,7 +173,7 @@ export function createAccountService(client) {
 
 let servicePromise;
 export async function getAccountService() {
-  if (authMode() === 'guest') return null; // 訪客不下載 SDK、不連 Supabase。
+  authMode();
   if (!servicePromise) servicePromise = (async () => {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

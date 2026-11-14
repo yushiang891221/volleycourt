@@ -272,7 +272,7 @@ function engine() {
   vm.runInContext(gym.match(/const CAM_SPIKE_MAX = [^;]+;/)[0], c);
   vm.runInContext('Math.random = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', c);   /* 固定亂數：教練落點每次一樣，測試結果穩定 */
   for (const name of ['toWorldOf', 'toLocalOf', 'courtAt', 'vbCourt', 'solveShot', 'vbPredict', 'vbMine', 'vbLaunch',
-    'netFloorHit', 'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbSpikeCamOffset', 'vbClearAir', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
+    'netFloorHit', 'netBallSound', 'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbSpikeCamOffset', 'vbClearAir', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
     'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
     'vbSet', 'vbSetStep', 'vbSpot', 'vbSendSet', 'vbDoSet', 'vbBlockTest', 'vbBlockOutcome', 'vbBlockApply',
     'staGame', 'staPay', 'staUse', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {
@@ -325,7 +325,17 @@ for (const mode of ['atk', 'set', 'block', 'defense']) {
     }
     assert.equal(first.lk, 'spike', mode);
   }
-  if (mode === 'atk') first.floorHit = [0,0];
+  if (mode === 'atk') {
+    assert(coach.drill.feeder);
+    assert.equal(first.lk, 'bump');
+    assert.equal(coach.drill.awaitingSet, true);
+    for (let i = 0; i < 200 && first.lk !== 'set'; i++) {
+      sim.tick(); coach.frame();
+    }
+    assert.equal(first.lk, 'set', '後中拋球到舉球手才舉球');
+    assert.equal(coach.drill.awaitingSet, false);
+    first.floorHit = [0,0];
+  }
   else coach.event(({ set: 'set', block: 'block', defense: 'recv' })[mode], {}, first);
   coach.frame();
   const due = coach.next; assert(Number.isFinite(due));
@@ -578,7 +588,7 @@ console.log('PASS 練習模式大面板（自由練習／新手教學）、按�
   const vbAssist = source('vbAssist');
   assert(vbAssist.includes("TUT_COACH.id === 'block'") && vbAssist.includes("TUT_COACH.id === 'recv' && TUT_COACH.index === 0"));
   const tut = fs.readFileSync(path.join(__dirname, '../tutorial.js'), 'utf8');
-  assert(tut.includes('.vb-tut-panel{top:160px;left:50%;transform:translateX(-50%)'), '面板在上方中間、陪練按鈕列下面');
+  assert(/\.vb-tut-panel\s*\{\s*top: max\(8px, env\(safe-area-inset-top\)\);\s*left: max\(8px, env\(safe-area-inset-left\)\)/.test(tut), '所有練習提示面板固定在左上角');
   console.log('PASS 各段失敗提示、成功清提示、教學中不被接球輔助拉走、面板位置');
 }
 

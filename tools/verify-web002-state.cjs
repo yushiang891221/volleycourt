@@ -10,7 +10,7 @@ await check('SQLite-backed storage and attachments restore rooms, salted hashes,
  const context={DurableObject:class{constructor(ctx){this.ctx=ctx;}},WebSocketRequestResponsePair:class{},crypto,TextEncoder,Date:{now:()=>now},Response,console};
  vm.runInNewContext(read('rt-worker/src/lobby.js').replace(/import[^\n]+\n/,'').replace('export class Lobby','globalThis.Lobby = class Lobby'),context);
  let lobby=new context.Lobby(ctx,{});await ready;
- const socket=(id,token)=>{let data={id,token,name:'',status:'大廳中',no:null,rateAt:0,rateN:0,chatAt:0,createAt:0};const ws={readyState:1,events:[],serializeAttachment(v){data=structuredClone(v);},deserializeAttachment(){return structuredClone(data);},send(v){this.events.push(JSON.parse(v));}};sockets.push(ws);return ws;};
+ const socket=(id,token)=>{let data={id,token,player:id,name:'',status:'大廳中',no:null,rateAt:0,rateN:0,chatAt:0,createAt:0};const ws={readyState:1,events:[],serializeAttachment(v){data=structuredClone(v);},deserializeAttachment(){return structuredClone(data);},send(v){this.events.push(JSON.parse(v));}};sockets.push(ws);return ws;};
  const a=socket('test-player','secret-session-token');const send=async(ws,m)=>{await lobby.webSocketMessage(ws,JSON.stringify(m));return ws.events.at(-1);};
  await send(a,{k:'hello',name:'房主',status:'大廳中'});await send(a,{k:'create',name:'持久房',mode:'2v2',password:'密碼原文'});
  const r=stored.rooms[0];assert(r.passwordHash);assert(r.salt);assert(!JSON.stringify(stored).includes('密碼原文'));assert.equal(r.code.length,32);
@@ -27,12 +27,12 @@ await check('lobby URL derivation, localhost-only override, retry and navigation
  async function harness(hostname,search,cf){
   const timers=[],sockets=[],states=[],storage=new Map();let requests=0;
   class WS{static OPEN=1;constructor(url){this.url=String(url);this.readyState=0;this.sent=[];sockets.push(this);}send(raw){this.sent.push(raw);}close(){this.readyState=3;this.onclose?.({code:1000});}}
-  const window={};const c={window,location:{hostname,search},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},crypto,URL,URLSearchParams,AbortSignal,WebSocket:WS,
+  const window={};const c={window,getAccountService:async()=>({accessToken:async()=>'test-token'}),location:{hostname,search},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},crypto,URL,URLSearchParams,AbortSignal,WebSocket:WS,
    fetch:async()=>{requests++;return {ok:true,json:async()=>({cf})};},setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout(){},setInterval:()=>1,clearInterval(){},console};
-  vm.runInNewContext(read('lobby-client.js'),c);const api=window.VBLobby,client=api.connect({hello:()=>({name:'測試',status:'大廳中'}),onstate:s=>states.push(s)});
+  vm.runInNewContext(read('lobby-client.js').replace("const {getAccountService}=await import('./auth.js');", ''),c);const api=window.VBLobby,client=api.connect({hello:()=>({name:'測試',status:'大廳中'}),onstate:s=>states.push(s)});
   await new Promise(setImmediate);return {api,client,timers,sockets,states,requests,storage};
  }
- const local=await harness('localhost','?lobby=ws://localhost:8787',null);assert.equal(local.requests,0);assert.equal(new URL(local.sockets[0].url).pathname,'/lobby');
+ const local=await harness('localhost','?lobby=ws://localhost:8787','ws://localhost:8787');assert.equal(local.requests,1);assert.equal(new URL(local.sockets[0].url).pathname,'/lobby');
  const remote=await harness('example.com','?lobby=ws://evil.invalid','wss://valid.example/room');assert.equal(remote.requests,1);assert.equal(new URL(remote.sockets[0].url).host,'valid.example');assert.equal(new URL(remote.sockets[0].url).pathname,'/lobby');
  const s=local.sockets[0];s.readyState=1;s.onopen();assert.equal(JSON.parse(s.sent[0]).k,'hello');s.close();assert.equal(local.states.at(-1),'offline');
  const retry=local.timers.at(-1);assert(retry.ms>=1000&&retry.ms<1400);retry.fn();await new Promise(setImmediate);assert.equal(local.sockets.length,2);assert.equal(local.sockets[0].url,local.sockets[1].url);

@@ -1,4 +1,4 @@
-// WEB-004：登入閘門與帳號同步（auth-config.js 兩個值都填了才會啟用；沒填就是訪客模式，什麼都不做）
+// 登入閘門與帳號同步。
 // 流程：開始遊戲 → 沒登入顯示 Google 登入 → 登入後把本機暱稱／外觀帶進帳號 → 沒暱稱先取暱稱 → 沒外觀進捏臉 → 大廳
 import { getAccountService, authMode, cleanNickname } from './auth.js';
 import { readLook, saveLook, normalizeLook } from './appearance.js';
@@ -75,14 +75,13 @@ function cacheNickname(name) {
 }
 let syncing = false;
 
-// ---- 閘門：intro 進大廳前呼叫。訪客模式直接回傳 ----
+// ---- 閘門：intro 進大廳前呼叫 ----
 export async function accountGate() {
-  if (!accountEnabled()) return 'guest';
   for (;;) {
     try {
       service = service || await getAccountService();
       const uid = await service.signedIn();
-      if (!uid) { await loginScreen(); continue; }
+      if (!uid || !await service.accessToken().catch(() => null)) { await loginScreen(); continue; }
       const owner = store.get(OWNER_KEY);
       const local = { owner: owner || uid, nickname: window.VBSettings && window.VBSettings.values.nickname, appearance: readLook() };
       const r = await service.migrate(local); profile = r.profile;

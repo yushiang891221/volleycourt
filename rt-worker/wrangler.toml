@@ -23,3 +23,13 @@ new_sqlite_classes = ["Lobby"]
 # 只讓這些網站連進來（逗號分隔）；本機 localhost 一律可以
 [vars]
 ALLOWED_ORIGINS = "https://volleycourts.vercel.app"
+
+[[ratelimits]]
+name = "CONNECT_LIMIT"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[ratelimits]]
+name = "ACCOUNT_LIMIT"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }

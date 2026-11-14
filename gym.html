@@ -945,6 +945,12 @@ import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook } from './avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey } from './appearance.js';
 import { myTitle, myWheel, EMOTES } from './progress.js';   // WEB-010：稱號、T 輪盤
+import { getAccountService } from './auth.js';
+const gameAccount = await getAccountService();
+try { await gameAccount.accessToken(); } catch {
+  location.replace('index.html#lobby');
+  throw new Error('請先登入。');
+}
 await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
@@ -2199,7 +2205,16 @@ function buildFurniture(g, it, w, d, def) {
       for (let i = 1; i < 5; i++) box(g, 0.6, 0.035, 0.06, darkSteel, 0, i * 0.32, -0.42);
       break;
     case 'scoreboard':
-      if (kit('score_stand', g, 0, 0, 0, { sx: w / 1.4 })) { const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshBasicMaterial({ map: scoreTex, toneMapped: false })); sp.position.set(0, 1.25, -0.058); sp.rotation.y = Math.PI; sp.userData.noInk = true; g.add(sp); break; }
+      if (kit('score_stand', g, 0, 0, 0, { sx: w / 1.4 })) {
+        for (const side of [-1, 1]) {
+          const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * w / 1.4, 0.6), new THREE.MeshBasicMaterial({ map: scoreTex, toneMapped: false }));
+          screen.position.set(0, 1.25, side * 0.062);
+          screen.rotation.y = side < 0 ? Math.PI : 0;
+          screen.userData.noInk = true;
+          g.add(screen);
+        }
+        break;
+      }
       box(g, 0.08, 0.9, 0.08, '#2B3A4F', -0.5, 0, 0); box(g, 0.08, 0.9, 0.08, '#2B3A4F', 0.5, 0, 0);
       box(g, w, 0.7, 0.1, c, 0, 0.9, 0);
       box(g, 0.45, 0.4, 0.01, '#F2B705', -0.32, 1.05, -0.06, { emissive: '#F2B705', emissiveIntensity: 0.4 });
@@ -6768,7 +6783,7 @@ function vbNetCourts() { return state.items.filter((c) => CAT[c.type].court === 
 function vbAntenna(b, c, from, lx, yc, lz) {
   const r = (c.rot * Math.PI) / 180, nx = Math.cos(r), nz = -Math.sin(r), vn = b.v.x * nx + b.v.z * nz, p = b.m.position;
   b.v.x -= 1.5 * vn * nx; b.v.z -= 1.5 * vn * nz; b.v.multiplyScalar(0.55); const back = Math.sign(from) * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back;
-  sfx('antenna', Math.min(1, b.v.length() / 8 + 0.4), p);
+  netBallSound(b, 'antenna', Math.min(1, b.v.length() / 8 + 0.4), p);
   if (VM.on && VM.host && VM.phase === 'rally' && b === VM.ball && c.id === VM.c.id) { const team = vmSide(0) === Math.sign(from) ? 0 : 1; vmPoint(1 - team, '球打到標誌桿'); }
 }
 function vmCrossCheck(b, c, from, yc, lz, top, bot) {
@@ -6783,6 +6798,7 @@ function updateBalls(dt) {
   if (!balls.length || !dt) return;
   const H = state.building.H, segs = blockers().concat(solidSegs(true)), netCourts = vbNetCourts();
   for (const b of balls) {
+    if (b.watchOnly) { vmWatchBallFrame(b); continue; }
     if (b.snap) { const s2 = b.snap; s2.t += dt; const k = Math.min(1, s2.t / s2.dur), e = 1 - (1 - k) * (1 - k); b.m.position.lerpVectors(s2.from, s2.to, e); if (k >= 1) { b.snap = null; vbImpact(b, s2.kind, s2.q); } continue; }
     if (b.rest > 2) continue;
     if (b.waitFloor && ballWaitFloor(b)) continue;   /* WEB-023：別人負責的球先落地，停住等回報 */
@@ -6804,7 +6820,7 @@ function updateBalls(dt) {
         b.acc = null; b.float = null;
         p.y = BALL_R;
         if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
-        if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); sfx('floor', Math.min(1, -b.v.y / 9), p); }
+        if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'floor', Math.min(1, -b.v.y / 9), p); }
         if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
       }
       if (b.floorEv) { b.floorEv = false; netFloorHit(b); }
@@ -6812,7 +6828,7 @@ function updateBalls(dt) {
       for (const [x1, z1, x2, z2] of segs) {
         const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
         const ex = p.x - (x1 + dx * t), ez = p.z - (z1 + dz * t), dd = Math.hypot(ex, ez);
-        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); sfx('wall', Math.min(1, -vn / 9), p); } if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
+        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'wall', Math.min(1, -vn / 9), p); } if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
       }
       if (p.y <= BALL_R + 1e-3) { const f = Math.max(0, 1 - 1.2 * h); b.v.x *= f; b.v.z *= f; }
       // 球網：每面排球場中線上 9.5 m 寬、網高 2.43 m（網子下緣 1.43 m）；沒過網就被網子擋回來
@@ -6830,13 +6846,13 @@ function updateBalls(dt) {
             const r1 = vbNetRoll(1), r2 = vbNetRoll(2); b.netEv = true;   // 連線時每台電腦擲出一樣的結果
             b.v.multiplyScalar(0.32); b.v.y = Math.abs(b.v.y) * 0.4 + 0.9 + r1 * 0.6;
             if (r2 < 0.5) { const back = Math.sign(px0) * (BALL_R + 0.02) - lx; p.x += nx * back; p.z += nz * back; b.v.x -= 1.3 * vn * 0.32 * nx; b.v.z -= 1.3 * vn * 0.32 * nz; }
-            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 12) * 0.6, true); sfx('tape', Math.min(1, spd / 14), p);
+            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 12) * 0.6, true); netBallSound(b, 'tape', Math.min(1, spd / 14), p);
           } else {
             // 網面是軟的：把球往回推一點點（約 15%）、沿著網子的速度也被拉住，往下掉在自己這邊網前
             const vt = { x: b.v.x - vn * nx, z: b.v.z - vn * nz }; b.netEv = true;
             b.v.x = vt.x * 0.35 - vn * 0.15 * nx; b.v.z = vt.z * 0.35 - vn * 0.15 * nz; b.v.y = Math.min(b.v.y, 0) * 0.4 - 0.3;
             const back = Math.sign(px0) * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back;
-            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 10), false); sfx('net', Math.min(1, spd / 14), p);
+            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 10), false); netBallSound(b, 'net', Math.min(1, spd / 14), p);
           }
           if (b.spike) { toast('掛網了！'); b.spike = null; }
         } else vmCrossCheck(b, c, px0, yc, lz, top, bot);
@@ -6932,6 +6948,7 @@ function roomRulesChanged(rules) {
   const f = rules.flow;
   if (f.phase === 'waiting') { if (VM.on) vmStop(true); roomLaunched = -1; roomPlaced = -1; return; }
   if (f.phase !== 'playing') return;
+  if (!rules.isHost && !VM.on && NET.tx) NET.tx.publish('room-match-sync', {});
   const c = state.items.find(i => i.id === f.court); if (!c) return;
   // Place each participant once, before the engine distributes service positions.
   const slot = f.picks.indexOf(vmMe());
@@ -6950,7 +6967,6 @@ function roomRulesChanged(rules) {
     vmApplyRoomRules(rules);   // 房主設定（企聯等 AI 強度、每局分數、局數）
     if (rules.count !== 2) vm6Start(c,sg,{},seats); else vmStart(c,sg,null,[],seats);
   }
-  if (!rules.isHost && !VM.on && NET.tx) NET.tx.publish('room-match-sync', {});
 }
 function roomSpectator() { return VM.on && vmTeamOf(vmMe()) < 0; }
 function roomKeepSpectatorOut() {
@@ -6988,10 +7004,20 @@ function netCount() {
   NETQ.slow = slow;
 }
 async function ablyTransport(room, cid = NET.me) {
-  const pre = await fetch('api/rt-token?clientId=' + encodeURIComponent(cid), { cache: 'no-store' }).catch(() => null);
-  if (!pre || pre.status === 501 || !(pre.headers.get('content-type') || '').includes('json')) throw new Error('noserver');
+  async function requestToken() {
+    const response = await fetch('api/rt-token?clientId=' + encodeURIComponent(cid) + '&room=' + encodeURIComponent(room), {
+      cache: 'no-store', headers: {Authorization: 'Bearer ' + await gameAccount.accessToken()}
+    });
+    if (!response.ok) throw new Error('無法取得連線授權');
+    return response.json();
+  }
+  let first = await requestToken();
   if (!window.Ably) await loadScript('https://cdn.jsdelivr.net/npm/ably@2.20.0/build/ably.min.js');
-  const client = new window.Ably.Realtime({ authUrl: 'api/rt-token?clientId=' + encodeURIComponent(cid), clientId: cid, echoMessages: false });
+  const client = new window.Ably.Realtime({ clientId: cid, echoMessages: false, authCallback: (_, callback) => {
+    const result = first ? Promise.resolve(first) : requestToken();
+    first = null;
+    result.then(value => callback(null, value), error => callback(error.message, null));
+  } });
   // Ably 的萬用權限只認「命名空間:*」，房間頻道用 vb-room:代碼
   const ch = client.channels.get('vb-room:' + room);
   await Promise.race([ch.attach(), new Promise((_, bad) => setTimeout(() => bad(new Error('timeout')), 12000))]).catch((e) => { client.close(); throw new Error(e && e.code === 40160 ? 'denied' : 'attach'); });
@@ -7026,8 +7052,10 @@ function localTransport(room, cid = NET.me) {
 async function cfTransport(room, cid, base) {
   const url = base + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(cid), members = new Map(), mainNet = cid === NET.me;
   let ws = null, onMsg = null, onPres = null, mine = null, closed = false, tries = 0, ping = 0;
-  const open = () => new Promise((ok, bad) => {
-    const w = new WebSocket(url); let done = false;
+  const open = async () => {
+    const token = await gameAccount.accessToken();
+    return new Promise((ok, bad) => {
+    const w = new WebSocket(url, ['volleycourt', token]); let done = false;
     const to = setTimeout(() => { if (!done) { done = true; try { w.close(); } catch (e) { /* ignore */ } bad(new Error('timeout')); } }, 6000);
     w.onmessage = (e) => {
       if (e.data === 'pong') return;
@@ -7042,6 +7070,7 @@ async function cfTransport(room, cid, base) {
     };
     w.onclose = () => { if (!done) { done = true; clearTimeout(to); bad(new Error('closed')); return; } if (w === ws && !closed) reconnect(); };
   });
+  };
   const reconnect = async () => {
     clearInterval(ping);
     if (closed) return;
@@ -7068,8 +7097,6 @@ async function cfTransport(room, cid, base) {
 let RT_CFG = undefined;
 async function rtConfig() {
   if (RT_CFG !== undefined) return RT_CFG;
-  const q = new URLSearchParams(location.search).get('cf');
-  if (q && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return (RT_CFG = { cf: q, prefer: 'cf' });
   try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CFG = r.ok && (r.headers.get('content-type') || '').includes('json') ? await r.json() : { cf: null }; } catch (e) { RT_CFG = { cf: null }; }
   return RT_CFG;
 }
@@ -8078,6 +8105,10 @@ function netOnMessage(t, d, from) {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
     // 位置與朝向依個別真人時間軸播放，動作保留最新狀態。
     if (!netPeerSnapshot(p2, d, performance.now())) return;
+    if (d.vm && !VM.on && (!ROOM || from === ROOM.host) && performance.now() - (NET.matchSyncAt || -Infinity) > 1000) {
+      NET.matchSyncAt = performance.now();
+      NET.tx.publish('room-match-sync', {});
+    }
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
     const dch = normalizeLook(d.ch);
     p2.ch = dch; refreshPeerAppearance(p2);
@@ -8100,10 +8131,17 @@ function netOnMessage(t, d, from) {
     const newer = d.h > NET.hitN || srvHit, sameOwner = d.h === NET.hitN && d.by === NET.hitBy, tie = d.h === NET.hitN && d.by !== NET.hitBy && d.by > NET.hitBy;
     if (!newer && !sameOwner && !tie) { if (d.w && VM.on) console.warn('[連線] 忽略一下擊球', d.w, d.by, d.h, NET.hitN, NET.hitBy); return; }
     if (newer || tie) { NET.hitN = Math.max(NET.hitN, d.h); NET.hitBy = d.by; NET.ownBall = false; }
+    if (VM.on && !VM.host && roomSpectator() && VM.watchFrames) {
+      if ((newer || tie) && ['serve', 'hit', 'spike', 'tip', 'bump', 'set', 'block'].includes(d.w)) {
+        sfx(d.w, d.q ?? 1, new THREE.Vector3(...d.p));
+      }
+      return;
+    }
     let b = balls.find((q) => q.room);
     if (b && sameOwner && b.floorReport) return; /* 落地後舊校正不能覆蓋落點。 */
     const P = new THREE.Vector3(d.p[0], d.p[1], d.p[2]);
     if (!b) { const m = newBallMesh(); ballsGroup.add(m); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; balls.push(b); b.m.position.copy(P); }
+    if (VM.on && !VM.host) VM.ball = b;
     // 訊息裡的球是對方「送出那一刻」的位置；傳到我這裡已經過了一小段時間（約 0.1 秒），不能照舊位置把球拉回去（會閃）
     //   新的擊球：沿著新的路線往前補上延遲那一段，再在約 0.25 秒內平滑靠過去
     //   一般校正：在對方的路線上找離我這顆球最近的一點；差不到 35 cm 就不動，差多了才慢慢拉過去
@@ -8117,6 +8155,11 @@ function netOnMessage(t, d, from) {
     b.rest = 0; b.spike = d.k ? { c: state.items.find((c) => c.id === d.k.c) || null, sg: d.k.sg } : null; if (b.spike && !b.spike.c) b.spike = null;
     if (newer) recHit({ x: P.x, y: P.y, z: P.z, v: b.v.length(), by: d.by, kind: d.w || 'hit' });
     if (newer || tie) { b.mine = false; if (d.w === 'set') vbMarkSet(b); }
+    if ((newer || tie) && d.w) {
+      b.lk = d.w;
+      if (d.w !== 'set') { b.setT = null; if (VB.setSpot?.b === b) VB.setSpot = null; }
+      if (['serve', 'hit', 'spike', 'tip', 'bump', 'set', 'block'].includes(d.w)) vbImpact(b, d.w, d.q ?? 1);
+    }
     if (newer || tie) b.spinW = d.s ? new THREE.Vector3(d.s[0], d.s[1], d.s[2]) : null;
     if (d.n && sameOwner) { const [q2, w2] = at(0.05 * VB.ts); cur.copy(q2); b.v.copy(w2); b.err = null; b.floorHit = null; }   // 碰網：照負責的人那邊的結果直接對齊（不會在你這邊過網、他那邊掛網）
     if (d.g && sameOwner && Array.isArray(d.g) && d.g.length === 2 && d.g.every(Number.isFinite)) {
@@ -8125,6 +8168,12 @@ function netOnMessage(t, d, from) {
     }
     if (newer) { b.jump0 = d.j || null; b.setFault = d.sf || null; vmOnTouch(b, d.by, d.w); }
     for (const q of balls.filter((q2) => q2 !== b && q2.room)) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
+  } else if (t === 'ball-sound') {
+    if (from !== NET.hitBy || !['floor', 'wall', 'net', 'tape', 'antenna'].includes(d.kind)) return;
+    if (!Array.isArray(d.p) || d.p.length !== 3 || !d.p.every(Number.isFinite) || !Number.isFinite(d.seq)) return;
+    const peer = NET.peers.get(from); if (!peer || d.seq <= (peer.soundSeq || 0)) return;
+    peer.soundSeq = d.seq;
+    sfx(d.kind, clamp(Number(d.q) || 1, 0, 1.5), new THREE.Vector3(...d.p));
   } else if (t === 'emo') { emoOnNet(d, from);
   } else if (t === 'vm') { vmOnNet(d, from);
   } else if (t === 'rk') { rkOnNet(d, from);
@@ -8142,7 +8191,7 @@ function netFloorHit(b) {
   const m = netBallMsg(b); m.g = b.floorHit.slice();
   NET.tx.publish('ball', m); /* 每段球權第一次落地才送，不更動一般校正節奏。 */
 }
-function netBallHit(b, kind) {
+function netBallHit(b, kind, quality = 1) {
   if (kind === 'kick') { if (NET.on) langziSend(b); return; }
   if (b.langzi && VM.on) return;
   b.langzi = false;
@@ -8150,7 +8199,7 @@ function netBallHit(b, kind) {
   for (const q of balls) if (q !== b && q.room) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
   b.floorHit = null; b.floorReport = null; b.floorEv = false;
   b.room = true; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = true; NET.lastBall = performance.now(); b.err = null;
-  NET.tx.publish('ball', netBallMsg(b, kind));
+  NET.tx.publish('ball', { ...netBallMsg(b, kind), q: quality });
 }
 function recHit(e) { if (typeof recEvent === 'function') recEvent('hit', e); }
 function netBallMsg(b, kind) {
@@ -9474,7 +9523,7 @@ function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
   b.m.position.copy(cp); b.v.copy(v); b.rest = 0; b.serve = false; b.err = null; b.lk = kind; b.lkNpc = false;
   if (kind !== 'set') b.setFault = null;
   b.spinW = vbSpinFor(b, v, kind, q);
-  if (NET.on) netBallHit(b, kind);   // 別人收到的是「碰到的位置＋出去的速度」
+  if (NET.on) netBallHit(b, kind, q);   // 別人收到的是「碰到的位置＋出去的速度」
   const d = from.distanceTo(cp);
   if (d > 0.03) { b.m.position.copy(from); b.snap = { from, to: cp.clone(), t: 0, dur: Math.min(0.09, 0.03 + d * 0.07), kind, q }; }
   else vbImpact(b, kind, q);
@@ -9538,6 +9587,14 @@ function sfxBus(ac) {
   const conv = ac.createConvolver(); conv.buffer = sfxIR(ac, 2.1); const wet = ac.createGain(); wet.gain.value = 0.42; conv.connect(wet).connect(master);
   const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   return (SFX.bus = { ac, master, conv, noise, out });
+}
+function netBallSound(ball, kind, quality, position) {
+  if (NET.on && ball.room) {
+    if (!NET.ownBall) return;
+    NET.soundSeq = (NET.soundSeq || 0) + 1;
+    NET.tx.publish('ball-sound', { seq: NET.soundSeq, kind, q: quality, p: position.toArray() });
+  }
+  sfx(kind, quality, position);
 }
 function sfx(kind, q = 1, pos) {
   if (!SFX.on) return;
@@ -10859,6 +10916,8 @@ function vmMkAi(id, team, name, color, ch) {
 function vmStop(silent) {
   if (!silent && ROOM) { if (ROOM.isHost) ROOM.end(); return; }
   if (!VM.on) return;
+  if (VM.watchBall) { VM.watchBall.m.removeFromParent(); const i = balls.indexOf(VM.watchBall); if (i >= 0) balls.splice(i, 1); }
+  VM.watchFrames = null; VM.watchBall = null; VM.watchOffset = null;
   if (VM.trail) { scene.remove(VM.trail); VM.trail = null; }
   if (VM.host && NET.on && !silent) NET.tx.publish('vm', { e: 'end' });
   for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); }
@@ -11900,6 +11959,16 @@ function vmAiJumpHeight(j, t) {
 function vmAiPlayback(a, dt, now, ox, oz) {
   const buf = a.netBuf;
   if (!buf?.length) return [ox, oz];
+  if (VM.watchFrames) {
+    const time = now - VM.watchOffset - 225;
+    let left = buf[0], right = left;
+    for (const row of buf) { if (row.stamp * 1000 <= time) left = row; right = row; if (row.stamp * 1000 >= time) break; }
+    const fraction = right.stamp > left.stamp ? clamp((time / 1000 - left.stamp) / (right.stamp - left.stamp), 0, 1) : 0;
+    a.y = left.y + (right.y - left.y) * fraction;
+    if (a.poseC !== left.pose) { a.poseC = left.pose; a.poseT = 0; }
+    a.poseT = (a.poseT || 0) + dt; a.pose = left.pose; a.bs = left.bs || 0; a.sta = left.sta;
+    return [left.x + (right.x - left.x) * fraction, left.z + (right.z - left.z) * fraction];
+  }
   const delay = clamp(1.5 * (a.netGap || 150), 120, 300);
   a.netDelay = (a.netDelay ?? delay) + (delay - (a.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
   const time = Math.max(a.netTime ?? -Infinity, now - a.netDelay); a.netTime = time;
@@ -11974,8 +12043,39 @@ function vmStaRings() {
 }
 // ---- 連線：主機回合中每 150 ms、等待時每 400 ms 帶上比分與 AI 快照。
 function vmStatePayload() {
+  const matchBall = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find(b => b.room);
+  const watch = { t: VM.t, ball: matchBall ? matchBall.m.position.toArray() : null, rally: VM.srvSeq };
   const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0, a.jp || null, VM.t]; });
-  return { lz: [VM.langziMatch, VM.srvSeq], sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
+  return { watch, lz: [VM.langziMatch, VM.srvSeq], sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
+}
+function vmWatchSnapshot(frame) {
+  if (!VM.watchFrames) {
+    vmClearBalls();
+    VM.watchFrames = [];
+    VM.watchOffset = performance.now() - frame.t * 1000;
+  }
+  const frames = VM.watchFrames;
+  if (frames.length && frame.t <= frames[frames.length - 1].t) return;
+  frames.push(frame);
+  while (frames.length > 2 && frames[1].t < frame.t - 2) frames.shift();
+  if (!VM.watchBall || !balls.includes(VM.watchBall)) {
+    const mesh = newBallMesh();
+    const ball = { m: mesh, v: new THREE.Vector3(), rest: 0, room: true, watchOnly: true };
+    mesh.userData.ball = ball; mesh.visible = false;
+    ballsGroup.add(mesh); balls.push(ball); VM.watchBall = ball;
+  }
+}
+function vmWatchBallFrame(ball) {
+  const frames = VM.watchFrames;
+  if (!frames?.length) { ball.m.visible = false; return; }
+  const time = (performance.now() - VM.watchOffset - 225) / 1000;
+  let left = frames[0], right = left;
+  for (const frame of frames) { if (frame.t <= time) left = frame; right = frame; if (frame.t >= time) break; }
+  ball.m.visible = !!left.ball;
+  if (!left.ball) return;
+  const fraction = right.ball && right.rally === left.rally && right.t > left.t ? clamp((time - left.t) / (right.t - left.t), 0, 1) : 0;
+  ball.m.position.set(...left.ball);
+  if (fraction) ball.m.position.lerp(new THREE.Vector3(...right.ball), fraction);
 }
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
 function vmBroadcast(force, msg, pt) {
@@ -12018,6 +12118,8 @@ function vmOnNet(d, from) {
     if (d.gr && (!VM.grade || VM.grade.s !== d.gr[0])) { const first = !VM.grade; VM.grade = { s: d.gr[0], team: d.gr[1], g: d.gr[2], why: d.gr[3] }; if (!first) vmGradeShow(VM.grade); }   // 到位等級（剛加入時的舊等級不顯示）
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
+    if (d.watch && roomSpectator()) vmWatchSnapshot(d.watch);
+    drawScore();
     const nowS = performance.now();
     for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
     if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
@@ -12173,6 +12275,10 @@ const TUT_COACH = {
     this.place(({ atk: 3.5, set: 1.5, block: 0.7, defense: 5.5 })[mode], 0);
     const setter = this.world(mode === 'block' ? -1.5 : mode === 'set' ? 6 : 1, (mode === 'atk' ? -2.3 : 1.2) * this.sg);
     if (mode !== 'defense') this.coach = this.avatar(setter);
+    if (mode === 'atk') {
+      d.feeder = this.avatar(this.world(6, 0));
+      d.feeder.g.rotation.y = Math.atan2(setter.x - d.feeder.g.position.x, setter.z - d.feeder.g.position.z);
+    }
     if (mode === 'block' || mode === 'defense') {
       for (const z of [-3.25, 0, 3.25]) {
         const base = this.world(-1.25, z);
@@ -12193,17 +12299,21 @@ const TUT_COACH = {
     const d = this.drill;
     const index = Math.floor(Math.random() * d.hitters.length);
     d.hitter = d.hitters[index]; d.strike = false;
-    const from = d.mode === 'defense' ? d.handBalls[index].getWorldPosition(new THREE.Vector3()) : this.coach.g.position.clone();
-    if (d.mode !== 'defense') from.y = d.mode === 'set' ? 1.1 : 2.1;
+    const from = d.mode === 'defense' ? d.handBalls[index].getWorldPosition(new THREE.Vector3()) : (d.feeder || this.coach).g.position.clone();
+    if (d.mode !== 'defense') from.y = d.mode === 'atk' || d.mode === 'set' ? 1.1 : 2.1;
     const mesh = newBallMesh(); mesh.position.copy(from);
     const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.next = Infinity; d.poseUntil = now + 500;
     if (d.mode === 'atk') {
-      const [lx,lz] = toLocalOf(this.court,from.x,from.z);
-      const sp = vbSpot({ lx: this.sg }, d.slot, lx, lz, d.variant);
-      const [x,z] = toWorldOf(this.court, sp.lx, sp.lz);
-      vbSendSet(ball, x, z, sp.y, sp.T, d.variant === 'high3' ? 6 : d.slot, '陪練', from);
+      d.awaitingSet = true;
+      d.feedPoseUntil = now + 500;
+      d.poseUntil = 0;
+      const target = this.coach.g.position.clone(); target.y = 2.1;
+      const seconds = 1.5;
+      const velocity = target.sub(from).multiplyScalar(1 / seconds);
+      velocity.y += 4.9 * seconds;
+      vbLaunch(ball, from, velocity, 'bump');
       return;
     }
     const send = (target, seconds, kind) => {
@@ -12228,6 +12338,7 @@ const TUT_COACH = {
   drillFrame(now) {
     const d = this.drill, ball = this.ball;
     if (d.mode === 'atk') this.face(this.coach);
+    if (d.feeder) avDrive(d.feeder, now < d.feedPoseUntil ? AVP.bump : AVP.ready, 0.45);
     if (this.coach) avDrive(this.coach, now < d.poseUntil ? (d.mode === 'set' ? AVP.bump : AVP.setPush) : AVP.ready, 0.45);
     for (const av of d.hitters) {
       const active = av === d.hitter;
@@ -12235,6 +12346,16 @@ const TUT_COACH = {
     }
     if (ball && !this.settled) {
       if (ball.floorHit || ball.rest > 0.3 || !balls.includes(ball)) this.drillFinish(now);
+      else if (d.awaitingSet && ball.v.y < 0 && ball.m.position.y <= 2.2
+        && Math.hypot(ball.m.position.x - this.coach.g.position.x, ball.m.position.z - this.coach.g.position.z) < 0.8) {
+        const from = ball.m.position.clone();
+        const [lx, lz] = toLocalOf(this.court, from.x, from.z);
+        const spot = vbSpot({ lx: this.sg }, d.slot, lx, lz, d.variant);
+        const [x, z] = toWorldOf(this.court, spot.lx, spot.lz);
+        vbSendSet(ball, x, z, spot.y, spot.T, d.variant === 'high3' ? 6 : d.slot, '陪練', from);
+        d.awaitingSet = false;
+        d.poseUntil = now + 500;
+      }
       else if (d.strike && ball.v.y < 0 && ball.m.position.y <= 3.28) {
         const cp = ball.m.position.clone(), t = 0.55;
         const velocity = d.target.clone().sub(cp).multiplyScalar(1 / t);
@@ -12251,6 +12372,7 @@ const TUT_COACH = {
     this.drillFeed(now);
   },
   drillFinish(now) {
+    this.drill.awaitingSet = false;
     this.drill.strike = false; this.settled = true; this.next = now + this.drill.delay;
   },
   clearStep() {
