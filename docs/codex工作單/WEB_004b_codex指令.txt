@@ -1,0 +1,3 @@
+請用繁體中文工作。接續 WEB-004（Google 登入）：先讀 D:\開排球場\codex工作單\WEB_004_Google登入.md 和 D:\開排球場\codex工作單\WEB_004_報告.md 的「接續事項」，把登入畫面與遊戲流程接線做完（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+不要改 volleycourt\blender 和 volleycourt\models；不要推送、不要部署。
+做完把進度補寫進 WEB_004_報告.md（最後要有給使用者的 Supabase／Google 設定步驟清單）並在 game-site 提交。用量接近 50% 就停下來寫進度到報告。

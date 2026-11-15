@@ -1,0 +1,4 @@
+請用繁體中文工作。先讀 D:\開排球場\codex工作單\WEB_019_評分算進輸贏.md，完全照它做完整張（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+做完就停；只有 Codex 顯示帳號額度不足時才提早停並寫進度。
+不要改 volleycourt\blender、volleycourt\models、volleycourt\rt-worker、server\supabase；不要推送、不要部署。一行程式中間的註解用 /* */。
+做完一定要先寫報告 D:\開排球場\codex工作單\WEB_019_報告.md，再嘗試提交（只提交自己改的檔，不要提交 models\hair_strands.png）；提交失敗就留在暫存區，不用重試。

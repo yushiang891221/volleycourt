@@ -1,0 +1,4 @@
+請用繁體中文工作。先讀 D:\開排球場\codex工作單\WEB_005E_Blender角色接進網頁.md，完全照工作單做（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+參考 WEB_005C_報告.md、WEB_005D_報告.md 了解前兩輪。不要改 volleycourt\blender 和 volleycourt\models；不要推送、不要部署。
+沙盒連不到 CDN 的話，視覺部分寫進報告「待 Claude 驗收」，其他照常做完。
+做完照工作單寫報告 D:\開排球場\codex工作單\WEB_005E_報告.md 並在 game-site 提交。用量接近 50% 就停下來寫進度到報告。

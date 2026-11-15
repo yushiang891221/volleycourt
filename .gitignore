@@ -2,3 +2,6 @@ models/*.blend
 models/*.blend1
 models/shots/
 blender/__pycache__/
+
+# Codex 執行紀錄（很大、只在本機看）
+docs/codex工作單/*.log

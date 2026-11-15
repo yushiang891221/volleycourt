@@ -1,0 +1,7 @@
+WEB_013 已完成，15 支驗證通過；僅工作單列出的 3 支既有失敗。
+
+提交因 `.git` 寫入權限不足未成功，4 個修改檔已留在暫存區。未改 models／blender，未推送、部署或執行 SQL。
+
+[完成報告](D:/開排球場/codex工作單/WEB_013_報告.md)
+
+使用者要做的事：到 Supabase SQL Editor 執行 `011_cannon_oh.sql`。

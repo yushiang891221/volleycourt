@@ -1,0 +1,3 @@
+請用繁體中文工作。先讀 D:\開排球場\codex工作單\WEB_005D_捏臉背景用遊戲球場.md，完全照工作單做（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+參考 D:\開排球場\codex工作單\WEB_005C_報告.md 了解上一輪做了什麼。不要動 volleycourt\blender 和 volleycourt\models；不要推送、不要部署。
+做完照工作單寫報告 D:\開排球場\codex工作單\WEB_005D_報告.md 並在 game-site 提交。用量接近 50% 就停下來寫進度到報告。

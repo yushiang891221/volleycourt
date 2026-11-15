@@ -1,0 +1,3 @@
+請用繁體中文工作。先讀 D:\開排球場\codex工作單\WEB_006_新手教學設計.md、D:\開排球場\codex工作單\WEB_006A_報告.md，再讀 D:\開排球場\codex工作單\WEB_006B_教學後三段.md，完全照工作單做（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+不要改 volleycourt\blender 和 volleycourt\models；不要推送、不要部署。一行程式中間的註解用 /* */。
+做完照工作單寫報告 D:\開排球場\codex工作單\WEB_006B_報告.md 並在 game-site 提交（只提交自己改的檔）。用量接近 50% 就停下來寫進度到報告。

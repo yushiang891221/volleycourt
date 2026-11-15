@@ -1,0 +1,4 @@
+請用繁體中文工作。先讀 D:\開排球場\codex工作單\WEB_018_報告.md，再讀 D:\開排球場\codex工作單\WEB_021_閃身步.md，並打開 D:\開排球場\codex工作單\WEB_021_參考圖\ 裡的參考截圖，完全照 WEB_021 做完整張（程式在 D:\開排球場\volleycourt，git 分支 game-site）。
+做完就停；Codex 額度快不夠時先把進度寫進報告再停。
+不要改 volleycourt\blender、volleycourt\models、volleycourt\rt-worker、server\supabase；不要推送、不要部署。一行程式中間的註解用 /* */。
+做完一定要先寫報告 D:\開排球場\codex工作單\WEB_021_報告.md，再嘗試提交（只提交自己改的檔，不要提交 models\hair_strands.png）；提交失敗就留在暫存區，不用重試。
