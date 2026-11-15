@@ -701,6 +701,11 @@ function setWheelOpen(page = SETM.page) {
   vbManualSetCancel(); clearTimeout(SETM.to); SETM.page = page;
   SETM.m = { all:true, page, n:0, dx:0, dy:0, hov:-1 };
   const el = $('set-menu'); el.classList.add('all-wheel');
+  el.onpointermove = e => {
+    if(!SETM.m?.all || document.pointerLockElement)return;
+    const rect=el.getBoundingClientRect(), m=SETM.m;
+    setMenuMove(e.clientX-rect.left-rect.width/2-m.dx,e.clientY-rect.top-rect.height/2-m.dy);
+  };
   for (const o of el.querySelectorAll('.sw-opt,.sw-center')) o.remove();
   SET_WHEEL[page].forEach((route,i) => {
     if (!route) return;
@@ -760,9 +765,12 @@ function setMenuHover(i) { const m = SETM.m; if (!m || m.hov === i) return; m.ho
 // 滑鼠移動：游標在轉盤裡跟著動（不轉頭）；方向最接近哪個選項就亮哪個，拖出去夠遠（45 px）就舉
 function setMenuMove(dx, dy) {
   const m = SETM.m; if (!m) return; m.dx += dx; m.dy += dy;
-  const r = Math.hypot(m.dx, m.dy), N = m.all ? 6 : SET_OPT[m.n].length; if (r > 60) { m.dx *= 60 / r; m.dy *= 60 / r; }
+  const r = Math.hypot(m.dx, m.dy), N = m.all ? 6 : SET_OPT[m.n].length;
+  const radius=m.all ? $('set-menu').clientWidth*.43 : 60;
+  const deadZone=m.all ? $('set-menu').querySelector('.sw-center').offsetWidth/2+6 : 12;
+  if (r > radius) { m.dx *= radius / r; m.dy *= radius / r; }
   $('set-cur').style.transform = `translate(${m.dx.toFixed(0)}px, ${m.dy.toFixed(0)}px)`;
-  if (r < 12) { if(m.all){m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');} return; }
+  if (r <= deadZone) { if(m.all){m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');} return; }
   const phi = Math.atan2(-m.dy, m.dx); let best = 0, bd = 9;
   for (let i = 0; i < N; i++) { const a=m.all ? setWheelAngle(i) : setAng(i,N); const d = Math.abs(Math.atan2(Math.sin(phi-a),Math.cos(phi-a))); if (d < bd) { bd = d; best = i; } }
   if(m.all && !SET_WHEEL[m.page][best]){m.hov=-1;m.invalid=true;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');return;}
