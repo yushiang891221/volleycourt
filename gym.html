@@ -6673,6 +6673,7 @@ function serveLaunch(ball, p0, type, q, aim, chg = null) {
   if (window.__gym) window.__gym.lastServe = { type, q: +q.toFixed(2), chg, zone: C && C.zone, spd: +spd.toFixed(1) };
   const v = serveVel(p0, tx, tz, spd, g, a && a.court, a && a.sg);
   const b = { m: ball, v, rest: 0, spike: a ? { c: a.court, sg: a.sg } : null, serve: true };
+  if (type === 'jump' || type === 'std') { const hv = Math.hypot(v.x, v.z) || 1, sq = typeof q === 'number' ? q : 0.8; b.spinW = new THREE.Vector3(v.z / hv, 0, -v.x / hv).multiplyScalar(type === 'jump' ? 45 + 25 * sq : 15); }   /* 跳發強上旋、一般發球輕上旋；飄球不轉 */
   if (type === 'jump') b.acc = new THREE.Vector3(0, -4.5, 0);   // 上旋：下墜比一般快
   if (type === 'float' || type === 'jfloat') b.float = { t: 0, w: 4.5 + Math.random() * 3, ph: Math.random() * 6.3, a: type === 'float' ? 4.5 : !C ? 5 : sweet ? 12 : C.zone === 'over' ? 7 : C.zone === 'light' ? 3.5 : 5 };   // 飄球：沒有旋轉，空中左右上下亂晃（跳飄甜蜜點晃最兇）
   ball.userData.ball = b; balls.push(b);
@@ -9728,10 +9729,10 @@ function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
 function vbSpinFor(b, v, kind, q) {
   const h = Math.hypot(v.x, v.z) || 1, top = new THREE.Vector3(v.z / h, 0, -v.x / h);   // 水平、跟飛行方向垂直的轉軸：正轉＝上旋
   const rnd = () => new THREE.Vector3(rkGauss(), rkGauss() * 0.5, rkGauss()).normalize();
-  if (kind === 'spike') return top.multiplyScalar(14 + 22 * q);
+  if (kind === 'spike') return top.multiplyScalar(40 + 30 * q);   /* 扣球：強上旋，每秒約 6～11 圈（比賽同步後不再自動滾動，轉速要夠才看得出來） */
   if (kind === 'set') { const r = b.setFault === 'double' ? 16 + Math.random() * 6 : q >= 0.85 ? 0 : (0.85 - q) * 22; return r ? top.multiplyScalar(0.5).add(rnd()).normalize().multiplyScalar(r) : null; }
   if (kind === 'tip') return top.multiplyScalar(-3);
-  return top.multiplyScalar(2 + 4 * (1 - q)).add(rnd().multiplyScalar(4 * (1 - q)));
+  return top.multiplyScalar(12 + 6 * (1 - q)).add(rnd().multiplyScalar(4 + 6 * (1 - q)));   /* 接球、墊球：每秒約 2～3 圈，接得越差越亂 */
 }
 // 碰網的隨機結果：連線時用擊球序號算（每台電腦一樣），自己玩就真的亂數
 function vbNetRoll(k) { if (!NET.on) return Math.random(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
@@ -11351,6 +11352,7 @@ function vmAiServe(a) {
   const spd = type === 'jump' ? (sweet ? 28 + Math.random() * 3 : 20 + Math.random() * 5) : type === 'jfloat' ? 15 + Math.random() * 2 : type === 'float' ? 12.5 : 13, g = type === 'jump' ? 14.3 : 9.8;
   let v = serveVel(p, wx, wz, spd, g, VM.c, 0, type === 'float' || type === 'jfloat' ? 0.45 : 0.22); if (net) v.y -= 1.6;   // 過網留餘裕：飄球會晃，留多一點
   const b = { m, v, rest: 0 }; m.userData.ball = b; balls.push(b);
+  if (type === 'jump' || type === 'std') { const hv = Math.hypot(v.x, v.z) || 1, sq = typeof q === 'number' ? q : 0.8; b.spinW = new THREE.Vector3(v.z / hv, 0, -v.x / hv).multiplyScalar(type === 'jump' ? 45 + 25 * sq : 15); }   /* 跳發強上旋、一般發球輕上旋；飄球不轉 */
   if (type === 'jump') b.acc = new THREE.Vector3(0, -4.5, 0);   // 上旋：下墜比一般快
   if (type === 'float' || type === 'jfloat') b.float = { t: 0, w: 4.5 + Math.random() * 3, ph: Math.random() * 6.3, a: type === 'float' ? 4.5 : sweet ? 12 : 5 };   // 飄球
   while (balls.length > 8) { const old = balls.shift(); ballsGroup.remove(old.m); }
