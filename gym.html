@@ -1420,6 +1420,8 @@ let colliders = [];          // 導覽用的牆線段 [x1,z1,x2,z2]
 const itemObjs = new Map(); // id -> Group
 const spinners = [];
 
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#cccccc'; }
+function applyTheme() { /* 圖紙風格只有亮色一種 */ }
 
 // ---------------------------------------------------------------- materials: 寫實材質＋墨線輪廓
 const matCache = new Map();
@@ -1447,6 +1449,13 @@ function inkify(root, soft) {
     add.push([o, ls]); o.userData.inked = true;
   });
   for (const [o, ls] of add) o.add(ls);
+}
+function canvasTex(w, h, draw, rep) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  draw(cv.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy(); if (rep) t.repeat.set(rep, rep);
+  return t;
 }
 function rnd32(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // Poly Haven（CC0）真實貼圖，放在 img/tex/。UV 一律是公尺，所以 repeat = 1 / 貼圖代表的邊長，區域多大紋理密度都一樣
@@ -2597,6 +2606,14 @@ function zoneLayout(z) {
   // 背面：有門就是門的對面；開放區域靠外牆那面，不然是離館內中心最遠的那面
   const back = door ? sides[(sides.indexOf(door) + 2) % 4] : (sides.find((s) => s.onWall) || sides.slice().sort((a, b) => a.score - b.score)[0]);
   return { sides, door, back, x0, x1, z0, z1, corners: cs };
+}
+function zoneGlassLen() {
+  let clear = 0, frost = 0;
+  for (const z of state.zones) {
+    const zw = zoneWalls(z); if (zw !== 'glass' && zw !== 'frost') continue;
+    for (const s of zoneLayout(z).sides) if (!s.onWall) { const l = s.len - (s.door ? s.door[1] - s.door[0] : 0); if (zw === 'frost') frost += l; else clear += l; }
+  }
+  return { clear, frost };
 }
 // 自由畫的牆：實心（粉刷）、玻璃（框料＋玻璃）、半牆、圍網
 function buildPartitions() {
@@ -4000,6 +4017,7 @@ async function generateFromSite(id, opts = {}) {
 const CATALOG = {}, TYPE_CATS = {};
 const getPicks = () => ({ sel: {}, custom: {} });
 function setPicks() {}
+function costReport() { return { lines: [], total: 0, missing: [] }; }
 function renderCostCard() {}
 function renderPicker() {}
 function initPicker() {}
@@ -4246,6 +4264,27 @@ function addCorner(latlng) {
   OUT.pts.push(m); redrawOutline();
 }
 function setCorners(geo) { OUT.pts.forEach((m) => m.remove()); OUT.pts = []; geo.forEach((g) => addCorner(window.L.latLng(g[0], g[1]))); }
+async function findOsm() {
+  const s = OUT.site, st = $('ol-osm');
+  st.textContent = '正在找 OpenStreetMap 上附近的建物…';
+  const c = OUT.map.getCenter();
+  const q = `[out:json][timeout:20];way(around:250,${c.lat},${c.lng})[building];out geom;`;
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const j = await r.json();
+    if (OUT.osm) OUT.osm.remove();
+    OUT.osm = window.L.layerGroup().addTo(OUT.map);
+    const ways = (j.elements || []).filter((w) => w.geometry && w.geometry.length >= 4);
+    for (const w of ways) {
+      const geo = w.geometry.map((g) => [g.lat, g.lon]); if (geo.length > 3 && geo[0][0] === geo[geo.length - 1][0] && geo[0][1] === geo[geo.length - 1][1]) geo.pop();
+      const h = Number(w.tags && (w.tags.height || '').replace(/[^\d.]/g, '')) || null, lv = Number(w.tags && w.tags['building:levels']) || null;
+      window.L.polygon(geo, { color: '#4FC3F7', weight: 2, dashArray: '4 4', fillOpacity: 0.08 }).addTo(OUT.osm)
+        .bindTooltip(`點一下套用這棟${h ? `・高 ${h} m` : lv ? `・${lv} 層` : ''}`, { sticky: true })
+        .on('click', () => { setCorners(geo); if (h) $('ol-roof').value = h; st.textContent = '已套用 OpenStreetMap 的外框，可以拖角落微調，右鍵刪掉多的角。'; });
+    }
+    st.textContent = ways.length ? `找到 ${ways.length} 棟（藍色虛線），點你要的那棟就會套用外框。` : 'OpenStreetMap 在這附近沒有建物資料，請在衛星圖上點屋頂角落描外框。';
+  } catch (e) { st.textContent = '連不到 OpenStreetMap，請直接在衛星圖上點屋頂角落描外框。'; }
+}
 async function openOutline() {
   if (GAME_ONLY) return;
   const id = window.__siteId; if (!id) { toast('先從地圖選一個候選場地，再描外框'); return; }
@@ -4356,9 +4395,66 @@ initOutline();
 // ---------------------------------------------------------------- automatic outline: address → building → footprint (Overture Maps / OpenStreetMap)
 const OVT = 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/buildings.pmtiles';
 let ovtLib = null;
+async function ovtLoad() {
+  if (!ovtLib) ovtLib = Promise.all([
+    import('https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/+esm'), import('https://cdn.jsdelivr.net/npm/@mapbox/vector-tile@2.0.3/+esm'), import('https://cdn.jsdelivr.net/npm/pbf@4.0.1/+esm'),
+  ]).then(([pm, vt, pbf]) => ({ src: new pm.PMTiles(OVT), VectorTile: vt.VectorTile, Pbf: pbf.default }));
+  return ovtLib;
+}
 // all building footprints within ~radius metres of a point, as [[lat, lng], …] rings
+async function buildingsNear(lat, lng, radius = 250) {
+  const { src, VectorTile, Pbf } = await ovtLoad();
+  const z = 14, n = 2 ** z;
+  const tx = (lng + 180) / 360 * n, ty = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
+  const span = radius / (40075016 * Math.cos(lat * Math.PI / 180) / n);   // radius in tile units
+  const tiles = new Set();
+  for (const dx of [-span, 0, span]) for (const dy of [-span, 0, span]) tiles.add(`${Math.floor(tx + dx)},${Math.floor(ty + dy)}`);
+  const out = [];
+  await Promise.all([...tiles].map(async (k) => {
+    const [x, y] = k.split(',').map(Number);
+    const t = await src.getZxy(z, x, y); if (!t) return;
+    const layer = new VectorTile(new Pbf(new Uint8Array(t.data))).layers.building; if (!layer) return;
+    for (let i = 0; i < layer.length; i++) {
+      const f = layer.feature(i), ext = layer.extent || 4096;
+      const rings = f.loadGeometry(); if (!rings.length || rings[0].length < 4) continue;
+      const ring = rings[0].map((p) => { const gx = (x + p.x / ext) / n, gy = (y + p.y / ext) / n; return [Math.atan(Math.sinh(Math.PI * (1 - 2 * gy))) * 180 / Math.PI, gx * 360 - 180]; });
+      if (ring.length > 3 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]) ring.pop();
+      const c = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]);
+      const d = Math.hypot((c[0] - lat) * 110540, (c[1] - lng) * 111320 * Math.cos(lat * Math.PI / 180));
+      if (d <= radius) out.push({ ring, d, h: Number(f.properties.height) || null, src: f.properties['@geometry_source'] === 'OpenStreetMap' ? 'OpenStreetMap' : 'Overture' });
+    }
+  }));
+  return out;
+}
 const geoArea = (ring) => Math.abs(polyArea(toLocal(ring).P));
 // the building that contains the point; otherwise the closest sizeable one (factories are big, so prefer ≥ 300 ㎡)
+function pickBuilding(list, lat, lng) {
+  const inside = list.filter((b) => { const lp = toLocalAt(b.ring, lat, lng); return pip(0, 0, lp); });
+  if (inside.length) return inside.sort((a, b) => geoArea(a.ring) - geoArea(b.ring))[0];
+  const big = list.filter((b) => geoArea(b.ring) >= 300).sort((a, b) => a.d - b.d);
+  return big[0] || list.sort((a, b) => a.d - b.d)[0] || null;
+}
+function toLocalAt(ring, lat0, lng0) { const kx = 111320 * Math.cos(lat0 * Math.PI / 180); return ring.map(([la, ln]) => [(ln - lng0) * kx, -(la - lat0) * 110540]); }
+async function autoOutline(lat, lng, how, opts = {}) {
+  const st = $('ol-osm');
+  st.textContent = `正在找${how}的建物輪廓…`;
+  try {
+    const list = await buildingsNear(lat, lng, opts.radius || 250);
+    if (OUT.osm) OUT.osm.remove();
+    OUT.osm = window.L.layerGroup().addTo(OUT.map);
+    window.L.circleMarker([lat, lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#E8814A', fillOpacity: 1 }).addTo(OUT.osm).bindTooltip(how, { permanent: false });
+    for (const b of list) window.L.polygon(b.ring, { color: '#4FC3F7', weight: 1.5, dashArray: '4 4', fillOpacity: 0.06 }).addTo(OUT.osm)
+      .bindTooltip(`點一下改用這棟・約 ${Math.round(geoArea(b.ring) / 3.3058).toLocaleString('zh-TW')} 坪`, { sticky: true })
+      .on('click', (e) => { window.L.DomEvent.stopPropagation(e); setCorners(b.ring); if (b.h) $('ol-roof').value = b.h; st.textContent = '已換成這棟。'; });
+    if (opts.choose) { setCorners([]); OUT.map.setView([lat, lng], 17); st.textContent = opts.choose; return list.length > 0; }
+    const b = pickBuilding(list, lat, lng);
+    if (!b) { st.textContent = '這附近沒有建物輪廓資料，請在衛星圖上點屋頂角落描外框。'; return false; }
+    setCorners(b.ring); if (b.h) $('ol-roof').value = b.h;
+    OUT.map.fitBounds(window.L.latLngBounds(b.ring).pad(0.6));
+    st.textContent = `已自動抓到${how}的建物輪廓（來源：${b.src}）。不是這棟的話，點旁邊藍色虛線的建物換一棟；角落也可以拖曳微調。`;
+    return true;
+  } catch (e) { st.textContent = '建物輪廓資料讀取失敗，請稍後再試，或在衛星圖上點屋頂角落描外框。'; return false; }
+}
 async function locateAddress() {
   return;
 }
@@ -6105,6 +6201,11 @@ function renderCctv(now) {
 }
 // ---- 電腦：播影片
 const VIDEO_SRC = 'assets/video/nandian-2022-fcu-vs-nsysu-v2.mp4', VIDEO_TITLE = '2022 南電盃｜逢甲通訊 A vs 中山機電';
+function playVideo(title) {
+  const v = $('vplayer'); if (!v.src) v.src = VIDEO_SRC;
+  $('vtitle').textContent = title; $('vmodal').hidden = false; walk.keys.clear(); walk.paused = true; unlockMouse(); updateLockHint();
+  v.currentTime = 0; v.play().catch(() => {});
+}
 function closeModals() { const v = $('vplayer'); v.pause(); $('vmodal').hidden = true; $('pmodal').hidden = true; walk.paused = false; updateLockHint(); }
 // ---- 智慧球場攝影機：從那支攝影機的位置拍你（畫面裡放一個你的人形）
 const avatar = (() => {
@@ -7013,6 +7114,8 @@ async function rtTransport(room, cid) {
   catch (e) { if (!cf) throw e; console.info('[即時] Ably 連不上，改用房間伺服器', e && e.message); const tx = await tryCf(); tx.kind = 'cf-backup'; return tx; }
 }
 function netStatus(msg, kind) { const el = $('room-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
+function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
+function inviteLink(room) { const u = new URL(location.href); u.searchParams.delete('debug'); u.searchParams.delete('host'); u.searchParams.set('room', room); return u.toString(); }
 async function netJoin(room) {
   room = String(room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 64);
   if (!room) { netStatus('請輸入房間代碼', 'warn'); return; }
@@ -7068,6 +7171,11 @@ const myChar = () => (readLook() ? myLookCode() : normalizeLook(readLook()));   
 // 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
 const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toonCache = new Map();
+function toon(c, kind) {   // kind：'glow' 發光、'ds' 兩面都畫（敞開的外套、帽子內側）
+  const k = c + (kind || ''); if (toonCache.has(k)) return toonCache.get(k);
+  const m = kind === 'glow' ? new THREE.MeshBasicMaterial({ color: c, toneMapped: false }) : new THREE.MeshToonMaterial({ color: c, gradientMap: TOON_RAMP, side: kind === 'ds' ? THREE.DoubleSide : THREE.FrontSide });
+  toonCache.set(k, m); return m;
+}
 const chGeo = new Map(), cg = (k, f) => { let q = chGeo.get(k); if (!q) { q = f(); chGeo.set(k, q); } return q; };
 const latheGeo = (pts, seg = 18, p0 = 0, pl = Math.PI * 2) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(Math.max(0, r), y)), seg, p0, pl);
 // 四肢：從關節往下長 len；上粗下細、中段微鼓（肌肉）、兩端圓
@@ -7081,6 +7189,21 @@ const torsoR = (P, y) => { for (let i = 1; i < P.length; i++) if (y <= P[i][0]) 
 // 同一個身形放大 d 的一段（衣服、配色條）：y0～y1
 const torsoBand = (P, y0, y1, d, n = 8, rMin = 0) => { const pts = []; for (let i = 0; i <= n; i++) { const y = y0 + ((y1 - y0) * i) / n; pts.push([Math.max(rMin, torsoR(P, Math.max(-0.07, y))) + d, y]); } return pts; };
 // 同一個部位、同一個材質的小零件合併成一個（一個人約 40 次繪製，不然會上百次）
+function chMerge(top) {
+  const groups = []; top.traverse((o) => { if (!o.isMesh) groups.push(o); });
+  for (const grp of groups) {
+    const byM = new Map();
+    for (const o of grp.children) if (o.isMesh) { o.updateMatrix(); if (!byM.has(o.material)) byM.set(o.material, []); byM.get(o.material).push(o); }
+    for (const [m, list] of byM) {
+      if (list.length < 2) continue;
+      const geos = list.map((o) => { const q = (o.geometry.index ? o.geometry : o.geometry).clone(); for (const k of Object.keys(q.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') q.deleteAttribute(k); q.applyMatrix4(o.matrix); return q; });
+      const mg = mergeGeometries(geos); geos.forEach((q) => q.dispose()); if (!mg) continue;
+      for (const o of list) grp.remove(o);
+      grp.add(new THREE.Mesh(mg, m));
+    }
+  }
+  top.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+}
 // 頭（hc＝頭骨中心）：橢球半徑
 const HRX = 0.118, HRY = 0.13, HRZ = 0.122;
 // 頭髮：頭頂、後腦兩片髮殼＋一束一束的髮絲（瀏海、側邊、後面）＋各髮型的馬尾、雙馬尾、包頭、捲髮、辮子、刺刺
@@ -8318,7 +8441,35 @@ function coDiff(a, b) {
   }
   return any ? d : null;
 }
+function coApplyDiff(d) {
+  const s0 = coSnap();
+  for (const k of ['name', 'building', 'floor', 'colors', 'net']) if (k in d) s0[k] = d[k];
+  for (const [k, ku, kr] of [['items', 'iu', 'ir'], ['zones', 'zu', 'zr'], ['walls', 'wu', 'wr']]) {
+    const M = new Map(s0[k].map((x) => [x.id, x]));
+    for (const id of d[kr] || []) M.delete(id);
+    for (const x of d[ku] || []) M.set(x.id, x);
+    const order = d[k + 'O'];
+    s0[k] = order ? order.map((id) => M.get(id)).filter(Boolean).concat([...M.values()].filter((x) => !order.includes(x.id))) : [...M.values()];
+  }
+  coReplace(s0);
+}
 // 收到別人的修改前：我這邊還沒送出去的修改先送（不然會被蓋掉）
+function coFlush() {
+  if (!CO.on || !CO.timer) return;
+  clearTimeout(CO.timer); CO.timer = 0;
+  const now = coSnap(), d = CO.last && coDiff(CO.last, now); CO.last = now;
+  if (d) { const msg = JSON.stringify(d); if (msg.length < 48000) CO.tx.publish('ed', d); else coSendFull(); }
+}
+function coReplace(raw) {
+  const keepSel = selectedId, keepZone = selZoneId;
+  CO.applying = true;
+  state = sanitize({ ...raw, id: state.id });
+  if (keepSel && !state.items.some((i) => i.id === keepSel)) selectedId = null;
+  if (keepZone && !state.zones.some((z) => z.id === keepZone)) selZoneId = null;
+  fullRefresh(); if (mode === 'plan') renderPlan(); renderZoneSel(); renderZoneTable(); planToolState();
+  if (walk.on) updateZoneCard(true);
+  CO.last = coSnap(); CO.applying = false;
+}
 function coQueue() {
   if (!CO.on || CO.applying) return;
   clearTimeout(CO.timer);
@@ -8335,6 +8486,30 @@ function coQueue() {
 function coSendFull(to) {
   const txt = JSON.stringify(coSnap()), id = Math.random().toString(36).slice(2, 8), n = Math.ceil(txt.length / 40000);
   for (let i = 0; i < n; i++) CO.tx.publish('full', { id, i, n, to: to || '', part: txt.slice(i * 40000, (i + 1) * 40000) });
+}
+function coOnMessage(t, d, from) {
+  if (from === CO.me) return;
+  CO.rx = (CO.rx || 0) + 1;
+  if (t === 'ed') { coFlush(); coApplyDiff(d); coNotice(from); }
+  else if (t === 'full') {
+    if (d.to && d.to !== CO.me) return;
+    const P = CO.parts.get(d.id) || []; P[d.i] = d.part; CO.parts.set(d.id, P);
+    if (P.filter((x) => x != null).length === d.n) { CO.parts.delete(d.id); try { coFlush(); coReplace(JSON.parse(P.join(''))); coNotice(from, true); } catch (e) { /* 壞掉的就略過 */ } }
+  } else if (t === 'sync?') {
+    // 只有代號最小的老成員回覆，避免大家一起送
+    const elders = [CO.me, ...[...CO.peers.keys()].filter((id) => id !== from)].sort();
+    if (elders[0] === CO.me) coSendFull(from);
+  }
+}
+function coNotice(from, full) {
+  const p2 = CO.peers.get(from), who = (p2 && p2.n) || '有人';
+  if (performance.now() - CO.toastT > 4000) { CO.toastT = performance.now(); toast(full ? `已和 ${who} 同步成最新的配置` : `${who} 改了配置（你這邊已經更新）`); }
+}
+function coRender() {
+  const el = $('co-badge'); if (!el) return;
+  const names = [...CO.peers.values()].map((p2) => p2.n);
+  el.hidden = !CO.on || !names.length;
+  el.innerHTML = `<b>👥 ${names.length + 1} 人一起編輯</b>：你、${names.map(esc).join('、')}`;
 }
 async function coStart() {
   if (GAME_ONLY) return;
@@ -9567,6 +9742,7 @@ function vbParts(dt) {
 // 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
 const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
 SFX.on = !VBSettings.values.mute;
+function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
 // 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
 function sfxIR(ac, rt) {
   const sr = ac.sampleRate, len = Math.floor(sr * rt), b = ac.createBuffer(2, len, sr);
@@ -10855,6 +11031,7 @@ function vbApproachK() {
   return d < 4 ? clamp((4.2 - d) / 2.4, 0, 1) * clamp((v - 1.0) / 1.2, 0, 1) : 0;
 }
 // 空中：起跳前 0.12 秒雙手往上甩，接著 0.18 秒內變成拉弓躬身
+function vbAirPose() { const t = walk.air ? walk.air.t : 1; return t < 0.12 ? AVP.takeoff : t < 0.3 ? avMix(AVP.takeoff, AVP.airUp, (t - 0.12) / 0.18) : AVP.airUp; }
 function myAvPose() {
   if (walk.emote?.keyframes) return [emoKeySample(walk.emote.k, (performance.now() - walk.emote.t0) / 1000, walk.emote.dir).pose, 1];
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
@@ -11258,6 +11435,13 @@ function vmTrailPush(q) {
   pa.needsUpdate = ca.needsUpdate = true; VM.trail.geometry.setDrawRange(0, n); VM.trail.visible = !RP.on;
 }
 // 攔網碰到球：手的位置閃一圈白光、跳出 TOUCH（打手出界時特別標出來，裁判也是看這個判）
+function vbTouchFx(pos, word) {
+  const out = /出界/.test(word || ''), g = new THREE.Group(); g.position.copy(pos);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 28), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide })); ring.lookAt(camera.position.clone().sub(pos).add(pos)); g.add(ring);
+  const sp = labelSprite(out ? 'TOUCH・出界' : 'TOUCH', out ? '#E5484D' : '#FFFFFF', 0.65); sp.position.y = 0.45; g.add(sp); scene.add(g);
+  vbBurst(pos, '#FFFFFF', 10, 1.2);
+  const t0 = performance.now(); (function anim() { const k = (performance.now() - t0) / 900; if (k >= 1 || !g.parent) { scene.remove(g); return; } ring.scale.setScalar(1 + k * 2.2); ring.material.opacity = 0.95 * (1 - k); sp.position.y = 0.45 + k * 0.35; requestAnimationFrame(anim); })();
+}
 // 攔網碰到球的動畫：衝擊光圈（兩圈往外擴）、火花、彈出來的大字；攔死時鏡頭震一下
 //   stuff＝攔死、out＝打手出界、soft＝撐起來、through＝打穿、touch＝碰到
 const BLOCK_FX = { stuff: ['攔死！BLOCK', '#F2B705', 30, 1.15], out: ['TOUCH OUT', '#E5484D', 22, 1.0], soft: ['撐起來', '#FFFFFF', 14, 0.85], through: ['打穿！', '#9AA4B2', 16, 0.9], touch: ['TOUCH', '#FFFFFF', 12, 0.8] };

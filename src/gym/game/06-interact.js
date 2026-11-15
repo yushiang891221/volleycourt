@@ -385,6 +385,11 @@ function renderCctv(now) {
 }
 // ---- 電腦：播影片
 const VIDEO_SRC = 'assets/video/nandian-2022-fcu-vs-nsysu-v2.mp4', VIDEO_TITLE = '2022 南電盃｜逢甲通訊 A vs 中山機電';
+function playVideo(title) {
+  const v = $('vplayer'); if (!v.src) v.src = VIDEO_SRC;
+  $('vtitle').textContent = title; $('vmodal').hidden = false; walk.keys.clear(); walk.paused = true; unlockMouse(); updateLockHint();
+  v.currentTime = 0; v.play().catch(() => {});
+}
 function closeModals() { const v = $('vplayer'); v.pause(); $('vmodal').hidden = true; $('pmodal').hidden = true; walk.paused = false; updateLockHint(); }
 // ---- 智慧球場攝影機：從那支攝影機的位置拍你（畫面裡放一個你的人形）
 const avatar = (() => {

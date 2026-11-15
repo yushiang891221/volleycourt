@@ -113,6 +113,8 @@ let colliders = [];          // 導覽用的牆線段 [x1,z1,x2,z2]
 const itemObjs = new Map(); // id -> Group
 const spinners = [];
 
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#cccccc'; }
+function applyTheme() { /* 圖紙風格只有亮色一種 */ }
 
 // ---------------------------------------------------------------- materials: 寫實材質＋墨線輪廓
 const matCache = new Map();
@@ -140,6 +142,13 @@ function inkify(root, soft) {
     add.push([o, ls]); o.userData.inked = true;
   });
   for (const [o, ls] of add) o.add(ls);
+}
+function canvasTex(w, h, draw, rep) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  draw(cv.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy(); if (rep) t.repeat.set(rep, rep);
+  return t;
 }
 function rnd32(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // Poly Haven（CC0）真實貼圖，放在 img/tex/。UV 一律是公尺，所以 repeat = 1 / 貼圖代表的邊長，區域多大紋理密度都一樣

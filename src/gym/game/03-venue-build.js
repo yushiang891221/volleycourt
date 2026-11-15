@@ -1034,6 +1034,14 @@ function zoneLayout(z) {
   const back = door ? sides[(sides.indexOf(door) + 2) % 4] : (sides.find((s) => s.onWall) || sides.slice().sort((a, b) => a.score - b.score)[0]);
   return { sides, door, back, x0, x1, z0, z1, corners: cs };
 }
+function zoneGlassLen() {
+  let clear = 0, frost = 0;
+  for (const z of state.zones) {
+    const zw = zoneWalls(z); if (zw !== 'glass' && zw !== 'frost') continue;
+    for (const s of zoneLayout(z).sides) if (!s.onWall) { const l = s.len - (s.door ? s.door[1] - s.door[0] : 0); if (zw === 'frost') frost += l; else clear += l; }
+  }
+  return { clear, frost };
+}
 // 自由畫的牆：實心（粉刷）、玻璃（框料＋玻璃）、半牆、圍網
 function buildPartitions() {
   for (const w of state.walls || []) {

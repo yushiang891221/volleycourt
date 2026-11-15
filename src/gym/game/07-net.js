@@ -186,6 +186,8 @@ async function rtTransport(room, cid) {
   catch (e) { if (!cf) throw e; console.info('[即時] Ably 連不上，改用房間伺服器', e && e.message); const tx = await tryCf(); tx.kind = 'cf-backup'; return tx; }
 }
 function netStatus(msg, kind) { const el = $('room-status'); if (el) { el.textContent = msg; el.dataset.kind = kind || ''; } }
+function roomCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s2 = ''; for (let i = 0; i < 5; i++) s2 += a[Math.floor(Math.random() * a.length)]; return s2; }
+function inviteLink(room) { const u = new URL(location.href); u.searchParams.delete('debug'); u.searchParams.delete('host'); u.searchParams.set('room', room); return u.toString(); }
 async function netJoin(room) {
   room = String(room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 64);
   if (!room) { netStatus('請輸入房間代碼', 'warn'); return; }
@@ -241,6 +243,11 @@ const myChar = () => (readLook() ? myLookCode() : normalizeLook(readLook()));   
 // 卡通著色：三階明暗（亮、中、暗）；發光的部分不受光（會被泛光帶出光暈）
 const TOON_RAMP = (() => { const t = new THREE.DataTexture(new Uint8Array([88, 165, 220, 255]), 4, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toonCache = new Map();
+function toon(c, kind) {   // kind：'glow' 發光、'ds' 兩面都畫（敞開的外套、帽子內側）
+  const k = c + (kind || ''); if (toonCache.has(k)) return toonCache.get(k);
+  const m = kind === 'glow' ? new THREE.MeshBasicMaterial({ color: c, toneMapped: false }) : new THREE.MeshToonMaterial({ color: c, gradientMap: TOON_RAMP, side: kind === 'ds' ? THREE.DoubleSide : THREE.FrontSide });
+  toonCache.set(k, m); return m;
+}
 const chGeo = new Map(), cg = (k, f) => { let q = chGeo.get(k); if (!q) { q = f(); chGeo.set(k, q); } return q; };
 const latheGeo = (pts, seg = 18, p0 = 0, pl = Math.PI * 2) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(Math.max(0, r), y)), seg, p0, pl);
 // 四肢：從關節往下長 len；上粗下細、中段微鼓（肌肉）、兩端圓
@@ -254,6 +261,21 @@ const torsoR = (P, y) => { for (let i = 1; i < P.length; i++) if (y <= P[i][0]) 
 // 同一個身形放大 d 的一段（衣服、配色條）：y0～y1
 const torsoBand = (P, y0, y1, d, n = 8, rMin = 0) => { const pts = []; for (let i = 0; i <= n; i++) { const y = y0 + ((y1 - y0) * i) / n; pts.push([Math.max(rMin, torsoR(P, Math.max(-0.07, y))) + d, y]); } return pts; };
 // 同一個部位、同一個材質的小零件合併成一個（一個人約 40 次繪製，不然會上百次）
+function chMerge(top) {
+  const groups = []; top.traverse((o) => { if (!o.isMesh) groups.push(o); });
+  for (const grp of groups) {
+    const byM = new Map();
+    for (const o of grp.children) if (o.isMesh) { o.updateMatrix(); if (!byM.has(o.material)) byM.set(o.material, []); byM.get(o.material).push(o); }
+    for (const [m, list] of byM) {
+      if (list.length < 2) continue;
+      const geos = list.map((o) => { const q = (o.geometry.index ? o.geometry : o.geometry).clone(); for (const k of Object.keys(q.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') q.deleteAttribute(k); q.applyMatrix4(o.matrix); return q; });
+      const mg = mergeGeometries(geos); geos.forEach((q) => q.dispose()); if (!mg) continue;
+      for (const o of list) grp.remove(o);
+      grp.add(new THREE.Mesh(mg, m));
+    }
+  }
+  top.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+}
 // 頭（hc＝頭骨中心）：橢球半徑
 const HRX = 0.118, HRY = 0.13, HRZ = 0.122;
 // 頭髮：頭頂、後腦兩片髮殼＋一束一束的髮絲（瀏海、側邊、後面）＋各髮型的馬尾、雙馬尾、包頭、捲髮、辮子、刺刺

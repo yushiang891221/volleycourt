@@ -114,6 +114,7 @@ function vbParts(dt) {
 // 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
 const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
 SFX.on = !VBSettings.values.mute;
+function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
 // 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
 function sfxIR(ac, rt) {
   const sr = ac.sampleRate, len = Math.floor(sr * rt), b = ac.createBuffer(2, len, sr);
@@ -1402,6 +1403,7 @@ function vbApproachK() {
   return d < 4 ? clamp((4.2 - d) / 2.4, 0, 1) * clamp((v - 1.0) / 1.2, 0, 1) : 0;
 }
 // 空中：起跳前 0.12 秒雙手往上甩，接著 0.18 秒內變成拉弓躬身
+function vbAirPose() { const t = walk.air ? walk.air.t : 1; return t < 0.12 ? AVP.takeoff : t < 0.3 ? avMix(AVP.takeoff, AVP.airUp, (t - 0.12) / 0.18) : AVP.airUp; }
 function myAvPose() {
   if (walk.emote?.keyframes) return [emoKeySample(walk.emote.k, (performance.now() - walk.emote.t0) / 1000, walk.emote.dir).pose, 1];
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
