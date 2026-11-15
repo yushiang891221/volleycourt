@@ -71,11 +71,11 @@ console.log('PASS actual contact: front/back, short/medium/long hold, pitch angl
 }
 {
   const {c,events}=fixture();let grabs=0,serves=0,attacks=0;c.grabBall=()=>{grabs++;};c.startServe=()=>serves++;c.vbHeldAttack=()=>attacks++;c.vbChargeStart=()=>false;c.vbAtServeLine=()=>false;
-  c.vbPrimaryDown();assert.equal(grabs,1,'empty practice click takes ball');
+  c.vbPrimaryDown();assert.equal(grabs,0,'沒有球時按扣球不會自己生球（2026-11-15 使用者要求）');
   c.walk.hold={};c.vbPrimaryDown();assert.equal(attacks,1);assert.equal(serves,0,'inside court is not serving');
   c.vbAtServeLine=()=>true;c.vbPrimaryDown();assert.equal(serves,1);
-  c.walk.hold=null;c.VM.on=true;c.VM.phase='rally';c.vbPrimaryDown();assert.equal(grabs,1,'match cannot spawn another ball');
-  c.vbManualSetPrepare(false);c.vbPrimaryDown();assert(c.walk.setAim.chargingAt!=null);assert.equal(grabs,1);assert.equal(attacks,1);
+  c.walk.hold=null;c.VM.on=true;c.VM.phase='rally';c.vbPrimaryDown();assert.equal(grabs,0,'match cannot spawn another ball');
+  c.vbManualSetPrepare(false);c.vbPrimaryDown();assert(c.walk.setAim.chargingAt!=null);assert.equal(grabs,0);assert.equal(attacks,1);
   console.log('PASS primary click: practice pickup, held attack, baseline serve, no match ball duplication, set priority');
 }
 {

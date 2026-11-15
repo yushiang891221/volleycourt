@@ -8211,7 +8211,7 @@ function vmWireReceive(d, from) {
   const b = vmWireGetBall(), hadFrame = !!b.wireFrame;
   const before = b.m.position.clone(); if (b.wireVisualError) before.add(b.wireVisualError);
   b.wireRemote = true;
-  if (!w.pending) {
+  if (!w.pending && !(d.ball.floor && b.wireLocal)) {   /* 已經落地、本機在算彈跳：同一個落地的球路不要再把球拉回落點 */
     b.wirePrediction = null; vmWireApply(b, d.ball);
     const age = clamp((now + w.offset - d.at) / 1000, 0, .35), flight = VBMatchSync.sample(d.ball, age * VB.ts, BALL_R, age);
     const error = before.sub(new THREE.Vector3(...flight.p));
@@ -10000,8 +10000,6 @@ function vbAtServeLine() {
 function vbPrimaryDown(tip = false) {
   if (walk.setAim) { if (!tip) vbManualSetDown(); return; }
   if (walk.hold) { vbAttack(tip); return; }
-  const incoming = balls.some(b => !b.floorHit && b.rest < .3 && b.m.position.y > BALL_R + .05 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 6);
-  if (!tip && !VM.on && !incoming && !walk.air && !walk.serve && !walk.jserve && !walk.spike && !window.VBTutorial?.active) { grabBall(); return; }
   const kind = tip ? 'float' : 'jump'; if (vbChargeStart(kind)) return;
   if (walk.jserve && !walk.jserve.jumped && !walk.jserve.hit) { walk.chargeArm = kind; return; }
   if (!tip && !walk.air && !walk.serve && !walk.jserve) { walk.chargeArm = 'jump'; walk.chargeArmGround = true; return; }
