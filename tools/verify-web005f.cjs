@@ -40,9 +40,9 @@ for (const seed of [
   { 'vb.settings': '{broken' }
 ]) assert.equal(load(seed).api.values.nameTags, true);
 t = load({ 'vb.settings': JSON.stringify({ showFps: true, fov: 90 }) });
-assert.equal(t.api.values.showFps, true); assert.equal(t.api.values.fov, 90);
+assert.equal(t.api.values.showFps, true); assert.equal(t.api.values.fov, 85);   /* c1bc099 起視野固定 85，不再讀存檔的值 */
 t.api.update({ nameTags: false });
-assert.equal(t.api.values.showFps, true); assert.equal(t.api.values.fov, 90);
+assert.equal(t.api.values.showFps, true); assert.equal(t.api.values.fov, 85);   /* c1bc099 起視野固定 85，不再讀存檔的值 */
 for (const value of [null, 0, 'false']) assert.equal(load({ 'vb.settings': JSON.stringify({ nameTags: value }) }).api.values.nameTags, true);
 t = load({}, true); assert.equal(t.api.update({ nameTags: false }), false);
 assert.equal(t.classes.has('hide-nametags'), true);
