@@ -31,12 +31,12 @@ await check('inline scripts and shared scripts compile',()=>{
 });
 await check('migration, defaults, validation, persistence and nickname alias',()=>{
  const storage=new Map([['vb.quality','low'],['vb.fov','90'],['vb.sfx','0'],['vb.mp.name','測試球友']]);const {p,events}=settings(storage);
- assert.equal(p.values.quality,'low');assert.equal(p.values.fov,90);assert(p.values.mute);assert.equal(p.values.sensitivity,1);
+ assert.equal(p.values.quality,'low');assert.equal(p.values.fov,85);assert(p.values.mute);assert.equal(p.values.sensitivity,1);
  p.update({assist:false,volume:37,sensitivity:2,nickname:' 新名字 '});assert.equal(events.length,1);assert.equal(storage.get('vb.mp.name'),'新名字');
  const again=settings(storage).p;assert.equal(again.values.volume,37);assert.equal(again.values.assist,false);assert.equal(again.values.sensitivity,2);
- again.update({fov:900,volume:-5});assert.equal(again.values.fov,100);assert.equal(again.values.volume,0);
+ again.update({fov:900,volume:-5});assert.equal(again.values.fov,85);assert.equal(again.values.volume,0);
  assert(p.nicknameError('一'));assert(p.nicknameError('ab\n'));assert.equal(p.nicknameError('😀😀'),'');
- for(const raw of ['true','3','[]','null','oops'])assert.equal(settings(new Map([['vb.settings',raw]])).p.values.fov,80);
+ for(const raw of ['true','3','[]','null','oops'])assert.equal(settings(new Map([['vb.settings',raw]])).p.values.fov,85);
 });
 await check('rebind swaps duplicates; old key stops; reset restores every alias',()=>{
  const {p}=settings();const event=(key,code)=>({key,code});
@@ -44,7 +44,7 @@ await check('rebind swaps duplicates; old key stops; reset restores every alias'
  assert(p.bind('w','KeyS'));assert.equal(p.key(event('s','KeyS')),'w');assert.equal(p.key(event('w','KeyW')),'s');
  assert(p.bind('e','KeyZ'));assert.equal(p.key(event('e','KeyE')),'');assert.equal(p.key(event('z','KeyZ')),'e');
  assert(!p.bind('e','Escape'));assert(!p.bind('e','F5'));assert.equal(p.key(event('Shift','ShiftRight')),'shift');
- p.update(p.defaults());assert.equal(p.key(event('e','KeyE')),'e');assert.equal(p.key(event('z','KeyZ')),'');assert.equal(p.key(event('q','KeyQ')),'q');
+ p.update(p.defaults());assert.equal(p.key(event('e','KeyE')),'e');assert.equal(p.key(event('z','KeyZ')),'');assert.equal(p.key(event('c','KeyC')),'q');
 });
 await check('real gym key handler respects remapping, keyup and settings guard',()=>{
  const {p}=settings(),listeners={},walk={on:true,keys:new Set(),paused:false},calls={interact:0,receive:0};
@@ -86,7 +86,7 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
  for(const f of ['gym.html','index.html'])assert(read(f).includes('src="settings.js"')&&read(f).includes('href="settings.css"'));
 });
 // Input and tutorial changes have behavioral coverage in verify-manual-controls.
-await check('physics, scoring, rotation and match transport remain unchanged from the deployed match fix',()=>{
+await check('physics, point scoring, rotation and match transport unchanged; touch rules covered by wheel/back-row regression',()=>{
  const old=execFileSync('git',['show','78597b4:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
  const fn=(text,name)=>{
    const start=text.indexOf('function '+name+'(');assert(start>=0,name);
@@ -94,7 +94,7 @@ await check('physics, scoring, rotation and match transport remain unchanged fro
    for(let i=1;i<lines.length;i++){const body=lines.slice(0,i).join('\n');try{new vm.Script(body);return body;}catch{}}
    throw Error(name);
  };
- for(const name of ['updateBalls','vmOnTouch','vmPoint','vm6Rotate','vm6Overlap','netOnMessage','netTick','vmWireClaim','vmWireReceive'])assert.equal(fn(gym,name),fn(old,name),name);
+ for(const name of ['updateBalls','vmPoint','vm6Rotate','vm6Overlap','netOnMessage','netTick','vmWireClaim','vmWireReceive'])assert.equal(fn(gym,name),fn(old,name),name);
 });
 console.log(`${checks} checks passed${staged?' (PREPARED FILES; NOT YET APPLIED)':''}`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -10,10 +10,10 @@ function preferences(raw) {
 }
 {
   const p=preferences().api;
-  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyR',q:'KeyQ',e:'KeyE',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
+  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyB',q:'KeyC',e:'KeyE',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
   assert.equal(new Set(Object.values(p.values.keys)).size,p.bindings.length,'every default has a unique key');
   const old={...p.values,controlVersion:1,volume:37,keys:{...p.values.keys,w:'KeyI',b:'KeyB',e:'KeyE',q:'KeyQ',f:'KeyF',ready:'KeyR'}};delete old.keys.interact;
-  const migrated=preferences(old).api;assert.equal(migrated.values.keys.b,'KeyR');assert.equal(migrated.values.keys.ready,'KeyH');assert.equal(migrated.values.keys.w,'KeyI');assert.equal(migrated.values.volume,37);
+  const migrated=preferences(old).api;assert.equal(migrated.values.keys.b,'KeyB');assert.equal(migrated.values.keys.ready,'KeyH');assert.equal(migrated.values.keys.w,'KeyI');assert.equal(migrated.values.volume,37);
   const saved=preferences();saved.api.bind('q','KeyZ');saved.api.update({setFast:13,setSlow:6,setCharge:1.2});
   const reloaded=preferences(JSON.parse(saved.store.get('vb.settings'))).api;
   assert.equal(reloaded.values.keys.q,'KeyZ');assert.equal(reloaded.values.setFast,13);
@@ -24,7 +24,7 @@ function fixture() {
   const f=engine(),c=f.c,elements=new Map(),events=[];
   c.$=id=>{if(!elements.has(id))elements.set(id,{hidden:true,style:{},dataset:{},textContent:'',classList:{add(){},remove(){}},querySelector:()=>({hidden:true,style:{}})});return elements.get(id);};
   c.VBSettings=preferences().api;c.roomSpectator=()=>false;c.vbChgHud=()=>{};c.vbMyRole=()=>null;
-  c.SETM={};c.TP={};c.RP={on:false};c.roomReady=()=>events.push('ready');c.roomStart=()=>{};
+  c.SETM={};c.setWheelOpen=()=>{c.SETM.m={all:true};events.push('wheel');};c.setMenuClose=()=>{c.SETM.m=null;};c.TP={};c.RP={on:false};c.roomReady=()=>events.push('ready');c.roomStart=()=>{};
   c.doInteract=()=>events.push('interact');c.vbReceive=()=>events.push('receive');c.vbJump=kind=>events.push(kind);
   c.tutEv=(type,data)=>events.push({type,data});c.NET.on=false;
   c.walk.x=0;c.walk.z=0;c.walk.yaw=0;c.walk.pitch=.5;c.camera.position.set(0,1.62,0);
@@ -37,16 +37,16 @@ function fixture() {
 }
 {
   const {c,key,events}=fixture();
-  key('keydown','q','KeyQ');assert(c.walk.setAim&&!c.walk.setAim.back);assert(!events.includes('receive'));
-  key('keyup','q','KeyQ');assert.equal(c.walk.setAim,null,'release uncommitted readiness cancels');
-  key('keydown','e','KeyE');assert(c.walk.setAim.back);assert(!events.includes('interact'));
-  key('keyup','e','KeyE');key('keydown','v','KeyV');assert(events.includes('receive'));
-  key('keydown','r','KeyR');assert(events.includes('block'));assert(!events.includes('ready'));
+  key('keydown','c','KeyC');assert(c.SETM.m.all);assert(!events.includes('receive'));
+  key('keyup','c','KeyC');assert.equal(c.SETM.m,null);
+  key('keydown','e','KeyE');assert(!c.walk.setAim);assert(!events.includes('interact'));
+  key('keydown','v','KeyV');assert(events.includes('receive'));
+  key('keydown','b','KeyB');assert(events.includes('block'));assert(!events.includes('ready'));
   key('keydown','h','KeyH');assert(events.includes('ready'));
   key('keydown','f','KeyF');assert(events.includes('interact'));
-  c.VBSettings.bind('q','KeyZ');key('keydown','q','KeyQ');assert.equal(c.walk.setAim,null);
-  key('keydown','z','KeyZ');assert(c.walk.setAim);key('keyup','z','KeyZ');assert.equal(c.walk.setAim,null);
-  console.log('PASS actual key routing Q/E/V/R/F/H and remapped readiness release');
+  c.VBSettings.bind('q','KeyZ');key('keydown','c','KeyC');assert.equal(c.SETM.m,null);
+  key('keydown','z','KeyZ');assert(c.SETM.m.all);key('keyup','z','KeyZ');assert.equal(c.SETM.m,null);
+  console.log('PASS wheel Q press/release, E reserved, V/R/F/H and remapped Q');
 }
 for(const back of [false,true])for(const hold of [0,.45,.9]) {
   const f=fixture(),{c}=f;c.vbManualSetPrepare(back);assert(!c.$('set-charge').hidden);
