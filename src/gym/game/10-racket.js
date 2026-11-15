@@ -13,7 +13,7 @@ const RK_LV = {
   3: { name: '高手', react: 0.15, speed: 1.0, err: 0.12, q: 0.93, smash: 0.85, miss: 0.02 },
 };
 const RK = { on: false, opt: { lv: 2, to: 11, assist: null, hint: true }, ask: null, peerAsk: null, P: {}, acc: 0 };
-const rkGauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.15;
+const rkGauss = () => (gameRandom() + gameRandom() + gameRandom() - 1.5) * 1.15;
 // 哪些地方可以打：獨立的羽球場／匹克球場，或複合球場現在架的是羽球網／匹克球網（一塊地切成好幾面）
 function rkCourts() {
   const out = [];

@@ -2,7 +2,8 @@
   "name": "volleycourt-tw",
   "private": true,
   "type": "module",
-  "description": "台北伺服器：多人連線房間＋大廳（協定同 rt-worker/）",
-  "scripts": { "start": "node vps/server.mjs" },
-  "dependencies": { "ws": "^8.18.0" }
+  "description": "台北伺服器：多人連線房間＋大廳（協定同 server/cloudflare-legacy），之後也跑比賽引擎",
+  "scripts": { "start": "node server/rt/server.mjs" },
+  "dependencies": { "ws": "^8.18.0", "three": "0.160.0" },
+  "devDependencies": { "acorn": "8.14.0", "acorn-walk": "8.3.4" }
 }

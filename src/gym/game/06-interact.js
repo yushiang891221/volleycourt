@@ -231,12 +231,12 @@ function blockers() {
 // ---- 販賣機：隨機掉一瓶飲料到取物口
 const cans = [];
 function dropDrink(it) {
-  const [name, col] = DRINKS[Math.floor(Math.random() * DRINKS.length)];
-  const { d } = sizeOf(it), [x, z] = toWorldOf(it, (Math.random() - 0.5) * 0.3, -d / 2 - 0.1);
+  const [name, col] = DRINKS[Math.floor(fxRandom() * DRINKS.length)];
+  const { d } = sizeOf(it), [x, z] = toWorldOf(it, (fxRandom() - 0.5) * 0.3, -d / 2 - 0.1);
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 16), mat(col)); body.position.y = 0.06; g.add(body);
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.02, 16), mat('#C9CDD0', { metalness: 0.8, roughness: 0.3 })); top.position.y = 0.13; g.add(top);
-  g.position.set(x, 0.55, z); g.rotation.z = Math.PI / 2; g.rotation.y = Math.random() * 3; ballsGroup.add(g);
+  g.position.set(x, 0.55, z); g.rotation.z = Math.PI / 2; g.rotation.y = fxRandom() * 3; ballsGroup.add(g);
   cans.push(g); while (cans.length > 12) ballsGroup.remove(cans.shift());
   tween(0.45, (p) => { g.position.y = 0.55 - 0.52 * p * p; }, () => { g.position.y = 0.03; });
   walk.drinks++;
@@ -283,7 +283,7 @@ function toggleBag(it, point) {
   if (walk.bags.has(k)) { const m = walk.bags.get(k); if (m) ballsGroup.remove(m); walk.bags.delete(k); toast(`拿回第 ${col + 1} 格的包包`); return; }
   const low = it.type === 'lowcubby', y0 = low ? 0.08 : 0.03, cols2 = ['#B8322B', '#22304A', '#3E8E41', '#E07B39', '#6B4FA0', '#1F2124'];
   const bag = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(Math.min(0.3, cw - 0.06), 0.17, Math.min(0.26, d - 0.06)), mat(cols2[Math.floor(Math.random() * cols2.length)], { roughness: 0.8 })); body.position.y = 0.085; bag.add(body);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(Math.min(0.3, cw - 0.06), 0.17, Math.min(0.26, d - 0.06)), mat(cols2[Math.floor(fxRandom() * cols2.length)], { roughness: 0.8 })); body.position.y = 0.085; bag.add(body);
   const strap = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 6, 16, Math.PI), mat('#1F2124')); strap.position.y = 0.17; bag.add(strap);
   const [x, z] = toWorldOf(it, -w / 2 + cw * (col + 0.5), -0.02);
   bag.position.set(x, y0, z); bag.rotation.y = (it.rot * Math.PI) / 180; ballsGroup.add(bag);
@@ -456,7 +456,7 @@ function ballMaterial(hot) {
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
 const BALL_GEO = new THREE.SphereGeometry(BALL_R, 56, 36);   // 所有球共用一份（輪廓夠圓）
-function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
+function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); return m; }
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
@@ -777,7 +777,7 @@ function addWind(it) {
   const wall = !!def.wall, y0 = wall ? (def.mountY || 2.4) + 0.05 : it.type === 'packac' ? 1.75 : 1.45;
   const o = wall ? [0, y0, d / 2 + 0.05] : [0, y0, -d / 2 - 0.05], dir = wall ? [0, -0.55, 0.84] : [0, -0.12, -1];
   const geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3), seed = [];
-  for (let i = 0; i < N; i++) seed.push({ t: Math.random(), x: (Math.random() - 0.5) * w * 0.85, y: (Math.random() - 0.5) * 0.12, sp: 0.7 + Math.random() * 0.6 });
+  for (let i = 0; i < N; i++) seed.push({ t: fxRandom(), x: (fxRandom() - 0.5) * w * 0.85, y: (fxRandom() - 0.5) * 0.12, sp: 0.7 + fxRandom() * 0.6 });
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const pts = new THREE.Points(geo, new THREE.PointsMaterial({ map: windTex, color: '#B9E4FF', size: 0.09, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
   const g = new THREE.Group(); g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; g.add(pts); scene.add(g);

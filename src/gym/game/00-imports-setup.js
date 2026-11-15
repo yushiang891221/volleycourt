@@ -6,6 +6,11 @@ import { getAccountService } from './js/auth.js';
 import { ballSubstep, ballSubsteps } from './engine/ball.js';   // B1：球的物理（伺服器共用）
 import { touchCounts, judgeTouch, scorePoint, judgeLanding } from './engine/rules.js';   // B2：排球規則（伺服器共用）
 import { createAi } from './engine/ai.js';   // B3：AI 球員（伺服器共用）
+// 純畫面／聲音效果（粒子、音高、鏡頭晃動、腳步聲、環境動畫）用自己的亂數：比賽邏輯的 Math.random 不受畫面影響，伺服器（沒有畫面）跟網頁才會算出一樣的比賽
+// 比賽邏輯專用亂數（AI、發球、擦網、攔網結果…）：平常照 Math.random；設定種子（GAME_RNG.s）後每次算出一樣的比賽（伺服器與網頁比對用）
+const GAME_RNG = { s: 0 };
+function gameRandom() { if (!GAME_RNG.s) return Math.random(); GAME_RNG.s = (GAME_RNG.s * 16807) % 2147483647; return GAME_RNG.s / 2147483647; }
+const fxRandom = (() => { let s = 1234567; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
 const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');

@@ -966,6 +966,11 @@ import { getAccountService } from './js/auth.js';
 import { ballSubstep, ballSubsteps } from './engine/ball.js';   // B1：球的物理（伺服器共用）
 import { touchCounts, judgeTouch, scorePoint, judgeLanding } from './engine/rules.js';   // B2：排球規則（伺服器共用）
 import { createAi } from './engine/ai.js';   // B3：AI 球員（伺服器共用）
+// 純畫面／聲音效果（粒子、音高、鏡頭晃動、腳步聲、環境動畫）用自己的亂數：比賽邏輯的 Math.random 不受畫面影響，伺服器（沒有畫面）跟網頁才會算出一樣的比賽
+// 比賽邏輯專用亂數（AI、發球、擦網、攔網結果…）：平常照 Math.random；設定種子（GAME_RNG.s）後每次算出一樣的比賽（伺服器與網頁比對用）
+const GAME_RNG = { s: 0 };
+function gameRandom() { if (!GAME_RNG.s) return Math.random(); GAME_RNG.s = (GAME_RNG.s * 16807) % 2147483647; return GAME_RNG.s / 2147483647; }
+const fxRandom = (() => { let s = 1234567; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
 const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');
@@ -5794,7 +5799,7 @@ function updateWalk(dt) {
   if (game && !walk.air && !walk.dive) {   // 急停、急轉（速度掉一半、或方向轉超過 60°）：球鞋「唧」
     const pv = walk.pv || [0, 0], ps = Math.hypot(pv[0], pv[1]), cs = Math.hypot(vx, vz), cosA = ps > 0.1 && cs > 0.1 ? (pv[0] * vx + pv[1] * vz) / (ps * cs) : 1;
     // 急停、急轉、突然起跑都會「吱」（球場上最常聽到的聲音）
-    if (((ps > 1.8 && (cs < ps * 0.6 || cosA < 0.7)) || (ps < 1 && cs > 3)) && performance.now() - (walk.sqT || 0) > 300) { walk.sqT = performance.now(); sfx('squeak', 0.7 + Math.random() * 0.3, new THREE.Vector3(walk.x, 0.05, walk.z)); }
+    if (((ps > 1.8 && (cs < ps * 0.6 || cosA < 0.7)) || (ps < 1 && cs > 3)) && performance.now() - (walk.sqT || 0) > 300) { walk.sqT = performance.now(); sfx('squeak', 0.7 + fxRandom() * 0.3, new THREE.Vector3(walk.x, 0.05, walk.z)); }
     walk.pv = [vx, vz];
   }
   walk.low = (walk.low || 0) + (((walk.dive && walk.dive.t > 0.08) || walk.down > 0.2 ? 1.1 : walk.crouch && !walk.air ? 0.45 : 0) - (walk.low || 0)) * Math.min(1, dt * (walk.dive ? 12 : 4));
@@ -5807,7 +5812,7 @@ function updateWalk(dt) {
   if (!keyMoving) vbServeZone();
   const bob = !keyMoving && (mag > 0.01 || walk.target) ? Math.sin(performance.now() / 160) * 0.015 : 0;
   camera.position.set(walk.x, EYE + bob - (skill.dip || 0) - (walk.low || 0) + jumpY(dt), walk.z);
-  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a; }
+  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (fxRandom() - 0.5) * a; camera.position.y += (fxRandom() - 0.5) * a; camera.position.z += (fxRandom() - 0.5) * a; }
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
@@ -6047,12 +6052,12 @@ function blockers() {
 // ---- 販賣機：隨機掉一瓶飲料到取物口
 const cans = [];
 function dropDrink(it) {
-  const [name, col] = DRINKS[Math.floor(Math.random() * DRINKS.length)];
-  const { d } = sizeOf(it), [x, z] = toWorldOf(it, (Math.random() - 0.5) * 0.3, -d / 2 - 0.1);
+  const [name, col] = DRINKS[Math.floor(fxRandom() * DRINKS.length)];
+  const { d } = sizeOf(it), [x, z] = toWorldOf(it, (fxRandom() - 0.5) * 0.3, -d / 2 - 0.1);
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 16), mat(col)); body.position.y = 0.06; g.add(body);
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.02, 16), mat('#C9CDD0', { metalness: 0.8, roughness: 0.3 })); top.position.y = 0.13; g.add(top);
-  g.position.set(x, 0.55, z); g.rotation.z = Math.PI / 2; g.rotation.y = Math.random() * 3; ballsGroup.add(g);
+  g.position.set(x, 0.55, z); g.rotation.z = Math.PI / 2; g.rotation.y = fxRandom() * 3; ballsGroup.add(g);
   cans.push(g); while (cans.length > 12) ballsGroup.remove(cans.shift());
   tween(0.45, (p) => { g.position.y = 0.55 - 0.52 * p * p; }, () => { g.position.y = 0.03; });
   walk.drinks++;
@@ -6099,7 +6104,7 @@ function toggleBag(it, point) {
   if (walk.bags.has(k)) { const m = walk.bags.get(k); if (m) ballsGroup.remove(m); walk.bags.delete(k); toast(`拿回第 ${col + 1} 格的包包`); return; }
   const low = it.type === 'lowcubby', y0 = low ? 0.08 : 0.03, cols2 = ['#B8322B', '#22304A', '#3E8E41', '#E07B39', '#6B4FA0', '#1F2124'];
   const bag = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(Math.min(0.3, cw - 0.06), 0.17, Math.min(0.26, d - 0.06)), mat(cols2[Math.floor(Math.random() * cols2.length)], { roughness: 0.8 })); body.position.y = 0.085; bag.add(body);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(Math.min(0.3, cw - 0.06), 0.17, Math.min(0.26, d - 0.06)), mat(cols2[Math.floor(fxRandom() * cols2.length)], { roughness: 0.8 })); body.position.y = 0.085; bag.add(body);
   const strap = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 6, 16, Math.PI), mat('#1F2124')); strap.position.y = 0.17; bag.add(strap);
   const [x, z] = toWorldOf(it, -w / 2 + cw * (col + 0.5), -0.02);
   bag.position.set(x, y0, z); bag.rotation.y = (it.rot * Math.PI) / 180; ballsGroup.add(bag);
@@ -6272,7 +6277,7 @@ function ballMaterial(hot) {
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
 const BALL_GEO = new THREE.SphereGeometry(BALL_R, 56, 36);   // 所有球共用一份（輪廓夠圓）
-function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); return m; }
+function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); return m; }
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
@@ -6593,7 +6598,7 @@ function addWind(it) {
   const wall = !!def.wall, y0 = wall ? (def.mountY || 2.4) + 0.05 : it.type === 'packac' ? 1.75 : 1.45;
   const o = wall ? [0, y0, d / 2 + 0.05] : [0, y0, -d / 2 - 0.05], dir = wall ? [0, -0.55, 0.84] : [0, -0.12, -1];
   const geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 3), seed = [];
-  for (let i = 0; i < N; i++) seed.push({ t: Math.random(), x: (Math.random() - 0.5) * w * 0.85, y: (Math.random() - 0.5) * 0.12, sp: 0.7 + Math.random() * 0.6 });
+  for (let i = 0; i < N; i++) seed.push({ t: fxRandom(), x: (fxRandom() - 0.5) * w * 0.85, y: (fxRandom() - 0.5) * 0.12, sp: 0.7 + fxRandom() * 0.6 });
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const pts = new THREE.Points(geo, new THREE.PointsMaterial({ map: windTex, color: '#B9E4FF', size: 0.09, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
   const g = new THREE.Group(); g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot * Math.PI) / 180; g.add(pts); scene.add(g);
@@ -7915,7 +7920,7 @@ function emoHi5Join(sid, id, team) {
 function emoAiPlan(H) {
   if (H.team === 'all' || VM.phase !== 'dead') return;
   const c = emoPos(H.by); if (!c) return;
-  for (const id of VM.team[H.team]) { if (!VM.ai.has(id) || id === H.by) continue; const p = emoPos(id); if (p && emoD(p, c) <= EMO.R && Math.random() < 0.85) H.plan.push({ id, at: H.t0 + 300 + Math.random() * 900 }); }
+  for (const id of VM.team[H.team]) { if (!VM.ai.has(id) || id === H.by) continue; const p = emoPos(id); if (p && emoD(p, c) <= EMO.R && fxRandom() < 0.85) H.plan.push({ id, at: H.t0 + 300 + fxRandom() * 900 }); }
 }
 function emoPos(id) {
   if (id === vmMe()) return new THREE.Vector3(walk.x, 2.1, walk.z);
@@ -8099,7 +8104,7 @@ function netPeerPlayback(p2, dt, now) {
 }
 // Match protocol 2: only the host advances the accepted touch sequence.
 function vmWireInit(host, data = VM.startData) {
-  const session = host ? `${NET.me}:${Date.now()}:${Math.random().toString(36).slice(2)}` : data.session;
+  const session = host ? `${NET.me}:${Date.now()}:${gameRandom().toString(36).slice(2)}` : data.session;
   VM.wire = { session, order: host ? new VBMatchSync.Authority(session) : new VBMatchSync.Receiver(session), frame: 0, sent: -Infinity, dirty: true, history: [], seen: new Map(), offset: null, pending: null, event: null, eventSeen: '', serial: 0 };
   if (host) Object.assign(data, { wire: 2, session });
   NET.ownBall = host; NET.hitBy = host ? NET.me : VM.hostId;
@@ -9015,7 +9020,7 @@ const RK_LV = {
   3: { name: '高手', react: 0.15, speed: 1.0, err: 0.12, q: 0.93, smash: 0.85, miss: 0.02 },
 };
 const RK = { on: false, opt: { lv: 2, to: 11, assist: null, hint: true }, ask: null, peerAsk: null, P: {}, acc: 0 };
-const rkGauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.15;
+const rkGauss = () => (gameRandom() + gameRandom() + gameRandom() - 1.5) * 1.15;
 // 哪些地方可以打：獨立的羽球場／匹克球場，或複合球場現在架的是羽球網／匹克球網（一塊地切成好幾面）
 function rkCourts() {
   const out = [];
@@ -9706,12 +9711,12 @@ function vbSpinFor(b, v, kind, q) {
   const h = Math.hypot(v.x, v.z) || 1, top = new THREE.Vector3(v.z / h, 0, -v.x / h);   // 水平、跟飛行方向垂直的轉軸：正轉＝上旋
   const rnd = () => new THREE.Vector3(rkGauss(), rkGauss() * 0.5, rkGauss()).normalize();
   if (kind === 'spike') return top.multiplyScalar(40 + 30 * q);   /* 扣球：強上旋，每秒約 6～11 圈（比賽同步後不再自動滾動，轉速要夠才看得出來） */
-  if (kind === 'set') { const r = b.setFault === 'double' ? 16 + Math.random() * 6 : q >= 0.85 ? 0 : (0.85 - q) * 22; return r ? top.multiplyScalar(0.5).add(rnd()).normalize().multiplyScalar(r) : null; }
+  if (kind === 'set') { const r = b.setFault === 'double' ? 16 + gameRandom() * 6 : q >= 0.85 ? 0 : (0.85 - q) * 22; return r ? top.multiplyScalar(0.5).add(rnd()).normalize().multiplyScalar(r) : null; }
   if (kind === 'tip') return top.multiplyScalar(-3);
   return top.multiplyScalar(12 + 6 * (1 - q)).add(rnd().multiplyScalar(4 + 6 * (1 - q)));   /* 接球、墊球：每秒約 2～3 圈，接得越差越亂 */
 }
 // 碰網的隨機結果：連線時用擊球序號算（每台電腦一樣），自己玩就真的亂數
-function vbNetRoll(k) { if (!NET.on) return Math.random(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
+function vbNetRoll(k) { if (!NET.on) return gameRandom(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
 // 碰到的那一刻：粒子、球壓扁一下、擊球聲；扣球、攔網鏡頭震一下
 function vbImpact(b, kind, q = 1) {
   vbBurst(b.m.position, q >= 0.88 ? '#F2B705' : '#FFFFFF', kind === 'spike' ? 22 : 13, kind === 'spike' ? 3.4 : 2);
@@ -9721,7 +9726,7 @@ function vbImpact(b, kind, q = 1) {
 }
 function vbBurst(pos, color, n, speed) {
   const P = new Float32Array(n * 3), V = [];
-  for (let i = 0; i < n; i++) { P.set([pos.x, pos.y, pos.z], i * 3); const a = Math.random() * Math.PI * 2, e = Math.random() * 2 - 1, r = Math.sqrt(1 - e * e), s2 = speed * (0.5 + Math.random() * 0.7); V.push([Math.cos(a) * r * s2, e * s2, Math.sin(a) * r * s2]); }
+  for (let i = 0; i < n; i++) { P.set([pos.x, pos.y, pos.z], i * 3); const a = fxRandom() * Math.PI * 2, e = fxRandom() * 2 - 1, r = Math.sqrt(1 - e * e), s2 = speed * (0.5 + fxRandom() * 0.7); V.push([Math.cos(a) * r * s2, e * s2, Math.sin(a) * r * s2]); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3));
   const m = new THREE.Points(g, new THREE.PointsMaterial({ color, size: 0.05, transparent: true, opacity: 1, depthWrite: false })); m.frustumCulled = false; scene.add(m);
   (VB.parts = VB.parts || []).push({ m, V, t: 0 });
@@ -9742,13 +9747,13 @@ function vbParts(dt) {
 // 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
 const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
 SFX.on = !VBSettings.values.mute;
-function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
+function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (fxRandom() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
 // 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
 function sfxIR(ac, rt) {
   const sr = ac.sampleRate, len = Math.floor(sr * rt), b = ac.createBuffer(2, len, sr);
   for (let ch = 0; ch < 2; ch++) {
     const d = b.getChannelData(ch); let y = 0;
-    for (let i = 0; i < len; i++) { const t = i / sr, a = 0.85 - 0.72 * Math.min(1, t / rt); y += a * ((Math.random() * 2 - 1) - y); d[i] = y * Math.pow(10, (-3 * t) / rt) * (t < 0.012 ? t / 0.012 : 1); }
+    for (let i = 0; i < len; i++) { const t = i / sr, a = 0.85 - 0.72 * Math.min(1, t / rt); y += a * ((fxRandom() * 2 - 1) - y); d[i] = y * Math.pow(10, (-3 * t) / rt) * (t < 0.012 ? t / 0.012 : 1); }
     for (const [ms, g] of [[11, 0.5], [19, 0.35], [27, 0.3], [38, 0.22], [52, 0.18]]) { const k = Math.floor((ms + ch * 3) * sr / 1000); if (k < len) d[k] += g * (ch ? -1 : 1); }
   }
   return b;
@@ -9758,7 +9763,7 @@ function sfxBus(ac) {
   const master = ac.createDynamicsCompressor(); master.threshold.value = -14; master.ratio.value = 4; master.attack.value = 0.002; master.release.value = 0.15;
   const out = ac.createGain(); out.gain.value = VBSettings.values.mute ? 0 : .9 * VBSettings.values.volume / 100; master.connect(out).connect(ac.destination);
   const conv = ac.createConvolver(); conv.buffer = sfxIR(ac, 2.1); const wet = ac.createGain(); wet.gain.value = 0.42; conv.connect(wet).connect(master);
-  const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = fxRandom() * 2 - 1;
   return (SFX.bus = { ac, master, conv, noise, out });
 }
 function netBallSound(ball, kind, quality, position) {
@@ -9839,12 +9844,12 @@ function sfxLoad() {
 // 播一段：每次隨機挑一段、音高差一點點，不會每一下都一模一樣
 function sfxRec(ac, dry, kind, gain, rate = 1, at = ac.currentTime + 0.004) {
   const list = SFX.rec && SFX.rec[kind]; if (!list || !list.length) return false;
-  const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = list[Math.floor(Math.random() * list.length)]; s.playbackRate.value = rate * (0.96 + Math.random() * 0.08); g.gain.value = gain;
+  const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = list[Math.floor(fxRandom() * list.length)]; s.playbackRate.value = rate * (0.96 + fxRandom() * 0.08); g.gain.value = gain;
   s.connect(g).connect(dry); s.start(at); return true;
 }
 function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
   if (!SFX.recLoading) sfxLoad();
-  const bus = sfxBus(ac), t = ac.currentTime + 0.004, J = () => 1 + (Math.random() - 0.5) * 0.08, A = () => 0.85 + Math.random() * 0.3;
+  const bus = sfxBus(ac), t = ac.currentTime + 0.004, J = () => 1 + (fxRandom() - 0.5) * 0.08, A = () => 0.85 + fxRandom() * 0.3;
   const dry = ac.createGain(); dry.gain.value = vol;
   let node = dry; if (ac.createStereoPanner) { const pn = ac.createStereoPanner(); pn.pan.value = pan; dry.connect(pn); node = pn; }
   node.connect(bus.master);
@@ -9852,11 +9857,11 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
   // 一個會衰減的共鳴（dec＝衰減時間常數，秒）
   const ring = (f, dec, g, type = 'sine', at = t, glide = 1) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f * glide, at); if (glide !== 1) o.frequency.exponentialRampToValueAtTime(f, at + dec); e.gain.setValueAtTime(0, at); e.gain.linearRampToValueAtTime(g, at + 0.0012); e.gain.setTargetAtTime(0.00001, at + 0.0012, dec); o.connect(e).connect(dry); o.start(at); o.stop(at + 0.002 + dec * 7); };
   // 一段濾過的雜音（拍擊、摩擦、網子）
-  const burst = (dur, fc, Q, g, type = 'bandpass', at = t, shape = 'exp') => { const s = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); s.buffer = bus.noise; f.type = type; f.frequency.value = fc; f.Q.value = Q; e.gain.setValueAtTime(0, at); e.gain.linearRampToValueAtTime(g, at + Math.min(0.001, dur * 0.2)); if (shape === 'exp') e.gain.setTargetAtTime(0.00001, at + 0.001, dur / 3); else e.gain.linearRampToValueAtTime(0, at + dur); s.connect(f).connect(e).connect(dry); s.start(at, Math.random() * 0.8, dur * 4 + 0.05); };
+  const burst = (dur, fc, Q, g, type = 'bandpass', at = t, shape = 'exp') => { const s = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); s.buffer = bus.noise; f.type = type; f.frequency.value = fc; f.Q.value = Q; e.gain.setValueAtTime(0, at); e.gain.linearRampToValueAtTime(g, at + Math.min(0.001, dur * 0.2)); if (shape === 'exp') e.gain.setTargetAtTime(0.00001, at + 0.001, dur / 3); else e.gain.linearRampToValueAtTime(0, at + dur); s.connect(f).connect(e).connect(dry); s.start(at, fxRandom() * 0.8, dur * 4 + 0.05); };
   const ball = (g, cav = 1) => { ring(1050 * J(), 0.018, 0.15 * g * cav); ring(262 * J(), 0.016, 0.3 * g); ring(640 * J(), 0.012, 0.16 * g); ring(1720 * J(), 0.008, 0.07 * g * cav); };   // 球殼（262、640 Hz）＋球內空氣（1.05 kHz）的共鳴
   // 拍擊：頻譜往高頻慢慢變小（像真實錄音），bright＝越用力越亮
   const slap = (g, bright, dur = 0.005, at = t) => { burst(dur * 1.4, 700, 0.45, 0.9 * g, 'bandpass', at); burst(dur, 1700 + 900 * bright, 0.45, 0.62 * g, 'bandpass', at); burst(dur * 1.2, 2700 + 900 * bright, 0.6, 1.1 * g * (0.3 + 0.7 * bright), 'bandpass', at); burst(dur * 0.6, 7000, 0.7, 0.07 * g * bright, 'highpass', at); };
-  const net = (g) => { burst(0.18, 700, 0.7, 0.35 * g, 'bandpass', t, 'lin'); for (let i = 0; i < 7; i++) burst(0.025 + Math.random() * 0.04, 900 + Math.random() * 1100, 0.9, g * (0.4 - i * 0.045) * A(), 'bandpass', t + 0.01 + i * 0.03 + Math.random() * 0.012); ring(96 * J(), 0.12, 0.3 * g, 'triangle'); ring(193 * J(), 0.07, 0.1 * g, 'triangle'); ring(291 * J(), 0.04, 0.05 * g, 'triangle'); };   // 網布被拉扯的沙沙＋網繩繃緊的「嗡」
+  const net = (g) => { burst(0.18, 700, 0.7, 0.35 * g, 'bandpass', t, 'lin'); for (let i = 0; i < 7; i++) burst(0.025 + fxRandom() * 0.04, 900 + fxRandom() * 1100, 0.9, g * (0.4 - i * 0.045) * A(), 'bandpass', t + 0.01 + i * 0.03 + fxRandom() * 0.012); ring(96 * J(), 0.12, 0.3 * g, 'triangle'); ring(193 * J(), 0.07, 0.1 * g, 'triangle'); ring(291 * J(), 0.04, 0.05 * g, 'triangle'); };   // 網布被拉扯的沙沙＋網繩繃緊的「嗡」
   const p = clamp(q, 0, 1.3);
   // 照錄音校正好的合成聲；還沒做好（第一下）才用簡易版
   const R = (k, g, rate, at) => sfxRec(ac, dry, k, g, rate, at);
@@ -9894,11 +9899,11 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
     }
     case 'net': { net(0.55 * Math.max(0.4, p)); ball(0.2 * p, 0.5); break; }
     case 'tape': { ring(232 * J(), 0.02, 0.38); ring(1050 * J(), 0.02, 0.2); burst(0.008, 700, 0.8, 0.35); net(0.32); ring(96 * J(), 0.16, 0.3, 'triangle'); break; }   // 擦到白帶：悶的「噗」＋鋼索嗡得比較久
-    case 'land': { burst(0.016, 300, 0.8, 0.32 * A(), 'lowpass'); ring(78 * J(), 0.03, 0.3); if (Math.random() < 0.35) sfxPlay(ac, 'squeak', 0.6, vol * 0.7, pan); break; }
-    case 'slide': { burst(0.32, 900, 0.6, 0.3, 'lowpass', t, 'lin'); burst(0.02, 320, 0.8, 0.4, 'lowpass'); ring(70, 0.04, 0.3); if (Math.random() < 0.6) sfxPlay(ac, 'squeak', 0.9, vol, pan); break; }
+    case 'land': { burst(0.016, 300, 0.8, 0.32 * A(), 'lowpass'); ring(78 * J(), 0.03, 0.3); if (fxRandom() < 0.35) sfxPlay(ac, 'squeak', 0.6, vol * 0.7, pan); break; }
+    case 'slide': { burst(0.32, 900, 0.6, 0.3, 'lowpass', t, 'lin'); burst(0.02, 320, 0.8, 0.4, 'lowpass'); ring(70, 0.04, 0.3); if (fxRandom() < 0.6) sfxPlay(ac, 'squeak', 0.9, vol, pan); break; }
     case 'squeak': {   // 球鞋在木地板上的「唧」：橡膠一卡一滑，音高快速抖動
-      const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), f = ac.createBiquadFilter(), e = ac.createGain(), f0 = 1700 + Math.random() * 1000, L = 0.07 + Math.random() * 0.09;
-      o.type = 'square'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (1.1 + Math.random() * 0.25), t + L); lfo.frequency.value = 55 + Math.random() * 40; lg.gain.value = f0 * 0.06; lfo.connect(lg).connect(o.frequency);
+      const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), f = ac.createBiquadFilter(), e = ac.createGain(), f0 = 1700 + fxRandom() * 1000, L = 0.07 + fxRandom() * 0.09;
+      o.type = 'square'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (1.1 + fxRandom() * 0.25), t + L); lfo.frequency.value = 55 + fxRandom() * 40; lg.gain.value = f0 * 0.06; lfo.connect(lg).connect(o.frequency);
       f.type = 'bandpass'; f.frequency.value = f0 * 1.2; f.Q.value = 6; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.17 * q, t + 0.012); e.gain.setValueAtTime(0.17 * q, t + L * 0.6); e.gain.linearRampToValueAtTime(0, t + L);
       o.connect(f).connect(e).connect(dry); o.start(t); lfo.start(t); o.stop(t + L + 0.02); lfo.stop(t + L + 0.02); break;
     }
@@ -9915,7 +9920,7 @@ function sfxPlay(ac, kind, q = 1, vol = 1, pan = 0) {
     }
     case 'cheer': {   // 得分：幾個人的歡呼＋拍手（業餘球館，不是滿場觀眾）
       for (const [fc, g] of [[520, 0.06], [1100, 0.07], [2300, 0.035]]) { const s = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); s.buffer = bus.noise; f.type = 'bandpass'; f.frequency.value = fc; f.Q.value = 0.8; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g * q, t + 0.18); e.gain.setTargetAtTime(0.00001, t + 0.4, 0.35); s.connect(f).connect(e).connect(dry); s.start(t, 0, 2); }
-      for (let i = 0; i < 14; i++) burst(0.012, 1400 + Math.random() * 900, 0.8, 0.12 * A(), 'bandpass', t + 0.1 + i * 0.07 + Math.random() * 0.04);
+      for (let i = 0; i < 14; i++) burst(0.012, 1400 + fxRandom() * 900, 0.8, 0.12 * A(), 'bandpass', t + 0.1 + i * 0.07 + fxRandom() * 0.04);
       break;
     }
     default: ball(0.5);
@@ -10181,12 +10186,12 @@ function vbRecvStep() {
 const RECV_CROUCH = { stand: 1.45, crouch: 0.3, crouchMag: 0.5, crouchDy: -0.5, crouchDT: 0.15 };
 function vbHardDefl(vin, q, absorb, vzIn, skill = 1, crouch = null) {
   const ex = clamp((vin - 13) / 14, 0, 1), cm = crouch === true ? RECV_CROUCH.crouch : crouch === false ? RECV_CROUCH.stand : 1;
-  if (!ex || Math.random() > ex * (0.35 + 0.65 * (1 - q)) * (absorb ? 0.65 : 1) * skill * cm) return null;
-  const m = (0.6 + 1.4 * ex) * (0.6 + Math.random() * 0.8) * (crouch === true ? RECV_CROUCH.crouchMag : 1), r = Math.random();
-  if (crouch === true) return r < 0.6 ? { kind: 'side', dx: rkGauss() * 0.3, dz: (Math.sign(vzIn) || (Math.random() < 0.5 ? -1 : 1)) * m, dy: 0, dT: 0 } : { kind: 'high', dx: m * 0.5, dz: rkGauss() * 0.4, dy: 0.6, dT: 0.2 };   // 蹲著接：偏一點也留在自己場上
+  if (!ex || gameRandom() > ex * (0.35 + 0.65 * (1 - q)) * (absorb ? 0.65 : 1) * skill * cm) return null;
+  const m = (0.6 + 1.4 * ex) * (0.6 + gameRandom() * 0.8) * (crouch === true ? RECV_CROUCH.crouchMag : 1), r = gameRandom();
+  if (crouch === true) return r < 0.6 ? { kind: 'side', dx: rkGauss() * 0.3, dz: (Math.sign(vzIn) || (gameRandom() < 0.5 ? -1 : 1)) * m, dy: 0, dT: 0 } : { kind: 'high', dx: m * 0.5, dz: rkGauss() * 0.4, dy: 0.6, dT: 0.2 };   // 蹲著接：偏一點也留在自己場上
   if (r < 0.5) return { kind: 'long', dx: -m * 1.1, dz: rkGauss() * 0.5, dy: -0.3, dT: -0.15 };
-  if (r < 0.8) return { kind: 'side', dx: rkGauss() * 0.5, dz: (Math.sign(vzIn) || (Math.random() < 0.5 ? -1 : 1)) * m * 1.3, dy: 0, dT: 0 };
-  return { kind: 'high', dx: m * 0.7, dz: rkGauss() * 0.6, dy: 1.2 + Math.random() * 0.8, dT: 0.35 };
+  if (r < 0.8) return { kind: 'side', dx: rkGauss() * 0.5, dz: (Math.sign(vzIn) || (gameRandom() < 0.5 ? -1 : 1)) * m * 1.3, dy: 0, dT: 0 };
+  return { kind: 'high', dx: m * 0.7, dz: rkGauss() * 0.6, dy: 1.2 + gameRandom() * 0.8, dT: 0.35 };
 }
 const DEFL_NOTE = { long: '球太重，墊得太衝', side: '球太重，從手臂旁邊噴出去', high: '球太重，彈得又高又後面' };
 function vbDoReceive(o, dive) {
@@ -10273,7 +10278,7 @@ function vmThird() { if (!VM.on || VM.phase !== 'rally') return false; const tc 
 function vbThirdOverVel(cp, ct, q) {
   const sg = vmSide(vmTeamOf(vmMe())), [lx] = toLocalOf(ct.c, cp.x, cp.z), poor = q < 0.32;
   const dep = clamp(6.5 + rkGauss() * (1 - q), 4, 8.6);
-  const z = clamp((Math.random() - 0.5) * 5 + rkGauss() * (1 - q) * (poor ? 3 : 1), poor ? -6 : -4.1, poor ? 6 : 4.1);
+  const z = clamp((gameRandom() - 0.5) * 5 + rkGauss() * (1 - q) * (poor ? 3 : 1), poor ? -6 : -4.1, poor ? 6 : 4.1);
   const [tx, tz] = toWorldOf(ct.c, -sg * dep, z);
   const f = Math.abs(lx) / Math.max(0.001, Math.abs(lx) + dep), clear = NETS[state.net].h + BALL_R + 0.6;
   const T = Math.max(1.55, Math.sqrt(Math.max(0, (clear - cp.y - (BALL_R - cp.y) * f) / Math.max(0.0001, 4.9 * f * (1 - f)))));
@@ -10602,7 +10607,7 @@ function sqFromMotion(o, x, z, y, dt) {
   const kv = Math.min(1, dt * 12), vx = jump ? 0 : (x - S.x) / d, vz = jump ? 0 : (z - S.z) / d;
   S.vx += (vx - S.vx) * kv; S.vz += (vz - S.vz) * kv; S.x = x; S.z = z;
   const ps = Math.hypot(S.pvx, S.pvz), cs = Math.hypot(S.vx, S.vz), cosA = ps > 0.1 && cs > 0.1 ? (S.pvx * S.vx + S.pvz * S.vz) / (ps * cs) : 1, now = performance.now();
-  if (!jump && (y || 0) <= 0.02 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && now - S.t > 500) { S.t = now; sfx('squeak', 0.6 + Math.random() * 0.3, new THREE.Vector3(x, 0.05, z)); }
+  if (!jump && (y || 0) <= 0.02 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && now - S.t > 500) { S.t = now; sfx('squeak', 0.6 + fxRandom() * 0.3, new THREE.Vector3(x, 0.05, z)); }
   const kf = Math.min(1, dt * 4); S.pvx += (S.vx - S.pvx) * kf; S.pvz += (S.vz - S.pvz) * kf;
 }
 // WEB-023：別人負責的球在我這邊先落地 → 停在落點等他回報（收到就照回報走；0.5 秒沒回報就照我這邊的結果彈起來）。回傳 true＝這一格還在等
@@ -11247,7 +11252,7 @@ function vmSetupServe() {
   if (VM.wire) { VM.wire.order.reset(VM.srvSeq); VM.wire.history = []; VM.wire.event = null; VM.wire.dirty = true; }
   vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); if (VM.trailPts) VM.trailPts.length = 0; if (VM.trail) VM.trail.visible = false; VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
   const srv = vmServer(), s = vmSide(VM.srvTeam);
-  VM.serveAt = VM.t + 3.0 + Math.random() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
+  VM.serveAt = VM.t + 3.0 + gameRandom() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
   // AI 先站位：發球的人在底線後，其他人在自己半場
   for (const a of VM.ai.values()) {
     const sd = vmSide(a.team); a.blk = null;
@@ -11519,8 +11524,8 @@ function vmAiBlock(...a) { return aiEngine().vmAiBlock(...a); }   /* B3：AI 在
 //   正中又低＝容易攔死；打外側那隻手＝越用力越容易打手出界；擦過指尖＝彈大（彈高往攔網這邊後場飛，常常出界）；力道大＝可能打穿；其他＝撐起來
 function vbBlockOutcome(off, low, pow, skill) {
   const centered = off < 0.4, edge = off > 0.42;
-  if (low < 0.18 && Math.random() < 0.45 + 0.35 * pow) return 'top';
-  const pStuff = skill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (edge ? 0.1 + 0.6 * pow : 0.05) * (1.3 - 0.7 * low), pThrough = 0.32 * pow * (1.2 - skill), r = Math.random();
+  if (low < 0.18 && gameRandom() < 0.45 + 0.35 * pow) return 'top';
+  const pStuff = skill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (edge ? 0.1 + 0.6 * pow : 0.05) * (1.3 - 0.7 * low), pThrough = 0.32 * pow * (1.2 - skill), r = gameRandom();
   return r < pStuff ? 'stuff' : r < pStuff + pOut ? 'out' : r < pStuff + pOut + pThrough ? 'through' : 'soft';
 }
 // 照結果改球：plane＝攔網那一側的網面（球場座標 lx）、sd＝攔網那一隊在哪一側、hz＝雙手中心（lz）、e＝沿著網子的方向、n＝網子的法線；回傳那一下叫什麼
@@ -11530,17 +11535,17 @@ function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
   const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
   if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
   if (kind === 'out') {   // 打手出界：球擦到外側那隻手，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m
-    const side = Math.sign(lz - hz) || (Math.random() < 0.5 ? 1 : -1);
+    const side = Math.sign(lz - hz) || (gameRandom() < 0.5 ? 1 : -1);
     b.v.multiplyScalar(TOUCH_OUT.outKeep + TOUCH_OUT.outKeepPow * pow);
-    const vy = 1.2 + Math.random() * 1.6 + TOUCH_OUT.powVy * pow, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
-    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + Math.random() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.0, TOUCH_OUT.outLatMax[0] + TOUCH_OUT.outLatMax[1] * pow);
+    const vy = 1.2 + gameRandom() * 1.6 + TOUCH_OUT.powVy * pow, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
+    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + gameRandom() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.0, TOUCH_OUT.outLatMax[0] + TOUCH_OUT.outLatMax[1] * pow);
     b.v.x += ex * side * vlat; b.v.z += ez * side * vlat; b.v.y = vy;
     const lz2 = lz + (b.v.x * ex + b.v.z * ez) * t, lx2 = lx + (b.v.x * nx + b.v.z * nz) * t;
     return Math.abs(lz2) > 4.5 + BALL_R || Math.abs(lx2) > 9 + BALL_R ? '打手出界！' : '碰手了！';
   }
-  if (kind === 'top') { b.v.multiplyScalar(TOUCH_OUT.topKeep + TOUCH_OUT.topKeepPow * pow); b.v.y = TOUCH_OUT.topVy[0] + Math.random() * TOUCH_OUT.topVy[1] + TOUCH_OUT.powVy * pow; return '擦手彈大！'; }   // 擦過指尖：彈高，繼續往攔網這邊的後場飛
+  if (kind === 'top') { b.v.multiplyScalar(TOUCH_OUT.topKeep + TOUCH_OUT.topKeepPow * pow); b.v.y = TOUCH_OUT.topVy[0] + gameRandom() * TOUCH_OUT.topVy[1] + TOUCH_OUT.powVy * pow; return '擦手彈大！'; }   // 擦過指尖：彈高，繼續往攔網這邊的後場飛
   if (kind === 'through') { b.v.multiplyScalar(0.82); b.v.y -= 0.8; return '打穿攔網！'; }
-  b.v.multiplyScalar(0.25); b.v.y = 3 + Math.random() * 1.5; return '撐起來了';
+  b.v.multiplyScalar(0.25); b.v.y = 3 + gameRandom() * 1.5; return '撐起來了';
 }
 const BLK_FX = { stuff: 'stuff', soft: 'soft', through: 'through', out: 'out', top: 'touch' };
 // AI 攔網：球穿過 AI 雙手的位置才算；手頂＝站著 2.7 m＋跳起來的高度（最高點約 3.65 m，比完美助跑、在最高點扣的擊球點低一點：攻擊手跳得好就能打過手）
@@ -11646,7 +11651,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   VM.team = VM.rot.map((r) => r.slice()); VM.rot0 = VM.rot.map((r) => r.slice());
   VM.tactics = count === 6 && ROOM?.snapshot.tactics === 'rotation' ? 'rotation' : 'roles';
   vm6SyncRotationRoles();
-  VM.srvTeam = Math.random() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
+  VM.srvTeam = gameRandom() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
   for (const a of VM.ai.values()) { const f = vm6Spot(a.team, a.id, 'defense'); a.x = a.tx = f.x; a.z = a.tz = f.z; }
   VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } };
   mrecRoles();
@@ -11676,7 +11681,7 @@ function vm6NextSet() {
   VM.rot = VM.rot0.map((r) => r.slice()); VM.rotN = [1, 1]; VM.formC = {};
   vm6SyncRotationRoles();
   const deciding = VM.bestOf > 1 && VM.sets[0] + VM.sets[1] === VM.bestOf - 1;
-  VM.srvTeam = deciding ? (Math.random() < 0.5 ? 0 : 1) : 1 - VM.firstSrv; VM.firstSrv = VM.srvTeam;
+  VM.srvTeam = deciding ? (gameRandom() < 0.5 ? 0 : 1) : 1 - VM.firstSrv; VM.firstSrv = VM.srvTeam;
   vm6Swap(); vmSetupServe();
   vmSay(`第 ${VM.setNo} 局${deciding ? '（決勝局，先到 15 分）' : ''}・換場`, 'srv', 2600);
 }
@@ -12387,6 +12392,7 @@ const TUT_COACH = {
 
 // ---------------------------------------------------------------- B3：AI 引擎（engine/ai.js）要用到的遊戲東西，一律即時讀寫
 const AI_GAME = {
+  get gameRandom() { return gameRandom; },
   get BALL_R() { return BALL_R; },
   get JUMP_G() { return JUMP_G; },
   get NET() { return NET; },
@@ -12558,7 +12564,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o) => vmStart(c, sg, m, o), vm6Start: (c, sg, asg) => vm6Start(c, sg, asg), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), emo: (k) => emoDo(k), get netq() { return NETQ; }, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o, seats) => vmStart(c, sg, m, o, seats), vm6Start: (c, sg, asg, seats) => vm6Start(c, sg, asg, seats), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), emo: (k) => emoDo(k), get netq() { return NETQ; }, rng: GAME_RNG, vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (assets/data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {

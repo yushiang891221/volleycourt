@@ -1,5 +1,6 @@
 // ---------------------------------------------------------------- B3：AI 引擎（engine/ai.js）要用到的遊戲東西，一律即時讀寫
 const AI_GAME = {
+  get gameRandom() { return gameRandom; },
   get BALL_R() { return BALL_R; },
   get JUMP_G() { return JUMP_G; },
   get NET() { return NET; },

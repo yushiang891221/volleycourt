@@ -60,7 +60,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   VM.team = VM.rot.map((r) => r.slice()); VM.rot0 = VM.rot.map((r) => r.slice());
   VM.tactics = count === 6 && ROOM?.snapshot.tactics === 'rotation' ? 'rotation' : 'roles';
   vm6SyncRotationRoles();
-  VM.srvTeam = Math.random() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
+  VM.srvTeam = gameRandom() < 0.5 ? 0 : 1; VM.firstSrv = VM.srvTeam;   // 擲硬幣決定誰先發球
   for (const a of VM.ai.values()) { const f = vm6Spot(a.team, a.id, 'defense'); a.x = a.tx = f.x; a.z = a.tz = f.z; }
   VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } };
   mrecRoles();
@@ -90,7 +90,7 @@ function vm6NextSet() {
   VM.rot = VM.rot0.map((r) => r.slice()); VM.rotN = [1, 1]; VM.formC = {};
   vm6SyncRotationRoles();
   const deciding = VM.bestOf > 1 && VM.sets[0] + VM.sets[1] === VM.bestOf - 1;
-  VM.srvTeam = deciding ? (Math.random() < 0.5 ? 0 : 1) : 1 - VM.firstSrv; VM.firstSrv = VM.srvTeam;
+  VM.srvTeam = deciding ? (gameRandom() < 0.5 ? 0 : 1) : 1 - VM.firstSrv; VM.firstSrv = VM.srvTeam;
   vm6Swap(); vmSetupServe();
   vmSay(`第 ${VM.setNo} 局${deciding ? '（決勝局，先到 15 分）' : ''}・換場`, 'srv', 2600);
 }
