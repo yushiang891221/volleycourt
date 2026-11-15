@@ -4,7 +4,17 @@ const root=path.resolve(__dirname,'..'),gym=fs.readFileSync(path.join(root,'gym.
 const css=gym.match(/<style id="app-style">([\s\S]*?)<\/style>/)[1];
 const keyboard=gym.split('\n').find(s=>s.includes('id="wk-keys"'));
 const wheel=gym.slice(gym.indexOf('const SET_OPT ='),gym.indexOf('// Q/E choose the side'));
-const fixture=`<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><link rel="stylesheet" href="css/settings.css"><style>${css}\nbody{margin:0;background:#284347!important;color:#fff}#test-court{position:fixed;inset:25% 10%;border:2px solid #eee;background:#a7654e}#test-court:after{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:2px solid white}</style><div id="test-court"></div>${keyboard}<div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div><script src="js/settings.js"></script><script src="js/tutorial.js"></script><script>const walk={on:true},VM={on:false},$=id=>document.getElementById(id);const vbManualSetCancel=()=>{},roomSpectator=()=>false,vbSet=(...args)=>window.lastSet=args;${wheel};window.lesson=VBTutorialFactory.create();lesson.mount(document);lesson.start('move');</script></html>`;
+const coach=gym.slice(gym.indexOf('const TUT_COACH ='),gym.indexOf('// ---------------------------------------------------------------- loop',gym.indexOf('const TUT_COACH =')));
+const fixture=`<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><link rel="stylesheet" href="css/settings.css"><style>${css}\nbody{margin:0;background:#284347!important;color:#fff}#test-court{position:fixed;inset:25% 10%;border:2px solid #eee;background:#a7654e}#test-court:after{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:2px solid white}</style><div id="test-court"></div>${keyboard}<div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div><script src="js/settings.js"></script><script src="js/tutorial.js"></script><script>const walk={on:true},VM={on:false},$=id=>document.getElementById(id);const vbManualSetCancel=()=>{},roomSpectator=()=>false,vbSet=(...args)=>window.lastSet=args;${wheel};window.lesson=VBTutorialFactory.create({now:()=>window.lessonClock||0});lesson.mount(document);lesson.start('move');</script><script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const scene=new THREE.Scene(),BALL_R=.105,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,100);camera.position.set(6,8,10);camera.lookAt(0,0,0);
+const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.domElement.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1';document.body.prepend(renderer.domElement);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(12,9),new THREE.MeshBasicMaterial({color:0xa7654e}));floor.rotation.x=-Math.PI/2;scene.add(floor);
+${coach}
+TUT_COACH.ring=TUT_COACH.circle(new THREE.Vector3(0,0,0));TUT_COACH.progress(.5);TUT_COACH.trajectory(new THREE.Vector3(-3,3.25,0),new THREE.Vector3(6,1,0));
+window.preview={coach:TUT_COACH,render:()=>renderer.render(scene,camera)};preview.render();
+</script></html>`;
 let browser,ws,server;
 (async()=>{
   server=http.createServer((req,res)=>{
@@ -54,8 +64,9 @@ let browser,ws,server;
   await evaluate("dispatchEvent(new Event('blur'))");assert(await evaluate("!document.querySelector('#wk-keys .pressed')"));
   await evaluate("history.replaceState(null,'','/fixture');practiceKeysRender()");assert(await evaluate("document.getElementById('wk-keys').hidden"));
   await evaluate("history.replaceState(null,'','/fixture?practice=1');practiceKeysRender();VBSettings.open();document.getElementById('settings-tab-2').click()");
+  await evaluate('document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))');
   const controls=await evaluate(`(()=>{const p=document.querySelector('#settings-page-2'),k=p.querySelector('.control-keyboard');return {keys:[...k.querySelectorAll('kbd')].map(e=>e.textContent),width:k.getBoundingClientRect().width,overflow:k.scrollWidth>k.clientWidth,sliders:[...p.querySelectorAll('[data-pref]')].map(e=>e.dataset.pref)}})()`);
-  assert(controls.keys.includes('R')&&controls.keys.includes('Q')&&controls.keys.includes('E')&&controls.keys.includes('Ctrl'));assert(!controls.overflow);assert.equal(controls.keys.length,104);assert(!controls.sliders.includes('setCharge'));
+  assert(controls.keys.includes('R')&&controls.keys.includes('Q')&&controls.keys.includes('E')&&controls.keys.includes('Ctrl'));assert(!controls.overflow,JSON.stringify(controls));assert.equal(controls.keys.length,104);assert(!controls.sliders.includes('setCharge'));
   assert.equal(await evaluate('VBSettings.values.keys.q'),'KeyC');assert.equal(await evaluate('VBSettings.values.keys.b'),'KeyB');
   await evaluate("document.querySelector('[data-physical=KeyC]').click();document.querySelector('.vb-settings').dispatchEvent(new KeyboardEvent('keydown',{key:'z',code:'KeyZ',bubbles:true}))");
   assert.equal(await evaluate('VBSettings.values.keys.q'),'KeyZ');
@@ -64,6 +75,17 @@ let browser,ws,server;
   await evaluate("document.querySelector('[data-reset-keys]').click();VBSettings.update({fov:60})");
   assert.equal(await evaluate('VBSettings.values.fov'),85);assert.equal(await evaluate('VBSettings.values.keys.q'),'KeyC');
   fs.writeFileSync(path.join(output,'controls-keyboard-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  await evaluate("VBSettings.close();lesson.start('set');lesson.emit('set',{n:1,v:'high',menu:true})");
+  assert.equal(await evaluate("document.querySelectorAll('.vb-tut-progress i.done').length"),1);
+  assert.equal(await evaluate("document.querySelectorAll('.vb-tut-progress i').length"),3);
+  for(let i=0;i<100;i++){if(await evaluate('!!window.preview'))break;await new Promise(r=>setTimeout(r,100));}
+  assert(await evaluate('!!window.preview'),'Three.js preview loaded');
+  fs.writeFileSync(path.join(output,'tutorial-progress-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  for(let i=0;i<2;i++)await evaluate("lessonClock=(window.lessonClock||0)+900;lesson.frame({x:0,z:0,focused:true});lesson.emit('set',{n:1,v:'high',menu:true})");
+  assert.equal(await evaluate("document.querySelectorAll('.vb-tut-progress i.done').length"),3);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.vb-tut-panel')).backgroundColor"),'rgb(23, 36, 49)');
+  await evaluate('preview.coach.progress(1);preview.render()');
+  fs.writeFileSync(path.join(output,'tutorial-complete-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await evaluate("VBSettings.close();lesson.start('set')");
   assert(await evaluate("document.querySelector('.vb-tut-panel').getBoundingClientRect().right <= innerWidth"));

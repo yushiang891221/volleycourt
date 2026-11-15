@@ -464,7 +464,7 @@ function tutSnapshot() {
   const ct = vbCourt(), velocity = walk.vel || [0, 0];
   return { x: walk.x, z: walk.z, yaw: walk.yaw, pitch: walk.pitch,
     speed: Math.hypot(...velocity), sprint: (walk.keys.has('shift') || walk.joyRun) && Math.hypot(...velocity) > 0.1,
-    crouch: !!walk.crouch, air: !!walk.air, airBlock: !!walk.air?.block,
+    focused:!globalThis.document?.hidden && (locked() || !!walk.noLock), stamina: STA.v, crouch: !!walk.crouch, air: !!walk.air, airBlock: !!walk.air?.block,
     blkAim: walk.blkAim || 0, locked: locked(), tp: tpActive(), hold: !!walk.hold,
     nearNet: ct ? Math.abs(ct.lx) : null, onCourt: !!ct && Math.abs(ct.lx) <= 9 && Math.abs(ct.lz) <= 4.5,
     incoming: TUT_COACH.incoming() };
@@ -487,15 +487,19 @@ const TUT_COACH = {
       for (const d of [s, -s]) if (ok(px, lz + d * r)) return this.world(px, lz + d * r);
       return this.world(px > 4.8 ? px - r : px + r, lz);
     }
-    return this.world(clamp(px, 1.2, 8.5), clamp(lz, -4, 4));
+    const lanes=[-1.8,0,1.8], depths=[6,5,4];
+    return this.world(depths[this.rep||0],lanes[this.rep||0]*this.sg);
   },
   tossStep(now) {
     const t = this.toss, b = t.ball;
     if (!balls.includes(b)) { this.toss = null; return; }
+    if(t.receive){
+      if(b.v.y<0 && b.m.position.y<=3.25){const cp=b.m.position.clone(),v=t.target.clone().sub(cp).multiplyScalar(1/t.flight);v.y+=4.9*t.flight;vbLaunch(b,cp,v,'spike');this.trajectory(cp,v);this.hitUntil=now+450;this.toss=null;}return;
+    }
     if (!t.apex && b.v.y < 0) { t.apex = now; this.cj = now; }
     if (t.apex && b.m.position.y <= this.TOSS.hitY) {
       const v = this.world(-1, 0).sub(this.world(-2, 0)).multiplyScalar(this.TOSS.speed); v.y = -0.5;
-      vbLaunch(b, b.m.position.clone(), v, 'spike'); this.toss = null;
+      vbLaunch(b, b.m.position.clone(), v, 'spike'); this.trajectory(b.m.position,v); this.toss = null;
     }
   },
   face(av) { av.g.rotation.y = Math.atan2(walk.x - av.g.position.x, walk.z - av.g.position.z); },   // 角色面向玩家（角色朝向＝rotation.y 的 sin、cos 方向）
@@ -520,6 +524,33 @@ const TUT_COACH = {
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.67, 0.8, 48), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.035, p.z); ring.userData.noPick = true;
     scene.add(ring); this.objects.push(ring); return ring;
+  },
+  progress(value) {
+    const ring=this.ring;if(!ring)return;
+    if(!ring.userData.progress){
+      const arc=new THREE.Mesh(new THREE.RingGeometry(.67,.8,120),new THREE.MeshBasicMaterial({color:0x42dd88,side:THREE.DoubleSide,depthWrite:false}));
+      arc.rotation.x=-Math.PI/2;arc.userData.noPick=true;scene.add(arc);this.objects.push(arc);ring.userData.progress=arc;
+    }
+    const arc=ring.userData.progress;arc.position.copy(ring.position);arc.position.y+=.003;arc.visible=value>0;arc.geometry.setDrawRange(0,Math.floor(clamp(value,0,1)*120)*6);
+  },
+  trajectory(from,velocity) {
+    if(this.path){this.path.removeFromParent();this.path.geometry.dispose();this.path.material.dispose();this.objects=this.objects.filter(o=>o!==this.path);}
+    const points=[];
+    for(let i=0;i<=100;i++){const t=i*.035,p=from.clone().add(velocity.clone().multiplyScalar(t));p.y-=4.9*t*t;if(p.y<BALL_R){p.y=BALL_R;points.push(p);break;}points.push(p);}
+    this.path=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineDashedMaterial({color:0x6ce8ff,transparent:true,opacity:.9,dashSize:.22,gapSize:.1,depthWrite:false}));
+    this.path.computeLineDistances();this.path.userData.noPick=true;scene.add(this.path);this.objects.push(this.path);
+  },
+  moveTarget(index,rep=0){
+    if(index===1)return this.world([9,6,3][rep],0);
+    if(index===3){let p;for(let i=0;i<20;i++){p=this.world(2+Math.random()*6,(Math.random()-.5)*6);if(Math.hypot(p.x-walk.x,p.z-walk.z)>2)break;}return p;}
+    if(index===5)return this.world([5,6,4][rep],[-1.8,1.8,0][rep]*this.sg);
+    return new THREE.Vector3(walk.x,0,walk.z);
+  },
+  roundComplete(){if(this.id!=='move'){this.settled=true;this.next=performance.now()+1800;}},
+  repeat(id,index,rep){
+    this.rep=rep;
+    if(id==='move'){if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}const p=this.moveTarget(index,rep);this.ring.position.set(p.x,.035,p.z);return {x:p.x,z:p.z};}
+    this.next=Math.max(this.next===Infinity?0:this.next,performance.now()+900);return null;
   },
   avatar(p) {
     const av = makeAvatar('#30A46C', myChar());
@@ -653,10 +684,10 @@ const TUT_COACH = {
     this.owned.clear();
     for (const object of this.objects) {
       object.removeFromParent();
-      if (object.isMesh) { object.geometry.dispose(); object.material.dispose(); }
+      if (object.isMesh || object.isLine) { object.geometry.dispose(); object.material.dispose(); }
     }
     this.objects = []; this.mate = null; this.ring = null; this.ball = null; this.next = 0;
-    this.coach = null; this.toss = null; this.cj = 0;
+    this.coach = null; this.toss = null; this.cj = 0; this.path=null;this.hitUntil=0;
     if (this.held) {
       this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
       this.held = null;
@@ -679,14 +710,11 @@ const TUT_COACH = {
     return true;
   },
   step(id, index) {
-    this.clearStep(); this.id = id; this.index = index; this.paused = false;
+    this.clearStep(); this.id = id; this.index = index; this.rep=0; this.paused = false;
     this.settled = false; this.failed = false; this.next = performance.now() + 1200;
     if (id === 'move') {
-      const p = new THREE.Vector3(walk.x, 0, walk.z);
-      if (index === 1) p.add(new THREE.Vector3(-Math.sin(walk.yaw) * 4, 0, -Math.cos(walk.yaw) * 4));
-      if (index === 2) p.add(new THREE.Vector3(Math.cos(walk.yaw) * 3, 0, -Math.sin(walk.yaw) * 3));
-      if (index === 3) { this.place(8, -3); p.copy(this.world(2, 2)); }
-      this.ring = this.circle(p); return { x: p.x, z: p.z };
+      if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}
+      const p=this.moveTarget(index);this.ring=this.circle(p);this.progress(0);return {x:p.x,z:p.z};
     }
     this.place(id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
     if (id === 'serve') {
@@ -695,6 +723,10 @@ const TUT_COACH = {
       return null;
     }
     this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0));
+    if(id==='recv' && index>=2){
+      const base=this.world(-1.25,0);const stool=new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),new THREE.MeshStandardMaterial({color:0x876849}));
+      stool.position.copy(base);stool.position.y=.425;scene.add(stool);this.objects.push(stool);base.y=.85;this.coach.g.position.copy(base);
+    }
     if (id === 'block') {
       this.ring = this.circle(this.world(0.7, 0));
       if (index === 3) {
@@ -716,27 +748,36 @@ const TUT_COACH = {
   },
   feed() {
     const id = this.id;
-    const from = this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, id === 'block' ? this.TOSS.y0 : 2.2);
+    const hard=id==='recv' && this.index>=2;
+    const from = this.world(hard?-1.25:id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, hard?3.15:id === 'block' ? this.TOSS.y0 : 2.2);
     const mesh = newBallMesh(); mesh.position.copy(from);
     const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.failed = false; this.next = Infinity;
-    if (id === 'block') {
+    if(hard){
+      const target=this.recvTarget(this.index);target.y=BALL_R;
+      const flight=this.index===3?.65:.55;
+      vbLaunch(ball,from,new THREE.Vector3(0,2.8,0),'set');
+      this.toss={ball,receive:true,target,flight};
+      const contact=from.clone();contact.y=3.25;const v=target.clone().sub(contact).multiplyScalar(1/flight);v.y+=4.9*flight;this.trajectory(contact,v);
+    } else if (id === 'block') {
       /* 攔網：教練先把球往上拋（預兆），球落回扣球高度時起跳扣過來（frame 裡做） */
       vbLaunch(ball, from, new THREE.Vector3(0, this.TOSS.vy, 0), 'set');
       this.toss = { ball, t0: performance.now(), apex: 0 };
+      const cp=this.world(-2,0,this.TOSS.hitY),v=this.world(-1,0).sub(this.world(-2,0)).multiplyScalar(this.TOSS.speed);v.y=-.5;this.trajectory(cp,v);
     } else if (id === 'atk') {
       const target = this.world(1.45, 0);
-      vbSendSet(ball, target.x, target.z, 3.05, 1.1, 2, '教練', from);
+      vbSendSet(ball, target.x, target.z, 3.05, 1.1, 2, '教練', from);this.trajectory(ball.m.position,ball.v);
     } else {
       const target = id === 'recv' ? this.recvTarget(this.index) : new THREE.Vector3(walk.x - Math.sin(walk.yaw) * 0.3, 0, walk.z - Math.cos(walk.yaw) * 0.3);
       const velocity = id === 'recv' ? solveShot(from, target.x, target.z, this.court, -this.sg, this.index === 2 ? 1.25 : 1.65)
         : new THREE.Vector3((target.x - from.x) / 1.15, (2.05 - from.y) / 1.15 + 4.9 * 1.15, (target.z - from.z) / 1.15);
-      vbLaunch(ball, from, velocity, id === 'set' ? 'set' : 'bump');
+      vbLaunch(ball, from, velocity, id === 'set' ? 'set' : 'bump');this.trajectory(ball.m.position,ball.v);
     }
   },
   incoming() {
     if (this.id !== 'recv' || !this.ball || this.settled || this.ball.floorHit) return null;
+    if(this.toss?.receive)return {x:this.toss.target.x,z:this.toss.target.z,t:this.toss.flight};
     return vbPredict(this.ball.m.position, this.ball.v, BALL_R);
   },
   together() {
@@ -750,12 +791,14 @@ const TUT_COACH = {
       if (!this.settled && expected === name && ball === this.ball) this.drillFinish(performance.now());
       return false;
     }
+    if(['recv','set','atk','block'].includes(name) && ball && ball!==this.ball)return false;
     if (name === 'jump' && data.block && this.mate) this.mate.jumping = true;
     if (name === 'recvMiss') {
       if (!this.ball || this.settled || this.failed) return false;
       this.failed = true;
     }
     if (['recv', 'set', 'atk', 'block', 'serve'].includes(name)) {
+      if(ball && ball===this.ball && this.settled)return false;
       if (ball) this.owned.add(ball);
       if (name === 'serve') this.lastServe = performance.now();
       this.settled = true; this.next = performance.now() + (this.id === 'serve' ? 1500 : 2000);
@@ -775,10 +818,12 @@ const TUT_COACH = {
     if (this.coach) this.face(this.coach);   // 拋球／餵球的教練一直面向玩家
     if (this.toss) this.tossStep(now);
     if (this.coach && this.id === 'block') this.coachAnim(now);
+    if(this.coach && this.id==='recv' && this.index>=2)avDrive(this.coach,this.toss?AVP.serveToss:now<this.hitUntil?AVP.spikeHit:AVP.ready,.5,0,false);
     const incoming = this.incoming();
     if (this.id === 'recv' && this.ring) {
-      this.ring.visible = !!incoming;
+      this.ring.visible = !!incoming || this.settled;
       if (incoming) this.ring.position.set(incoming.x, 0.035, incoming.z);
+      const arc=this.ring.userData.progress;if(arc){arc.position.copy(this.ring.position);arc.position.y+=.003;}
     }
     if (this.ball && !this.settled && (this.ball.floorHit || this.ball.rest > 0.3 || !balls.includes(this.ball))) {
       this.settled = true; this.next = now + 2000;
