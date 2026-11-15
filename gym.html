@@ -6818,8 +6818,7 @@ function updateBalls(dt) {
   const H = state.building.H, segs = blockers().concat(solidSegs(true)), netCourts = vbNetCourts();
   for (const b of balls) {
     if (VM.on && VM.wire && b.room && !b.langzi) {
-      if (!VM.host) { vmWireRemoteStep(b, dt); continue; }
-      if (b.floorHit) { b.v.set(0, 0, 0); b.squash = 0; b.m.scale.set(1, 1, 1); continue; }
+      if (!VM.host && !b.wireLocal) { vmWireRemoteStep(b, dt); continue; }   /* 加入者：落地前照主機的球路；落地後（wireLocal）自己算彈跳滾動 */
     }
     if (b.watchOnly) { vmWatchBallFrame(b); continue; }
     if (b.snap) { const s2 = b.snap; s2.t += dt; const k = Math.min(1, s2.t / s2.dur), e = 1 - (1 - k) * (1 - k); b.m.position.lerpVectors(s2.from, s2.to, e); if (k >= 1) { b.snap = null; vbImpact(b, s2.kind, s2.q); } continue; }
@@ -6851,7 +6850,6 @@ function updateBalls(dt) {
         if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
       }
       if (b.floorEv) { b.floorEv = false; netFloorHit(b); }
-      if (VM.on && VM.wire && b === VM.ball && b.floorHit) { b.v.set(0, 0, 0); break; }
       if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
       for (const [x1, z1, x2, z2] of segs) {
         const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
@@ -8138,7 +8136,7 @@ function vmWireApply(b, data) {
   b.spinW = data.s ? new THREE.Vector3(...data.s) : null; b.acc = data.a ? new THREE.Vector3(...data.a) : null;
   b.float = data.f ? { t: data.f[0], w: data.f[1], ph: data.f[2], a: data.f[3] } : null;
   b.floorHit = data.floor || null; b.floorReport = !!data.floor; b.floorT = performance.now();
-  b.err = null; b.snap = null; b.waitFloor = null; b.floorEv = false; b.rest = 0;
+  b.err = null; b.snap = null; b.waitFloor = null; b.floorEv = false; b.rest = 0; b.wireLocal = false;   /* 新的球路來了：切回照主機的球 */
   b.jump0 = data.j || null; b.setFault = data.sf || null; b.room = true;
 }
 function vmWireGetBall() {
@@ -8229,6 +8227,7 @@ function vmWireReceive(d, from) {
   }
 }
 function vmWireRemoteStep(b, dt) {
+  const prevV = b.v.clone();   /* 落地前一刻的速度：落地後拿來彈跳 */
   const w = VM.wire, now = performance.now(), prediction = w.pending && b.wirePrediction;
   const frame = b.wireFrame || w.latest;
   if (!prediction && !frame?.ball) return;
@@ -8237,7 +8236,7 @@ function vmWireRemoteStep(b, dt) {
   const flight = VBMatchSync.sample(ball, age * VB.ts, BALL_R, age);
   b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
   if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
-  if (ball.floor) { b.m.position.set(ball.floor[0], BALL_R, ball.floor[1]); b.v.set(0, 0, 0); }
+  if (ball.floor) { b.m.position.set(ball.floor[0], BALL_R, ball.floor[1]); b.v.copy(prevV); if (b.v.y > -0.5) b.v.y = -0.5; b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; }   /* 落地後交給本機物理彈跳滾動，不再釘在落點 */
   if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
   if (b === VM.ball) vmTrailPush(b.m.position);
 }

@@ -315,8 +315,8 @@ function engine() {
     const expected = sync.sample({ p: [0,8,0], v: [12,4,-3], a: [0,-4.5,0] }, .4 * c.VB.ts);
     assert(b.m.position.distanceTo(new Vector(...expected.p)) < 1e-8, 'authority and receiver agree at ' + fps + ' FPS');
     b.m.position.set(0, .15, 0); b.v.set(1, -10, 0); c.updateBalls(.05);
-    assert(b.floorHit); assert.equal(b.m.position.y, c.BALL_R); assert.equal(b.v.length(), 0);
-    c.updateBalls(.1); assert.equal(b.m.position.y, c.BALL_R, 'authority does not resurrect grounded ball');
+    assert(b.floorHit); assert(Math.abs(b.floorHit[0]) < 0.2); assert(b.v.y > 0, '落地後照常彈起來，不再停在落點');   /* 2026-11-15 使用者要求 */
+    { const first = b.floorHit.slice(); c.updateBalls(.1); c.updateBalls(.1); assert.deepEqual(b.floorHit, first, '彈跳之後，判分用的第一次落點不變'); }
   }
   const { c } = engine(); c.vmTrailPush = () => {}; c.VB.ts = 1;
   c.state.items = [{ id: 'net', type: 'vb', x: 0, z: 0, rot: 0 }];

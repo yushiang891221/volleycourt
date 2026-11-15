@@ -94,7 +94,8 @@ await check('physics, point scoring, rotation and match transport unchanged; tou
    for(let i=1;i<lines.length;i++){const body=lines.slice(0,i).join('\n');try{new vm.Script(body);return body;}catch{}}
    throw Error(name);
  };
- for(const name of ['updateBalls','vmPoint','vm6Rotate','vm6Overlap','netOnMessage','netTick','vmWireClaim','vmWireReceive'])assert.equal(fn(gym,name),fn(old,name),name);
+ /* updateBalls：2026-11-15 使用者要求球落地後照常彈跳滾動（不再停在落點），行為改由 verify-web006 檢查 */
+ for(const name of ['vmPoint','vm6Rotate','vm6Overlap','netOnMessage','netTick','vmWireClaim','vmWireReceive'])assert.equal(fn(gym,name),fn(old,name),name);
 });
 console.log(`${checks} checks passed${staged?' (PREPARED FILES; NOT YET APPLIED)':''}`);
 })().catch(e=>{console.error(e);process.exitCode=1;});
