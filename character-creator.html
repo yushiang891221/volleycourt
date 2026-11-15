@@ -4,8 +4,8 @@
 </head><body style="margin:0">
 <script type="module">
 // 單獨測試捏臉畫面用。?mode=edit 看「調整外觀」版；?cat=hair 一開始停在哪個部位（截圖用）
-import { openCreator } from './creator.js';
-import { encodeLook, decodeLook } from './avatar-toy.js';
+import { openCreator } from './js/creator.js';
+import { encodeLook, decodeLook } from './js/avatar-toy.js';
 const Q = new URLSearchParams(location.search);
 let saved = null; try { saved = localStorage.getItem('vb.look'); } catch {}
 const open = () => openCreator({

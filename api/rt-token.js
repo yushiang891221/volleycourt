@@ -13,7 +13,7 @@ function send(res, code, body) {
 
 module.exports = async (req, res) => {
   try {
-    const { verifiedPlayer } = await import('../server/verify-player.mjs');
+    const { verifiedPlayer } = await import('../server/shared/verify-player.mjs');
     const token = /^Bearer (\S+)$/i.exec(req.headers.authorization || '')?.[1];
     if (!await verifiedPlayer(token)) return send(res, 401, {error: 'login required'});
   } catch { return send(res, 503, {error: 'authentication unavailable'}); }

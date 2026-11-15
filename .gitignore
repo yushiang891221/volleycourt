@@ -1,7 +1,11 @@
-models/*.blend
-models/*.blend1
-models/shots/
-blender/__pycache__/
+# 建模原始檔與截圖（很大，只放本機）
+art/models-src/
+art/shots/
+art/blender/__pycache__/
+# 伺服器套件
+node_modules/
+server/**/.wrangler/
+server/**/.wrangler-config/
 
 # Codex 執行紀錄（很大、只在本機看）
 docs/codex工作單/*.log

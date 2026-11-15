@@ -4,22 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Let's Play｜遊戲大廳</title>
-<link rel="icon" type="image/png" sizes="32x32" href="img/brand/favicon-32.png">
-<link rel="icon" type="image/png" sizes="64x64" href="img/brand/favicon-64.png">
-<link rel="apple-touch-icon" href="img/brand/apple-touch-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/img/brand/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/img/brand/apple-touch-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="lobby.css">
-  <link rel="stylesheet" href="settings.css">
-  <link rel="stylesheet" href="intro.css">
+  <link rel="stylesheet" href="css/lobby.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/intro.css">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-  <script src="settings.js" defer></script>
-  <script src="lobby-client.js" defer></script>
-  <script src="intro.js" defer></script>
-  <script type="module" src="session-guard.js"></script>
-  <script type="module" src="account-line.js"></script>
-  <script src="lobby.js" defer></script>
+  <script src="js/settings.js" defer></script>
+  <script src="js/lobby-client.js" defer></script>
+  <script src="js/intro.js" defer></script>
+  <script type="module" src="js/session-guard.js"></script>
+  <script type="module" src="js/account-line.js"></script>
+  <script src="js/lobby.js" defer></script>
 </head>
 <body class="intro-active">
 <dialog id="intro" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
@@ -42,7 +42,7 @@
 </script>
 <div id="lobby-shell" inert>
 <header class="top panel">
-  <div class="brand"><img class="logo logo-img" src="img/brand/favicon-64.png" alt=""><div><div class="brand-line"><h1>Let's Play</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
+  <div class="brand"><img class="logo logo-img" src="assets/img/brand/favicon-64.png" alt=""><div><div class="brand-line"><h1>Let's Play</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
   <div class="actions">
     <button class="orange" id="create"><span data-icon="plus"></span>開啟房間</button>
     <button class="green" id="practice"><span data-icon="court"></span>練習模式</button>
@@ -90,7 +90,7 @@
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
 <div id="toast" role="status" hidden></div>
 </div>
-<script type="module" src="./player-menu.js"></script>
+<script type="module" src="js/player-menu.js"></script>
 <dialog id="lobby-news" aria-labelledby="lobby-news-title">
   <h2 id="lobby-news-title"><span aria-hidden="true">📣</span> 大廳公告</h2>
   <p class="news-date">版本更新日期　<time datetime="2026-11-14">2026 年 11 月 14 日</time></p>

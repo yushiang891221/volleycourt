@@ -1,0 +1,16 @@
+[Unit]
+Description=volleycourt realtime server
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/volleycourt
+ExecStart=/usr/bin/node server/rt/server.mjs
+Environment=LOBBY_FILE=/var/lib/volleycourt/lobby.json
+Restart=always
+RestartSec=2
+User=volley
+StateDirectory=volleycourt
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

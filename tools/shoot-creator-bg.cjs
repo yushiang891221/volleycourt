@@ -79,9 +79,9 @@ if (require.main === module) withBrowser(async ({ send, waitFor, origin, evaluat
   await send('Page.navigate', { url: `${origin}/gym.html?site=bs-shenjing&shot=creator` });
   await waitFor('window.__creatorShot?.ready');
   const { data } = await send('Page.captureScreenshot', { format: 'jpeg', quality: 88 });
-  fs.mkdirSync(path.join(root, 'assets'), { recursive: true });
-  fs.writeFileSync(path.join(root, 'assets/creator-bg.jpg'), Buffer.from(data, 'base64'));
-  console.log('已儲存 assets/creator-bg.jpg (2560×1440)', await evaluate('window.__creatorShot'));
+  fs.mkdirSync(path.join(root, 'assets', 'img'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'assets/img/creator-bg.jpg'), Buffer.from(data, 'base64'));
+  console.log('已儲存 assets/img/creator-bg.jpg (2560×1440)', await evaluate('window.__creatorShot'));
 }).catch(error => { console.error(error); process.exitCode = 1; });
 
 module.exports = { withBrowser };

@@ -1,10 +1,14 @@
+# 不用放上網站的東西（網站只需要：網頁、js、css、assets、api、server/shared）
 tools/
-rt-worker/
+tests/
+art/
 docs/
+supabase/
+server/rt/
+server/cloudflare-legacy/
 .dbg/
 README.md
-部署說明.md
-# Legacy reference datasets are not needed by the fixed game venue.
-data/criteria.json
-data/map.json
-data/venues.json
+# 舊的企劃資料（遊戲用不到）
+assets/data/criteria.json
+assets/data/map.json
+assets/data/venues.json
