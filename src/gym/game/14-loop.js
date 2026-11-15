@@ -26,11 +26,21 @@ for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'click', 'to
 addEventListener('resize', () => window.wakeRender(400));
 // 顯示 FPS（設定 → 畫面）：每 0.5 秒更新一次，也記這段時間最慢的一格（卡頓）
 const FPS = { n: 0, t0: 0, worst: 0, last: 0, el: null };
+// 連線量測一行：延遲（到別人的單程，量 ping 的一半）、每秒收／送幾筆、斷糧（別人的動作緩衝空掉）佔幾 %；線路是台北伺服器還是 Ably
+function netStatLine(ms) {
+  if (!NET.on) return '';
+  const lat = NET.lat.size ? Math.round([...NET.lat.values()].reduce((a, b) => a + b, 0) / NET.lat.size) : null;
+  const inN = NETSTAT.inN - NETSTAT.in0, outN = NETQ.sent - NETSTAT.out0, starve = NETSTAT.starve - NETSTAT.starve0, peers = Math.max(1, NET.peers.size);
+  NETSTAT.in0 = NETSTAT.inN; NETSTAT.out0 = NETQ.sent; NETSTAT.starve0 = NETSTAT.starve;
+  const sec = ms / 1000, frames = Math.max(1, FPS.n) * peers, kind = NET.tx?.kind || '', line = /^cf/.test(kind) ? '台北' : /ably/.test(kind) ? 'Ably' : '本機測試';
+  return `
+${line}・延遲 ${lat == null ? '量測中' : lat + ' ms'}・收 ${Math.round(inN / sec)}／秒・送 ${Math.round(outN / sec)}／秒・斷糧 ${Math.round(starve / frames * 100)}%`;
+}
 function fpsTick(now) {
   if (!VBSettings.values.showFps) { if (FPS.el) FPS.el.hidden = true; FPS.last = now; return; }
-  if (!FPS.el) { FPS.el = document.createElement('div'); FPS.el.style.cssText = 'position:fixed;right:14px;bottom:70px;z-index:50;padding:4px 10px;border-radius:6px;background:#0b1220d9;color:#9ff0c8;font:13px/1.4 monospace;pointer-events:none'; document.body.appendChild(FPS.el); }
+  if (!FPS.el) { FPS.el = document.createElement('div'); FPS.el.style.cssText = 'white-space:pre;text-align:right;position:fixed;right:14px;bottom:70px;z-index:50;padding:4px 10px;border-radius:6px;background:#0b1220d9;color:#9ff0c8;font:13px/1.4 monospace;pointer-events:none'; document.body.appendChild(FPS.el); }
   FPS.el.hidden = false; if (FPS.last) FPS.worst = Math.max(FPS.worst, now - FPS.last); FPS.last = now; FPS.n++;
-  if (!FPS.t0) FPS.t0 = now; else if (now - FPS.t0 >= 500) { FPS.el.textContent = `FPS ${Math.round(FPS.n * 1000 / (now - FPS.t0))}・最慢一格 ${Math.round(FPS.worst)} ms`; FPS.n = 0; FPS.t0 = now; FPS.worst = 0; }
+  if (!FPS.t0) FPS.t0 = now; else if (now - FPS.t0 >= 500) { FPS.el.textContent = `FPS ${Math.round(FPS.n * 1000 / (now - FPS.t0))}・最慢一格 ${Math.round(FPS.worst)} ms` + netStatLine(now - FPS.t0); FPS.n = 0; FPS.t0 = now; FPS.worst = 0; }
 }
 import('./js/friends.js').then(({ startBadge }) => startBadge(() => ROOM?.snapshot.flow.phase === 'playing'));
 function tick(now) { requestAnimationFrame(tick); fpsTick(now || performance.now()); drawFrame(false); }

@@ -70,6 +70,8 @@ const NET_COLORS = ['#F2B705', '#E5484D', '#3E63DD', '#30A46C', '#8E4EC6', '#F76
 function loadScript(src) { return new Promise((ok, bad) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = ok; s2.onerror = bad; document.head.appendChild(s2); }); }
 // 流量保護：比賽每分鐘 660 則、其他時間 240 則；超量才放慢位置更新。
 const NETQ = { ts: [], slow: 1, warned: false, sent: 0 };
+// 連線量測（設定 → 顯示 FPS 時一起顯示）：收到幾筆、斷糧幾格（別人的動作緩衝空了）
+const NETSTAT = { inN: 0, starve: 0, in0: 0, out0: 0, starve0: 0 };
 function netCount() {
   const now = performance.now(); NETQ.ts.push(now); NETQ.sent++; while (NETQ.ts.length && now - NETQ.ts[0] > 60000) NETQ.ts.shift();
   const lim = (VM.on ? (VM.wire ? 1440 : 660) : 240) * (netFast() ? 4 : 1), n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
@@ -1134,7 +1136,7 @@ function netPeerSnapshot(p2, d, now) {
 function netPeerPlayback(p2, dt, now) {
   if (p2.keyEmote) return emoKeyPeer(p2, now);
   const buf = p2.buf, latest = buf[buf.length - 1];
-  const delay = clamp(1.5 * (p2.netGap || 150), typeof netFast === 'function' && netFast() ? 60 : 120, 300);   /* 台北伺服器：每 50 ms 一筆，緩衝 75 ms 就夠 */
+  const delay = clamp(1.5 * (p2.netGap || 150), typeof netFast === 'function' && netFast() ? 100 : 120, 300);   /* 台北伺服器：每 66 ms 一筆；緩衝下限 100 ms，網路偶爾慢一點也不會斷糧（2026-11-15 玩家回報 60 ms 會卡） */
   p2.netDelay = (p2.netDelay ?? delay) + (delay - (p2.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
   const time = Math.max(p2.netTime ?? -Infinity, now - p2.netDelay); p2.netTime = time;
   let l = buf[0], r = l;
@@ -1145,6 +1147,7 @@ function netPeerPlayback(p2, dt, now) {
     x += (r.x - x) * f; z += (r.z - z) * f;
     yaw += Math.atan2(Math.sin(r.yaw - yaw), Math.cos(r.yaw - yaw)) * f;
   } else if (time > l.t) {
+    if (typeof NETSTAT === 'object') NETSTAT.starve++;   /* 連線量測：緩衝裡沒有新資料，只能往前推算（看起來會卡） */
     /* Bound missing-stop overshoot to 4 cm as well as 0.2 seconds. */
     const age = Math.min(0.2, (time - l.t) / 1000), speed = Math.hypot(l.vx, l.vz);
     const span = Math.min(age, 0.04 / Math.max(speed, 0.001));
@@ -1306,7 +1309,7 @@ function vmWireTick() {
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null;
   if (b) w.history.push({ at: now, seq: w.order.seq, p: b.m.position.toArray(), floor: !!b.floorHit });
   while (w.history.length && w.history[0].at < now - 700) w.history.shift();
-  if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? (typeof netFast === 'function' && netFast() ? 50 : 100) : (typeof netFast === 'function' && netFast() ? 200 : 400))) return;
+  if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? (typeof netFast === 'function' && netFast() ? 66 : 100) : (typeof netFast === 'function' && netFast() ? 200 : 400))) return;
   w.sent = now; w.dirty = false;
   NET.tx.publish('match-frame', { session: w.session, frame: ++w.frame, round: w.order.round, seq: w.order.seq, at: now, time: VM.t, ai: vmStatePayload().ai, ball: b ? vmWireBall(b) : null, event: w.event, sc: VM.sc, phase: VM.phase, server: vmServer(), tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null });
 }
@@ -1321,6 +1324,7 @@ function vmJudgePenetration() {
 }
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
+  if (typeof NETSTAT === 'object') NETSTAT.inN++;   /* 連線量測：每秒收到幾筆 */
   if (VM.on && VM.wire) {
     if (t === 'match-claim') { vmWireClaim(d, from); return; }
     if (t === 'match-frame') { vmWireReceive(d, from); return; }
@@ -1464,8 +1468,8 @@ function netTick(dt, now) {
   if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
   const rally = VM.on && VM.phase === 'rally';
   const fast = netFast();
-  const gap = fast ? (toss ? 50 : document.hidden ? 10000 : rally ? (moved ? 50 : 300) : moved ? 100 : 1000) : toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
-  if (NET.forceSt || (poseChanged && now - NET.lastSt > (fast ? 40 : 120)) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
+  const gap = fast ? (toss ? 66 : document.hidden ? 10000 : rally ? (moved ? 66 : 300) : moved ? 100 : 1000) : toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
+  if (NET.forceSt || (poseChanged && now - NET.lastSt > (fast ? 60 : 120)) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = !VM.wire && NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > (VM.on && VM.phase === 'rally' ? 400 : 1000) * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
