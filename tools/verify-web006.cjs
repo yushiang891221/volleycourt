@@ -303,6 +303,30 @@ function engine() {
   return { c, api, walk, tick, until, advance, setTime: n => { time = n; } };
 }
 
+// Protocol-2 authority uses the actual swept-collision engine, not just the receiver sampler.
+{
+  const sync = require('../match-sync.js');
+  for (const fps of [30, 60, 144]) {
+    const { c } = engine(); c.state.items = []; c.vmTrailPush = () => {};
+    const b = { m: c.newBallMesh(), v: new Vector(12, 4, -3), acc: new Vector(0, -4.5, 0), rest: 0, room: true };
+    b.m.position.set(0, 8, 0); c.balls.push(b); Object.assign(c.VM, { on: true, host: true, wire: {}, ball: b });
+    const steps = Math.round(fps * .4), dt = .4 / steps;
+    for (let i = 0; i < steps; i++) c.updateBalls(dt);
+    const expected = sync.sample({ p: [0,8,0], v: [12,4,-3], a: [0,-4.5,0] }, .4 * c.VB.ts);
+    assert(b.m.position.distanceTo(new Vector(...expected.p)) < 1e-8, 'authority and receiver agree at ' + fps + ' FPS');
+    b.m.position.set(0, .15, 0); b.v.set(1, -10, 0); c.updateBalls(.05);
+    assert(b.floorHit); assert.equal(b.m.position.y, c.BALL_R); assert.equal(b.v.length(), 0);
+    c.updateBalls(.1); assert.equal(b.m.position.y, c.BALL_R, 'authority does not resurrect grounded ball');
+  }
+  const { c } = engine(); c.vmTrailPush = () => {}; c.VB.ts = 1;
+  c.state.items = [{ id: 'net', type: 'vb', x: 0, z: 0, rot: 0 }];
+  const b = { m: c.newBallMesh(), v: new Vector(-40, 0, 0), rest: 0, room: true, wireCatchup: .2 };
+  b.m.position.set(1, 2, 0); c.balls.push(b); Object.assign(c.VM, { on: true, host: true, wire: {}, ball: b });
+  c.NET.ownBall = true; c.updateBalls(1 / 60);
+  assert(b.m.position.x > 0 && b.v.x >= 0, 'fast remote spike catch-up must sweep through net collision');
+  console.log('PASS 新同步：實際主機物理與客戶端球路一致、落地停球、延遲快扣不穿網');
+}
+
 const game = engine(), { c, api, walk, tick, until, advance } = game;
 for (const mode of ['atk', 'set', 'block', 'defense']) {
   const sim = engine(), env = sim.c, coach = env.coach;

@@ -168,22 +168,23 @@ for (const scenario of ['match', 'continuous']) for (const host of [true, false]
   assert(current.total <= old.total * 1.01); assert.deepEqual(Array.from(current.counts), Array.from(old.counts));
   console.log(JSON.stringify({ scenario, host, old, current, changePercent: (current.total / old.total - 1) * 100 }));
 }
-assert.equal(block(gym, 'function vmAiSnapshot(', 'function vmRenderAi('), block(baseline, 'function vmAiSnapshot(', 'function vmRenderAi('));
-/* Physics integration and collision rules remain byte-identical outside the correction block. */
-function withoutCorrection(source) {
-  /* WEB-021 的互動入口鎖定由 verify-web021 驗證，保留其餘逐字比較。 */
-  source = source.replace(/\n  if \(walk\.emote\?\.keyframes\) return;/g, '');
-  /* WEB-023 的單行掛勾（等落地、腳步聲、近身判斷）由 verify-web023 驗證，其餘逐字比較。 */
-  source = source.replace(/^.*WEB-023.*\n/gm, '').replaceAll(' b.waitFloor = null;', '');
-
-  /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
-  const beforeWeb020 = t => t
-    .replace("  if (b.langzi && VM.on) return; /* WEB-022 裝飾球排除自由推球。 */\n", '')
-    .replace(' b.floorEv = true;', '')
-    .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
-    .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');
-  return beforeWeb020(block(source, 'function updateBalls(', 'const NET =')).replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
+/* Compare legacy playback behavior rather than requiring the whole source to stay byte-identical.
+   Spectator playback and protocol 2 intentionally have additional branches. */
+function aiPlaybackResult(source) {
+  const c = { VM: {}, clamp: (n,a,b) => Math.max(a,Math.min(b,n)), netLat: () => .1 };
+  vm.createContext(c); vm.runInContext(block(source, 'function vmAiSnapshot(', 'function vmRenderAi('), c);
+  const actor = {}; let x = 0, z = 0; const positions = [];
+  for (let frame = 0; frame < 240; frame++) {
+    const now = frame * 1000 / 60;
+    if (frame % 9 === 0) c.vmAiSnapshot(actor, ['ai', now / 1000 * 3, 0, 0, 3, .8, 0, null, now / 1000], now);
+    [x,z] = c.vmAiPlayback(actor, 1/60, now, x, z); positions.push([x,z,actor.y]);
+  }
+  return positions;
 }
-assert.equal(withoutCorrection(gym), withoutCorrection(baseline));
+assert.deepEqual(aiPlaybackResult(gym), aiPlaybackResult(baseline));
+/* Real physics and the new match protocol have dedicated behavioral regression suites. */
+for (const test of ['verify-web006.cjs', 'verify-match-sync.cjs']) {
+  cp.execFileSync(process.execPath, [path.join(__dirname, test)], { encoding: 'utf8' });
+}
 assert(gym.includes('if (toss) st.ts = 1;')); assert(gym.includes('tm: +(now / 1000).toFixed(2)'));
 console.log('WEB-018 passed');

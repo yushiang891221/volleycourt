@@ -5,6 +5,7 @@
 <meta charset="utf-8">
 <link rel="stylesheet" href="settings.css">
 <script src="room-chat.js"></script>
+<script src="match-sync.js"></script>
 <link rel="stylesheet" href="room-chat.css">
 <script src="settings.js"></script>
 <script src="room-settings.js"></script>
@@ -6798,14 +6799,21 @@ function updateBalls(dt) {
   if (!balls.length || !dt) return;
   const H = state.building.H, segs = blockers().concat(solidSegs(true)), netCourts = vbNetCourts();
   for (const b of balls) {
+    if (VM.on && VM.wire && b.room && !b.langzi) {
+      if (!VM.host) { vmWireRemoteStep(b, dt); continue; }
+      if (b.floorHit) { b.v.set(0, 0, 0); b.squash = 0; b.m.scale.set(1, 1, 1); continue; }
+    }
     if (b.watchOnly) { vmWatchBallFrame(b); continue; }
     if (b.snap) { const s2 = b.snap; s2.t += dt; const k = Math.min(1, s2.t / s2.dur), e = 1 - (1 - k) * (1 - k); b.m.position.lerpVectors(s2.from, s2.to, e); if (k >= 1) { b.snap = null; vbImpact(b, s2.kind, s2.q); } continue; }
     if (b.rest > 2) continue;
     if (b.waitFloor && ballWaitFloor(b)) continue;   /* WEB-023：別人負責的球先落地，停住等回報 */
     // 每一小步最多走 4 cm：快的扣球也不會一步跨過網子或牆
-    const steps = clamp(Math.ceil((b.v.length() * dt * VB.ts) / 0.04), 3, 16), h = (dt * VB.ts) / steps;
+    const catchup = Math.min(b.wireCatchup || 0, .35); b.wireCatchup = 0;
+    const flightDt = dt + catchup;
+    const steps = clamp(Math.ceil((b.v.length() * flightDt * VB.ts) / 0.04), 3, catchup ? 512 : 96), h = (flightDt * VB.ts) / steps;
     for (let k = 0; k < steps; k++) {
       const p = b.m.position, ox = p.x, oy = p.y, oz = p.z;
+      const ovx = b.v.x, ovy = b.v.y, ovz = b.v.z;
       b.v.y -= 9.8 * h;
       if (b.acc) b.v.addScaledVector(b.acc, h);
       if (b.float) {
@@ -6814,6 +6822,7 @@ function updateBalls(dt) {
         b.v.x += sx * side * F.a * h; b.v.z += sz * side * F.a * h; b.v.y += up * F.a * 0.15 * h;
       }
       p.addScaledVector(b.v, h);
+      if (VM.on && VM.wire && b === VM.ball) { p.x += (ovx - b.v.x) * h * .5; p.y += (ovy - b.v.y) * h * .5; p.z += (ovz - b.v.z) * h * .5; }
       if (p.y < BALL_R) {
         if (!b.floorHit) { b.floorHit = [p.x, p.z]; b.floorT = performance.now(); b.floorEv = true; }
         if (NET.on && b.room && !NET.ownBall && !b.floorReport && !b.waitFloor && b.v.y < 0) { p.y = BALL_R; b.waitFloor = { t: performance.now(), v: b.v.clone() }; b.v.set(0, 0, 0); b.err = null; b.acc = null; b.float = null; break; }   /* WEB-023：先停住等回報 */
@@ -6824,6 +6833,7 @@ function updateBalls(dt) {
         if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
       }
       if (b.floorEv) { b.floorEv = false; netFloorHit(b); }
+      if (VM.on && VM.wire && b === VM.ball && b.floorHit) { b.v.set(0, 0, 0); break; }
       if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
       for (const [x1, z1, x2, z2] of segs) {
         const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
@@ -6861,9 +6871,10 @@ function updateBalls(dt) {
     }
     if (b.err) netSmoothBall(b, dt, netCourts);
     const sp = Math.hypot(b.v.x, b.v.z);
+    if (b.netEv && VM.on && VM.wire) { b.netEv = false; VM.wire.dirty = true; }
     if (b.netEv) { b.netEv = false; if (NET.on && NET.ownBall && b.room) { const m = netBallMsg(b); m.n = 1; NET.tx.publish('ball', m); NET.lastBall = performance.now(); } }   // 碰網：負責這顆球的人馬上把結果送出去
-    if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * dt); }   // 空中：照擊球時的旋轉
-    else { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 落地：滾
+    if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * flightDt); }   // 空中：照擊球時的旋轉
+    else if (!(VM.on && VM.wire && b.room) || b.m.position.y <= BALL_R + 0.03) { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 新同步空中零旋轉／飄球不能套用地面滾動。
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
     if (VM.on && b === VM.ball) vmTrailPush(b.m.position);
     if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
@@ -6999,7 +7010,7 @@ function loadScript(src) { return new Promise((ok, bad) => { const s2 = document
 const NETQ = { ts: [], slow: 1, warned: false, sent: 0 };
 function netCount() {
   const now = performance.now(); NETQ.ts.push(now); NETQ.sent++; while (NETQ.ts.length && now - NETQ.ts[0] > 60000) NETQ.ts.shift();
-  const lim = VM.on ? 660 : 240, n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
+  const lim = VM.on ? (VM.wire ? 1440 : 660) : 240, n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
   if (slow > NETQ.slow && !NETQ.warned) { NETQ.warned = true; console.info('[即時] 訊息太多，自動放慢位置更新'); }
   NETQ.slow = slow;
 }
@@ -8094,13 +8105,171 @@ function netPeerPlayback(p2, dt, now) {
   }
   return [x, z, yaw, y];
 }
+// Match protocol 2: only the host advances the accepted touch sequence.
+function vmWireInit(host, data = VM.startData) {
+  const session = host ? `${NET.me}:${Date.now()}:${Math.random().toString(36).slice(2)}` : data.session;
+  VM.wire = { session, order: host ? new VBMatchSync.Authority(session) : new VBMatchSync.Receiver(session), frame: 0, sent: -Infinity, dirty: true, history: [], seen: new Map(), offset: null, pending: null, event: null, eventSeen: '', serial: 0 };
+  if (host) Object.assign(data, { wire: 2, session });
+  NET.ownBall = host; NET.hitBy = host ? NET.me : VM.hostId;
+}
+function vmWireBall(b) {
+  return { p: b.m.position.toArray(), v: b.v.toArray(), q: b.m.quaternion.toArray(), s: b.spinW?.toArray(), a: b.acc?.toArray(), f: b.float ? [b.float.t, b.float.w, b.float.ph, b.float.a] : undefined, floor: b.floorHit?.slice(), sf: b.setFault, j: b.jump0 };
+}
+function vmWireApply(b, data) {
+  b.m.position.set(...data.p); b.v.set(...data.v); b.m.quaternion.set(...(data.q || [0, 0, 0, 1]));
+  b.spinW = data.s ? new THREE.Vector3(...data.s) : null; b.acc = data.a ? new THREE.Vector3(...data.a) : null;
+  b.float = data.f ? { t: data.f[0], w: data.f[1], ph: data.f[2], a: data.f[3] } : null;
+  b.floorHit = data.floor || null; b.floorReport = !!data.floor; b.floorT = performance.now();
+  b.err = null; b.snap = null; b.waitFloor = null; b.floorEv = false; b.rest = 0;
+  b.jump0 = data.j || null; b.setFault = data.sf || null; b.room = true;
+}
+function vmWireGetBall() {
+  let b = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find(q => q.room && !q.langzi);
+  if (!b) { const m = newBallMesh(); b = { m, v: new THREE.Vector3(), rest: 0, room: true }; m.userData.ball = b; ballsGroup.add(m); balls.push(b); }
+  VM.ball = b; return b;
+}
+function vmWireHit(b, kind, quality) {
+  const w = VM.wire;
+  if (vmTeamOf(vmMe()) < 0 && !VM.host) return;
+  if (!['serve', 'bump', 'set', 'spike', 'hit', 'tip', 'block'].includes(kind)) return;
+  b.room = true; b.floorHit = null; b.floorReport = null; b.waitFloor = null; b.err = null;
+  const data = vmWireBall(b);
+  if (walk.air?.x0 != null) data.j = [walk.air.x0, walk.air.z0];
+  if (VM.host) {
+    w.order.seq++; NET.hitN = w.order.seq; NET.ownBall = true; NET.hitBy = NET.me;
+    w.event = { seq: w.order.seq, actor: vmMe(), kind, quality, p: data.p }; w.dirty = true;
+  } else {
+    // Predict the local action immediately, but never claim authority over its result.
+    if (w.pending) return;
+    const now = performance.now(), request = { session: w.session, round: w.order.round, base: w.order.seq, id: ++w.serial, at: now + (w.offset || 0), kind, quality, ball: data };
+    VM.ball = b; b.wireRemote = true;
+    w.pending = { request, since: now, sent: now }; b.wirePrediction = { ball: data, at: now };
+    NET.tx.publish('match-claim', request);
+  }
+}
+function vmWireClaim(d, from) {
+  const w = VM.wire, now = performance.now();
+  if (!VM.host || !d || d.session !== w.session || vmTeamOf(from) < 0 || !Number.isInteger(d.id)) return;
+  const key = `${from}:${d.id}`;
+  if (w.seen.has(key)) { NET.tx.publish('match-ack', { session: w.session, to: from, id: d.id, accepted: w.seen.get(key) }); w.dirty = true; return; }
+  let valid = VBMatchSync.validBall(d.ball) && Number.isFinite(d.at) && d.at <= now + 100 && d.at >= now - 600;
+  if (valid && VM.phase === 'serve') valid = d.kind === 'serve' && from === vmServer();
+  else if (valid && VM.phase === 'rally' && d.kind !== 'serve') {
+    const at = clamp(d.at, now - 350, now);
+    const history = w.history.filter(h => h.seq === d.base && Math.abs(h.at - at) < 100 && !h.floor);
+    valid = history.some(h => Math.hypot(...h.p.map((n, i) => n - d.ball.p[i])) < .95);
+    const peer = NET.peers.get(from)?.last;
+    valid = valid && !!peer && Math.hypot(peer.x - d.ball.p[0], peer.z - d.ball.p[2]) < 3.5;
+  } else valid = false;
+  const accepted = !!(valid && w.order.claim(d));
+  w.seen.set(key, accepted); if (w.seen.size > 128) w.seen.delete(w.seen.keys().next().value);
+  NET.tx.publish('match-ack', { session: w.session, to: from, id: d.id, accepted });
+  if (!accepted) { w.dirty = true; return; }
+  const b = vmWireGetBall(); vmWireApply(b, d.ball); b.mine = false; b.lk = d.kind;
+  NET.hitN = w.order.seq; NET.hitBy = NET.me; NET.ownBall = true;
+  w.event = { seq: w.order.seq, actor: from, kind: d.kind, quality: clamp(Number(d.quality) || 1, 0, 1.5), p: d.ball.p, id: d.id };
+  vmOnTouch(b, from, d.kind); vbImpact(b, d.kind, w.event.quality);
+  // Advance only the accepted outgoing flight, using elapsed host time.
+  if (VM.phase === 'rally') {
+    const age = clamp((now - d.at) / 1000, 0, .35);
+    // Let normal swept collision steps handle the network catch-up, not a position teleport.
+    b.wireCatchup = age;
+  }
+  w.dirty = true;
+}
+function vmWireReceive(d, from) {
+  const w = VM.wire, previousRound = w.order.round;
+  if (VM.host || from !== VM.hostId || !w.order.accept(d)) return;
+  if (d.round !== previousRound && d.server !== NET.me) vmDropHeld();
+  const now = performance.now();
+  if (w.offset == null) w.offset = d.at + netLat(from) * 1000 - now;
+  if (Number.isFinite(d.time)) for (const row of d.ai || []) {
+    const ai = VM.ai.get(row[0]); if (!ai) continue;
+    ai.netOffset = d.at - d.time * 1000 - w.offset;
+    vmAiSnapshot(ai, row, now);
+  }
+  w.latest = d; VM.sc = d.sc; VM.phase = d.phase; VM.srvId = d.server; VM.tc = d.tc;
+  NET.hitN = d.seq; NET.hitBy = from; NET.ownBall = false;
+  if (w.pending && (d.round !== w.pending.request.round || d.seq > w.pending.request.base)) w.pending = null;
+  if (!d.ball) { if (!w.pending) { vmClearBalls(); VM.ball = null; } return; }
+  const b = vmWireGetBall(), hadFrame = !!b.wireFrame;
+  const before = b.m.position.clone(); if (b.wireVisualError) before.add(b.wireVisualError);
+  b.wireRemote = true;
+  if (!w.pending) {
+    b.wirePrediction = null; vmWireApply(b, d.ball);
+    const age = clamp((now + w.offset - d.at) / 1000, 0, .35), flight = VBMatchSync.sample(d.ball, age * VB.ts, BALL_R, age);
+    const error = before.sub(new THREE.Vector3(...flight.p));
+    b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
+    b.wireVisualError = hadFrame && !d.ball.floor && error.length() < 2 ? error : null;
+  }
+  b.wireFrame = d;
+  const event = d.event, eventKey = `${d.round}:${event?.seq}`;
+  if (event && w.eventSeen !== eventKey) {
+    w.eventSeen = eventKey; b.lk = event.kind; b.mine = event.actor === NET.me;
+    if (event.kind === 'set') vbMarkSet(b);
+    if (event.actor !== NET.me) sfx(event.kind, event.quality, new THREE.Vector3(...event.p));
+  }
+}
+function vmWireRemoteStep(b, dt) {
+  const w = VM.wire, now = performance.now(), prediction = w.pending && b.wirePrediction;
+  const frame = b.wireFrame || w.latest;
+  if (!prediction && !frame?.ball) return;
+  const ball = prediction ? prediction.ball : frame.ball;
+  const age = clamp((prediction ? now - prediction.at : now + (w.offset || 0) - frame.at) / 1000, 0, .35);
+  const flight = VBMatchSync.sample(ball, age * VB.ts, BALL_R, age);
+  b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
+  if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
+  if (ball.floor) { b.m.position.set(ball.floor[0], BALL_R, ball.floor[1]); b.v.set(0, 0, 0); }
+  if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
+  if (b === VM.ball) vmTrailPush(b.m.position);
+}
+function vmWireRender(begin) {
+  const b = VM.on && VM.wire && !VM.host && VM.ball;
+  if (!b) return;
+  if (begin && b.wireVisualError) { b.wireRenderPosition = b.m.position.clone(); b.m.position.add(b.wireVisualError); }
+  else if (!begin && b.wireRenderPosition) { b.m.position.copy(b.wireRenderPosition); b.wireRenderPosition = null; }
+}
+function vmWireTick() {
+  if (!VM.on || !VM.wire || !NET.on) return;
+  const w = VM.wire, now = performance.now();
+  if (!VM.host) {
+    const p = w.pending;
+    if (p && now - p.since > 1000) { w.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
+    else if (p && now - p.sent > 200) { p.sent = now; NET.tx.publish('match-claim', p.request); }
+    return;
+  }
+  const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null;
+  if (b) w.history.push({ at: now, seq: w.order.seq, p: b.m.position.toArray(), floor: !!b.floorHit });
+  while (w.history.length && w.history[0].at < now - 700) w.history.shift();
+  if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? 100 : 400)) return;
+  w.sent = now; w.dirty = false;
+  NET.tx.publish('match-frame', { session: w.session, frame: ++w.frame, round: w.order.round, seq: w.order.seq, at: now, time: VM.t, ai: vmStatePayload().ai, ball: b ? vmWireBall(b) : null, event: w.event, sc: VM.sc, phase: VM.phase, server: vmServer(), tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null });
+}
+function vmJudgePenetration() {
+  if (!VM.host || VM.phase !== 'rally') return;
+  for (const team of [0, 1]) for (const id of VM.team[team]) {
+    const ai = VM.ai.get(id), peer = NET.peers.get(id)?.last;
+    const p = ai ? { x: ai.x, z: ai.z, y: ai.y } : id === vmMe() ? { x: vmL(walk.x, walk.z)[0], z: vmL(walk.x, walk.z)[1], y: walk.air?.y || 0 } : peer ? { x: vmL(peer.x, peer.z)[0], z: vmL(peer.x, peer.z)[1], y: peer.y || 0 } : null;
+    // Approximate the sole as 20 cm: touching the centre line is still permitted.
+    if (p && p.y < .08 && Math.abs(p.z) < 4.5 && p.x * vmSide(team) < -.2 && Math.abs(p.x) < 9) { vmPoint(1 - team, `越過中線犯規（${vmName(id)}的腳完全進入對方球場）`); return; }
+  }
+}
 function netOnMessage(t, d, from) {
   if (from === NET.me) return;
+  if (VM.on && VM.wire) {
+    if (t === 'match-claim') { vmWireClaim(d, from); return; }
+    if (t === 'match-frame') { vmWireReceive(d, from); return; }
+    if (t === 'match-ack') {
+      if (from === VM.hostId && d.session === VM.wire.session && d.to === NET.me && d.id === VM.wire.pending?.request.id && !d.accepted) { VM.wire.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
+      return;
+    }
+    if (t === 'ball' && d.w !== 'kick') return;
+  }
   if (t === 'chat') { RoomChat.receive(d, from); return; }
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
   if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
-  if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t }); return; }   // 量延遲
-  if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); } return; }
+  if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t, hostTime: performance.now() }); return; }   // 量延遲
+  if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); if (VM.wire && !VM.host && from === VM.hostId && Number.isFinite(d.hostTime)) { const offset = d.hostTime + half - performance.now(); VM.wire.offset = VM.wire.offset == null ? offset : VM.wire.offset * .8 + offset * .2; } } return; }
   if (t === 'st') {
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
     // 位置與朝向依個別真人時間軸播放，動作保留最新狀態。
@@ -8188,11 +8357,13 @@ function netOnMessage(t, d, from) {
 function netFloorHit(b) {
   if (!NET.on || !b.room || !NET.ownBall || b.floorReport) return;
   b.floorReport = true;
+  if (VM.on && VM.wire) { VM.wire.dirty = true; return; }
   const m = netBallMsg(b); m.g = b.floorHit.slice();
   NET.tx.publish('ball', m); /* 每段球權第一次落地才送，不更動一般校正節奏。 */
 }
 function netBallHit(b, kind, quality = 1) {
   if (kind === 'kick') { if (NET.on) langziSend(b); return; }
+  if (VM.on && VM.wire) { vmWireHit(b, kind, quality); return; }
   if (b.langzi && VM.on) return;
   b.langzi = false;
   if (!NET.on) return;
@@ -8230,7 +8401,7 @@ function netTick(dt, now) {
   const gap = toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
   if (NET.forceSt || (poseChanged && now - NET.lastSt > 120) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
-  const rb = NET.ownBall && balls.find((q) => q.room);
+  const rb = !VM.wire && NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > (VM.on && VM.phase === 'rally' ? 400 : 1000) * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
   // 對方的人形：緩衝位置與朝向；起跳、動作維持現在時間。
   const k = 1 - Math.exp(-dt * 14);
@@ -10898,6 +11069,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
     }
   }
   VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG };
+  if (NET.on && globalThis.VBMatchSync) vmWireInit(true);
   if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm');
   vmSetupServe();
@@ -10917,6 +11089,7 @@ function vmStop(silent) {
   if (!silent && ROOM) { if (ROOM.isHost) ROOM.end(); return; }
   if (!VM.on) return;
   if (VM.watchBall) { VM.watchBall.m.removeFromParent(); const i = balls.indexOf(VM.watchBall); if (i >= 0) balls.splice(i, 1); }
+  VM.wire = null;
   VM.watchFrames = null; VM.watchBall = null; VM.watchOffset = null;
   if (VM.trail) { scene.remove(VM.trail); VM.trail = null; }
   if (VM.host && NET.on && !silent) NET.tx.publish('vm', { e: 'end' });
@@ -10930,6 +11103,7 @@ function vmStop(silent) {
 function vmServer() { const t = VM.srvTeam; return VM.six ? VM.rot[t][0] : VM.team[t][VM.srvIdx[t] % 2]; }
 function vmSetupServe() {
   VM.phase = 'serve'; VM.ball = null; VM.touch = { team: -1, n: 0, last: null }; VM.poss = [null, null]; VM.srvSeq++;
+  if (VM.wire) { VM.wire.order.reset(VM.srvSeq); VM.wire.history = []; VM.wire.event = null; VM.wire.dirty = true; }
   vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); if (VM.trailPts) VM.trailPts.length = 0; if (VM.trail) VM.trail.visible = false; VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
   const srv = vmServer(), s = vmSide(VM.srvTeam);
   VM.serveAt = VM.t + 3.0 + Math.random() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
@@ -11019,6 +11193,7 @@ function vmOnTouch(b, id, kind) {
   const team = vmTeamOf(id); if (team < 0 || kind === 'throw') return;
   // 只有比賽球算：發球階段只認輪到的人發出去的那一下；開打之後別顆球（有人手上本來拿著的、場外的）碰到、落地都不算
   if (VM.phase === 'serve' && (kind !== 'serve' || id !== vmServer())) return;
+  if (VM.wire) { VM.wire.dirty = true; if (VM.wire.event) VM.wire.event.actor = id; }
   vmPerfTouch(id, kind, b);   // WEB-010 戰績
   if (VM.phase === 'rally' && VM.ball && balls.includes(VM.ball) && b !== VM.ball) return;
   VM.ball = b; b.spike = null; b.floorHit = null; if (kind !== 'block') b.blkDone = false;
@@ -11605,6 +11780,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG, six: { rot: VM.rot, role: VM.role, bestOf: VM.bestOf, colors: Object.fromEntries([...VM.ai.values()].map((a) => [a.id, a.color])) } };
   mrecRoles();
   VM.startData.six.tactics = VM.tactics;
+  if (NET.on && globalThis.VBMatchSync) vmWireInit(true);
   if (NET.on) NET.tx.publish('vm', VM.startData);
   $('rk-menu').hidden = true; $('vm-hud').hidden = false; $('walk-ui').classList.add('vm'); peerTagsAll();
   vmSetupServe();
@@ -11928,6 +12104,7 @@ function vmUpdate(dt) {
     if (!state.items.some((i) => i.id === VM.c.id)) { vmStop(); toast('球場被改掉了，比賽結束'); return; }
     if (VM.next && VM.t >= VM.next.at) { const f = VM.next.fn; VM.next = null; f(); }
     if (VM.phase === 'serve') vmServeClock();
+    if (VM.phase === 'rally') vmJudgePenetration();
     if (VM.phase === 'rally') vmJudge();
     if (VM.ball) for (const q of balls.slice()) if (q !== VM.ball && !q.room) { ballsGroup.remove(q.m); balls.splice(balls.indexOf(q), 1); }
     for (const a of VM.ai.values()) vmAiStep(a, dt);
@@ -11969,7 +12146,7 @@ function vmAiPlayback(a, dt, now, ox, oz) {
     a.poseT = (a.poseT || 0) + dt; a.pose = left.pose; a.bs = left.bs || 0; a.sta = left.sta;
     return [left.x + (right.x - left.x) * fraction, left.z + (right.z - left.z) * fraction];
   }
-  const delay = clamp(1.5 * (a.netGap || 150), 120, 300);
+  const delay = VM.wire ? 0 : clamp(1.5 * (a.netGap || 150), 120, 300);
   a.netDelay = (a.netDelay ?? delay) + (delay - (a.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
   const time = Math.max(a.netTime ?? -Infinity, now - a.netDelay); a.netTime = time;
   let l = buf[0], r = l;
@@ -12080,6 +12257,7 @@ function vmWatchBallFrame(ball) {
 // 比賽有事（得分、換發球、結束）：下一格就跟著主機的狀態送出去
 function vmBroadcast(force, msg, pt) {
   if (!NET.on || !VM.host) return;
+  if (VM.wire && force) VM.wire.dirty = true;
   if (msg || pt) NET.vmPend = { msg: msg || undefined, pt: pt || undefined };
   if (force) NET.forceSt = true;
 }
@@ -12092,6 +12270,7 @@ function vmOnNet(d, from) {
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
+    if (d.wire === 2 && globalThis.VBMatchSync) vmWireInit(false, d);
     VM.tactics = d.six?.tactics === 'rotation' ? 'rotation' : 'roles';
     vm6SyncRotationRoles();
     // Ball speed is owned by room-settings, independent of the match simulation host.
@@ -12112,13 +12291,13 @@ function vmOnNet(d, from) {
     if (Array.isArray(d.lz)) [VM.langziMatch, VM.langziSeq] = d.lz; /* WEB-022 死球訊息所屬的比賽與發球輪次。 */
     // 新的一球：清掉場上的球；但自己剛發出去（或正在發）的球不清——狀態比「輪到你發球」晚到時，會把剛跳發出去的球清掉（球不見）
     const mySrv = d.srv === NET.me && (walk.jserve || walk.serve || balls.some((q) => q.serve && q.room && NET.hitBy === NET.me));
-    if (d.ph === 'serve' && VM.phase !== 'serve' && !mySrv) { vmClearBalls(); if (d.srv !== NET.me) vmDropHeld(); }
-    VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv; VM.tc = d.tc || null;
+    if (!VM.wire && d.ph === 'serve' && VM.phase !== 'serve' && !mySrv) { vmClearBalls(); if (d.srv !== NET.me) vmDropHeld(); }
+    if (!VM.wire) { VM.sc = d.sc; VM.phase = d.ph; VM.srvId = d.srv; VM.tc = d.tc || null; }
     VM.remoteSetters = Array.isArray(d.setter) ? d.setter : null;
     if (d.gr && (!VM.grade || VM.grade.s !== d.gr[0])) { const first = !VM.grade; VM.grade = { s: d.gr[0], team: d.gr[1], g: d.gr[2], why: d.gr[3] }; if (!first) vmGradeShow(VM.grade); }   // 到位等級（剛加入時的舊等級不顯示）
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
-    if (d.watch && roomSpectator()) vmWatchSnapshot(d.watch);
+    if (d.watch && roomSpectator() && !VM.wire) vmWatchSnapshot(d.watch);
     drawScore();
     const nowS = performance.now();
     for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
@@ -12143,7 +12322,7 @@ function vmHud() {
   drawScore();   // 球館裡的計分板跟著比賽比分
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
   const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
-  const tct = tc && tc[1] > 0 ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : VM.six ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
+  const tct = VM.phase === 'rally' && !tc ? '觸球 0/3（接發球）' : tc ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : VM.six ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
   const ttl = vmSmallCount() ? `🏐 ${vmSmallCount()} 對 ${vmSmallCount()}` : VM.six ? '🏐 6 對 6' : '🏖️ 2 對 2'; if ($('vm-title').textContent !== ttl) $('vm-title').textContent = ttl;
   vm6Chart();
   const na = vmTeamLabel(0), nb = vmTeamLabel(1); if ($('vm-a').textContent !== na) $('vm-a').textContent = na; if ($('vm-b').textContent !== nb) $('vm-b').textContent = nb;
@@ -12595,10 +12774,13 @@ function drawFrame(force) {
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
   if (walk.on) { roomKeepSpectatorOut(); staTick(dt); stowSync(); recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
+  if (walk.on) vmWireTick();
   const tp = walk.on && tpBegin(dt);
   if (walk.on) vbChgPlace();
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
+  vmWireRender(true);
   renderScene();
+  vmWireRender(false);
   chatBubbleStep();
   labelRenderer.render(scene, camera);
   if (walk.on) vbDomFx();
