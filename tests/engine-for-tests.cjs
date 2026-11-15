@@ -23,13 +23,14 @@ function aiScript() {
   const body = ai.slice(ai.indexOf('export function createAi(G) {') + 'export function createAi(G) {'.length, ai.lastIndexOf('  return {'));
   const plain = body.replace(/\b([A-Za-z_$][\w$]*): G\.\1\b/g, '$1').replace(/(?<![\w$.])G\.([A-Za-z_$][\w$]*)/g, '$1')
     .replace(/^  (async )?function ([A-Za-z_$][\w$]*)\(/gm, (m, as, n) => `__ai.${n} = ${as || ''}function ${n}(`);
-  return 'var __ai = {};\n' + plain + '\nfunction aiEngine() { return __ai; }\n';
+  return 'if (typeof gameRandom === "undefined") globalThis.gameRandom = () => Math.random();\nvar __ai = {};\n' + plain + '\nfunction aiEngine() { return __ai; }\n';
 }
 function installAi(vm) {
   if (vm.__aiInstalled) return; vm.__aiInstalled = true;
   const seen = new WeakSet(), run = vm.runInContext, runNew = vm.runInNewContext;
-  const prep = (code, ctx) => { if (typeof code === 'string' && code.includes('aiEngine()') && ctx && !seen.has(ctx)) { seen.add(ctx); run.call(vm, aiScript(), ctx); } };
+  const prep = (code, ctx) => {
+    if (typeof code === 'string' && /gameRandom|fxRandom/.test(code) && ctx && !ctx.__gameRandom) { ctx.__gameRandom = true; run.call(vm, 'if (typeof gameRandom === "undefined") globalThis.gameRandom = () => Math.random(); if (typeof fxRandom === "undefined") globalThis.fxRandom = () => Math.random();', ctx); }   /* 比賽專用亂數與畫面亂數：測試環境照 Math.random */ if (typeof code === 'string' && code.includes('aiEngine()') && ctx && !seen.has(ctx)) { seen.add(ctx); run.call(vm, aiScript(), ctx); } };
   vm.runInContext = function (code, ctx, ...rest) { prep(code, ctx); return run.call(this, code, ctx, ...rest); };
-  vm.runInNewContext = function (code, ctx = {}, ...rest) { if (typeof code === 'string' && code.includes('aiEngine()')) { vm.createContext(ctx); prep(code, ctx); return run.call(this, code, ctx, ...rest); } return runNew.call(this, code, ctx, ...rest); };
+  vm.runInNewContext = function (code, ctx = {}, ...rest) { if (typeof code === 'string' && (code.includes('aiEngine()') || /gameRandom|fxRandom/.test(code))) { vm.createContext(ctx); prep(code, ctx); return run.call(this, code, ctx, ...rest); } return runNew.call(this, code, ctx, ...rest); };
 }
 module.exports = { engineScript, rulesScript, aiScript, installAi };

@@ -122,7 +122,7 @@ function vmSetupServe() {
   if (VM.wire) { VM.wire.order.reset(VM.srvSeq); VM.wire.history = []; VM.wire.event = null; VM.wire.dirty = true; }
   vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); if (VM.trailPts) VM.trailPts.length = 0; if (VM.trail) VM.trail.visible = false; VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
   const srv = vmServer(), s = vmSide(VM.srvTeam);
-  VM.serveAt = VM.t + 3.0 + Math.random() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
+  VM.serveAt = VM.t + 3.0 + gameRandom() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
   // AI 先站位：發球的人在底線後，其他人在自己半場
   for (const a of VM.ai.values()) {
     const sd = vmSide(a.team); a.blk = null;
@@ -394,8 +394,8 @@ function vmAiBlock(...a) { return aiEngine().vmAiBlock(...a); }   /* B3：AI 在
 //   正中又低＝容易攔死；打外側那隻手＝越用力越容易打手出界；擦過指尖＝彈大（彈高往攔網這邊後場飛，常常出界）；力道大＝可能打穿；其他＝撐起來
 function vbBlockOutcome(off, low, pow, skill) {
   const centered = off < 0.4, edge = off > 0.42;
-  if (low < 0.18 && Math.random() < 0.45 + 0.35 * pow) return 'top';
-  const pStuff = skill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (edge ? 0.1 + 0.6 * pow : 0.05) * (1.3 - 0.7 * low), pThrough = 0.32 * pow * (1.2 - skill), r = Math.random();
+  if (low < 0.18 && gameRandom() < 0.45 + 0.35 * pow) return 'top';
+  const pStuff = skill * 0.6 * (centered ? 1 : 0.35) * (1 - 0.55 * pow) * (0.5 + 1.0 * low), pOut = (edge ? 0.1 + 0.6 * pow : 0.05) * (1.3 - 0.7 * low), pThrough = 0.32 * pow * (1.2 - skill), r = gameRandom();
   return r < pStuff ? 'stuff' : r < pStuff + pOut ? 'out' : r < pStuff + pOut + pThrough ? 'through' : 'soft';
 }
 // 照結果改球：plane＝攔網那一側的網面（球場座標 lx）、sd＝攔網那一隊在哪一側、hz＝雙手中心（lz）、e＝沿著網子的方向、n＝網子的法線；回傳那一下叫什麼
@@ -405,17 +405,17 @@ function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
   const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
   if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
   if (kind === 'out') {   // 打手出界：球擦到外側那隻手，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m
-    const side = Math.sign(lz - hz) || (Math.random() < 0.5 ? 1 : -1);
+    const side = Math.sign(lz - hz) || (gameRandom() < 0.5 ? 1 : -1);
     b.v.multiplyScalar(TOUCH_OUT.outKeep + TOUCH_OUT.outKeepPow * pow);
-    const vy = 1.2 + Math.random() * 1.6 + TOUCH_OUT.powVy * pow, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
-    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + Math.random() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.0, TOUCH_OUT.outLatMax[0] + TOUCH_OUT.outLatMax[1] * pow);
+    const vy = 1.2 + gameRandom() * 1.6 + TOUCH_OUT.powVy * pow, t = (vy + Math.sqrt(vy * vy + 19.6 * Math.max(0.1, p.y - BALL_R))) / 9.8;
+    const vlat = clamp((4.5 + BALL_R + TOUCH_OUT.outPast[0] + gameRandom() * (TOUCH_OUT.outPast[1] - TOUCH_OUT.outPast[0]) * (0.5 + pow) - side * lz) / t, 1.0, TOUCH_OUT.outLatMax[0] + TOUCH_OUT.outLatMax[1] * pow);
     b.v.x += ex * side * vlat; b.v.z += ez * side * vlat; b.v.y = vy;
     const lz2 = lz + (b.v.x * ex + b.v.z * ez) * t, lx2 = lx + (b.v.x * nx + b.v.z * nz) * t;
     return Math.abs(lz2) > 4.5 + BALL_R || Math.abs(lx2) > 9 + BALL_R ? '打手出界！' : '碰手了！';
   }
-  if (kind === 'top') { b.v.multiplyScalar(TOUCH_OUT.topKeep + TOUCH_OUT.topKeepPow * pow); b.v.y = TOUCH_OUT.topVy[0] + Math.random() * TOUCH_OUT.topVy[1] + TOUCH_OUT.powVy * pow; return '擦手彈大！'; }   // 擦過指尖：彈高，繼續往攔網這邊的後場飛
+  if (kind === 'top') { b.v.multiplyScalar(TOUCH_OUT.topKeep + TOUCH_OUT.topKeepPow * pow); b.v.y = TOUCH_OUT.topVy[0] + gameRandom() * TOUCH_OUT.topVy[1] + TOUCH_OUT.powVy * pow; return '擦手彈大！'; }   // 擦過指尖：彈高，繼續往攔網這邊的後場飛
   if (kind === 'through') { b.v.multiplyScalar(0.82); b.v.y -= 0.8; return '打穿攔網！'; }
-  b.v.multiplyScalar(0.25); b.v.y = 3 + Math.random() * 1.5; return '撐起來了';
+  b.v.multiplyScalar(0.25); b.v.y = 3 + gameRandom() * 1.5; return '撐起來了';
 }
 const BLK_FX = { stuff: 'stuff', soft: 'soft', through: 'through', out: 'out', top: 'touch' };
 // AI 攔網：球穿過 AI 雙手的位置才算；手頂＝站著 2.7 m＋跳起來的高度（最高點約 3.65 m，比完美助跑、在最高點扣的擊球點低一點：攻擊手跳得好就能打過手）

@@ -1,8 +1,8 @@
 // 比賽引擎：AI 球員的大腦（B3）。網頁和台北伺服器共用。
 // 由 tools 從 gym 搬過來：函式內容沒有改，只把用到的遊戲東西改成 G.名字（G 由使用的人提供，見 src/gym/game/13a-ai-engine.js）。
-// G 需要提供：BALL_R、JUMP_G、NET、NETS、ROLE_SUPER、THREE、V6_BASE、V6_NAME、VM、VM_LEVELS、balls、ballsGroup、clamp、netBallHit、newBallMesh、rkGauss、serveVel、sfx、staCfg、staCost、state、toast、vbClearAir、vbHardDefl、vbImpact、vbLaunch、vbMarkSet、vbShotVel、vm6Front、vm6Idx、vm6P、vmBallL、vmL、vmLv、vmMe、vmOnTouch、vmOppPos、vmPos、vmPositionSetters、vmPredL、vmPro、vmProLv、vmServer、vmSide、vmSmallCount、vmSmallLabel、vmTeamOf、vmW、walk
+// G 需要提供：BALL_R、JUMP_G、NET、NETS、ROLE_SUPER、THREE、V6_BASE、V6_NAME、VM、VM_LEVELS、balls、ballsGroup、clamp、netBallHit、newBallMesh、rkGauss、serveVel、sfx、staCfg、staCost、state、toast、vbClearAir、vbHardDefl、vbImpact、vbLaunch、vbMarkSet、vbShotVel、vm6Front、vm6Idx、vm6P、vmBallL、vmL、vmLv、vmMe、vmOnTouch、vmOppPos、vmPos、vmPositionSetters、vmPredL、vmPro、vmProLv、vmServer、vmSide、vmSmallCount、vmSmallLabel、vmTeamOf、vmW、walk、gameRandom（比賽專用亂數）
 // 之後在伺服器上跑時，G 換成伺服器版本（沒有畫面，只有位置與規則）。
-export const AI_DEPS = ["BALL_R","JUMP_G","NET","NETS","ROLE_SUPER","THREE","V6_BASE","V6_NAME","VM","VM_LEVELS","balls","ballsGroup","clamp","netBallHit","newBallMesh","rkGauss","serveVel","sfx","staCfg","staCost","state","toast","vbClearAir","vbHardDefl","vbImpact","vbLaunch","vbMarkSet","vbShotVel","vm6Front","vm6Idx","vm6P","vmBallL","vmL","vmLv","vmMe","vmOnTouch","vmOppPos","vmPos","vmPositionSetters","vmPredL","vmPro","vmProLv","vmServer","vmSide","vmSmallCount","vmSmallLabel","vmTeamOf","vmW","walk"];
+export const AI_DEPS = ["BALL_R","JUMP_G","NET","NETS","ROLE_SUPER","THREE","V6_BASE","V6_NAME","VM","VM_LEVELS","balls","ballsGroup","clamp","gameRandom","netBallHit","newBallMesh","rkGauss","serveVel","sfx","staCfg","staCost","state","toast","vbClearAir","vbHardDefl","vbImpact","vbLaunch","vbMarkSet","vbShotVel","vm6Front","vm6Idx","vm6P","vmBallL","vmL","vmLv","vmMe","vmOnTouch","vmOppPos","vmPos","vmPositionSetters","vmPredL","vmPro","vmProLv","vmServer","vmSide","vmSmallCount","vmSmallLabel","vmTeamOf","vmW","walk"];
 export function createAi(G) {
   function vmProSetter(team, passer, b = G.VM.ball) {
     if (!G.vmProLv() || !b || G.vmSmallCount() || G.VM.tactics === 'rotation') return null;
@@ -13,22 +13,22 @@ export function createAi(G) {
     return best;
   }
   function vmAiServe(a) {
-    const sd = G.vmSide(a.team), err = Math.random(), L = G.vmLv(a), S = L.serve || {}, rt = Math.random();
-    const type = rt < S.jump ? 'jump' : rt < S.jump + S.jfloat ? 'jfloat' : rt < S.jump + S.jfloat + S.float ? 'float' : 'std', sweet = (type === 'jump' || type === 'jfloat') && Math.random() < L.sweet;
+    const sd = G.vmSide(a.team), err = G.gameRandom(), L = G.vmLv(a), S = L.serve || {}, rt = G.gameRandom();
+    const type = rt < S.jump ? 'jump' : rt < S.jump + S.jfloat ? 'jfloat' : rt < S.jump + S.jfloat + S.float ? 'float' : 'std', sweet = (type === 'jump' || type === 'jfloat') && G.gameRandom() < L.sweet;
     const g0 = vmPickGap(a, sd, 3, 8.3, 3.6); let tx = g0.tx, tz = g0.tz, net = false;
     const outK = type === 'jump' ? (sweet ? 1 : 1.8) : 1;   // 跳發比較容易失誤（沒打到甜蜜點更容易）
-    if (err < L.out * 0.8 * outK) { if (Math.random() < 0.5) tx = -sd * (9.6 + Math.random() * 1.5); else tz = Math.sign(tz || 1) * (4.9 + Math.random()); }
+    if (err < L.out * 0.8 * outK) { if (G.gameRandom() < 0.5) tx = -sd * (9.6 + G.gameRandom() * 1.5); else tz = Math.sign(tz || 1) * (4.9 + G.gameRandom()); }
     else if (err < (L.out * 0.8 + L.net) * outK) net = true;   // 太平，掛網
     const jumpH = type === 'jump' || type === 'jfloat';
     if (jumpH) { a.vy = aiJump(a, 4.2, 'jserve'); }   // 跳發／跳飄：跳起來在空中打
     const p = new G.THREE.Vector3(...(() => { const [x, z] = G.vmW(a.x - sd * (jumpH ? 0.6 : 0.3), a.z); return [x, jumpH ? 3.25 : 2.6, z]; })()), [wx, wz] = G.vmW(tx, tz);
     const m = G.newBallMesh(); m.position.copy(p); G.ballsGroup.add(m);
-    const spd = type === 'jump' ? (sweet ? 28 + Math.random() * 3 : 20 + Math.random() * 5) : type === 'jfloat' ? 15 + Math.random() * 2 : type === 'float' ? 12.5 : 13, g = type === 'jump' ? 14.3 : 9.8;
+    const spd = type === 'jump' ? (sweet ? 28 + G.gameRandom() * 3 : 20 + G.gameRandom() * 5) : type === 'jfloat' ? 15 + G.gameRandom() * 2 : type === 'float' ? 12.5 : 13, g = type === 'jump' ? 14.3 : 9.8;
     let v = G.serveVel(p, wx, wz, spd, g, G.VM.c, 0, type === 'float' || type === 'jfloat' ? 0.45 : 0.22); if (net) v.y -= 1.6;   // 過網留餘裕：飄球會晃，留多一點
     const b = { m, v, rest: 0 }; m.userData.ball = b; G.balls.push(b);
     if (type === 'jump' || type === 'std') { const hv = Math.hypot(v.x, v.z) || 1, sq = typeof q === 'number' ? q : 0.8; b.spinW = new G.THREE.Vector3(v.z / hv, 0, -v.x / hv).multiplyScalar(type === 'jump' ? 45 + 25 * sq : 15); }   /* 跳發強上旋、一般發球輕上旋；飄球不轉 */
     if (type === 'jump') b.acc = new G.THREE.Vector3(0, -4.5, 0);   // 上旋：下墜比一般快
-    if (type === 'float' || type === 'jfloat') b.float = { t: 0, w: 4.5 + Math.random() * 3, ph: Math.random() * 6.3, a: type === 'float' ? 4.5 : sweet ? 12 : 5 };   // 飄球
+    if (type === 'float' || type === 'jfloat') b.float = { t: 0, w: 4.5 + G.gameRandom() * 3, ph: G.gameRandom() * 6.3, a: type === 'float' ? 4.5 : sweet ? 12 : 5 };   // 飄球
     while (G.balls.length > 8) { const old = G.balls.shift(); G.ballsGroup.remove(old.m); }
     a.pose = 4; a.swingT = 0.35; aiPay(a, 'serve');
     if (G.NET.on) G.netBallHit(b, 'serve');
@@ -77,7 +77,7 @@ export function createAi(G) {
     }
     // AI 球員急停、急轉：球鞋吱一聲
     { const ps = Math.hypot(a.pvx || 0, a.pvz || 0), cs = Math.hypot(a.vx, a.vz), cosA = ps > 0.1 && cs > 0.1 ? ((a.pvx || 0) * a.vx + (a.pvz || 0) * a.vz) / (ps * cs) : 1;
-      if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && G.VM.t - (a.sqT || 0) > 0.5) { a.sqT = G.VM.t; const [wx, wz] = G.vmW(a.x, a.z); G.sfx('squeak', 0.6 + Math.random() * 0.3, new G.THREE.Vector3(wx, 0.05, wz)); }
+      if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && G.VM.t - (a.sqT || 0) > 0.5) { a.sqT = G.VM.t; const [wx, wz] = G.vmW(a.x, a.z); G.sfx('squeak', 0.6 + G.gameRandom() * 0.3, new G.THREE.Vector3(wx, 0.05, wz)); }
       const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
     // 移動、跳
     { const v0 = Math.hypot(a.vx, a.vz); const c = G.staCfg(); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - (c.sprint / 100) * 0.6 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + ((G.VM.phase === 'rally' ? (v0 < 0.5 ? c.regStill : c.regMove) : c.regDead) / 100) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
@@ -120,13 +120,13 @@ export function createAi(G) {
       if (pick !== a) return false;
     }
     const L = G.vmLv(a);
-    if (a.blkRoll !== G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10) { a.blkRoll = G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10; a.blkGo = Math.random() < L.block; }
+    if (a.blkRoll !== G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10) { a.blkRoll = G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10; a.blkGo = G.gameRandom() < L.block; }
     if (!a.blkGo) return false;
     if (!a.blk) a.blk = { until: G.VM.t + 3 };
-    a.tx = sd * 0.45; a.tz = G.clamp(th.z + lane + (Math.random() - 0.5) * 0.1, -4.2, 4.2);
-    if (a.blk.bsZ == null) { const cross = -Math.sign(th.z || (Math.random() < 0.5 ? 1 : -1)); a.blk.bsZ = (Math.random() < 0.65 ? cross : -cross) * (0.15 + Math.random() * 0.3); }   // 雙手要往哪邊（球場座標的左右）：多半封往場中間的斜線
+    a.tx = sd * 0.45; a.tz = G.clamp(th.z + lane + (G.gameRandom() - 0.5) * 0.1, -4.2, 4.2);
+    if (a.blk.bsZ == null) { const cross = -Math.sign(th.z || (G.gameRandom() < 0.5 ? 1 : -1)); a.blk.bsZ = (G.gameRandom() < 0.65 ? cross : -cross) * (0.15 + G.gameRandom() * 0.3); }   // 雙手要往哪邊（球場座標的左右）：多半封往場中間的斜線
     // 攻擊手起跳後，過反應時間就跟著跳
-    const bite = !th.fake || (a.blk.bite ??= Math.random() < 1.15 - L.blockSkill);   // 時間差的假跳：程度越高越不會被騙
+    const bite = !th.fake || (a.blk.bite ??= G.gameRandom() < 1.15 - L.blockSkill);   // 時間差的假跳：程度越高越不會被騙
     if (th.air && bite && a.y <= 0 && a.vy <= 0 && !a.blk.jumped) { a.blk.jumpAt = a.blk.jumpAt || G.VM.t + Math.max(0, L.react * 0.6 + G.rkGauss() * (0.16 - 0.12 * L.blockSkill)); if (G.VM.t >= a.blk.jumpAt) { a.vy = aiJump(a, 4.0, 'block'); a.pose = 9; a.swingT = 0.9; a.blk.jumped = true; a.blk.until = G.VM.t + 1.2; } }   // 起跳時機有誤差：程度低的常常跳早或跳晚
     if (!th.air) a.blk.jumpAt = 0;
     return true;
@@ -140,16 +140,16 @@ export function createAi(G) {
       const dh = Math.hypot(B.x - a.x, B.z - a.z);
       if (dh < (G.VM.six && G.VM.touch.blk && G.VM.touch.team !== a.team ? 1.4 : 1.05) && B.y < 1.5 && B.y > 0.3) {   // 被攔回來的球：蹲在旁邊 cover 的人撲得比較遠
         const vin = Math.hypot(B.vx, B.vy, B.vz), fast = vin > 15, L = G.vmLv(a), onLine = dh < 0.55 - 0.25 * G.clamp((vin - 10) / 15, 0, 1);   // 有沒有站在球路上（越重容許偏差越小）
-        if (fast && Math.random() < L.miss * (onLine ? 0.7 : 1.3)) { a.reactAt = G.VM.t + 1.2; return; }   // 重扣沒接到
+        if (fast && G.gameRandom() < L.miss * (onLine ? 0.7 : 1.3)) { a.reactAt = G.VM.t + 1.2; return; }   // 重扣沒接到
         if (fast && !onLine) {   // 沒對到球路：撲過去撈，球高高的落在自己附近（往場中間一點），讓隊友修正
           const dz = (B.z - a.z) * sd;
           vmAiTouch(a, sd * G.clamp(Math.abs(a.x) - 0.5, 2.2, 7), a.z * 0.6, 1.0, 1.5, 0.8 + L.passErr, 'bump', Math.abs(dz) < 0.35 ? 10 : dz > 0 ? 11 : 12); a.swingT = 1.25; return;
         }
-        let tlx = sd * 1.8, tlz = G.VM.six ? -sd * 0.9 + (Math.random() - 0.5) * 1.2 : (Math.random() - 0.5) * 2, ty = 2.4, T = 1.35;   // 6 對 6 傳到舉球點（網前偏右）
+        let tlx = sd * 1.8, tlz = G.VM.six ? -sd * 0.9 + (G.gameRandom() - 0.5) * 1.2 : (G.gameRandom() - 0.5) * 2, ty = 2.4, T = 1.35;   // 6 對 6 傳到舉球點（網前偏右）
         const flt = G.VM.ball && G.VM.ball.float ? 1 + G.VM.ball.float.a / 8 : 1;   // 飄球：越飄越難接
         const d = G.vbHardDefl(vin, 1 - L.passErr * 0.5, onLine, B.vz, 0.6 + 0.6 * L.passErr);   // 重球被推走（站到位也會，程度越高越會卸力）
-        if (Math.random() < 0.012 + 0.05 * L.passErr) { vmAiTouch(a, sd * 0.05, a.z * 0.5 + G.rkGauss() * 0.6, 1.8, 0.8, 0.2, 'bump', 3, true); return; }   // 接過頭：撞到網子
-        if (d && 1.8 + d.dx < 0.3) { vmAiTouch(a, -sd * (2 + Math.random() * 4), (Math.random() - 0.5) * 5, G.BALL_R, 1.5, 0.5, 'bump', 3); return; }   // 太衝：直接回對面
+        if (G.gameRandom() < 0.012 + 0.05 * L.passErr) { vmAiTouch(a, sd * 0.05, a.z * 0.5 + G.rkGauss() * 0.6, 1.8, 0.8, 0.2, 'bump', 3, true); return; }   // 接過頭：撞到網子
+        if (d && 1.8 + d.dx < 0.3) { vmAiTouch(a, -sd * (2 + G.gameRandom() * 4), (G.gameRandom() - 0.5) * 5, G.BALL_R, 1.5, 0.5, 'bump', 3); return; }   // 太衝：直接回對面
         if (d) { tlx = sd * (1.8 + d.dx); tlz += d.dz; ty += d.dy; T += d.dT; }
         vmAiTouch(a, tlx, tlz, ty, T, L.passErr * (fast ? 1.3 : 1) * flt, 'bump', 3);
       }
@@ -167,10 +167,10 @@ export function createAi(G) {
       if (early || (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5)) {
         if (G.vmPro(a) && !P.dumpChk && !P.fix && Math.abs(a.x) < 1.8 && (!G.VM.six || G.vm6Front(a.id)) && B.y > 2.0) {   // 企聯技能：舉球員跳起來雙手往右推，貼網吊到對面三米線中間（每波最多想一次）
           P.dumpChk = true;
-          if (Math.random() < 0.14) {
+          if (G.gameRandom() < 0.14) {
             if (a.y <= 0 && a.vy <= 0) a.vy = aiJump(a, 2.6, 'set');
             const netH = G.NETS[G.state.net].h, f = G.clamp(Math.abs(B.x) / (Math.abs(B.x) + 3), 0.05, 0.95), base = B.y + (G.BALL_R - B.y) * f, T = Math.max(0.55, Math.sqrt(Math.max(0.02, netH + G.BALL_R + 0.12 - base) / (4.9 * f * (1 - f))));
-            vmAiTouch(a, -sd * 3, (Math.random() - 0.5) * 0.6, G.BALL_R, T, 0.05, 'tip', 2, true); return;
+            vmAiTouch(a, -sd * 3, (G.gameRandom() - 0.5) * 0.6, G.BALL_R, T, 0.05, 'tip', 2, true); return;
           }
         }
         let ap = G.vmPos(P.attacker) || { z: 0 }, call = a.team === 0 && G.VM.call && G.VM.t - G.VM.call.t < 8 ? G.VM.call.n : 0, pick = null;
@@ -189,12 +189,12 @@ export function createAi(G) {
         if (call === 2 && callV === 'high3') { vmAiTouch(a, sd * 1.0, G.VM.six ? G.clamp(ap.z, -1.2, 1.2) : 0, 2.95, 1.1, G.vmLv(a).setErr, 'set', 2); P.td = true; }   // 3 號位高球：打時間差
         else if (call === 2 && G.VM.six) vmAiTouch(a, sd * G.clamp(Math.abs(ap.x ?? 1) - 0.1, 0.7, 1.4), G.clamp(ap.z, a.z - 1.6, a.z + 1.6), 3.05, 0.19, G.vmLv(a).setErr * 0.4, 'set', 2);   // 6 對 6 快攻：又低又快直接送到已經跳起來的中間手手上
         else if (call === 2) vmAiTouch(a, sd * 0.75, G.clamp(ap.z, a.z - 1.5, a.z + 1.5), 2.95, 0.32, G.vmLv(a).setErr * 0.6, 'set', 2);
-        else if (call === 1 || call === 3) { const flat = callV ? callV === 'flat' : Math.random() < (G.vmLv(a).flat || 0); vmAiTouch(a, sd * 1.0, (call === 1 ? sd : -sd) * 3.3, 2.95, flat ? 0.82 : 1.2, G.vmLv(a).setErr, 'set', 2); }   // 平球：又平又快（喊的照喊，沒喊照程度自己選）
+        else if (call === 1 || call === 3) { const flat = callV ? callV === 'flat' : G.gameRandom() < (G.vmLv(a).flat || 0); vmAiTouch(a, sd * 1.0, (call === 1 ? sd : -sd) * 3.3, 2.95, flat ? 0.82 : 1.2, G.vmLv(a).setErr, 'set', 2); }   // 平球：又平又快（喊的照喊，沒喊照程度自己選）
         else if (call === 6) { vmAiTouch(a, sd * 1.0, G.clamp(ap.z, -1.2, 1.2), 2.95, 1.1, G.vmLv(a).setErr, 'set', 2); P.td = true; }   // 3 號位高球：打時間差
         else if (call === 4) vmAiTouch(a, sd * 3.6, 0, 3.0, 1.2, G.vmLv(a).setErr, 'set', 2);
         else if (call === 5) vmAiTouch(a, sd * 3.6, -sd * 3.0, 3.0, 1.3, G.vmLv(a).setErr, 'set', 2);
         else if (call === 7) vmAiTouch(a, sd * 3.6, sd * 3.0, 3.0, 1.3, G.vmLv(a).setErr, 'set', 2);   // 後排 5 號位（左邊後排攻擊）   // 右邊後排攻擊（舉對在後排時）
-        else vmAiTouch(a, sd * 1.0, G.clamp(ap.z, -3.6, 3.6), 2.85, Math.random() < (G.vmLv(a).flat || 0) ? 0.85 : 1.25, G.vmLv(a).setErr, 'set', 2);   // 2 對 2：照程度有時舉平球
+        else vmAiTouch(a, sd * 1.0, G.clamp(ap.z, -3.6, 3.6), 2.85, G.gameRandom() < (G.vmLv(a).flat || 0) ? 0.85 : 1.25, G.vmLv(a).setErr, 'set', 2);   // 2 對 2：照程度有時舉平球
         if (pick && G.VM.poss[a.team] && G.VM.poss[a.team].stage === 2) G.VM.poss[a.team].attacker = pick.id;
       }
     } else if (P.attacker === a.id && st === 2) {
@@ -246,7 +246,7 @@ export function createAi(G) {
   function vmPickGap(a, sd, x0, x1, zMax) {
     const opp = G.vmOppPos(a.team), L = G.vmLv(a); let best = null;
     for (let i = 0; i < 12; i++) {
-      const tx = -sd * (x0 + Math.random() * (x1 - x0)), tz = (Math.random() - 0.5) * 2 * zMax, d = Math.min(9, ...opp.map((q) => Math.hypot(q.x - tx, q.z - tz)));
+      const tx = -sd * (x0 + G.gameRandom() * (x1 - x0)), tz = (G.gameRandom() - 0.5) * 2 * zMax, d = Math.min(9, ...opp.map((q) => Math.hypot(q.x - tx, q.z - tz)));
       const score = d + G.rkGauss() * (1.2 - L.blockSkill) * 1.5;
       if (!best || score > best.score) best = { tx, tz, score, d };
     }
@@ -254,21 +254,21 @@ export function createAi(G) {
   }
   function vmAiSpike(a, sd) {
     if (!vmAiOwnSide(a)) return;
-    const b = G.VM.ball, r = Math.random(), L = G.vmLv(a), [ax0, az0] = G.vmW(a.x - sd * 0.25, a.z), p = b.m.position.clone().lerp(new G.THREE.Vector3(ax0, a.y + 2.45, az0), 0.7);
+    const b = G.VM.ball, r = G.gameRandom(), L = G.vmLv(a), [ax0, az0] = G.vmW(a.x - sd * 0.25, a.z), p = b.m.position.clone().lerp(new G.THREE.Vector3(ax0, a.y + 2.45, az0), 0.7);
     const gap = vmPickGap(a, sd, 2.5, 8.3, 3.9), netGuard = G.vmOppPos(a.team).some((q) => Math.abs(q.x) < 2.5);
     const fixB = !!(G.VM.poss[a.team] && G.VM.poss[a.team].fix), Lo = L.out * (fixB ? 1.6 : 1), Lt = L.tip + (fixB ? 0.08 : 0), Ln = L.net * (fixB ? 1.6 : 1);   // 修正球：打不重、出界掛網多、常常吊
-    let tx = gap.tx, tz = gap.tz, spd = (L.spike[0] + Math.random() * (L.spike[1] - L.spike[0])) * (0.6 + 0.4 * aiEff(a)) * (fixB ? 0.85 : 1), tip = false;
-    const mix = Math.random();
-    const sup = L.pro && !fixB && G.VM.six && G.ROLE_SUPER[G.VM.role[a.id]] && Math.random() < 0.25 ? G.ROLE_SUPER[G.VM.role[a.id]] : null;   // 企聯技能：大砲／舉對打到紫色區
+    let tx = gap.tx, tz = gap.tz, spd = (L.spike[0] + G.gameRandom() * (L.spike[1] - L.spike[0])) * (0.6 + 0.4 * aiEff(a)) * (fixB ? 0.85 : 1), tip = false;
+    const mix = G.gameRandom();
+    const sup = L.pro && !fixB && G.VM.six && G.ROLE_SUPER[G.VM.role[a.id]] && G.gameRandom() < 0.25 ? G.ROLE_SUPER[G.VM.role[a.id]] : null;   // 企聯技能：大砲／舉對打到紫色區
     if (sup) { spd = L.spike[1] * sup.pw * (0.6 + 0.4 * aiEff(a)); const g2 = vmPickGap(a, sd, 2.5, 6.5, 3.9); tx = g2.tx; tz = g2.tz; }
     else if (!fixB && mix < L.sweet * 0.6) { spd = L.spike[1] * 1.1 * (0.6 + 0.4 * aiEff(a)); const g2 = vmPickGap(a, sd, 2.5, 6, 3.9); tx = g2.tx; tz = g2.tz; }   // 蓄到甜蜜點的重扣：又重又釘
-    else if (mix > 0.9) { spd = 12 + Math.random() * 2.5; const g2 = vmPickGap(a, sd, 6.5, 8.2, 3.9); tx = g2.tx; tz = g2.tz; }   // 輕打：吊到後場深角
-    if (r < Lo) { if (Math.random() < 0.5) tx = -sd * (9.5 + Math.random() * 1.8); else tz = Math.sign(tz || 1) * (4.8 + Math.random() * 1.2); }
-    else if (!netGuard && r < Lo + Lt) { tip = true; tx = -sd * (1.5 + Math.random() * 1.5); }   // 網前沒人才吊，吊在網後
+    else if (mix > 0.9) { spd = 12 + G.gameRandom() * 2.5; const g2 = vmPickGap(a, sd, 6.5, 8.2, 3.9); tx = g2.tx; tz = g2.tz; }   // 輕打：吊到後場深角
+    if (r < Lo) { if (G.gameRandom() < 0.5) tx = -sd * (9.5 + G.gameRandom() * 1.8); else tz = Math.sign(tz || 1) * (4.8 + G.gameRandom() * 1.2); }
+    else if (!netGuard && r < Lo + Lt) { tip = true; tx = -sd * (1.5 + G.gameRandom() * 1.5); }   // 網前沒人才吊，吊在網後
     if (!tip && r >= Lo) {
       const bl = vmBlockerFacing(a);
       if (bl) {
-        const rc = Math.random(), side = Math.sign(bl.z) || (Math.random() < 0.5 ? 1 : -1), f = Math.max(0.15, Math.abs(a.x) / (Math.abs(a.x) + Math.abs(tx)));
+        const rc = G.gameRandom(), side = Math.sign(bl.z) || (G.gameRandom() < 0.5 ? 1 : -1), f = Math.max(0.15, Math.abs(a.x) / (Math.abs(a.x) + Math.abs(tx)));
         if (rc < 0.15 + 0.35 * L.blockSkill) { tz = G.clamp(a.z + (bl.z + side * 0.55 - a.z) / f, -4.4, 4.4); spd = Math.max(spd, L.spike[1] * 0.95); }   // 打手出界：瞄外側那隻手、用力，落點壓邊線
         else if (rc < 0.45 + 0.35 * L.blockSkill) tz = G.clamp(a.z + (bl.z - side * 1.0 - a.z) / f, -4.2, 4.2);   // 繞手：打攔網沒封到的裡面那邊
       }
@@ -425,8 +425,8 @@ export function createAi(G) {
     const call = a.team === G.vmTeamOf(G.vmMe()) && G.VM.call && G.VM.t - G.VM.call.t < 8 ? G.VM.call : null;
     if (call) { G.VM.call = null; const o = opt.find((q) => q[0] === call.n); if (o) return { n: o[0], id: o[1] }; }   // 喊的那球沒辦法舉（例如喊快攻但沒跳起來）就照平常選
     const human = opt.filter((q) => !G.VM.ai.has(q[1]));
-    if (human.length && Math.random() < 0.55) return { n: human[0][0], id: human[0][1] };
-    let r = Math.random() * opt.reduce((sum, q) => sum + q[2], 0);
+    if (human.length && G.gameRandom() < 0.55) return { n: human[0][0], id: human[0][1] };
+    let r = G.gameRandom() * opt.reduce((sum, q) => sum + q[2], 0);
     for (const q of opt) { r -= q[2]; if (r <= 0) return { n: q[0], id: q[1] }; }
     return { n: opt[0][0], id: opt[0][1] };
   }
@@ -487,7 +487,7 @@ export function createAi(G) {
     return air ? { id } : null;
   }
   function vm6Quick(a, P, B, sd) {
-    if (P.qk === undefined) P.qk = Math.random() < (G.VM.ai.has(P.setter) ? 0.5 : 0.75) ? a.id : null;   // 真人舉球時攔中比較常先跳，讓你有快攻可以舉
+    if (P.qk === undefined) P.qk = G.gameRandom() < (G.VM.ai.has(P.setter) ? 0.5 : 0.75) ? a.id : null;   // 真人舉球時攔中比較常先跳，讓你有快攻可以舉
     if (P.qk !== a.id) return false;
     const pr = G.vmPredL(B, G.VM.ai.has(P.setter) ? 2.3 : 2.0); if (!pr || Math.abs(pr.x) > 2.6) { P.qk = null; return false; }   // 真人舉球員在額頭前碰球（比較低）   // 傳得不到位：不打快攻
     if (a.y > 0) return true;
@@ -627,8 +627,8 @@ export function createAi(G) {
     if(!opt.length)return {id:a.id,n:4};
     const call=a.team===G.vmTeamOf(G.vmMe())&&G.VM.call&&G.VM.t-G.VM.call.t<8?G.VM.call:null;
     if(call){G.VM.call=null;const o=opt.find(q=>q[0]===call.n);if(o)return {n:o[0],id:o[1]};}
-    const human=opt.filter(q=>!G.VM.ai.has(q[1]));if(human.length&&Math.random()<0.55)return {n:human[0][0],id:human[0][1]};
-    let r=Math.random()*opt.reduce((s,q)=>s+q[2],0);for(const q of opt){r-=q[2];if(r<=0)return {n:q[0],id:q[1]};}
+    const human=opt.filter(q=>!G.VM.ai.has(q[1]));if(human.length&&G.gameRandom()<0.55)return {n:human[0][0],id:human[0][1]};
+    let r=G.gameRandom()*opt.reduce((s,q)=>s+q[2],0);for(const q of opt){r-=q[2];if(r<=0)return {n:q[0],id:q[1]};}
     return {n:opt[0][0],id:opt[0][1]};
   }
   function vmSoloBrain(a,sd,b,live) {

@@ -987,7 +987,7 @@ function emoHi5Join(sid, id, team) {
 function emoAiPlan(H) {
   if (H.team === 'all' || VM.phase !== 'dead') return;
   const c = emoPos(H.by); if (!c) return;
-  for (const id of VM.team[H.team]) { if (!VM.ai.has(id) || id === H.by) continue; const p = emoPos(id); if (p && emoD(p, c) <= EMO.R && Math.random() < 0.85) H.plan.push({ id, at: H.t0 + 300 + Math.random() * 900 }); }
+  for (const id of VM.team[H.team]) { if (!VM.ai.has(id) || id === H.by) continue; const p = emoPos(id); if (p && emoD(p, c) <= EMO.R && fxRandom() < 0.85) H.plan.push({ id, at: H.t0 + 300 + fxRandom() * 900 }); }
 }
 function emoPos(id) {
   if (id === vmMe()) return new THREE.Vector3(walk.x, 2.1, walk.z);
@@ -1171,7 +1171,7 @@ function netPeerPlayback(p2, dt, now) {
 }
 // Match protocol 2: only the host advances the accepted touch sequence.
 function vmWireInit(host, data = VM.startData) {
-  const session = host ? `${NET.me}:${Date.now()}:${Math.random().toString(36).slice(2)}` : data.session;
+  const session = host ? `${NET.me}:${Date.now()}:${gameRandom().toString(36).slice(2)}` : data.session;
   VM.wire = { session, order: host ? new VBMatchSync.Authority(session) : new VBMatchSync.Receiver(session), frame: 0, sent: -Infinity, dirty: true, history: [], seen: new Map(), offset: null, pending: null, event: null, eventSeen: '', serial: 0 };
   if (host) Object.assign(data, { wire: 2, session });
   NET.ownBall = host; NET.hitBy = host ? NET.me : VM.hostId;

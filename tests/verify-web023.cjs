@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3／B4：AI 引擎、比賽亂數 */
 // WEB-023：加入者的腳步聲、落點提示用真正位置、別人負責的球先落地停住等回報、近身快速修正只在球朝自己來時
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const gym = fs.readFileSync(path.join(__dirname, '..', 'gym.html'), 'utf8').replaceAll('\r\n', '\n');

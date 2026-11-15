@@ -232,7 +232,7 @@ function updateWalk(dt) {
   if (game && !walk.air && !walk.dive) {   // 急停、急轉（速度掉一半、或方向轉超過 60°）：球鞋「唧」
     const pv = walk.pv || [0, 0], ps = Math.hypot(pv[0], pv[1]), cs = Math.hypot(vx, vz), cosA = ps > 0.1 && cs > 0.1 ? (pv[0] * vx + pv[1] * vz) / (ps * cs) : 1;
     // 急停、急轉、突然起跑都會「吱」（球場上最常聽到的聲音）
-    if (((ps > 1.8 && (cs < ps * 0.6 || cosA < 0.7)) || (ps < 1 && cs > 3)) && performance.now() - (walk.sqT || 0) > 300) { walk.sqT = performance.now(); sfx('squeak', 0.7 + Math.random() * 0.3, new THREE.Vector3(walk.x, 0.05, walk.z)); }
+    if (((ps > 1.8 && (cs < ps * 0.6 || cosA < 0.7)) || (ps < 1 && cs > 3)) && performance.now() - (walk.sqT || 0) > 300) { walk.sqT = performance.now(); sfx('squeak', 0.7 + fxRandom() * 0.3, new THREE.Vector3(walk.x, 0.05, walk.z)); }
     walk.pv = [vx, vz];
   }
   walk.low = (walk.low || 0) + (((walk.dive && walk.dive.t > 0.08) || walk.down > 0.2 ? 1.1 : walk.crouch && !walk.air ? 0.45 : 0) - (walk.low || 0)) * Math.min(1, dt * (walk.dive ? 12 : 4));
@@ -245,7 +245,7 @@ function updateWalk(dt) {
   if (!keyMoving) vbServeZone();
   const bob = !keyMoving && (mag > 0.01 || walk.target) ? Math.sin(performance.now() / 160) * 0.015 : 0;
   camera.position.set(walk.x, EYE + bob - (skill.dip || 0) - (walk.low || 0) + jumpY(dt), walk.z);
-  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a; }
+  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (fxRandom() - 0.5) * a; camera.position.y += (fxRandom() - 0.5) * a; camera.position.z += (fxRandom() - 0.5) * a; }
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
