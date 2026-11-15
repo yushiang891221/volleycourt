@@ -3,6 +3,7 @@ import { preloadAvatars, makeToyAvatar, decodeLook } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey } from './js/appearance.js';
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
 import { getAccountService } from './js/auth.js';
+import { ballSubstep, ballSubsteps } from './engine/ball.js';   // B1：球的物理（伺服器共用）
 const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');

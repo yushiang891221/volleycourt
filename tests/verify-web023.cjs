@@ -64,7 +64,7 @@ for (const n of ['sqFromMotion', 'ballWaitFloor', 'vbTruePos']) vm.runInContext(
   ctx.NET.ownBall = true; const mine = { room: true, waitFloor: { t: now, v: new V3() }, v: new V3() };
   assert.equal(ctx.ballWaitFloor(mine), false, '自己負責的球不等');
   assert(gym.includes('if (b.waitFloor && ballWaitFloor(b)) continue;'), '球的更新要接上等落地');
-  assert(/NET\.on && b\.room && !NET\.ownBall && !b\.floorReport && !b\.waitFloor && b\.v\.y < 0\) \{ p\.y = BALL_R; b\.waitFloor = /.test(gym), '落地那一刻開始等');
+  assert(/floorWait\(b, p\) \{[^\n]*\n\s*if \(!\(NET\.on && b\.room && !NET\.ownBall && !b\.floorReport && !b\.waitFloor && b\.v\.y < 0\)\) return false;\s*\n\s*p\.y = BALL_R; b\.waitFloor = /.test(gym), '落地那一刻開始等');   /* B1：落地等回報改成球引擎的 floorWait hook */
   assert(gym.includes('b.floorReport = true; b.floorT = performance.now(); b.waitFloor = null;'), '收到落地回報要解除等待');
   assert(gym.includes('b.floorEv = false; b.waitFloor = null; }'), '新擊球要解除等待');
 }

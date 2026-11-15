@@ -963,6 +963,7 @@ import { preloadAvatars, makeToyAvatar, decodeLook } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey } from './js/appearance.js';
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
 import { getAccountService } from './js/auth.js';
+import { ballSubstep, ballSubsteps } from './engine/ball.js';   // B1：球的物理（伺服器共用）
 const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');
@@ -6712,6 +6713,29 @@ function vmCrossCheck(b, c, from, yc, lz, top, bot) {
   if (yc <= bot - BALL_R && Math.abs(lz) < 5.3) vmPoint(1 - team, '球從網子下面過去');
   else if (Math.abs(lz) > 4.5 + BALL_R && yc > 0.3) vmPoint(1 - team, '球從標誌桿外面過網');
 }
+// B1：球的物理交給 engine/ball.js；下面是「遊戲這邊」要做的事（停住等回報、提示、音效、網子特效、標誌桿、攔網）
+const BALL_WORLD = { R: BALL_R, H: 9, segs: [], nets: [], toLocal: toLocalOf, netTop: 2.43, netRoll: k => vbNetRoll(k), now: () => performance.now(), midpoint: false };
+const BALL_HOOKS = {
+  floorWait(b, p) {   /* WEB-023：別人負責的球先落地，停住等回報 */
+    if (!(NET.on && b.room && !NET.ownBall && !b.floorReport && !b.waitFloor && b.v.y < 0)) return false;
+    p.y = BALL_R; b.waitFloor = { t: performance.now(), v: b.v.clone() }; b.v.set(0, 0, 0); b.err = null; b.acc = null; b.float = null; return true;
+  },
+  floorLand(b, p) {
+    if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
+    if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'floor', Math.min(1, -b.v.y / 9), p); }
+  },
+  floorEvent(b) { netFloorHit(b); },
+  wall(b, vn, p) { if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'wall', Math.min(1, -vn / 9), p); } },
+  antenna(b, c, from, lx, yc, lz) { vbAntenna(b, c, from, lx, yc, lz); },
+  netRemote(b) { return b.room && !NET.ownBall; },   /* 遠端網面與網帶由球權端決定，攔網仍在迴圈外執行。 */
+  netTouch(b, c, lz, dir, spd, tape, p) {
+    if (tape) { netFxHit(c, lz, dir, Math.min(1, spd / 12) * 0.6, true); netBallSound(b, 'tape', Math.min(1, spd / 14), p); }
+    else { netFxHit(c, lz, dir, Math.min(1, spd / 10), false); netBallSound(b, 'net', Math.min(1, spd / 14), p); }
+    if (b.spike) { toast('掛網了！'); b.spike = null; }
+  },
+  cross(b, c, from, yc, lz, top, bot) { vmCrossCheck(b, c, from, yc, lz, top, bot); },
+  after(b, h) { vbBlockTest(b, h); vmBlockTest(b, h); },
+};
 function updateBalls(dt) {
   updateTweens(dt); updateDoors(dt); updateWind(dt); netFxStep(dt);
   ballShadowSync();
@@ -6728,64 +6752,10 @@ function updateBalls(dt) {
     // 每一小步最多走 4 cm：快的扣球也不會一步跨過網子或牆
     const catchup = Math.min(b.wireCatchup || 0, .35); b.wireCatchup = 0;
     const flightDt = dt + catchup;
-    const steps = clamp(Math.ceil((b.v.length() * flightDt * VB.ts) / 0.04), 3, catchup ? 512 : 96), h = (flightDt * VB.ts) / steps;
-    for (let k = 0; k < steps; k++) {
-      const p = b.m.position, ox = p.x, oy = p.y, oz = p.z;
-      const ovx = b.v.x, ovy = b.v.y, ovz = b.v.z;
-      b.v.y -= 9.8 * h;
-      if (b.acc) b.v.addScaledVector(b.acc, h);
-      if (b.float) {
-        const F = b.float, t = (F.t += h), w = F.w, ph = F.ph, hv = Math.hypot(b.v.x, b.v.z) || 1, sx = b.v.z / hv, sz = -b.v.x / hv;
-        const side = Math.sin(t * w + ph) + 0.7 * Math.sin(t * w * 2.37 + ph * 3.1) + 0.45 * Math.sin(t * w * 0.61 + ph * 5.3), up = 0.5 * Math.sin(t * w * 1.3 + ph) + 0.4 * Math.sin(t * w * 3.1 + ph * 2.2);
-        b.v.x += sx * side * F.a * h; b.v.z += sz * side * F.a * h; b.v.y += up * F.a * 0.15 * h;
-      }
-      p.addScaledVector(b.v, h);
-      if (VM.on && VM.wire && b === VM.ball) { p.x += (ovx - b.v.x) * h * .5; p.y += (ovy - b.v.y) * h * .5; p.z += (ovz - b.v.z) * h * .5; }
-      if (p.y < BALL_R) {
-        if (!b.floorHit) { b.floorHit = [p.x, p.z]; b.floorT = performance.now(); b.floorEv = true; }
-        if (NET.on && b.room && !NET.ownBall && !b.floorReport && !b.waitFloor && b.v.y < 0) { p.y = BALL_R; b.waitFloor = { t: performance.now(), v: b.v.clone() }; b.v.set(0, 0, 0); b.err = null; b.acc = null; b.float = null; break; }   /* WEB-023：先停住等回報 */
-        b.acc = null; b.float = null;
-        p.y = BALL_R;
-        if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
-        if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'floor', Math.min(1, -b.v.y / 9), p); }
-        if (b.v.y < 0) { b.v.y = -b.v.y * 0.62; b.v.x *= 0.88; b.v.z *= 0.88; if (b.v.y < 0.5) b.v.y = 0; }
-      }
-      if (b.floorEv) { b.floorEv = false; netFloorHit(b); }
-      if (p.y > H - BALL_R) { p.y = H - BALL_R; b.v.y = -Math.abs(b.v.y) * 0.5; }
-      for (const [x1, z1, x2, z2] of segs) {
-        const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz || 1, t = clamp(((p.x - x1) * dx + (p.z - z1) * dz) / l2, 0, 1);
-        const ex = p.x - (x1 + dx * t), ez = p.z - (z1 + dz * t), dd = Math.hypot(ex, ez);
-        if (dd < BALL_R && dd > 1e-6) { const nx = ex / dd, nz = ez / dd; p.x += nx * (BALL_R - dd); p.z += nz * (BALL_R - dd); const vn = b.v.x * nx + b.v.z * nz; if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'wall', Math.min(1, -vn / 9), p); } if (vn < 0) { b.v.x -= 1.6 * vn * nx; b.v.z -= 1.6 * vn * nz; } }
-      }
-      if (p.y <= BALL_R + 1e-3) { const f = Math.max(0, 1 - 1.2 * h); b.v.x *= f; b.v.z *= f; }
-      // 球網：每面排球場中線上 9.5 m 寬、網高 2.43 m（網子下緣 1.43 m）；沒過網就被網子擋回來
-      for (const c of netCourts) {
-        const [lx, lz0] = toLocalOf(c, p.x, p.z), [px0, pz0] = toLocalOf(c, ox, oz);
-        if (Math.sign(lx) === Math.sign(px0) || px0 === 0) continue;
-        // 穿過網子那一點的高度和左右位置（不是這一步結束的位置）
-        const f = px0 / (px0 - lx), yc = oy + (p.y - oy) * f, lz = pz0 + (lz0 - pz0) * f, top = NETS[state.net].h, bot = top - 1.0;
-        if (Math.abs(Math.abs(lz) - 4.5) < BALL_R + 0.012 && yc > top - 0.02 && yc < top + 0.82) { vbAntenna(b, c, px0, lx, yc, lz); continue; }   // 標誌桿（網子兩端往上 0.8 m 的紅白桿）
-        if (Math.abs(lz) < 5.3 && yc < top + BALL_R && yc > bot - 0.15) {
-          if (b.room && !NET.ownBall) continue; /* 遠端網面與網帶由球權端決定，攔網仍在迴圈外執行。 */
-          const r = (c.rot * Math.PI) / 180, nx = Math.cos(r), nz = -Math.sin(r), vn = b.v.x * nx + b.v.z * nz, spd = b.v.length();
-          if (yc > top - 0.06) {
-            // 白帶：球擦到網子上緣，往上彈一點、速度變很慢；大概一半會滾過去
-            const r1 = vbNetRoll(1), r2 = vbNetRoll(2); b.netEv = true;   // 連線時每台電腦擲出一樣的結果
-            b.v.multiplyScalar(0.32); b.v.y = Math.abs(b.v.y) * 0.4 + 0.9 + r1 * 0.6;
-            if (r2 < 0.5) { const back = Math.sign(px0) * (BALL_R + 0.02) - lx; p.x += nx * back; p.z += nz * back; b.v.x -= 1.3 * vn * 0.32 * nx; b.v.z -= 1.3 * vn * 0.32 * nz; }
-            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 12) * 0.6, true); netBallSound(b, 'tape', Math.min(1, spd / 14), p);
-          } else {
-            // 網面是軟的：把球往回推一點點（約 15%）、沿著網子的速度也被拉住，往下掉在自己這邊網前
-            const vt = { x: b.v.x - vn * nx, z: b.v.z - vn * nz }; b.netEv = true;
-            b.v.x = vt.x * 0.35 - vn * 0.15 * nx; b.v.z = vt.z * 0.35 - vn * 0.15 * nz; b.v.y = Math.min(b.v.y, 0) * 0.4 - 0.3;
-            const back = Math.sign(px0) * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back;
-            netFxHit(c, lz, -Math.sign(px0 || 1), Math.min(1, spd / 10), false); netBallSound(b, 'net', Math.min(1, spd / 14), p);
-          }
-          if (b.spike) { toast('掛網了！'); b.spike = null; }
-        } else vmCrossCheck(b, c, px0, yc, lz, top, bot);
-      }
-      vbBlockTest(b, h); vmBlockTest(b, h);
-    }
+    const steps = ballSubsteps(b.v.length(), flightDt * VB.ts, catchup ? 512 : 96), h = (flightDt * VB.ts) / steps;
+    BALL_WORLD.H = H; BALL_WORLD.segs = segs; BALL_WORLD.nets = netCourts; BALL_WORLD.netTop = NETS[state.net].h;
+    BALL_WORLD.midpoint = VM.on && VM.wire && b === VM.ball;
+    for (let k = 0; k < steps; k++) if (!ballSubstep(b, b.m.position, h, BALL_WORLD, BALL_HOOKS)) break;   /* B1：球的物理在 engine/ball.js（伺服器共用） */
     if (b.err) netSmoothBall(b, dt, netCourts);
     const sp = Math.hypot(b.v.x, b.v.z);
     if (b.netEv && VM.on && VM.wire) { b.netEv = false; VM.wire.dirty = true; }

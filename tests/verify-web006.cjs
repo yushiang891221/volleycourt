@@ -276,6 +276,7 @@ function engine() {
     'vbAtServeLine', 'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
     'vbSet', 'vbSetStep', 'vbSpot', 'vbSendSet', 'vbDoSet', 'vbBlockTest', 'vbBlockOutcome', 'vbBlockApply',
     'staGame', 'staPay', 'staUse', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {
+    if (name === 'updateBalls') vm.runInContext(require('./engine-for-tests.cjs').engineScript(gym), c);   /* B1：球的物理在 engine/ball.js */
     vm.runInContext(source(name), c);
   }
   vm.runInContext(gym.slice(gym.indexOf('function tutEv('), gym.indexOf('// ---------------------------------------------------------------- loop', gym.indexOf('function tutEv('))) + '\nthis.coach = TUT_COACH;', c);
