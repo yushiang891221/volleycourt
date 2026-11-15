@@ -44,19 +44,26 @@ let browser,ws,server;
   assert(await evaluate("document.querySelector('#wk-keys [data-key=w]').parentElement.classList.contains('pressed')"));
   await evaluate("dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW',key:'w'}))");
   assert(await evaluate("!document.querySelector('#wk-keys [data-key=w]').parentElement.classList.contains('pressed')"));
-  await evaluate("lesson.stop();setWheelOpen();setMenuMove(-30,-52)");
+  await evaluate("lesson.stop();setWheelOpen();setMenuMove(-70,-121)");
   assert.equal(await evaluate("SETM.m.hov"),0);
+  const wheelSize=await evaluate("({outer:document.getElementById('set-menu').clientWidth,center:document.querySelector('.sw-center').offsetWidth})");
+  assert(wheelSize.outer>=518);assert(wheelSize.center>=170);
+  await evaluate("setWheelOpen(0);setMenuMove(60,0)");assert.equal(await evaluate('SETM.m.hov'),-1,'inside large center cannot select a route');
+  await evaluate("setMenuMove(80,0)");assert.equal(await evaluate('SETM.m.hov'),2);
+  await evaluate("setMenuMove(-80,0)");assert.equal(await evaluate('SETM.m.hov'),-1,'returning to center clears selection');
+  await evaluate("setWheelOpen(0);setMenuMove(-70,-121)");
+
   assert.equal(await evaluate("window.lastSet"),undefined);
   fs.writeFileSync(path.join(output,'set-wheel-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
   for(let i=0;i<6;i++){
-    const hit=await evaluate('(function(){setWheelOpen(0);const a=setWheelAngle('+i+');setMenuMove(Math.cos(a)*60,-Math.sin(a)*60);const h=SETM.m.hov;setMenuClose(true);return {h,shot:lastSet};})()');
+    const hit=await evaluate('(function(){setWheelOpen(0);const a=setWheelAngle('+i+');setMenuMove(Math.cos(a)*140,-Math.sin(a)*140);const h=SETM.m.hov;setMenuClose(true);return {h,shot:lastSet};})()');
     assert.equal(hit.h,i);assert.equal(hit.shot[2],true);
   }
-  await evaluate("setWheelOpen(1);setMenuMove(-60,0);setMenuClose(true)");
+  await evaluate("setWheelOpen(1);setMenuMove(-140,0);setMenuClose(true)");
   assert.deepEqual(await evaluate('lastSet'),[4,'line3',true]);
   await evaluate("setWheelOpen(0);setWheelScroll({deltaY:1,preventDefault(){},stopPropagation(){}})");
   assert.equal(await evaluate('SETM.page'),1);
-  await evaluate("setMenuClose(false);setWheelOpen(1);setMenuMove(60,0);window.lastSet=null;setMenuClose(true)");
+  await evaluate("setMenuClose(false);setWheelOpen(1);setMenuMove(140,0);window.lastSet=null;setMenuClose(true)");
   assert.equal(await evaluate('lastSet'),null,'empty rear sector cancels instead of firing');
   await evaluate("setWheelOpen(0);dispatchEvent(new Event('blur'))");assert.equal(await evaluate('SETM.m'),null);
   await evaluate("dispatchEvent(new KeyboardEvent('keydown',{code:'ShiftLeft',key:'Shift'}));dispatchEvent(new KeyboardEvent('keydown',{code:'ShiftRight',key:'Shift'}));dispatchEvent(new KeyboardEvent('keyup',{code:'ShiftLeft',key:'Shift'}))");

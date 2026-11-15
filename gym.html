@@ -731,8 +731,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 @media(max-width:700px) { .set-charge { left:10px; bottom:180px; width:220px; } }
 
 .wk-keys span.pressed{background:#ffd44b;border-color:#ffe793;color:#17202e;box-shadow:0 0 12px #ffd44b66}.wk-keys span.pressed kbd,.wk-keys span.pressed small{color:#17202e}.wk-keys[hidden]{display:none!important}
-.set-wheel.all-wheel{width:min(390px,80vmin);height:min(390px,80vmin);margin:0;transform:translate(-50%,-50%);border:2px solid #bac6d080;box-shadow:0 12px 50px #0008;background:var(--sector),repeating-conic-gradient(from -60deg,#bac6d060 0deg 1deg,transparent 1deg 60deg),#101720d9!important;backdrop-filter:blur(4px)}
-.all-wheel .sw-opt{width:110px;max-width:30%;font-size:14px;line-height:1.5;color:#fff;text-shadow:0 1px 3px #000;pointer-events:auto}.all-wheel .sw-opt small{display:block;font-size:11px;color:#d1dae4}.all-wheel .sw-opt{box-sizing:border-box;padding:5px;background:transparent;border-color:transparent}.all-wheel .sw-opt.on{color:#fff5bb;background:transparent;border-color:transparent}.sw-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:110px;height:110px;border-radius:50%;background:#17202ff5;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ffffff50;text-align:center;color:white;pointer-events:none}.sw-center small{font-size:11px;color:#bfcbd8;margin-top:6px}.all-wheel #set-cur{z-index:3}
+.set-wheel.all-wheel{width:min(520px,90vmin);height:min(520px,90vmin);margin:0;transform:translate(-50%,-50%);border:2px solid #bac6d080;box-shadow:0 12px 50px #0008;background:var(--sector),repeating-conic-gradient(from -60deg,#bac6d060 0deg 1deg,transparent 1deg 60deg),#101720d9!important;backdrop-filter:blur(4px)}
+.all-wheel .sw-opt{width:145px;max-width:29%;font-size:18px;line-height:1.5;color:#fff;text-shadow:0 1px 3px #000;pointer-events:auto}.all-wheel .sw-opt small{display:block;font-size:14px;color:#d1dae4}.all-wheel .sw-opt{box-sizing:border-box;padding:5px;background:transparent;border-color:transparent}.all-wheel .sw-opt.on{color:#fff5bb;background:transparent;border-color:transparent}.sw-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34%;height:34%;font-size:20px;border-radius:50%;background:#17202ff5;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ffffff50;text-align:center;color:white;pointer-events:none}.sw-center small{font-size:13px;color:#bfcbd8;margin-top:6px}.all-wheel #set-cur{z-index:3}
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -10338,6 +10338,11 @@ function setWheelOpen(page = SETM.page) {
   vbManualSetCancel(); clearTimeout(SETM.to); SETM.page = page;
   SETM.m = { all:true, page, n:0, dx:0, dy:0, hov:-1 };
   const el = $('set-menu'); el.classList.add('all-wheel');
+  el.onpointermove = e => {
+    if(!SETM.m?.all || document.pointerLockElement)return;
+    const rect=el.getBoundingClientRect(), m=SETM.m;
+    setMenuMove(e.clientX-rect.left-rect.width/2-m.dx,e.clientY-rect.top-rect.height/2-m.dy);
+  };
   for (const o of el.querySelectorAll('.sw-opt,.sw-center')) o.remove();
   SET_WHEEL[page].forEach((route,i) => {
     if (!route) return;
@@ -10397,9 +10402,12 @@ function setMenuHover(i) { const m = SETM.m; if (!m || m.hov === i) return; m.ho
 // 滑鼠移動：游標在轉盤裡跟著動（不轉頭）；方向最接近哪個選項就亮哪個，拖出去夠遠（45 px）就舉
 function setMenuMove(dx, dy) {
   const m = SETM.m; if (!m) return; m.dx += dx; m.dy += dy;
-  const r = Math.hypot(m.dx, m.dy), N = m.all ? 6 : SET_OPT[m.n].length; if (r > 60) { m.dx *= 60 / r; m.dy *= 60 / r; }
+  const r = Math.hypot(m.dx, m.dy), N = m.all ? 6 : SET_OPT[m.n].length;
+  const radius=m.all ? $('set-menu').clientWidth*.43 : 60;
+  const deadZone=m.all ? $('set-menu').querySelector('.sw-center').offsetWidth/2+6 : 12;
+  if (r > radius) { m.dx *= radius / r; m.dy *= radius / r; }
   $('set-cur').style.transform = `translate(${m.dx.toFixed(0)}px, ${m.dy.toFixed(0)}px)`;
-  if (r < 12) { if(m.all){m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');} return; }
+  if (r <= deadZone) { if(m.all){m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');} return; }
   const phi = Math.atan2(-m.dy, m.dx); let best = 0, bd = 9;
   for (let i = 0; i < N; i++) { const a=m.all ? setWheelAngle(i) : setAng(i,N); const d = Math.abs(Math.atan2(Math.sin(phi-a),Math.cos(phi-a))); if (d < bd) { bd = d; best = i; } }
   if(m.all && !SET_WHEEL[m.page][best]){m.hov=-1;m.invalid=true;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');return;}
