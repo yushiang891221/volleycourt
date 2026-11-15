@@ -7,4 +7,11 @@ function engineScript(gym) {
   if (a < 0 || b < 0) throw new Error('找不到 BALL_WORLD／updateBalls');
   return engine + '\n' + gym.slice(a, b);
 }
-module.exports = { engineScript };
+// 規則引擎（B2）＋遊戲裡的犯規提示文字
+function rulesScript(gym) {
+  const rules = fs.readFileSync(path.join(root, 'engine', 'rules.js'), 'utf8').replace(/^export /gm, '');
+  const a = gym.indexOf('const FAULT_TEXT = {'), b = gym.indexOf('function vmOnTouch(', a);
+  if (a < 0 || b < 0) throw new Error('找不到 FAULT_TEXT');
+  return rules + '\n' + gym.slice(a, b);
+}
+module.exports = { engineScript, rulesScript };

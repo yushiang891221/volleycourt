@@ -211,47 +211,54 @@ function vmAiServe(a) {
   vmOnTouch(b, a.id, 'serve');
 }
 // ---- 觸球紀錄（只有開局的人判）
+// 犯規提示文字（引擎只回代碼）
+const FAULT_TEXT = {
+  backBlock: n => `後排攔網犯規（${n}在後排）`,
+  backAttack: n => `後排攻擊犯規（${n}在後排，要在 3 公尺線後起跳）`,
+  serveBlock: n => `攔網發球犯規（${n}攔了發球）`,
+  serveAttack: n => `攻擊發球犯規（${n}在前區把高過網的發球直接打回去）`,
+  double: n => `連擊（${n} 連續碰兩次）`,
+  four: () => '四次擊球（一隊最多碰三次）',
+  held: n => `持球（${n}舉球時球在手上停太久）`,
+  setDouble: n => `連擊（${n}舉球兩手沒同時碰到）`,
+};
 function vmOnTouch(b, id, kind) {
   if (b.langzi || kind === 'kick') return; /* WEB-022 裝飾球不計比賽事件。 */
   if (!VM.on || !VM.host) return;
   const team = vmTeamOf(id); if (team < 0 || kind === 'throw') return;
   // 只有比賽球算：發球階段只認輪到的人發出去的那一下；開打之後別顆球（有人手上本來拿著的、場外的）碰到、落地都不算
-  if (VM.phase === 'serve' && (kind !== 'serve' || id !== vmServer())) return;
+  if (!touchCounts(VM, id, kind, VM.phase === 'serve' ? vmServer() : null)) return;   /* B2：規則判定在 engine/rules.js */
   if (VM.wire) { VM.wire.dirty = true; if (VM.wire.event) VM.wire.event.actor = id; }
   vmPerfTouch(id, kind, b);   // WEB-010 戰績
   if (VM.phase === 'rally' && VM.ball && balls.includes(VM.ball) && b !== VM.ball) return;
   VM.ball = b; b.spike = null; b.floorHit = null; if (kind !== 'block') b.blkDone = false;
-  if (VM.phase === 'serve') {   // 發球那一下：對方要接，自己這隊不能再碰
-    VM.phase = 'rally'; VM.touch = { team, n: 3, last: id, serve: true }; VM.poss = [null, null];
+  // 引擎要的事實：後排與否、擊球點高過網沒、起跳點、球離中線多遠（位置都在遊戲這邊算）
+  const fact = { team, id, kind, setFault: b.setFault || null };
+  if (VM.phase === 'rally') {
+    const attack = kind === 'spike' || kind === 'tip' || kind === 'hit';
+    fact.aboveNet = attack && b.m.position.y > NETS[state.net].h + BALL_R;   /* 跟以前一樣：只有攻擊才需要看網高、球的位置 */
+    if (fact.aboveNet) fact.ballX = vmL(b.m.position.x, b.m.position.z)[0];
+    if (VM.six) {
+      const k6 = vm6Idx(id); fact.back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;
+      if (fact.back && attack && fact.aboveNet) {
+        const ai = VM.ai.get(id);
+        const exact = ai ? ((ai.y > 0 || ai.vy > 0) && ai.jp ? [ai.jp.x, ai.jp.z] : vmW(ai.x, ai.z)) : id === vmMe() ? (walk.air && walk.air.x0 != null ? [walk.air.x0, walk.air.z0] : null) : b.jump0;   // 起跳點（自己的、或連線的人隨擊球訊息送來的）
+        const q = exact ? { x: vmL(exact[0], exact[1])[0] } : VM.ai.has(id) ? null : vmPos(id);
+        fact.jumpX = q ? q.x : null; fact.exactJump = !!exact;
+      }
+    }
+  }
+  const res = judgeTouch(VM, fact);
+  if (res.serveStart) {   // 發球那一下：對方要接，自己這隊不能再碰
+    VM.poss = [null, null];
     if (VM.six) { const ov = vm6Overlap(); if (ov) vmPoint(1 - ov.team, ov.why); }
     return;
   }
-  if (VM.phase !== 'rally') return;
-  // 6 對 6：後排的人不能攔網；後排的人在 3 公尺線前起跳、球整顆在網子上緣以上就打過去＝後排攻擊犯規
-  if (VM.six) {
-    const k6 = vm6Idx(id), back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;
-    if (back && kind === 'block') { vmPoint(1 - team, `後排攔網犯規（${vmName(id)}在後排）`); return; }
-    if (back && (kind === 'spike' || kind === 'tip' || kind === 'hit') && b.m.position.y > NETS[state.net].h + BALL_R) {
-      const ai = VM.ai.get(id);
-      const exact = ai ? ((ai.y > 0 || ai.vy > 0) && ai.jp ? [ai.jp.x, ai.jp.z] : vmW(ai.x, ai.z)) : id === vmMe() ? (walk.air && walk.air.x0 != null ? [walk.air.x0, walk.air.z0] : null) : b.jump0;   // 起跳點（自己的、或連線的人隨擊球訊息送來的）
-      const q = exact ? { x: vmL(exact[0], exact[1])[0] } : VM.ai.has(id) ? null : vmPos(id);
-      if (q && Math.abs(q.x) < (exact ? 3 : 2.6)) { vmPoint(1 - team, `後排攻擊犯規（${vmName(id)}在後排，要在 3 公尺線後起跳）`); return; }
-    }
-  }
-  // 正式規則：發球不能攔網；也不能在前區（3 公尺線內）把整顆高過網子的發球直接打回去
-  if (VM.touch.serve && team !== VM.touch.team) {
-    if (kind === 'block') { vmPoint(1 - team, `攔網發球犯規（${vmName(id)}攔了發球）`); return; }
-    if ((kind === 'spike' || kind === 'tip' || kind === 'hit') && b.m.position.y > NETS[state.net].h + BALL_R) { const [blx] = vmL(b.m.position.x, b.m.position.z); if (Math.abs(blx) < 3) { vmPoint(1 - team, `攻擊發球犯規（${vmName(id)}在前區把高過網的發球直接打回去）`); return; } }
-  }
-  // 正式規則：同一人不能連續碰兩次（連擊）、一隊最多碰三次；攔網不算一次，攔網的人也可以再碰下一球
-  const block = kind === 'block';
-  if (team === VM.touch.team) {
-    if (block) { VM.touch.last = id; VM.touch.blk = true; VM.poss[team] = null; return; }
-    if (VM.touch.last === id && !VM.touch.blk) { vmPoint(1 - team, `連擊（${vmName(id)} 連續碰兩次）`); return; }
-    VM.touch.n++; VM.touch.last = id; VM.touch.blk = false;
-    if (VM.touch.n > 3) { vmPoint(1 - team, '四次擊球（一隊最多碰三次）'); return; }
-  } else { VM.touch = { team, n: block ? 0 : 1, last: id, blk: block }; if (block) VM.poss[team] = null; }
-  if (b.setFault) { const f = b.setFault; b.setFault = null; if (kind === 'set') { vmPoint(1 - team, f === 'held' ? `持球（${vmName(id)}舉球時球在手上停太久）` : `連擊（${vmName(id)}舉球兩手沒同時碰到）`); return; } }
+  if (res.ignored) return;
+  if (res.setFaultUsed) b.setFault = null;
+  if (res.fault) { vmPoint(1 - team, FAULT_TEXT[res.fault](vmName(id))); return; }
+  const block = res.block;
+  if (block) { VM.poss[team] = null; if (res.sameTeamBlock) return; }
   if (!block && VM.six) {   // 6 對 6：第一球誰接都好，舉球員（他接了就換舉對／前排的人）舉；舉出去的球照落點找攻擊手
     let P = VM.poss[team]; if (!P) P = VM.poss[team] = { stage: 0, passer: id, setter: null, attacker: null };
     if (VM.touch.n === 1) { P.passer = id; P.setter = vm6SetterFor(team, id); P.attacker = null; } else if (VM.touch.n === 2) { P.setter = id; P.attacker = vm6AttackerFor(team, b, id); }
@@ -294,16 +301,14 @@ function vmFixSetter(team, P, p, passer) {
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
   vmPerfPoint(win);   // WEB-010 戰績
-  VM.phase = 'dead'; VM.sc[win]++;
+  const r = scorePoint(VM, win);   /* B2：比分、發球權、局數、換場判定在 engine/rules.js */
   sfx('whistle', 1);
-  if (win !== VM.srvTeam) { VM.srvTeam = win; if (VM.six) vm6Rotate(win); else VM.srvIdx[win]++; }   // 拿回發球權：6 對 6 要輪轉
-  const a = VM.sc[0], b = VM.sc[1], hi = Math.max(a, b);
+  if (r.sideOut) { if (VM.six) vm6Rotate(win); else VM.srvIdx[win]++; }   // 拿回發球權：6 對 6 要輪轉
   let fn = vmSetupServe;
-  if (VM.six) {
-    const deciding = VM.bestOf > 1 && VM.sets[0] + VM.sets[1] === VM.bestOf - 1, to = deciding ? 15 : VM.to;
-    if (hi >= to && Math.abs(a - b) >= 2) { VM.sets[win]++; const done = VM.sets[win] >= Math.ceil(VM.bestOf / 2); fn = done ? () => vmOver() : vm6NextSet; why += `・${vmTeamLabel(win)}拿下第 ${VM.setNo} 局（局數 ${VM.sets[0]}：${VM.sets[1]}）`; }
-    else if (deciding && !VM.swap8 && hi === 8) { VM.swap8 = true; fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); }; }
-  } else if ((hi >= VM.to && Math.abs(a - b) >= 2) || hi >= VM.to + 2) fn = () => vmOver();
+  if (r.setWon) why += `・${vmTeamLabel(win)}拿下第 ${VM.setNo} 局（局數 ${VM.sets[0]}：${VM.sets[1]}）`;
+  if (r.next === 'over') fn = () => vmOver();
+  else if (r.next === 'nextSet') fn = vm6NextSet;
+  else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
   VM.next = { at: VM.t + 3.2, fn };
   vmBroadcast(true, null, { win, why });
@@ -326,10 +331,10 @@ function vmJudge() {
     const near = [...VM.team[0], ...VM.team[1]].some((id) => { if (id === vmMe() || VM.ai.has(id)) return false; const q = NET.peers.get(id); return q && Math.hypot(q.x - b.floorHit[0], q.z - b.floorHit[1]) < 3.5; });
     if (near) return;
   }
-  const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, inside = Math.abs(B.x) <= 9 + BALL_R && Math.abs(B.z) <= 4.5 + BALL_R, sideTeam = Math.sign(B.x) === VM.sg ? 0 : 1;
-  vmMark(b.floorHit[0], b.floorHit[1], inside);
-  if (inside) vmPoint(1 - sideTeam, '落地得分');
-  else { const lose = VM.touch.team < 0 ? sideTeam : VM.touch.team; vmPoint(1 - lose, 'OUT 出界'); vmOut(B); }
+  const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, L = judgeLanding(B.x, B.z, VM.sg, VM.touch.team, BALL_R);   /* B2 */
+  vmMark(b.floorHit[0], b.floorHit[1], L.inside);
+  if (L.inside) vmPoint(L.winner, '落地得分');
+  else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
 }
 // 比賽球的軌跡：最近 0.5 秒的路線（越舊越淡），看得出球是從網子上面還是旁邊過去
 function vmTrailPush(q) {

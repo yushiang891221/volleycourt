@@ -24,7 +24,7 @@ function harness(delay=80) {
     c.vmPoint=(team,why)=>{c.VM.sc[team]++;c.VM.phase='dead';c.fault=why;};
     vm.createContext(c);
     vm.runInContext(gym.slice(gym.indexOf('function vmWireInit('),gym.indexOf('function netOnMessage(')),c);
-    vm.runInContext(gym.slice(gym.indexOf('function vmOnTouch('),gym.indexOf('function vmGrade(')),c);
+    vm.runInContext(require('./engine-for-tests.cjs').rulesScript(gym)+gym.slice(gym.indexOf('function vmOnTouch('),gym.indexOf('function vmGrade(')),c);   /* B2：規則引擎 */
     c.vmWireInit(host,host?c.VM.startData:nodes.get('host').VM.startData);
     if(host)c.VM.wire.order.reset(1);
     nodes.set(id,c);return c;

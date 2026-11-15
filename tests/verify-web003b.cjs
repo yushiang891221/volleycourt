@@ -5,7 +5,7 @@ let passed=0;function check(name,f){f();console.log('PASS '+name);passed++;}
 function integrated(n){
  const e=engine(),c=e.c;Object.assign(c,{BALL_R:.12,vmBallL:b=>b,vmSide:t=>t===0?-1:1,vmPos:id=>{const a=e.VM.ai.get(id);return a?{x:a.x,z:a.z}:c.positions?.[id];},vmTeamOf:id=>e.VM.team.findIndex(t=>t.includes(id)),vmPredL:B=>B,vmLetGo:()=>false,vmLv:()=>({react:.2}),vmSay(){},sfx(){},vmBroadcast(){},vmPointMsg:()=>'',vmTeamLabel:t=>String(t),vmOver(){e.finished=true;}});
  vm.runInContext(block('function vm6Rotate(','// ---- 每一格'),c);
- vm.runInContext(block('function vmServer()','function vmSetupServe()')+block('function vmPoint(','function vmTeamLabel('),c);
+ vm.runInContext(require('./engine-for-tests.cjs').rulesScript(require('fs').readFileSync(require('path').join(__dirname,'..','gym.html'),'utf8'))+block('function vmServer()','function vmSetupServe()')+block('function vmPoint(','function vmTeamLabel('),c);   /* B2 */
  c.vm6Start({id:'court',x:0,z:0,rot:0},-1,{},[Array(n).fill(null),Array(n).fill(null)]);
  return e;
 }

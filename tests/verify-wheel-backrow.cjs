@@ -41,7 +41,7 @@ for(const side of [-1,1])for(const rotation of [0,.65,Math.PI/2]){
     const [jx,jz]=world(test.take*side,.7),ai={x:test.now*side,z:.7,y:test.ground?0:.5,vy:0,jp:{x:jx,z:jz}};
     const b={m:{position:{x:0,z:0,y:test.height||3}},jump0:world(test.stale*side,0)};let fault='';
     const c={VM:{on:true,host:true,six:true,phase:'rally',ai:new Map([['ai',ai]]),touch:{team:0,n:2,last:'setter'},poss:[null,null]},balls:[b],NET:{on:false},state:{net:'men'},NETS:{men:{h:2.43}},BALL_R:.105,walk:{},vmTeamOf:()=>0,vmPerfTouch(){},vm6Idx:()=>4,vmSmallCount:()=>false,vmMe:()=> 'me',vmName:()=> 'AI',vmW:world,vmL:local,vmPoint:(team,why)=>{fault=why;},vm6SetterFor:()=>null,vm6AttackerFor:()=>null};
-    vm.runInNewContext(source('vmOnTouch'),c);c.vmOnTouch(b,'ai','spike');
+    vm.runInNewContext(require('./engine-for-tests.cjs').rulesScript(require('fs').readFileSync(require('path').join(__dirname,'..','gym.html'),'utf8'))+source('vmOnTouch'),c);   /* B2 */c.vmOnTouch(b,'ai','spike');
     assert.equal(!!fault,test.fault,JSON.stringify({side,rotation,test,fault}));
   }
 }

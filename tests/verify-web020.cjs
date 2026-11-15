@@ -31,6 +31,7 @@ Vector.prototype.toArray = function () { return [this.x, this.y, this.z]; };
 function fixture() {
   const game = harness.engine(), c = game.c;
   for (const name of ['netSmoothBall', 'netOnMessage', 'netBallHit', 'netBallMsg', 'vmJudge', 'vmThird', 'vbThirdOverVel', 'vbOverVel', 'vbFacingOverVel', 'vmFreeBall']) vm.runInContext(source(name), c);
+  vm.runInContext(require('./engine-for-tests.cjs').rulesScript(gym), c);   /* B2 */
   Object.assign(c.NET, { on: true, ownBall: false, me: 'me', hitN: 1, hitBy: 'other', peers: new Map(), tx: { publish: (t, d) => messages.push({ t, d }) } });
   const messages = [], points = [], notes = [];
   Object.assign(c.VM, { on: true, host: true, phase: 'rally', touch: { team: 0, n: 2 }, sg: 1, team: [['me'], ['other']], ai: new Map(), c: c.state.items[0], poss: {} });

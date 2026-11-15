@@ -59,6 +59,7 @@ let practice = false;
 Object.assign(context, { THREE: { Vector3: Vector }, BALL_R: .105, MREC: { id: 'test-match', local: {} }, vmIsPractice: () => practice, newBallMesh: () => ({ position: new Vector(), userData: {} }), ballsGroup: { add() {}, remove() {} }, VB: {} });
 Object.assign(context.NET, { me: 'self', hitN: 7, hitBy: 'self' });
 for (const name of ['netBallHit', 'netBallMsg', 'netOnMessage', 'vmOnTouch', 'vmClearBalls', 'vmPrepServe', 'vbBlockTest', 'vmJudge', 'vmStatePayload', 'vbOwnSide', 'hitWorldBall']) vm.runInContext(source(name), context);
+vm.runInContext(require('./engine-for-tests.cjs').rulesScript(gym), context);   /* B2 */
 const frames = run('EMO_KEYS.langzi'), kicks = frames.filter(f => f.kick != null);
 close(context.emoKeyDuration('langzi'), 2.19);
 assert.deepEqual(Array.from(kicks, f => f.kick), [0, 0]);   /* 使用者指定：同一隻腳先往後勾、再往前踢 */
