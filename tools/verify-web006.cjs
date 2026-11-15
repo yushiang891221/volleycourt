@@ -5,7 +5,7 @@ const { create, sections } = require('../tutorial.js');
 function fixture(raw = null, blocked = false) {
   let time = 1000;
   const memory = new Map([['vb.tutorial', raw]]);
-  const keys = Object.fromEntries(['w', 'a', 's', 'd', 'p', 'shift', 'crouch', 'v', '1', '2', '3', '4', '5', '6', ' ', 'b'].map(k => [k, 'custom-' + k]));
+  const keys = Object.fromEntries(['w', 'a', 's', 'd', 'p', 'shift', 'crouch', 'v', 'q', 'e', '1', '2', '3', '4', '5', '6', ' ', 'b'].map(k => [k, 'custom-' + k]));
   const settings = { values: { keys }, keyName: code => code };
   const calls = [];
   const api = create({
@@ -66,14 +66,14 @@ t.api.emit('dive'); t.api.emit('recv', { dive: true }); t.advance();
 assert.equal(t.api.progress().done.recv, true);
 
 t.api.start('set');
-t.api.emit('set', { n: 2 }); assert.equal(t.api.view().phase, 'running');
-t.api.emit('set', { n: 1 }); t.advance();
-t.api.emit('set', { n: 3 }); assert.match(t.api.view().instruction, /✓/);
-t.api.emit('set', { n: 3 }); assert.equal(t.api.view().phase, 'running');
-t.api.emit('set', { n: 2 }); t.advance();
-t.api.emit('set', { n: 7 }); t.advance();
-t.api.emit('set', { n: 1, menu: true, def: true }); assert.equal(t.api.view().phase, 'running');
-t.api.emit('set', { n: 1, menu: true, def: false }); t.advance();
+t.api.emit('set', { manual:true, back:true }); assert.equal(t.api.view().phase, 'running');
+t.api.emit('set', { manual:true, back:false }); t.advance();
+t.api.emit('set', { manual:true, back:false }); assert.equal(t.api.view().phase, 'running');
+t.api.emit('set', { manual:true, back:true }); t.advance();
+t.api.emit('set', { manual:true, angle:.4 }); assert.equal(t.api.view().phase, 'running');
+t.api.emit('set', { manual:true, angle:.8 }); t.advance();
+t.api.emit('set', { manual:true, fraction:0 }); assert.match(t.api.view().instruction, /✓/);
+t.api.emit('set', { manual:true, fraction:.9 }); t.advance();
 assert.equal(t.api.progress().done.set, true);
 const detached = t.api.progress(); detached.done.move = false;
 assert.equal(t.api.progress().done.move, true);
@@ -273,7 +273,7 @@ function engine() {
   vm.runInContext('Math.random = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', c);   /* 固定亂數：教練落點每次一樣，測試結果穩定 */
   for (const name of ['toWorldOf', 'toLocalOf', 'courtAt', 'vbCourt', 'solveShot', 'vbPredict', 'vbMine', 'vbLaunch',
     'netFloorHit', 'netBallSound', 'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbSpikeCamOffset', 'vbClearAir', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
-    'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
+    'vbAtServeLine', 'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
     'vbSet', 'vbSetStep', 'vbSpot', 'vbSendSet', 'vbDoSet', 'vbBlockTest', 'vbBlockOutcome', 'vbBlockApply',
     'staGame', 'staPay', 'staUse', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {
     vm.runInContext(source(name), c);
@@ -645,3 +645,5 @@ console.log('PASS 練習模式大面板（自由練習／新手教學）、按�
   assert(Math.sin(r) * -Math.sin(yaw) + Math.cos(r) * -Math.cos(yaw) > 0.99, '雙人攔網隊友要跟玩家一樣面向網子');
   console.log('PASS 教練面向玩家（玩家走動也跟著轉）、雙人攔網隊友面向網子');
 }
+
+module.exports = { engine, Vector, source };

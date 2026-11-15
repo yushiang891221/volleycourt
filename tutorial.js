@@ -70,10 +70,10 @@
           `按住 ${key('shift')} 再按 ${key('v')}，撲向遠處的球並接住。`
         ],
         set: [
-          `球快到額頭前上方時按 ${key('1')}，前舉到 4 號位。`,
-          `分別完成 ${key('2')} 中間快攻${seen.has(2) ? ' ✓' : ''}、${key('3')} 後舉到 2 號位${seen.has(3) ? ' ✓' : ''}。`,
-          `任選一種完成，${key('4')} 後排中間、${key('5')} 老三（右後排）、${key('6')} 後排 5 號位（左後排）。`,
-          `按住 ${key('1')}、${key('2')} 或 ${key('3')}，滑鼠往左或右拖，選不同於預設的舉法再放開。`
+          `按住 ${key('q')} 準備正面舉球，抬頭瞄準，球快到額頭前上方時按左鍵再放開。`,
+          `按住 ${key('e')} 準備背面舉球，再按左鍵、放開，把球舉到身後。`,
+          `按住 ${key('q')} 或 ${key('e')}，抬頭到 40° 以上，再用左鍵出手，完成高弧線舉球。`,
+          `分別完成左鍵短按的快球${seen.has('fast') ? ' ✓' : ''}、蓄力條超過八成的慢球${seen.has('slow') ? ' ✓' : ''}。按住 ${key('q')} 或 ${key('e')} 準備，左鍵放開出手。`
         ],
         atk: [
           `按住 ${key('shift')} 往網前助跑，移動中按 ${key(' ')} 起跳。這一步要一般起跳。`,
@@ -180,7 +180,7 @@
     function missHint() {   // 每段自己的失敗提示（按鍵照玩家設定）
       const id = section?.id;
       if (id === 'recv') return step === 3 ? `球快掉到地上時才按住 ${key('shift')} 再按 ${key('v')} 撲過去，太早撲會撲空。` : '等球靠近身體、亮起來再按，先看落點站好。';
-      if (id === 'set') return '球掉到額頭前上方時再按數字鍵，太早太晚都舉不到。';
+      if (id === 'set') return '按住 Q／E 準備，球接近額頭前上方時放開左鍵；球仍在飛行，不會停下等你。';
       if (id === 'atk') return '等球掉到頭頂前上方再起跳，起跳後再按左鍵。';
       if (id === 'block') return `看教練：他一起跳你就按 ${key('b')}，跟他同時跳，手才來得及舉到網上。`;
       if (id === 'serve') return '拿著球再按，發完等下一顆球回到手上。';
@@ -213,6 +213,11 @@
         if (name === 'recv' && (step === 1 || step === 2 && data.crouch || step === 3 && dived && data.dive)) succeed();
       }
       if (section.id === 'set' && name === 'set') {
+        if (data.manual) {
+          if (step === 3) { if (data.fraction <= .2) seen.add('fast'); if (data.fraction >= .8) seen.add('slow'); }
+          if (step === 0 && !data.back || step === 1 && data.back || step === 2 && data.angle >= 40 * Math.PI / 180 || step === 3 && seen.has('fast') && seen.has('slow')) succeed();
+          return;
+        }
         if (step === 1 && [2, 3].includes(data.n)) seen.add(data.n);
         if (step === 0 && data.n === 1 || step === 1 && seen.size === 2 || step === 2 && [4, 5, 7].includes(data.n) || step === 3 && data.menu && data.def === false) succeed();
       }
@@ -259,11 +264,13 @@
           top: max(8px, env(safe-area-inset-top));
           left: max(8px, env(safe-area-inset-left));
           box-sizing: border-box;
-          width: min(220px, calc(100vw - 24px));
-          padding: 8px 10px;
+          width: min(340px, calc(100vw - 24px));
+          max-height: calc(100dvh - 24px);
+          overflow: auto;
+          padding: 12px 14px;
           border-radius: 8px;
-          font-size: 13px;
-          line-height: 1.4;
+          font-size: 15px;
+          line-height: 1.5;
         }
         .vb-tut-panel p { margin: 4px 0 6px; }
         .vb-tut-panel button { margin: 0; padding: 4px 8px; }

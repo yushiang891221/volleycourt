@@ -63,14 +63,14 @@ if(require.main===module)(async()=>{
   const rules={isHost:true,speed:.7,count:2,flow:{phase:'playing',round:1,court:'court',picks:['guest',null,null,'host']}};
   c.roomRulesChanged(rules);assert.equal(calls[0][1],1);assert.equal(calls[0][4][0][1],'host');assert.equal(calls[0][4][1][0],'guest');assert(walk.x>0);c.roomRulesChanged(rules);assert.equal(calls.length,1);
  });
- await check('spectator boundary and real E handler preserve seating/monitor interaction, block ball actions',()=>{
+ await check('spectator boundary and real interaction handler preserve seating/monitor interaction, block ball actions',()=>{
   const walk={on:true,x:0,z:0,keys:new Set()},calls=[];
   const c={VM:{on:true,team:[['a'],['b']],c:{}},walk,vmMe:()=> 'spectator',vmTeamOf:()=>-1,vmL:(x,z)=>[x,z],vmW:(x,z)=>[x,z]};
   vm.runInNewContext(block('function roomSpectator()','function isRoomHost()'),c);c.roomKeepSpectatorOut();assert.equal(walk.z,5.7);walk.x=30;walk.z=0;c.roomKeepSpectatorOut();assert.equal(walk.x,30);
   Object.assign(c,{VBSettings:{isOpen:false,key:e=>e.key},ROOM_UI:null,RP:{on:false},window:{},addEventListener:(k,fn)=>c[k]=fn,performance:{now:()=>0},$:()=>({hidden:true}),doInteract:()=>calls.push('interact'),vmFreeBall:()=>calls.push('ball'),vbReceive:()=>calls.push('receive')});
   vm.runInNewContext(block("addEventListener('keydown', (e) => {\n  if (!walk.on","addEventListener('blur', () => walk.keys.clear());"),c);
   const press=key=>c.keydown({key,preventDefault(){},target:{tagName:'CANVAS'}});
-  walk.focus={kind:'item'};press('e');assert.deepEqual(calls,['interact']);walk.focus=null;press('e');press('v');assert.deepEqual(calls,['interact']);
+  walk.focus={kind:'item'};press('interact');assert.deepEqual(calls,['interact']);walk.focus=null;press('e');press('q');press('interact');press('v');assert.deepEqual(calls,['interact']);
  });
  await check('late match snapshot requests are host-only; UI and six modes compile',()=>{
   new vm.Script(read('room-flow-ui.js'));for(let k=1;k<=6;k++)assert(read('index.html').includes(`<option${k===2?' selected':''}>${k}v${k}</option>`));

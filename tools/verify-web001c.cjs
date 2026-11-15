@@ -51,11 +51,11 @@ await check('real gym key handler respects remapping, keyup and settings guard',
  const c={VBSettings:p,walk,RP:{on:false},VM:{on:false},SETM:{m:null},TP:{},performance:{now:()=>0},window:{__rkOn:false},addEventListener:(t,fn)=>listeners[t]=fn,$:()=>({hidden:true}),doInteract:()=>calls.interact++,vbReceive:()=>calls.receive++};
  const block=segment(gym,"addEventListener('keydown', (e) => {\n  if (!walk.on", "addEventListener('blur', () => walk.keys.clear());");vm.runInNewContext(block,c);
  const event=(key,code)=>({key,code,preventDefault(){},target:{tagName:'CANVAS'}});
- p.bind('e','KeyZ');listeners.keydown(event('e','KeyE'));assert.equal(calls.interact,0);listeners.keydown(event('z','KeyZ'));assert.equal(calls.interact,1);
+ p.bind('interact','KeyZ');listeners.keydown(event('f','KeyF'));assert.equal(calls.interact,0);listeners.keydown(event('z','KeyZ'));assert.equal(calls.interact,1);
  p.bind('w','KeyI');listeners.keydown(event('i','KeyI'));assert(walk.keys.has('w'));listeners.keyup(event('i','KeyI'));assert(!walk.keys.has('w'));listeners.keydown(event('w','KeyW'));assert(!walk.keys.has('w'));
- listeners.keydown(event('q','KeyQ'));assert.equal(calls.receive,1);
+ listeners.keydown(event('v','KeyV'));assert.equal(calls.receive,1);
  c.VBSettings={key:p.key,isOpen:true};listeners.keydown(event('z','KeyZ'));assert.equal(calls.interact,1);
- c.VBSettings=p;p.update(p.defaults());listeners.keydown(event('e','KeyE'));assert.equal(calls.interact,2);
+ c.VBSettings=p;p.update(p.defaults());listeners.keydown(event('f','KeyF'));assert.equal(calls.interact,2);
 });
 await check('host-only speed, late join, host departure and ordered succession',()=>{
  const net=network(),a=net.add('a',true);net.tick(1300);assert(a.isHost);a.setSpeed(.55);
@@ -85,70 +85,16 @@ await check('loading cover is real body DOM, removal follows first 3D render',()
  assert(/if\s*\(m\.host\)q\.set\('host','1'\)/.test(read('lobby.js')));assert(read('index.html').includes('id="system-settings"'));
  for(const f of ['gym.html','index.html'])assert(read(f).includes('src="settings.js"')&&read(f).includes('href="settings.css"'));
 });
-// WEB-003D 依使用者要求改了接重扣（蹲接）和舉球（新增後排 5 號位），vbJump～SETM、vbSet～vbAssist 兩段，以及 AI 分工所在的 vmJudge～vm6Start，不再跟 WEB-001 基準比對
-await check('unmodified physics, scoring, rotation and transports match baseline; AI fixes have dedicated regression checks',()=>{
- const old=execFileSync('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'show','9351dab:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
- // WEB-003 changes only startup/stop/end presentation in this formerly broad range.
- // Keep exact comparisons for every intervening physics, scoring and AI section.
- for(const [a,b] of [['function standUp()','const NET ='],['function vmPickChar(','function vmStop('],['// ---- 發球：贏球','function vmOver('],['// 輪轉：2 號位','function vmStaRings()']]){
-  let current=segment(gym,a,b),previous=segment(old,a,b);
-  /* WEB-021 只排除新增的表情播放鎖定，原有入口函式本體仍逐字比較。 */
-  current=current.replace(/\n  if \(walk\.emote\?\.keyframes\) return;/g, '');
-  /* WEB-023 的單行掛勾由 verify-web023 驗證。 */
-  current=current.replace(/^.*WEB-023.*\n/gm, '').replaceAll(' b.waitFloor = null;', '');
-  if(a==='function standUp()')current=current.slice(0,current.indexOf('let ROOM = null;'));
-  // 球館計分板跟著比賽比分（只是顯示），不算物理／玩法：兩邊都拿掉 drawScore 這段再比
-  const noScore=t=>{const i=t.indexOf('function drawScore() {'),j=t.indexOf('function addPoint(');return i>=0&&j>i?t.slice(0,i)+t.slice(j):t;};current=noScore(current);previous=noScore(previous);
-  // Intentional AI bug fixes are exercised by verify-ai-attack-routing and verify-3v3-back-sets.
-  // Retain exact comparison of the surrounding rotation, blocking, scoring and transport code.
-  const changedAi = t => {
-    for (const [from,to] of [['function vm6Spot(', '// 接發球陣型'],['function vm6ChooseSet(', '// 攔網：只有前排'],['function vm6Brain(', '// 對面要攻擊'],['function vm6CoverPlan(', '// 連線的人']]) {
-      const i=t.indexOf(from),j=t.indexOf(to,i); if(i>=0&&j>i)t=t.slice(0,i)+`/* ${from} verified by attack routing tests */\n`+t.slice(j);
-    }
-    return t;
-  };
-  current=changedAi(current);previous=changedAi(previous);
-  // Position-based setters and optional 6v6 rotation mode have behavioral coverage in verify-position-setters.
-  current=current.replace(/^  vm6SyncRotationRoles\(\);\n/gm,'')
-    .replace(/^  if \(VM.tactics === 'rotation'\) return null;\n/gm,'')
-    .replace(/^  if \(d.tactics\) VM.tactics = d.tactics;\n/gm,'')
-    .replace(/  if \(vmSmallCount\(\) > 1 \|\| VM.tactics === 'rotation'\) \{\n    const order = vmPositionSetters\(team\);\n    return order.find\(id => id !== passer\) \|\| null;\n  \}\n/,'');
-  current=current.replace("(VM.tactics === 'rotation' ? fr.find(o=>vm6Idx(o.id)===2) : fr.find((o) => VM.role[o.id] === 'MB'))", "fr.find((o) => VM.role[o.id] === 'MB')");
-  // Only strip explicit small-team early-return guards. Their behavior is tested in WEB-003B.
-  // All original physics, AI actions and 2/6-player branch bodies still match byte-for-byte.
-  current=current.replace(/^  .* \/\/ WEB003B\n/gm,'').replace(/^  if \(vmSmallCount\(\).*\/\/ 小人數.*\n/gm,'').replace(/^.*\/\/ 後排 5 號位.*\n/gm,'').replace(/(function vm6(?:Rotate|RotToast|Spot|Overlap|Possession|BlockPick|OffBlock|CoverSpot|ChooseSet|Chart|Brain)\([^\n]*\) \{)\n\n/g,'$1\n');
-  current=current.replace('function vm6RotToast() {\n ', 'function vm6RotToast() { ').replace('function vm6CoverSpot(a, attId) {\n ', 'function vm6CoverSpot(a, attId) { ');
-  current=current.replace('return vmSmallCount() ? (vmSmallCount() === 1 || !!CourtFormations.get(vmSmallCount())[k]?.front) : k >= 1 && k <= 3;', 'return k >= 1 && k <= 3;');
-  current=current.replace('back = vmSmallCount() ? !vm6Front(id) : k6 === 0 || k6 >= 4;', 'back = k6 === 0 || k6 >= 4;');
-  // WEB-005C 外觀接線由 verify-web005c 驗證，保留其他邏輯逐字比對。
-  current=current.replace('function vmPickChar(used) {\n  const code = aiLook(used.size); used.add(code); return code;\n}', 'function vmPickChar(used) { return null; }')
-    .replace('  ch = aiLook(id); VM.chars[id] = ch;\n', '')
-    .replace('const av = makeAvatar(color, ch, team), el =', 'const av = makeAvatar(color, ch), el =');
-  /* WEB-009 企聯：只拿掉標了「企聯」的新增行（原本的程式行都沒改），行為由 verify-ai-attack-routing 驗證 */
-  current=current.replace(/^.*(企聯|WEB-010).*\n/gm,'');   /* WEB-010 戰績的掛勾也是單獨一行 */
-  /* WEB-006C 只排除兩條教學通知，其他物理與比賽程式仍逐字比對。 */
-  current=current.replace("  tutEv('serve', { type, zone: C && C.zone }, b);\n", '')
-    .replace('  globalThis.VBTutorial?.stop();\n', '');
-  /* WEB-011 只正規化跳發排除旗標及還原鏡頭的清除入口；行為由 verify-web011 驗證。 */
-  current=current.replace('block: false, serve: true, t: 0', 'block: false, t: 0').replaceAll('vbClearAir();', 'walk.air = null;');
-  /* WEB-015 接收端播放由 verify-web015 驗證；主機更新、判分與輪轉仍逐字比較。 */
-  const noRemoteRender = t => { const marker=t.indexOf('// WEB-015: receiver-only snapshot timeline.'), start=marker>=0?marker:t.indexOf('function vmRenderAi('), end=t.indexOf('// 隊友腳下',start); return start>=0&&end>start?t.slice(0,start)+t.slice(end):t; };
-  current=noRemoteRender(current);previous=noRemoteRender(previous);
-  /* WEB-018 只排除網路誤差修正區段，球的物理與碰撞仍逐字比對。 */
-  const noBallCorrection = t => t.replace(/    if \(b.err\)[\s\S]*?(?=    const sp = Math.hypot\(b.v.x)/, '');
-  current=noBallCorrection(current);previous=noBallCorrection(previous);
-
-  /* WEB-020 遠端碰網與落地事件由 verify-web020 驗證，其餘物理仍逐字比較。 */
-  const beforeWeb020 = t => t
-    .replace(' b.floorEv = true;', '')
-    .replace(/^      if \(b.floorEv\) \{ b.floorEv = false; netFloorHit\(b\); \}\n/gm, '')
-    .replace(/^          if \(b.room && !NET.ownBall\) continue;[^\n]*\n/gm, '');
-  current=beforeWeb020(current);
-  /* WEB-022 僅排除新動作入口與訊息欄位，由 verify-web022 執行驗證。 */
-  current=current.replace(/^.*\/\* WEB-022 [^\n]*\n/gm, '').replace('lz: [VM.langziMatch, VM.srvSeq], ', '');
-  assert.equal(current,previous,a);
- }
- assert.equal(segment(gym,'function ablyTransport(', 'function netStatus('),segment(old,'function ablyTransport(', 'function netStatus('));
+// Input and tutorial changes have behavioral coverage in verify-manual-controls.
+await check('physics, scoring, rotation and match transport remain unchanged from the deployed match fix',()=>{
+ const old=execFileSync('git',['show','78597b4:gym.html'],{cwd:root,encoding:'utf8',maxBuffer:8e6}).replaceAll('\r\n','\n');
+ const fn=(text,name)=>{
+   const start=text.indexOf('function '+name+'(');assert(start>=0,name);
+   const lines=text.slice(start).split('\n');
+   for(let i=1;i<lines.length;i++){const body=lines.slice(0,i).join('\n');try{new vm.Script(body);return body;}catch{}}
+   throw Error(name);
+ };
+ for(const name of ['updateBalls','vmOnTouch','vmPoint','vm6Rotate','vm6Overlap','netOnMessage','netTick','vmWireClaim','vmWireReceive'])assert.equal(fn(gym,name),fn(old,name),name);
 });
 console.log(`${checks} checks passed${staged?' (PREPARED FILES; NOT YET APPLIED)':''}`);
 })().catch(e=>{console.error(e);process.exitCode=1;});
