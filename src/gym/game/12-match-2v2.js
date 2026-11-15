@@ -340,13 +340,6 @@ function vmTrailPush(q) {
   pa.needsUpdate = ca.needsUpdate = true; VM.trail.geometry.setDrawRange(0, n); VM.trail.visible = !RP.on;
 }
 // 攔網碰到球：手的位置閃一圈白光、跳出 TOUCH（打手出界時特別標出來，裁判也是看這個判）
-function vbTouchFx(pos, word) {
-  const out = /出界/.test(word || ''), g = new THREE.Group(); g.position.copy(pos);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 28), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide })); ring.lookAt(camera.position.clone().sub(pos).add(pos)); g.add(ring);
-  const sp = labelSprite(out ? 'TOUCH・出界' : 'TOUCH', out ? '#E5484D' : '#FFFFFF', 0.65); sp.position.y = 0.45; g.add(sp); scene.add(g);
-  vbBurst(pos, '#FFFFFF', 10, 1.2);
-  const t0 = performance.now(); (function anim() { const k = (performance.now() - t0) / 900; if (k >= 1 || !g.parent) { scene.remove(g); return; } ring.scale.setScalar(1 + k * 2.2); ring.material.opacity = 0.95 * (1 - k); sp.position.y = 0.45 + k * 0.35; requestAnimationFrame(anim); })();
-}
 // 攔網碰到球的動畫：衝擊光圈（兩圈往外擴）、火花、彈出來的大字；攔死時鏡頭震一下
 //   stuff＝攔死、out＝打手出界、soft＝撐起來、through＝打穿、touch＝碰到
 const BLOCK_FX = { stuff: ['攔死！BLOCK', '#F2B705', 30, 1.15], out: ['TOUCH OUT', '#E5484D', 22, 1.0], soft: ['撐起來', '#FFFFFF', 14, 0.85], through: ['打穿！', '#9AA4B2', 16, 0.9], touch: ['TOUCH', '#FFFFFF', 12, 0.8] };

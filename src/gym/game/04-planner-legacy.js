@@ -1072,7 +1072,6 @@ async function generateFromSite(id, opts = {}) {
 const CATALOG = {}, TYPE_CATS = {};
 const getPicks = () => ({ sel: {}, custom: {} });
 function setPicks() {}
-function costReport() { return { lines: [], total: 0, missing: [] }; }
 function renderCostCard() {}
 function renderPicker() {}
 function initPicker() {}
@@ -1319,27 +1318,6 @@ function addCorner(latlng) {
   OUT.pts.push(m); redrawOutline();
 }
 function setCorners(geo) { OUT.pts.forEach((m) => m.remove()); OUT.pts = []; geo.forEach((g) => addCorner(window.L.latLng(g[0], g[1]))); }
-async function findOsm() {
-  const s = OUT.site, st = $('ol-osm');
-  st.textContent = '正在找 OpenStreetMap 上附近的建物…';
-  const c = OUT.map.getCenter();
-  const q = `[out:json][timeout:20];way(around:250,${c.lat},${c.lng})[building];out geom;`;
-  try {
-    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-    const j = await r.json();
-    if (OUT.osm) OUT.osm.remove();
-    OUT.osm = window.L.layerGroup().addTo(OUT.map);
-    const ways = (j.elements || []).filter((w) => w.geometry && w.geometry.length >= 4);
-    for (const w of ways) {
-      const geo = w.geometry.map((g) => [g.lat, g.lon]); if (geo.length > 3 && geo[0][0] === geo[geo.length - 1][0] && geo[0][1] === geo[geo.length - 1][1]) geo.pop();
-      const h = Number(w.tags && (w.tags.height || '').replace(/[^\d.]/g, '')) || null, lv = Number(w.tags && w.tags['building:levels']) || null;
-      window.L.polygon(geo, { color: '#4FC3F7', weight: 2, dashArray: '4 4', fillOpacity: 0.08 }).addTo(OUT.osm)
-        .bindTooltip(`點一下套用這棟${h ? `・高 ${h} m` : lv ? `・${lv} 層` : ''}`, { sticky: true })
-        .on('click', () => { setCorners(geo); if (h) $('ol-roof').value = h; st.textContent = '已套用 OpenStreetMap 的外框，可以拖角落微調，右鍵刪掉多的角。'; });
-    }
-    st.textContent = ways.length ? `找到 ${ways.length} 棟（藍色虛線），點你要的那棟就會套用外框。` : 'OpenStreetMap 在這附近沒有建物資料，請在衛星圖上點屋頂角落描外框。';
-  } catch (e) { st.textContent = '連不到 OpenStreetMap，請直接在衛星圖上點屋頂角落描外框。'; }
-}
 async function openOutline() {
   if (GAME_ONLY) return;
   const id = window.__siteId; if (!id) { toast('先從地圖選一個候選場地，再描外框'); return; }
@@ -1450,66 +1428,9 @@ initOutline();
 // ---------------------------------------------------------------- automatic outline: address → building → footprint (Overture Maps / OpenStreetMap)
 const OVT = 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/buildings.pmtiles';
 let ovtLib = null;
-async function ovtLoad() {
-  if (!ovtLib) ovtLib = Promise.all([
-    import('https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/+esm'), import('https://cdn.jsdelivr.net/npm/@mapbox/vector-tile@2.0.3/+esm'), import('https://cdn.jsdelivr.net/npm/pbf@4.0.1/+esm'),
-  ]).then(([pm, vt, pbf]) => ({ src: new pm.PMTiles(OVT), VectorTile: vt.VectorTile, Pbf: pbf.default }));
-  return ovtLib;
-}
 // all building footprints within ~radius metres of a point, as [[lat, lng], …] rings
-async function buildingsNear(lat, lng, radius = 250) {
-  const { src, VectorTile, Pbf } = await ovtLoad();
-  const z = 14, n = 2 ** z;
-  const tx = (lng + 180) / 360 * n, ty = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
-  const span = radius / (40075016 * Math.cos(lat * Math.PI / 180) / n);   // radius in tile units
-  const tiles = new Set();
-  for (const dx of [-span, 0, span]) for (const dy of [-span, 0, span]) tiles.add(`${Math.floor(tx + dx)},${Math.floor(ty + dy)}`);
-  const out = [];
-  await Promise.all([...tiles].map(async (k) => {
-    const [x, y] = k.split(',').map(Number);
-    const t = await src.getZxy(z, x, y); if (!t) return;
-    const layer = new VectorTile(new Pbf(new Uint8Array(t.data))).layers.building; if (!layer) return;
-    for (let i = 0; i < layer.length; i++) {
-      const f = layer.feature(i), ext = layer.extent || 4096;
-      const rings = f.loadGeometry(); if (!rings.length || rings[0].length < 4) continue;
-      const ring = rings[0].map((p) => { const gx = (x + p.x / ext) / n, gy = (y + p.y / ext) / n; return [Math.atan(Math.sinh(Math.PI * (1 - 2 * gy))) * 180 / Math.PI, gx * 360 - 180]; });
-      if (ring.length > 3 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]) ring.pop();
-      const c = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]);
-      const d = Math.hypot((c[0] - lat) * 110540, (c[1] - lng) * 111320 * Math.cos(lat * Math.PI / 180));
-      if (d <= radius) out.push({ ring, d, h: Number(f.properties.height) || null, src: f.properties['@geometry_source'] === 'OpenStreetMap' ? 'OpenStreetMap' : 'Overture' });
-    }
-  }));
-  return out;
-}
 const geoArea = (ring) => Math.abs(polyArea(toLocal(ring).P));
 // the building that contains the point; otherwise the closest sizeable one (factories are big, so prefer ≥ 300 ㎡)
-function pickBuilding(list, lat, lng) {
-  const inside = list.filter((b) => { const lp = toLocalAt(b.ring, lat, lng); return pip(0, 0, lp); });
-  if (inside.length) return inside.sort((a, b) => geoArea(a.ring) - geoArea(b.ring))[0];
-  const big = list.filter((b) => geoArea(b.ring) >= 300).sort((a, b) => a.d - b.d);
-  return big[0] || list.sort((a, b) => a.d - b.d)[0] || null;
-}
-function toLocalAt(ring, lat0, lng0) { const kx = 111320 * Math.cos(lat0 * Math.PI / 180); return ring.map(([la, ln]) => [(ln - lng0) * kx, -(la - lat0) * 110540]); }
-async function autoOutline(lat, lng, how, opts = {}) {
-  const st = $('ol-osm');
-  st.textContent = `正在找${how}的建物輪廓…`;
-  try {
-    const list = await buildingsNear(lat, lng, opts.radius || 250);
-    if (OUT.osm) OUT.osm.remove();
-    OUT.osm = window.L.layerGroup().addTo(OUT.map);
-    window.L.circleMarker([lat, lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#E8814A', fillOpacity: 1 }).addTo(OUT.osm).bindTooltip(how, { permanent: false });
-    for (const b of list) window.L.polygon(b.ring, { color: '#4FC3F7', weight: 1.5, dashArray: '4 4', fillOpacity: 0.06 }).addTo(OUT.osm)
-      .bindTooltip(`點一下改用這棟・約 ${Math.round(geoArea(b.ring) / 3.3058).toLocaleString('zh-TW')} 坪`, { sticky: true })
-      .on('click', (e) => { window.L.DomEvent.stopPropagation(e); setCorners(b.ring); if (b.h) $('ol-roof').value = b.h; st.textContent = '已換成這棟。'; });
-    if (opts.choose) { setCorners([]); OUT.map.setView([lat, lng], 17); st.textContent = opts.choose; return list.length > 0; }
-    const b = pickBuilding(list, lat, lng);
-    if (!b) { st.textContent = '這附近沒有建物輪廓資料，請在衛星圖上點屋頂角落描外框。'; return false; }
-    setCorners(b.ring); if (b.h) $('ol-roof').value = b.h;
-    OUT.map.fitBounds(window.L.latLngBounds(b.ring).pad(0.6));
-    st.textContent = `已自動抓到${how}的建物輪廓（來源：${b.src}）。不是這棟的話，點旁邊藍色虛線的建物換一棟；角落也可以拖曳微調。`;
-    return true;
-  } catch (e) { st.textContent = '建物輪廓資料讀取失敗，請稍後再試，或在衛星圖上點屋頂角落描外框。'; return false; }
-}
 async function locateAddress() {
   return;
 }
