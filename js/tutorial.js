@@ -2,14 +2,14 @@
 (function (root) {
   'use strict';
   const sections = [
-    { id: 'move', name: '移動與視角', count: 6, enabled: true },
+    { id: 'move', name: '移動與視角', count: 7, enabled: true },
     { id: 'recv', name: '接球', count: 4, enabled: true },
     { id: 'set', name: '舉球', count: 4, enabled: true },
     { id: 'atk', name: '攻擊', count: 4, enabled: true },
     { id: 'serve', name: '發球', count: 3, enabled: true },
     { id: 'block', name: '攔網', count: 4, enabled: true }
   ];
-  const empty = () => ({ v: 1, done: {}, at: {}, updated: 0 });
+  const empty = () => ({ v: 2, done: {}, at: {}, updated: 0 });
   const copy = value => JSON.parse(JSON.stringify(value));
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -22,7 +22,7 @@
     let saved = empty();
     try {
       const raw = JSON.parse(storage?.getItem('vb.tutorial') || 'null');
-      if (raw && raw.v === 1 && raw.done && raw.at && !Array.isArray(raw.done) && !Array.isArray(raw.at)) {
+      if (raw && raw.v === 2 && raw.done && raw.at && !Array.isArray(raw.done) && !Array.isArray(raw.at)) {
         for (const section of sections) {
           if (raw.done[section.id] === true) saved.done[section.id] = true;
           const at = raw.at[section.id];
@@ -34,7 +34,9 @@
     let section = null, step = 0, phase = 'closed', since = 0, successAt = 0;
     let snapshot = null, previous = null, target = null, turn = 0, crouchTime = 0;
     let seen = new Set(), failures = 0, dived = false, hint = '', skipped = false;
-    let menu, panel, button, lastMarkup = '';
+    let menu, panel, button, dots, lastMarkup = '';
+    let reps=0, fraction=0, holdTime=0, turnMin=0, turnMax=0, looked=false, sprintSeen=false, repeatAt=0, landedSinceRep=true;
+    const required=()=>section?.id==='move' && [0,6].includes(step)?1:3;
     const drills = { atk: '攻擊', set: '舉球', block: '攔網', defense: '防守' };
     const drillHints = { atk: '後中 AI 先拋球給舉球手，再舉出指定球種。看一傳到位的時機助跑、起跳扣球。', set: '移動到球下方再舉球。約七成會到舉球區，其餘需要跑動修正。', block: '看對面舉球員把球送給誰，沿網移動，在攻擊手出手時起跳攔網。', defense: '看誰拋球，再看他的身體朝向，移動到直線或斜線上蹲低接球。' };
     const sets = { '1-high': '1｜左前高球', '1-flat': '1｜左前平球', '2-quick': '2｜中間快攻', '2-high3': '2｜3 號位高球', '3-high': '3｜右前高球', '3-flat': '3｜右前平球', '4-high': '4｜後排中間', '5-high': '5｜後排右側', '6-high': '6｜後排左側' };
@@ -57,17 +59,18 @@
       const texts = {
         move: [
           '點一下遊戲畫面，鎖定滑鼠。',
-          `用 ${movement} 走進地上的黃色圈。`,
-          '移動滑鼠轉頭，看向另一個黃色圈，左右轉動約 90 度。',
-          `按住 ${key('shift')} 跑進遠一點的黃色圈。`,
-          `按住 ${key('crouch')} 蹲下，持續 1 秒。`,
-          `按 ${key('p')} 切換視角，看看自己。`
+          '用 '+movement+' 依序走到發球線、六米、三米線的黃圈，各停留 3 秒；走出圈外會重新計時。',
+          '移動滑鼠，完整轉一圈 360°。地上圓圈會隨探索過的角度填綠，來回小幅擺頭不會累加。',
+          '先轉頭看向黃色圈，再走進圈內停留 3 秒。隨機換三個位置練習。',
+          '按住 '+key('shift')+' 加 '+movement+' 衝刺，將體力從 100% 跑到 0%。沒體力會變慢，放開衝刺讓體力恢復。',
+          '走進黃圈，按住 '+key('crouch')+' 蹲滿 3 秒，感受視野從 85° 平滑擴大到 100°。離開圈或放開按鍵都重新計時，共三個位置。',
+          '按 '+key('p')+' 切換視角，看看自己。'
         ],
         recv: [
-          '看地上的落點圈，在球落地前走進圈裡，這一步不用接球。',
-          `球快到身前時按 ${key('v')} 接球。`,
-          `按住 ${key('crouch')}，球快到時按 ${key('v')} 接球。`,
-          `按住 ${key('shift')} 再按 ${key('v')}，撲向遠處的球並接住。`
+          '看球路提示線，走進落點圈，練習判斷三個落點；這一步不用接球。',
+          '先練習三顆不同位置的嗆司球。球快到身前時按 '+key('v')+' 接住。',
+          '教練站在台階上重扣。看提示線移動，按住 '+key('crouch')+' 緩衝，再按 '+key('v')+' 接住，成功三顆。',
+          '看教練扣球方向，按住 '+key('shift')+' 再按 '+key('v')+' 撲向球；實際撲到並接住三顆才完成。'
         ],
         set: [
           '按住 '+key('q')+' 開輪盤，滑鼠移向左上「4 號位高球」，球到額頭前上方時放開。',
@@ -97,11 +100,12 @@
     }
     function view() {
       return { phase, section: section?.id || null, name: section?.name || '', step, count: section?.count || 0,
-        instruction: instruction(), hint, target: target && { ...target }, failures, full,
+        instruction: instruction(), hint, reps, required:required(), fraction, target: target && { ...target }, failures, full,
         completed: [...seen], allDone: sections.every(s => saved.done[s.id]) };
     }
     function render() {
       options.changed?.(view());
+      if(dots){dots.hidden=!['running','success'].includes(phase);dots.innerHTML=Array.from({length:required()},(_,i)=>'<i class="'+(i<reps?'done':'')+'"></i>').join('')+'<span>'+reps+' / '+required()+(fraction>0 && phase==='running'?' · '+Math.round(fraction*100)+'%':'')+'</span>';}
       if (!panel) return;
       menu.hidden = !['menu','lessons','setup'].includes(phase);
       panel.hidden = !['running', 'success', 'complete', 'drill'].includes(phase);
@@ -151,6 +155,7 @@
     function enter() {
       phase = 'running'; since = now(); previous = null; turn = 0; crouchTime = 0;
       seen = new Set(); failures = 0; dived = false; hint = ''; skipped = false;
+      reps=0;fraction=0;holdTime=0;turnMin=0;turnMax=0;looked=false;sprintSeen=false;repeatAt=0;landedSinceRep=true;
       target = coach.step?.(section.id, step, snapshot) || null;
       saved.at[section.id] = step; persist(); render();
     }
@@ -180,7 +185,7 @@
     function missHint() {   // 每段自己的失敗提示（按鍵照玩家設定）
       const id = section?.id;
       if (id === 'recv') return step === 3 ? `球快掉到地上時才按住 ${key('shift')} 再按 ${key('v')} 撲過去，太早撲會撲空。` : '等球靠近身體、亮起來再按，先看落點站好。';
-      if (id === 'set') return '按住 '+key('q')+' 選球路，球到額頭前上方時放開舉球鍵。';
+      if (id === 'set') return '按住 '+key('q')+' 選球路，球接近額頭前上方時放開舉球鍵；球不會停下等你。';
       if (id === 'atk') return '等球掉到頭頂前上方再起跳，起跳後再按左鍵。';
       if (id === 'block') return `看教練：他一起跳你就按 ${key('b')}，跟他同時跳，手才來得及舉到網上。`;
       if (id === 'serve') return '拿著球再按，發完等下一顆球回到手上。';
@@ -189,6 +194,11 @@
     function succeed(skip = false) {
       if (phase !== 'running') return;
       if (!(section?.id === 'block' && /攔網成功|碰到球/.test(hint))) hint = '';   // 做到了：清掉舊的失敗提示（攔網保留成功的那句）
+      if(!skip){
+        if(repeatAt)return;
+        reps++;fraction=1;landedSinceRep=false;coach.progress?.(1);coach.roundComplete?.();
+        if(reps<required()){repeatAt=now()+850;hint='完成第 '+reps+' 次，準備下一次。';render();return;}
+      }
       skipped = skip; phase = 'success'; successAt = now(); coach.pause?.(); render();
     }
     function advance() {
@@ -202,14 +212,14 @@
       } else { step++; enter(); }
     }
     function emit(name, data = {}) {
-      if (phase !== 'running') return;
+      if (phase !== 'running' || repeatAt) return;
       if (name === 'recvMiss' || name === 'whiff' || name === 'feedMiss') {
         if (name !== 'whiff') failures++;
         hint = missHint();
-        if (section.id === 'recv' && step === 3 && failures >= 3) hint = '已連續三次沒接到，這次只要有撲出去就算完成。';
+
       }
       if (section.id === 'recv') {
-        if (name === 'dive') { dived = true; if (step === 3 && failures >= 3) succeed(); }
+        if (name === 'dive') dived = true;
         if (name === 'recv' && (step === 1 || step === 2 && data.crouch || step === 3 && dived && data.dive)) succeed();
       }
       if (section.id === 'set' && name === 'set') {
@@ -228,6 +238,7 @@
       }
       if (section.id === 'serve' && name === 'serve' && data.type === ['std', 'float', 'jump'][step]) succeed();
       if (section.id === 'block') {
+        if(step===1 && name==='jump' && data.block)landedSinceRep=true;
         if (step === 0 && name === 'jump' && data.block && snapshot && Number.isFinite(snapshot.nearNet) && snapshot.nearNet >= 0 && snapshot.nearNet <= 1) succeed();
         if (name === 'block' && (step === 2 || step === 3 && data.mate === true)) {
           hint = data.kind === 'stuff' ? '攔網成功！' : '碰到球了！'; succeed();
@@ -240,23 +251,43 @@
       snapshot = state;
       if (phase === 'success') { if (now() - successAt >= (skipped ? 800 : 1800)) advance(); return; }   // 做到了：停 1.8 秒讓球飛完、看清楚結果再換下一步（按跳過不用等）
       if (phase !== 'running') return;
+      if(!state.air)landedSinceRep=true;
+      if(state.focused===false){holdTime=0;fraction=0;previous=null;coach.progress?.(0);render();return;}
+      if(repeatAt){
+        if(now()<repeatAt){previous={...state,time:now()};return;}
+        repeatAt=0;fraction=0;holdTime=0;turn=0;turnMin=0;turnMax=0;looked=false;sprintSeen=false;seen.clear();dived=false;hint='';
+        target=coach.repeat?.(section.id,step,reps) || target;coach.progress?.(0);previous=null;
+      }
       coach.frame?.(state);
       const dt = previous ? Math.max(0, Math.min(0.1, (now() - previous.time) / 1000)) : 0;
       if (section.id === 'move') {
-        const inCircle = target && Math.hypot(state.x - target.x, state.z - target.z) <= 0.8;
-        if (previous) turn += Math.abs(Math.atan2(Math.sin(state.yaw - previous.yaw), Math.cos(state.yaw - previous.yaw)));
-        crouchTime = state.crouch ? crouchTime + dt : 0;
-        if (step === 0 && state.locked || step === 1 && inCircle || step === 2 && turn > 1.5 || step === 3 && state.sprint && inCircle || step === 4 && crouchTime >= 1 || step === 5 && previous && state.tp !== previous.tp) succeed();
+        const inCircle=target && Math.hypot(state.x-target.x,state.z-target.z)<=.8;
+        if(step===0 && state.locked)succeed();
+        if(step===2){
+          if(previous)turn+=Math.atan2(Math.sin(state.yaw-previous.yaw),Math.cos(state.yaw-previous.yaw));
+          turnMin=Math.min(turnMin,turn);turnMax=Math.max(turnMax,turn);fraction=Math.min(1,(turnMax-turnMin)/(Math.PI*2));
+          if(fraction>=1-1e-6)succeed();
+        }
+        if([1,3,5].includes(step)){
+          if(step===3 && target && !inCircle){const bearing=Math.atan2(-(target.x-state.x),-(target.z-state.z));if(Math.abs(Math.atan2(Math.sin(bearing-state.yaw),Math.cos(bearing-state.yaw)))<.3)looked=true;}
+          const valid=inCircle && (step!==5 || state.crouch) && (step!==3 || looked);
+          holdTime=valid?holdTime+dt:0;fraction=Math.min(1,holdTime/3);
+          hint=valid?'持續 '+holdTime.toFixed(1)+' / 3.0 秒':step===5?'走入圈內並按住蹲下，放開就重新計時。':step===3&&!looked?'先轉頭看向目標圈。':'走進圈內停留，離開會重新計時。';
+          if(holdTime>=3-1e-6)succeed();
+        }
+        if(step===4){sprintSeen=sprintSeen||state.sprint;fraction=Math.max(0,Math.min(1,1-(state.stamina??1)));hint='體力 '+Math.round((state.stamina??1)*100)+'% · 持續衝刺直到耗盡';if(sprintSeen && state.stamina<=0)succeed();}
+        if(step===6 && previous && state.tp!==previous.tp)succeed();
+        coach.progress?.(fraction);
       }
       if (section.id === 'recv' && step === 0 && state.incoming && Math.hypot(state.x - state.incoming.x, state.z - state.incoming.z) <= 0.8) succeed();
-      if (section.id === 'block' && step === 1 && state.air && state.airBlock && Math.abs(state.blkAim) >= 0.2) succeed();
+      if (section.id === 'block' && step === 1 && landedSinceRep && state.air && state.airBlock && Math.abs(state.blkAim) >= 0.2) succeed();
       if (now() - since > 12000 && !hint) hint = '可以再試一次，或放開滑鼠後按「略過這步」。';
       previous = { ...state, time: now() }; render();
     }
     function mount(document) {
       if (panel) return;
       const style = document.createElement('style');
-      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#185a3d}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
+      style.textContent = '.vb-tut-panel,.vb-tut-menu{position:fixed;z-index:150;background:#172431;color:#fff;border:1px solid #7b8e9c;border-radius:12px;padding:16px;box-shadow:0 8px 30px #0006;font:15px/1.5 sans-serif}.vb-tut-menu{top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 48px));box-sizing:border-box;padding:24px 26px;box-shadow:0 0 0 100vmax #0007,0 12px 40px #000a}.vb-tut-menu h2{margin:0;font-size:24px}.vb-tut-lead{margin:4px 0 16px;color:#b7c6d3}.vb-tut-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vb-tut-card{background:#1f3142;border:1px solid #3b5368;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}.vb-tut-card h3{margin:0 0 6px;font-size:20px}.vb-tut-card p{margin:0 0 12px;color:#d6e0e8}.vb-tut-main{border-color:#f2b705;background:#2a3424}.vb-tut-menu .vb-tut-big{display:block;width:100%;margin:4px 0 12px;padding:12px;border:0;border-radius:10px;background:#30a46c;color:#fff;font-size:17px;font-weight:700}.vb-tut-main .vb-tut-big{background:#f2b705;color:#1b2638;margin-top:auto}.vb-tut-sub{font-size:13px;color:#9fb3c4!important;margin-bottom:6px!important}.vb-tut-chips{display:flex;flex-wrap:wrap;gap:6px}.vb-tut-menu .vb-tut-chips button{margin:0;padding:6px 10px;border-radius:999px;border:1px solid #5d7a92;background:#26394b;color:#fff}.vb-tut-menu .vb-tut-link{margin:14px 0 0;padding:0;border:0;background:none;color:#8fb3d0;text-decoration:underline;font-size:13px}.vb-tut-panel[data-phase=success]{background:#172431}.vb-tut-panel kbd{border:1px solid #93a7ba;border-radius:4px;padding:1px 5px}.vb-tut-panel button,.vb-tut-menu button{cursor:pointer;margin:3px;padding:5px 9px}.vb-tut-entry{position:fixed;right:20px;bottom:22px;z-index:149}.vb-tut-menu[hidden],.vb-tut-panel[hidden]{display:none}';
       style.textContent += '.vb-tut-menu{width:min(1000px,calc(100vw - 32px));max-height:92dvh;overflow:auto}.vb-tut-menu:has(select){width:min(460px,calc(100vw - 32px))}.vb-tut-menu label{display:block;margin:16px 0}.vb-tut-menu select,.vb-tut-menu input{font:inherit;padding:5px}.vb-tut-menu input{width:70px}.vb-tut-cards{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:720px){.vb-tut-cards{grid-template-columns:1fr}}';
       style.textContent += '.vb-tut-card .vb-tut-big{margin:auto 0 0}.vb-tut-menu:has(.vb-tut-chips){width:min(480px,calc(100vw - 32px))}.vb-tut-chips{margin:8px 0 16px}';
       style.textContent += `
@@ -275,11 +306,13 @@
         .vb-tut-panel p { margin: 4px 0 6px; }
         .vb-tut-panel button { margin: 0; padding: 4px 8px; }
       `;
+      style.textContent+='.vb-tut-progress{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:151;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#14212cdd;border-radius:24px;color:#fff;font:13px sans-serif;pointer-events:none}.vb-tut-progress[hidden]{display:none}.vb-tut-progress i{width:15px;height:15px;border:2px solid #f5cd4f;border-radius:50%;background:#263646}.vb-tut-progress i.done{background:#45d58a;border-color:#78f5b4}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');
       button = document.createElement('button'); button.type = 'button'; button.className = 'vb-tut-entry'; button.textContent = '🏐 練習模式'; button.onclick = open;
-      document.body.append(menu, panel);
+      dots=document.createElement('div');dots.className='vb-tut-progress';dots.setAttribute('aria-label','本項練習完成次數');
+      document.body.append(menu, panel, dots);
       const toolbar = document.querySelector('.walk-top');
       if (toolbar) toolbar.insertBefore(button, toolbar.querySelector('#w-host') || toolbar.firstChild);   // 放在「房主設定」左邊
       else document.body.append(button);

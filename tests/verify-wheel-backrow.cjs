@@ -1,6 +1,6 @@
 require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 const assert=require('node:assert/strict'),vm=require('node:vm');
-const {engine,Vector,source}=require('./verify-web006.cjs');
+const {engine,Vector,source}=require('./tutorial-engine.cjs');
 // Execute the actual setter, including both court sides and rotated courts.
 for(const side of [-1,1])for(const rot of [0,37,90]){
   const {c}=engine(); const court=c.state.items[0];court.rot=rot;

@@ -2,7 +2,7 @@ require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3ï¼šAI å¼
 const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
 const path = require('node:path'), root = path.join(__dirname, '..');
 const gym = fs.readFileSync(path.join(root, 'gym.html'), 'utf8');
-const { engine, Vector, source } = require('./verify-web006.cjs');
+const { engine, Vector, source } = require('./tutorial-engine.cjs');
 function preferences(raw) {
   const store = new Map(raw ? [['vb.settings',JSON.stringify(raw)]] : []);
   const c = { window:{},innerWidth:1280,matchMedia:()=>({matches:false}),localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)},dispatchEvent(){},CustomEvent:class{} };
