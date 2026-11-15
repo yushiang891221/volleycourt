@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // B2 驗收：engine/rules.js 接上之後，觸球犯規、得分、發球權、輪轉、局數、換場、落地判定，跟抽出來之前（提交 e0f3cfa）完全一樣
 // 隨機產生很多場比賽（2 人制、6 人制、3 局／5 局制），同一串觸球與落地事件同時丟給新舊程式，每一步比對狀態與判定。
 const assert = require('node:assert/strict'), cp = require('node:child_process'), vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');

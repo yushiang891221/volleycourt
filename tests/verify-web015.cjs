@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 ﻿const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict'), cp = require('node:child_process');
 const path = require('node:path'), root = path.resolve(__dirname, '..');
 const gym = fs.readFileSync(path.join(root, 'gym.html'), 'utf8');

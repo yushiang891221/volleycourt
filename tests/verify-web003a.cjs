@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // Deterministic room authority + real engine startup adapters. --ws also requires local Wrangler :8787.
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8').replaceAll('\r\n','\n');

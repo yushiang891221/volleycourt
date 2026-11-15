@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // Local checks only; never connects to a multiplayer service or production storage.
 const fs = require('node:fs');
 const path = require('node:path');

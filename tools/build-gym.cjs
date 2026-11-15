@@ -8,7 +8,9 @@ const root = path.resolve(__dirname, '..'), src = path.join(root, 'src', 'gym');
 function build() {
   const shell = fs.readFileSync(path.join(src, 'shell.html'), 'utf8');
   const style = fs.readFileSync(path.join(src, 'style.css'), 'utf8');
-  const parts = fs.readdirSync(path.join(src, 'game')).filter(f => /^\d+-.*\.js$/.test(f)).sort();
+  const all = fs.readdirSync(path.join(src, 'game')), parts = all.filter(f => /^\d+-.*\.js$/.test(f)).sort();
+  const skipped = all.filter(f => !parts.includes(f));
+  if (skipped.length) throw new Error('src/gym/game 裡有檔名格式不對、不會被組進去的檔案（要「數字-名字.js」）：' + skipped.join('、'));
   const game = parts.map(f => fs.readFileSync(path.join(src, 'game', f), 'utf8')).join('');
   for (const mark of ['/*@@APP_STYLE@@*/\n', '//@@APP_SCRIPT@@\n']) if (!shell.includes(mark)) throw new Error('shell.html 少了 ' + mark.trim());
   return shell.replace('/*@@APP_STYLE@@*/\n', () => style).replace('//@@APP_SCRIPT@@\n', () => game);

@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // B1 驗收：engine/ball.js 算出來的球路，跟抽出來之前 gym.html 裡的寫法（提交 c65ac3c）一模一樣
 // 隨機丟很多顆球（一般、加速度、飄球、擦網、撞網、撞牆、碰天花板、落地彈跳、停住等回報），每一小步比對位置、速度和觸發的事件。
 const assert = require('node:assert/strict'), cp = require('node:child_process'), vm = require('node:vm'), path = require('node:path');

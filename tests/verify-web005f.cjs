@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 ﻿// 離線行為測試；實際 Three.js/WebGL 畫面仍需人工驗收。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

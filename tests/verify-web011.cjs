@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');

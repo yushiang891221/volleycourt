@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 const assert=require('node:assert/strict'),vm=require('node:vm');
 const {engine,network,block,read}=require('./verify-web003a.cjs');
 const ctx={};vm.runInNewContext(read('js/court-formations.js'),ctx);const F=ctx.CourtFormations;

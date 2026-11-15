@@ -73,120 +73,18 @@ function vmSmallOverlap() {
   const fault = CourtFormations.overlap(vmSmallCount(),positions);
   return fault ? {team:t,why:`位置錯誤（${fault.axis==='d'?'前後':'左右'}越位：${fault.low+1} 與 ${fault.high+1} 號位）`} : null;
 }
-function vmSmallPossession(team,B) {
-  if(VM.poss[team])return VM.poss[team];
-  const p=vmPredL(B,BALL_R)||vmPredL(B,0.9);if(!p)return null;
-  const sd=vmSide(team),k=CourtFormations.owner(vmSmallCount(),p.x*sd,p.z/sd),passer=VM.rot[team][k];
-  return VM.poss[team]={stage:0,passer,setter:vm6SetterFor(team,passer),attacker:null};
-}
+function vmSmallPossession(...a) { return aiEngine().vmSmallPossession(...a); }   /* B3：AI 在 engine/ai.js */
 // 保留舉球員跑位線和攻擊手整段助跑線；掩護者的目標與實際移動都要避開。
-function vmBlockLane(a, th) {
-  const sd = vmSide(a.team), L = th.z / sd, edge = Math.sign(L) || 1;
-  const small = vmSmallCount(), pair = small ? vmSmallBlockers(a.team, th) : null;
-  if (pair?.length === 1) return 0;
-  const inner = small ? pair[1] === a.id : VM.tactics === 'rotation' ? vm6Idx(a.id) === 2 : VM.role[a.id] === 'MB';
-  if (!inner) return sd * edge * .4;
-  let target = L - edge * .4;
-  // 真人邊翼已經在網前時，攔中也不能跨過他的外側；保留約 0.7 m 接縫距離。
-  for (const id of VM.team[a.team]) {
-    if (id === a.id || VM.ai.has(id) || !vm6Front(id)) continue;
-    const q = vmPos(id); if (!q || Math.abs(q.x) > 1.8 || q.z / sd * edge < .5 || Math.abs(q.z / sd - L) > 1.3) continue;
-    target = edge * Math.min(target * edge, q.z / sd * edge - .7);
-  }
-  return sd * target - th.z;
-}
-function vmSmallBlockers(team, th) {
-  const ids = VM.team[team].filter(id => vm6Front(id) && vmPos(id) && Math.abs(vmPos(id).z - th.z) < 3.4);
-  ids.sort((a, b) => Math.abs(vmPos(a).z - th.z) - Math.abs(vmPos(b).z - th.z));
-  return ids.slice(0, 2);   // 小人數沒有專職攔中：靠攻擊邊的在外側，另一位在內側
-}
-function vmAttackLane(team, id) {
-  const at = vmPos(id); if (!at) return null;
-  const sd = vmSide(team), P = VM.poss[team], ball = VM.ball && vmBallL(VM.ball);
-  const pred = P?.stage === 2 && P.attacker === id && ball ? vmPredL(ball, 2.8) : null;
-  const back = VM.six && !vm6Front(id);
-  const L = VM.six && !vmSmallCount() ? (VM.tactics === 'rotation' ? V6_BASE[vm6Idx(id)]?.[1] || 0 : VM.role[id] === 'OH' ? (back ? 0 : 3.3) : VM.role[id] === 'OPP' ? -3.3 : 0) : at.z / sd;
-  const b = { x: sd * (pred ? Math.max(back ? 3.5 : 0.7, pred.x * sd + .55) : back ? 4.4 : 1.2), z: pred ? clamp(pred.z, -4, 4) : sd * L };
-  let dx = at.x - b.x, dz = at.z - b.z, len = Math.hypot(dx, dz);
-  if (len < .5) { dx = sd; dz = 0; len = 1; }
-  const run = Math.max(3.4, len);
-  return { a: { x: b.x + dx / len * run, z: b.z + dz / len * run }, b, r: 1.1, id };
-}
-function vmLaneProject(q, lane) {
-  const dx = lane.b.x - lane.a.x, dz = lane.b.z - lane.a.z, len = Math.hypot(dx, dz) || 1;
-  const t = clamp(((q.x - lane.a.x) * dx + (q.z - lane.a.z) * dz) / (len * len), 0, 1);
-  const x = lane.a.x + dx * t, z = lane.a.z + dz * t;
-  return { x, z, d: Math.hypot(q.x - x, q.z - z), side: ((q.x - x) * -dz + (q.z - z) * dx) / len, ux: dx / len, uz: dz / len };
-}
-function vmLaneClearPoint(q, lane) {
-  const p = vmLaneProject(q, lane); if (p.d >= lane.r + .15) return q;
-  const sign = Math.sign(p.side) || (q.z > 0 ? -1 : 1), step = lane.r + .3;
-  return { x: p.x - p.uz * sign * step, z: p.z + p.ux * sign * step };
-}
-function vmLanePathHits(a, b, lane) {
-  const path = { a, b }, side = (p, q, r) => (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x);
-  const crosses = side(a, b, lane.a) * side(a, b, lane.b) < 0 && side(lane.a, lane.b, a) * side(lane.a, lane.b, b) < 0;
-  return crosses || Math.min(vmLaneProject(a, lane).d, vmLaneProject(b, lane).d, vmLaneProject(lane.a, path).d, vmLaneProject(lane.b, path).d) < lane.r;
-}
-function vmAiYieldRoute(a) {
-  const goal = { x: a.tx, z: a.tz }, P = VM.poss[a.team];
-  if (VM.phase !== 'rally' || !P || VM.touch.team !== a.team || a.y > .05) return goal;
-  if ((P.stage === 1 && P.setter === a.id) || (P.stage === 2 && P.attacker === a.id) || P.stage < 1 || P.stage > 2) return goal;
-  const lanes = [];
-  if (P.stage === 1 && P.setter) {
-    const q = vmPos(P.setter), b = VM.ball && vmBallL(VM.ball), p = b && (vmPredL(b, 2.2) || vmPredL(b, 1));
-    if (q && p) lanes.push({ a: q, b: p, r: .85, id: P.setter });
-    // 球還沒舉出去時，真人 OH 也需要先助跑，掩護者不能卡住他的起步。
-    for (const id of VM.team[a.team]) if (id !== a.id && id !== P.setter && !VM.ai.has(id)) { const lane = vmAttackLane(a.team, id); if (lane) lanes.push(lane); }
-  } else if (P.attacker && P.attacker !== a.id) { const lane = vmAttackLane(a.team, P.attacker); if (lane) lanes.push(lane); }
-  let nav = goal;
-  for (const lane of lanes) {
-    const here = vmLaneProject(a, lane);
-    if (here.d < lane.r) { nav = vmLaneClearPoint(a, lane); continue; }
-    nav = vmLaneClearPoint(nav, lane);
-    // 跑位兩端在助跑線不同側：從起跳點前方繞過，不直穿攻擊手的路。
-    if (vmLanePathHits(a, nav, lane)) {
-      const sign = Math.sign(here.side) || 1, pad = lane.r + .45;
-      nav = { x: lane.b.x + here.ux * pad - here.uz * sign * pad, z: lane.b.z + here.uz * pad + here.ux * sign * pad };
-    }
-  }
-  return nav;
-}
-function vmAiSetAttack(a, P, B, pick, low) {
-  if (!pick.id || pick.id === a.id) { vmAiFree(a, vmSide(a.team)); return; }
-  const sd = vmSide(a.team), back = !vm6Front(pick.id), far = Math.max(0, Math.abs(a.x) - 2.6);
-  const fix = low || !!P.fix || far > 0.8;
-  const zone = vmSmallCount() ? CourtFormations.get(vmSmallCount())[vm6Idx(pick.id)] : null;
-  const L = zone ? clamp(zone.L, -3.0, 3.0) : pick.n === 7 || pick.n === 1 ? 3 : pick.n === 5 || pick.n === 3 ? -3 : 0;
-  // 所有人數共用：依選中的攻擊手是否在後排決定球深度，修正球與低手舉球也不能強制送到網前。
-  const T = (low ? 1.65 : fix ? 1.5 : 1.3) + Math.min(far, 4) * 0.06;
-  vmAiTouch(a, sd * (back ? 4.4 : 1.2), sd * L, 3.1, T, Math.min(vmLv(a).setErr * (fix ? 1.5 : 1), 0.5), 'set', low ? 3 : 2, false, back);
-  if (VM.poss[a.team]?.stage === 2) { VM.poss[a.team].attacker = pick.id; VM.poss[a.team].fix = fix; VM.poss[a.team].td = false; }
-}
-function vmSmallChooseSet(a,B) {
-  // 沒有固定分工：舉球的人以外每個人都可以打，照他現在的區域選球路（前排左＝1、前排右＝3、後排左＝7、後排中＝4、後排右＝5）
-  const n=vmSmallCount(),zones=CourtFormations.get(n),P=VM.poss[a.team]||{},opt=[];
-  for(const id of VM.team[a.team]){
-    if(id===a.id)continue;const k=vm6Idx(id),z=k>=0?zones[k]:null;if(!z)continue;
-    if(n===3&&z.front)continue;   // 3 對 3：球都舉給後排的兩個人打（前排那位負責舉）
-    const kind=z.front?(z.L<-1?3:1):(z.L>1.5?7:z.L<-1.5?5:4),w=(VM.ai.has(id)?2:3)*(id===P.passer?0.6:1);
-    opt.push([kind,id,w]);
-  }
-  if(!opt.length)return {id:a.id,n:4};
-  const call=a.team===vmTeamOf(vmMe())&&VM.call&&VM.t-VM.call.t<8?VM.call:null;
-  if(call){VM.call=null;const o=opt.find(q=>q[0]===call.n);if(o)return {n:o[0],id:o[1]};}
-  const human=opt.filter(q=>!VM.ai.has(q[1]));if(human.length&&Math.random()<0.55)return {n:human[0][0],id:human[0][1]};
-  let r=Math.random()*opt.reduce((s,q)=>s+q[2],0);for(const q of opt){r-=q[2];if(r<=0)return {n:q[0],id:q[1]};}
-  return {n:opt[0][0],id:opt[0][1]};
-}
-function vmSoloBrain(a,sd,b,live) {
-  if(!live)return;
-  const B=vmBallL(b),land=vmPredL(B,BALL_R);
-  const coming=VM.touch.team!==a.team&&(Math.sign(B.x)===sd||(Math.sign(B.vx)===sd&&land&&Math.sign(land.x)===sd))&&!vmLetGo(a.team,b);
-  if(!coming){const f=vm6Spot(a.team,a.id,'defense');a.tx=f.x;a.tz=f.z;a.reactAt=VM.t+vmLv(a).react;return;}
-  // With no teammate, reuse the existing rescue/free-ball action for a one-touch return.
-  if(VM.t>=a.reactAt)vmAiRole(a,{stage:2,passer:a.id,setter:null,attacker:null},B,sd);
-}
+function vmBlockLane(...a) { return aiEngine().vmBlockLane(...a); }   /* B3：AI 在 engine/ai.js */
+function vmSmallBlockers(...a) { return aiEngine().vmSmallBlockers(...a); }   /* B3：AI 在 engine/ai.js */
+function vmAttackLane(...a) { return aiEngine().vmAttackLane(...a); }   /* B3：AI 在 engine/ai.js */
+function vmLaneProject(...a) { return aiEngine().vmLaneProject(...a); }   /* B3：AI 在 engine/ai.js */
+function vmLaneClearPoint(...a) { return aiEngine().vmLaneClearPoint(...a); }   /* B3：AI 在 engine/ai.js */
+function vmLanePathHits(...a) { return aiEngine().vmLanePathHits(...a); }   /* B3：AI 在 engine/ai.js */
+function vmAiYieldRoute(...a) { return aiEngine().vmAiYieldRoute(...a); }   /* B3：AI 在 engine/ai.js */
+function vmAiSetAttack(...a) { return aiEngine().vmAiSetAttack(...a); }   /* B3：AI 在 engine/ai.js */
+function vmSmallChooseSet(...a) { return aiEngine().vmSmallChooseSet(...a); }   /* B3：AI 在 engine/ai.js */
+function vmSoloBrain(...a) { return aiEngine().vmSoloBrain(...a); }   /* B3：AI 在 engine/ai.js */
 function vmSmallChart() {
   const el=$('vm-rot'),n=vmSmallCount(),zones=CourtFormations.get(n),my=Math.max(0,vmTeamOf(vmMe()));
   const srv=VM.host?vmServer():VM.srvId;

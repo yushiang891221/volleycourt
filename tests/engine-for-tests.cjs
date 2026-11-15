@@ -14,4 +14,22 @@ function rulesScript(gym) {
   if (a < 0 || b < 0) throw new Error('找不到 FAULT_TEXT');
   return rules + '\n' + gym.slice(a, b);
 }
-module.exports = { engineScript, rulesScript };
+// AI 引擎（B3）：遊戲裡的 AI 函式變成「aiEngine().名字(...)」轉接；檢查程式的 vm 環境要能找到 aiEngine。
+// installAi(vm)：之後只要丟進 vm 的程式用到 aiEngine()，就先在那個環境裡載入 AI 的函式本體。
+// 檢查程式常常把某些 AI 函式換成假的（例如 aiPay），所以這裡把 engine/ai.js 的每個函式還原成「讀環境全域」的寫法（拿掉 G.），
+// 放進 __ai 表；AI 函式互相呼叫時走環境裡的名字（假的或轉接），跟搬出去之前完全一樣。
+function aiScript() {
+  const ai = fs.readFileSync(path.join(root, 'engine', 'ai.js'), 'utf8');
+  const body = ai.slice(ai.indexOf('export function createAi(G) {') + 'export function createAi(G) {'.length, ai.lastIndexOf('  return {'));
+  const plain = body.replace(/\b([A-Za-z_$][\w$]*): G\.\1\b/g, '$1').replace(/(?<![\w$.])G\.([A-Za-z_$][\w$]*)/g, '$1')
+    .replace(/^  (async )?function ([A-Za-z_$][\w$]*)\(/gm, (m, as, n) => `__ai.${n} = ${as || ''}function ${n}(`);
+  return 'var __ai = {};\n' + plain + '\nfunction aiEngine() { return __ai; }\n';
+}
+function installAi(vm) {
+  if (vm.__aiInstalled) return; vm.__aiInstalled = true;
+  const seen = new WeakSet(), run = vm.runInContext, runNew = vm.runInNewContext;
+  const prep = (code, ctx) => { if (typeof code === 'string' && code.includes('aiEngine()') && ctx && !seen.has(ctx)) { seen.add(ctx); run.call(vm, aiScript(), ctx); } };
+  vm.runInContext = function (code, ctx, ...rest) { prep(code, ctx); return run.call(this, code, ctx, ...rest); };
+  vm.runInNewContext = function (code, ctx = {}, ...rest) { if (typeof code === 'string' && code.includes('aiEngine()')) { vm.createContext(ctx); prep(code, ctx); return run.call(this, code, ctx, ...rest); } return runNew.call(this, code, ctx, ...rest); };
+}
+module.exports = { engineScript, rulesScript, aiScript, installAi };

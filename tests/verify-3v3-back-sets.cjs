@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // Exercise the actual setter, launch, prediction and attack handlers, including repair/low passes.
 const assert = require('node:assert/strict');
 const vm = require('node:vm');

@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
 const sync = require('../js/match-sync.js');
 const gym = fs.readFileSync(require('node:path').join(__dirname, '../gym.html'), 'utf8');

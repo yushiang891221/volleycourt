@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 const assert=require('node:assert/strict'),vm=require('node:vm');
 const {network,block}=require('./verify-web003a.cjs');
 const {setup}=require('./verify-3v3-back-sets.cjs');

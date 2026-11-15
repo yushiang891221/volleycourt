@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 /* 離線測試教學框架。場景接線完成後需另驗收實際球路與操作。 */
 const assert = require('node:assert/strict');
 const { create, sections } = require('../js/tutorial.js');

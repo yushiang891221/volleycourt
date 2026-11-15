@@ -1,3 +1,4 @@
+require('./engine-for-tests.cjs').installAi(require('node:vm'));   /* B3：AI 引擎 */
 // Node state tests, not a substitute for browser layout/WebGL/focus verification.
 // Run: node --experimental-vm-modules tools/verify-web002b.cjs
 const assert = require('node:assert/strict');
