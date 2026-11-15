@@ -7026,10 +7026,12 @@ function loadScript(src) { return new Promise((ok, bad) => { const s2 = document
 const NETQ = { ts: [], slow: 1, warned: false, sent: 0 };
 function netCount() {
   const now = performance.now(); NETQ.ts.push(now); NETQ.sent++; while (NETQ.ts.length && now - NETQ.ts[0] > 60000) NETQ.ts.shift();
-  const lim = VM.on ? (VM.wire ? 1440 : 660) : 240, n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
+  const lim = (VM.on ? (VM.wire ? 1440 : 660) : 240) * (netFast() ? 4 : 1), n = NETQ.ts.length, slow = n > lim * 1.5 ? 4 : n > lim ? 2 : 1;   // 比賽中上限放寬（每分鐘 660 則）
   if (slow > NETQ.slow && !NETQ.warned) { NETQ.warned = true; console.info('[即時] 訊息太多，自動放慢位置更新'); }
   NETQ.slow = slow;
 }
+// 台北伺服器（自己的房間伺服器，kind 是 cf／cf-backup）不按則數收費：位置送得比較密、播放緩衝比較短；走 Ably 時維持原本的節奏
+function netFast() { return !!(NET.tx && /^cf/.test(NET.tx.kind || '')); }
 async function ablyTransport(room, cid = NET.me) {
   async function requestToken() {
     const response = await fetch('api/rt-token?clientId=' + encodeURIComponent(cid) + '&room=' + encodeURIComponent(room), {
@@ -8086,7 +8088,7 @@ function netPeerSnapshot(p2, d, now) {
 function netPeerPlayback(p2, dt, now) {
   if (p2.keyEmote) return emoKeyPeer(p2, now);
   const buf = p2.buf, latest = buf[buf.length - 1];
-  const delay = clamp(1.5 * (p2.netGap || 150), 120, 300);
+  const delay = clamp(1.5 * (p2.netGap || 150), typeof netFast === 'function' && netFast() ? 60 : 120, 300);   /* 台北伺服器：每 50 ms 一筆，緩衝 75 ms 就夠 */
   p2.netDelay = (p2.netDelay ?? delay) + (delay - (p2.netDelay ?? delay)) * (1 - Math.exp(-dt * 2));
   const time = Math.max(p2.netTime ?? -Infinity, now - p2.netDelay); p2.netTime = time;
   let l = buf[0], r = l;
@@ -8258,7 +8260,7 @@ function vmWireTick() {
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null;
   if (b) w.history.push({ at: now, seq: w.order.seq, p: b.m.position.toArray(), floor: !!b.floorHit });
   while (w.history.length && w.history[0].at < now - 700) w.history.shift();
-  if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? 100 : 400)) return;
+  if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? (typeof netFast === 'function' && netFast() ? 50 : 100) : (typeof netFast === 'function' && netFast() ? 200 : 400))) return;
   w.sent = now; w.dirty = false;
   NET.tx.publish('match-frame', { session: w.session, frame: ++w.frame, round: w.order.round, seq: w.order.seq, at: now, time: VM.t, ai: vmStatePayload().ai, ball: b ? vmWireBall(b) : null, event: w.event, sc: VM.sc, phase: VM.phase, server: vmServer(), tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null });
 }
@@ -8415,8 +8417,9 @@ function netTick(dt, now) {
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
   if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
   const rally = VM.on && VM.phase === 'rally';
-  const gap = toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
-  if (NET.forceSt || (poseChanged && now - NET.lastSt > 120) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
+  const fast = netFast();
+  const gap = fast ? (toss ? 50 : document.hidden ? 10000 : rally ? (moved ? 50 : 300) : moved ? 100 : 1000) : toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
+  if (NET.forceSt || (poseChanged && now - NET.lastSt > (fast ? 40 : 120)) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = !VM.wire && NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > (VM.on && VM.phase === 'rally' ? 400 : 1000) * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
