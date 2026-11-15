@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<script>if (!location.search) location.replace("index.html#lobby");</script>
+<meta charset="utf-8">
+<link rel="stylesheet" href="css/settings.css">
+<script src="js/room-chat.js"></script>
+<script src="js/match-sync.js"></script>
+<link rel="stylesheet" href="css/room-chat.css">
+<script src="js/settings.js"></script>
+<script src="js/room-settings.js"></script>
+<script src="js/court-formations.js"></script>
+<script src="js/room-flow-ui.js"></script>
+<link rel="stylesheet" href="css/room-flow.css">
+<script src="js/lobby-client.js"></script>
+<script src="js/game-lobby.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Let's Play｜球館</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/img/brand/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/img/brand/apple-touch-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style id="game-entry-style">
+html{background:#0b1220}#plan-host{display:none!important}
+#game-loading{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:#0b1220;color:#e9eef7;transition:opacity .3s;font-family:'Noto Sans TC',sans-serif}
+#game-loading.done{opacity:0;pointer-events:none}#game-loading[hidden]{display:none}#game-loading .entry-box{width:min(420px,80vw)}#game-loading h1{font-size:28px;color:#f5a268}#game-loading small{color:#61cdb8;letter-spacing:3px}#game-loading progress{width:100%;height:8px;accent-color:#ed9458}#game-loading p{color:#a3b4ca}#game-loading a{color:#f5a268}
+.room-info{position:absolute;left:14px;top:12px;max-width:390px;padding:10px 14px;background:#111c2deb;border:1px solid #516078;border-radius:9px;pointer-events:auto;color:#e7edf6;font-size:12px}.room-info summary{cursor:pointer;color:#66d2bc}.room-info ul{margin:8px 0 0;padding-left:20px;max-height:160px;overflow:auto}.room-info p{margin:4px 0}.room-info details{margin-top:5px}
+#room-panel{position:absolute;right:14px;top:56px;padding:16px;background:#111c2d;border:1px solid #ed9458;border-radius:9px;pointer-events:auto;color:#eee}#room-panel[hidden],#w-host[hidden]{display:none!important}.walk-top{z-index:20}html.phone-walk .walk-top{display:flex!important}html.phone-walk .wk-fs{display:none!important}
+#walk-ui.settings-no-cues #wk-keys,#walk-ui.settings-no-cues #walk-help,#walk-ui.settings-no-cues #vb-cue,#walk-ui.settings-no-cues #vb-keycue,#walk-ui.settings-no-cues #wk-lock{display:none!important}
+
+
+</style>
+<style id="app-style">
+/*@@APP_STYLE@@*/
+</style>
+<style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
+</head><body>
+<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html#lobby">回大廳</a></div></div>
+<script>
+// 出錯時直接顯示在畫面左下角（方便截圖回報；同一個錯誤只列一次）
+(() => { const seen = new Set(), NL = String.fromCharCode(10); const show = (msg) => { if (seen.has(msg) || seen.size > 4) return; seen.add(msg); let box = document.getElementById('err-box'); if (!box) { box = document.createElement('div'); box.id = 'err-box'; box.style.cssText = 'position:fixed;left:10px;bottom:60px;z-index:99999;max-width:min(90vw,720px);background:#3a0d12f0;color:#fff;border:2px solid #ff6b6b;border-radius:8px;padding:8px 12px;font:12px/1.5 monospace;white-space:pre-wrap;pointer-events:auto'; box.title = '點一下關閉'; box.onclick = () => box.remove(); document.body.appendChild(box); box.textContent = '⚠ 遊戲出錯（請截圖回報）'; } box.textContent += NL + msg; };
+  addEventListener('error', (e) => { if (e.message) show(e.message + '  @行 ' + e.lineno + ':' + e.colno + (e.error && e.error.stack ? NL + String(e.error.stack).split(NL).slice(1, 4).join(NL) : '')); });
+  addEventListener('unhandledrejection', (e) => show('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason))); })();
+</script>
+<script>window.entryProgress=(n,t)=>{document.getElementById('entry-progress').value=n;document.getElementById('entry-stage').textContent=n+'% · '+t;};window.entryFail=()=>{document.getElementById('entry-stage').textContent='球館載入失敗，請重新整理或回大廳重試';};addEventListener('error',()=>{if(!document.getElementById('game-loading').hidden)window.entryFail();});</script>
+<header class="sitebar"><a id="goback" href="index.html#lobby">回大廳</a></header>
+<div id="app" class="app" data-mode="plan">
+  <aside class="rail" id="rail">
+    <header class="rail-head">
+      <p class="eyebrow">Step 2 · Hall Planning</p>
+      <h1 id="gym-title">排球館規劃</h1>
+      <div class="siteinfo" id="siteinfo" hidden></div>
+      <div class="siteinfo" id="site-none"><b>還沒選候選場地</b><span>現在是自由規劃。到地圖點一間候選廠房、按「進入球館」，這裡會帶出地址、坪數、租金、挑高，並照坪數自動排好球場。</span><div class="row"><a href="index.html#lobby">← 到地圖選場地</a></div></div>
+      <label class="field" for="design-name"><span>方案名稱</span><input id="design-name" type="text" maxlength="40" autocomplete="off"></label>
+      <p class="status-line" id="autosave" aria-live="polite">改動會自動存在這台裝置</p>
+      <p class="status-line cloud" id="cloud-status" aria-live="polite"></p>
+      <label class="field hist-row" id="hist-row" for="hist-sel" hidden><span>找回之前的版本（存在這台裝置）</span><select id="hist-sel"></select></label>
+    </header>
+    <section class="sec" id="sec-plan">
+      <h2><span class="num">01</span>目前規劃<small>AREA SCHEDULE</small></h2>
+      <div class="stats" id="plan-stats"></div>
+      <table class="ztable" id="zone-table"></table>
+    </section>
+    <section class="sec mode-plan" id="sec-zone-tools">
+      <h2><span class="num">02</span>畫區域<small>ZONES</small></h2>
+      <p class="hint">選一種區域，在右邊平面圖上拖出範圍。點已經畫好的區域可以拖曳移動、拉角落改大小。球場也可以直接拖。</p>
+      <div class="pal" id="zone-palette"></div>
+      <div class="btn-row"><button type="button" id="btn-add-court">＋ 加一面排球場</button><button type="button" id="btn-auto-zones">依空地自動分區</button></div>
+      <div id="zone-sel" hidden></div>
+    </section>
+    <section class="sec mode-3d">
+      <h2><span class="num">02</span>加入 3D 元件<small>OBJECTS</small></h2>
+      <p class="hint">點一下會放在畫面中央並選取，直接在 3D 畫面裡拖到想要的位置。按住任何元件都能直接拖（球場要先點一下選取）；擺好的可以按「鎖定」。自由移動視角時，新元件會放在你前面 4 m。</p>
+      <div id="palette"></div>
+    </section>
+    <section class="sec mode-3d" id="sec-selected">
+      <h2>選取的物件</h2>
+      <p class="hint" id="sel-empty">在 3D 畫面點一下物件就能選取，選取後可以旋轉、改大小、複製或刪除。</p>
+      <div id="sel-body" hidden></div>
+      <div class="btn-row"><button type="button" id="btn-lock-courts">鎖定全部球場</button><button type="button" id="btn-unlock-all">全部解鎖</button></div>
+    </section>
+    <section class="sec">
+      <h2><span class="num">03</span>場景資訊<small>ESTIMATE</small></h2>
+      <div class="costcard" id="costcard"><div class="ct-head"><span>球館設備</span><b class="ct-total"></b></div><ul class="ct-lines"></ul><p class="ct-miss"></p><p class="ct-hint">在 3D 元件模式點球場、燈、吊扇、沙發、攝影機、AED，可以換不同產品，總額跟著變。</p>
+        <p class="ct-sub">施工數量（依平面圖）</p><ul class="ct-build" id="build-qty"></ul></div>
+    </section>
+    <section class="sec">
+      <h2><span class="num">04</span>檢查<small>CHECKS</small></h2>
+      <div class="stats" id="stats"></div>
+      <ul class="warn-list" id="warn-list"></ul>
+    </section>
+    <section class="sec">
+      <details class="more" id="sec-build"><summary>廠房尺寸、地板與牆面顏色</summary>
+      <div class="grid3">
+        <label class="field" for="b-L"><span>長（m）</span><input id="b-L" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
+        <label class="field" for="b-W"><span>寬（m）</span><input id="b-W" type="number" min="10" max="160" step="0.5" inputmode="decimal"></label>
+        <label class="field" for="b-H"><span>淨高（m）</span><input id="b-H" type="number" min="4" max="15" step="0.5" inputmode="decimal"></label>
+      </div>
+      <div class="readout" style="margin-top:10px"><span><span class="big" id="r-ping">–</span> <span class="unit">坪</span></span><span class="unit" id="r-m2"></span><span class="chip" id="r-height"></span></div>
+      <p class="hint" style="margin:8px 0">淨高是樑下、燈下的高度，不是屋頂最高點。</p>
+      <div class="grid2">
+        <label class="field" for="b-floor"><span>球場配色</span><select id="b-floor"></select></label>
+        <label class="field" for="b-net"><span>排球網高</span><select id="b-net"></select></label>
+        <label class="field" for="b-wall"><span>建物外觀</span><select id="b-wall"><option value="metal">鐵皮屋（浪板牆、倒 V 屋頂）</option><option value="plaster">粉刷牆</option></select></label>
+        <label class="field" for="b-entryW"><span>主入口寬度（m）</span><input id="b-entryW" type="number" min="0.9" max="12" step="0.1" inputmode="decimal"></label>
+      </div>
+      <div class="colors" id="b-colors"></div>
+      </details>
+    </section>
+    <section class="sec">
+      <details class="more" id="sec-save"><summary>方案、範本與分享</summary>
+      <p class="status-line" id="save-status"></p>
+      <div class="btn-row" id="save-buttons">
+        <button type="button" class="primary" id="btn-save">存成新方案</button>
+        <button type="button" id="btn-update" hidden>更新這個方案</button>
+      </div>
+      <p class="hint" id="save-note" style="margin:8px 0"></p>
+      <ul class="saved" id="saved-list"></ul>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" id="btn-copy-code">複製方案代碼</button>
+        <button type="button" id="btn-paste-toggle">貼上代碼</button>
+      </div>
+      <div id="paste-box" hidden style="margin-top:8px">
+        <label class="field" for="paste-text"><span>貼上朋友傳來的方案代碼</span><textarea id="paste-text" spellcheck="false"></textarea></label>
+        <div class="btn-row" style="margin-top:6px"><button type="button" class="primary" id="btn-paste-load">載入這個代碼</button></div>
+      </div>
+      <textarea id="code-out" hidden readonly></textarea>
+      <p class="pal-title" style="margin:14px 0 6px">從範本開始</p>
+      <div class="tpl-list" id="tpl-list"></div>
+      </details>
+    </section>
+  </aside>
+  <main class="stage" id="stage">
+    <div id="plan-host">
+      <svg id="plan-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="可編輯的建築平面圖"></svg>
+    </div>
+    <div id="canvas-host" hidden></div>
+    <div class="steps" role="tablist" aria-label="規劃流程">
+      <button type="button" role="tab" id="m-plan" aria-selected="true"><i>01</i>平面圖規劃</button>
+      <button type="button" role="tab" id="m-3d" aria-selected="false"><i>02</i>加入 3D 元件</button>
+      <button type="button" role="tab" id="m-walk" class="go" aria-selected="false"><i>▶</i>進入導覽</button>
+    </div>
+    <div class="plan-tools mode-plan">
+      <div class="seg" role="group" aria-label="工具">
+        <button type="button" id="p-select" aria-pressed="true">選取／移動</button>
+        <button type="button" id="p-draw" aria-pressed="false">畫區域</button>
+        <button type="button" id="p-wall" aria-pressed="false">畫牆</button>
+        <button type="button" id="p-align" hidden>建物轉正</button>
+        <button type="button" id="p-ortho" hidden title="自己點的外框有誤差時，把每一邊拉直、牆角變直角，並轉回跟圖紙格線平行">校正成矩形</button>
+        <button type="button" id="p-entry" aria-pressed="false">設定入口</button>
+        <button type="button" id="p-box" aria-pressed="false" title="拖一個框選多個物件（電腦上也可以按住 Shift 拖）">框選</button>
+      </div>
+      <button type="button" id="p-rot" disabled>旋轉 90°</button>
+      <button type="button" id="p-del" class="danger" disabled>刪除</button>
+      <button type="button" id="p-snap" aria-pressed="true">對齊 0.5 m</button>
+      <button type="button" id="p-undo">復原</button>
+    </div>
+    <div class="draw-badge" id="draw-badge" hidden></div>
+    <div class="layers mode-plan" id="layers" hidden><div class="ly-h"><b>圖層・球場</b><button type="button" id="ly-fold" aria-label="收合圖層">—</button></div><div class="ly-list" id="ly-list"></div><p class="ly-tip">上面的疊在上層。點一下選取被壓住的球場；在圖上同一個位置再點一下也會換到下一層</p></div>
+    <div class="zoom-ctl mode-plan"><button type="button" id="z-in" aria-label="放大">＋</button><button type="button" id="z-out" aria-label="縮小">－</button><button type="button" id="z-fit" aria-label="符合畫面" style="font-size:12px">⤢</button></div>
+    <p class="plan-tip mode-plan">拖空白處移動圖紙・滾輪縮放・Delete 刪除・R 旋轉球場・Ctrl+Z 復原</p>
+    <div class="stage-top mode-3d">
+      <div class="seg" role="group" aria-label="視角">
+        <button type="button" id="v-bird" aria-pressed="true">鳥瞰</button>
+        <button type="button" id="v-top" aria-pressed="false">俯視</button>
+        <button type="button" id="v-player" aria-pressed="false">球員視角</button>
+        <button type="button" id="v-fly" aria-pressed="false" title="拖曳＝原地轉頭、滾輪＝往前後走、WASD 移動、Q／E 下降上升">自由移動</button>
+      </div>
+      <button type="button" id="t-walls" aria-expanded="false" aria-controls="wallmenu">牆與樑柱 ▾</button>
+      <button type="button" id="t-quality" aria-pressed="true">畫質：高</button>
+      <button type="button" id="t-labels" aria-pressed="true">標籤</button>
+      <button type="button" id="t-snap" aria-pressed="true">對齊 0.5 m</button>
+      <button type="button" id="btn-undo">復原</button>
+    </div>
+    <div class="co-badge" id="co-badge" hidden></div>
+    <p class="stage-hint mode-3d">按住元件直接拖曳移動（球場要先點一下選取）｜拖曳空白處轉視角、右鍵拖曳平移｜<b>WASD 移動、Q／E 下降上升、Shift 加速</b>｜R 旋轉、L 鎖定、Delete 刪除、Ctrl+Z 復原</p>
+    <div class="walk-ui" id="walk-ui" hidden>
+      <div class="walk-top"><button type="button" id="w-host" hidden>房主設定</button><button type="button" id="w-settings">⚙ 設定</button><button type="button" id="w-exit">回大廳</button></div>
+      <div class="room-info"><strong id="room-title">練習模式</strong><p id="room-status">單人練習 · 你是房主</p><details><summary id="room-count">1 / 20 人 · 名單</summary><ul id="room-list"></ul></details></div>
+      <div id="room-panel" hidden><label>全房間球速 <select id="room-speed"><option value="0.55">很慢（55%）</option><option value="0.7">慢（70%）</option><option value="1">正常（100%）</option></select></label><p>人跑、跳的速度不變</p><label class="room-size">每隊人數 <output id="room-size-value">2 對 2</output><input id="room-size" type="range" min="1" max="6" step="1" value="2"><span id="room-size-note"></span></label><button id="room-close" type="button">完成</button></div>
+      <div id="room-flow"><button id="room-ready" type="button">準備</button> <button id="room-start" type="button" hidden>開始遊戲</button><p id="room-flow-note">走到球場上按準備</p><p id="room-ready-list"></p></div>
+      <div class="wk-keys" id="wk-keys" aria-label="鍵盤操作配置"><div><span><kbd data-key="q">C</kbd><small>舉球輪盤</small></span><span><kbd data-key="w">W</kbd><small>前進</small></span><span><kbd data-key="e">E</kbd><small>—</small></span><span><kbd data-key="b">B</kbd><small>攔網</small></span></div><div><span><kbd data-key="a">A</kbd><small>左移</small></span><span><kbd data-key="s">S</kbd><small>後退</small></span><span><kbd data-key="d">D</kbd><small>右移</small></span><span><kbd data-key="interact">F</kbd><small>互動</small></span></div><div><span><kbd data-key="shift">Shift</kbd><small>衝刺</small></span><span><kbd data-key="crouch">Ctrl</kbd><small>蹲下</small></span><span><kbd data-key="v">V</kbd><small>接球</small></span><span><kbd data-key=" ">空白</kbd><small>跳躍</small></span></div><p>左鍵：拿球／扣球／發球區發球<br>舉球：按住 <kbd data-key="q">C</kbd> 選球路，放開舉球；滾輪換前／後排</p></div>
+      <p class="walk-help" id="walk-help"><kbd data-key="w">W</kbd><kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd> 移動 · <kbd data-key="shift">Shift</kbd> 衝刺 · <kbd data-key="crouch">Ctrl</kbd> 蹲下<br><kbd data-key="v">V</kbd> 接球 · <kbd data-key="b">B</kbd> 攔網 · <kbd data-key=" ">空白</kbd> 跳躍<br>按住 <kbd data-key="q">Q</kbd> 開輪盤，移動滑鼠選球路、放開舉球；滾輪切前／後排<br>左鍵：空手拿球（練習）／攻擊來球；持球扣出；站在底線後的發球區才發球<br>右鍵：吊球／發球區飄球 · <kbd data-key="interact">F</kbd> 場景互動 · <kbd data-key="f">X</kbd> 拋給隊友<br><kbd data-key="p">P</kbd> 切換視角 · <kbd data-key="ready">H</kbd> 準備 · Enter 聊天<br>Esc 放開滑鼠；右上角 ⚙ 可查看與調整鍵位</p>
+      <div class="wk-cross" id="wk-cross" aria-hidden="true"></div>
+      <div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div>
+      <div class="emo-menu" id="emo-menu" hidden><i id="emo-cur"></i></div>
+      <div id="set-charge" class="set-charge" hidden><strong id="set-charge-title">正面舉球</strong><div class="set-charge-track"><i id="set-charge-fill"></i></div><div class="set-charge-scale"><span>短按 · 快</span><span>長按 · 慢</span></div><small id="set-charge-note">抬頭決定角度 · 左鍵放開出手</small></div>
+      <div class="wk-chg" id="wk-chg" hidden aria-hidden="true"><i class="sw"></i><i class="sp" hidden></i><i class="ov"></i><b id="wk-chg-f"></b></div>
+      <button type="button" class="wk-act" id="wk-act" hidden><kbd data-key="interact">F</kbd><span id="wk-act-t"></span></button>
+      <button type="button" class="wk-act" id="wk-cart" style="top:67%;bottom:auto;pointer-events:auto" hidden>拖動球車（G）</button>
+      <div class="wk-combo" id="wk-combo" hidden></div>
+      <div class="rp" id="rp" hidden>
+        <div class="rp-stats" id="rp-stats"></div>
+        <div class="rp-bar"><button type="button" id="rp-play">⏸</button><input type="range" id="rp-time" min="0" max="1" step="0.01" value="0" aria-label="時間"><span id="rp-clock"></span>
+          <span class="seg"><button type="button" data-rps="0.5">0.5×</button><button type="button" data-rps="1" aria-pressed="true">1×</button><button type="button" data-rps="2">2×</button></span>
+          <span class="seg"><button type="button" data-rpv="cam">攝影機</button><button type="button" data-rpv="top">俯視</button><button type="button" data-rpv="follow">跟著球</button></span>
+          <button type="button" id="rp-dl">下載影片</button><button type="button" id="rp-x">關閉（Esc）</button></div>
+      </div>
+      <div class="pcwin" id="pcwin" hidden><div class="pc-mon"><div class="pc-screen">
+        <div class="pc-desk" id="pc-desk"></div>
+        <div class="pc-app" id="pc-app" hidden><div class="pc-tb"><span id="pc-title"></span><button type="button" id="pc-min" aria-label="最小化">–</button><button type="button" id="pc-close" aria-label="關閉視窗">✕</button></div><div class="pc-body" id="pc-body"></div></div>
+        <div class="pc-bar"><span class="pc-start">🏐 Let's Play</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
+      </div></div></div>
+      <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
+      <div class="wk-lock" id="wk-lock" hidden>點一下畫面：全螢幕；再點一下：滑鼠變準心　Esc：放開滑鼠，再按一次離開全螢幕</div>
+      <div class="vmodal" id="vmodal" hidden><div class="vbox"><video id="vplayer" controls playsinline preload="none"></video><div class="vrow"><b id="vtitle"></b><button type="button" id="vclose">關閉（Esc）</button></div></div></div>
+      <div class="vmodal" id="pmodal" hidden><div class="vbox"><img id="pimg" alt="智慧球場攝影機拍到的你"><div class="vrow"><b>智慧球場攝影機</b><a id="pdl" class="btn" download="智慧球場.jpg">下載照片</a><button type="button" id="pclose">關閉（Esc）</button></div></div></div>
+      <div class="wk-use" id="wk-use" hidden></div>
+      <div class="vb-cue" id="vb-cue" hidden></div>
+      <div class="vb-keycue" id="vb-keycue" hidden></div>
+      <div class="sta" id="sta" hidden><b>體力</b><i></i></div>
+      <div class="vb-ring" id="vb-ring" hidden></div>
+      <div class="vm-hud" id="vm-hud" hidden><div class="vm-sb"><b id="vm-title">🏖️ 2 對 2</b><span id="vm-a">你們</span><em id="vm-sc">0：0</em><span id="vm-b">AI 隊</span><small id="vm-tc">先到 7 分</small><button type="button" id="vm-x">離開</button></div><div class="vm-msg" id="vm-msg" hidden></div><div class="vm-grade" id="vm-grade" hidden></div><div class="vm-cd" id="vm-cd" hidden></div><div class="vm-rot" id="vm-rot" hidden></div></div>
+      <div class="rk-hud" id="rk-hud" hidden><div class="rk-top"><span id="rk-a"></span><b id="rk-sc">0：0</b><span id="rk-b"></span><button type="button" id="rk-rec">● 錄影</button><button type="button" id="rk-play" disabled>▶ 回放</button><button type="button" id="rk-x">離開對戰</button></div><div class="rk-msg" id="rk-msg" hidden></div><p class="rk-tip" id="rk-tip"></p></div>
+      <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button><button type="button" class="jump" data-rk="jump">跳<small>空白</small></button></div>
+      <div class="rk-menu" id="rk-menu" hidden></div>
+      <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
+      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">⇡ 推到底跑步</b><i></i></div>
+      <div class="vpad" id="vpad" hidden>
+        <button type="button" class="main" data-act="spike">攻擊<small>拿球＝發球</small></button>
+        <button type="button" data-act="bump" style="--dx:-88px;--dy:0px">接球</button>
+        <button type="button" data-act="jump" style="--dx:-62px;--dy:-62px">跳</button>
+        <button type="button" data-act="block" style="--dx:0px;--dy:-88px">攔網</button>
+        <button type="button" class="sm" data-act="set1" style="--dx:-139px;--dy:-12px">4號位</button>
+        <button type="button" class="sm" data-act="set2" style="--dx:-119px;--dy:-74px">快攻</button>
+        <button type="button" class="sm" data-act="set3" style="--dx:-74px;--dy:-119px">2號位</button>
+        <button type="button" class="sm" data-act="set4" style="--dx:-152px;--dy:46px">後排</button>
+        <button type="button" class="sm" data-act="pass" style="--dx:-12px;--dy:-139px">傳</button>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <div class="gen hide" id="gen" role="status" aria-live="polite"><h3 id="gen-title">正在生成球館</h3><p id="gen-sub"></p><ol id="gen-steps"></ol><div class="bar"><i id="gen-bar"></i></div></div>
+    <div class="insp" id="insp" hidden aria-hidden="true">
+      <div class="scrim" id="insp-scrim"></div><div class="block" id="insp-block"></div><div class="ring"></div><div class="tagname" id="insp-tag"></div><div class="hint">拖曳 360° 旋轉・滾輪縮放・Esc 關閉</div>
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="insp-title">
+        <div class="sh-head"><div><div class="kind" id="insp-kind"></div><h2 id="insp-title"></h2></div><span class="grow"></span><span class="tot" id="insp-total"></span><a class="newtab" id="insp-new" href="#" target="_blank" rel="noopener">新分頁開啟 ↗</a><button type="button" class="x" id="insp-x" aria-label="關閉">×</button></div>
+        <div class="pick" id="insp-pick" hidden><button type="button" class="pk-toggle" aria-expanded="true">場景設備 <i>▾</i></button><div class="pk-body"></div></div>
+        <div class="sh-body"><div class="loading"><div><i></i>載入中…</div></div><iframe id="insp-frame" title="物件詳細內容"></iframe></div>
+      </section>
+    </div>
+    <div class="outline" id="outline" hidden role="dialog" aria-modal="true" aria-labelledby="ol-title"><div class="ol-card">
+      <div class="ol-head"><h3 id="ol-title">描建物外框</h3><input id="ol-addr" class="ol-addr" placeholder="輸入確切地址，例：新竹縣竹東鎮○○路○段○號" maxlength="80" aria-label="地址"><button type="button" class="pri" id="ol-find">📍 用地址抓建物</button><button type="button" id="ol-clear">清除重描</button><a class="ol-link" id="ol-ge" target="_blank" rel="noopener">在 Google Earth 量高度 ↗</a><a class="ol-link" href="https://3dmaps.nlsc.gov.tw/FrontMap/" target="_blank" rel="noopener">國土測繪 3D 地圖 ↗</a><button type="button" id="ol-close" aria-label="關閉">×</button></div>
+      <div id="ol-map"></div>
+      <div class="ol-foot"><span id="ol-info"></span><label>淨高（樑下）<input id="ol-h" type="number" min="4" max="15" step="0.1"> m</label><label>屋頂外觀高度（選填）<input id="ol-roof" type="number" min="0" max="40" step="0.1"> m</label><span style="flex:1"></span><button type="button" class="pri" id="ol-ok" disabled>用這個外框生成球館</button><span id="ol-osm"></span></div>
+    </div></div>
+    <div class="wallmenu" id="wallmenu" hidden role="dialog" aria-label="牆與樑柱"></div>
+    <div class="camtip" id="camtip" hidden>點球場邊的攝影機，看智慧球場怎麼自動算分 →</div>
+  </main>
+</div>
+
+<script>document.querySelectorAll('#rail,.sitebar,.steps,.stage-top,#outline,#insp').forEach(el => { el.inert = true; el.setAttribute('aria-hidden', 'true'); });</script>
+<script type="application/json" id="saved-designs">[{"id":"dmvjcd5m1","name":"2 面專業排球（標準規格）","savedAt":"2026-10-22T09:31:29.065Z","data":{"name":"2 面專業排球（標準規格）","building":{"L":36,"W":30,"H":9},"floor":"blue","net":"men","items":[{"type":"vb","x":-9,"z":-2.5,"rot":90},{"type":"vb","x":9,"z":-2.5,"rot":90},{"type":"referee","x":-15.2,"z":-2.5,"rot":0},{"type":"referee","x":15.2,"z":-2.5,"rot":0},{"type":"wc","x":-15.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"男廁"},{"type":"wc","x":-10.5,"z":12.75,"rot":0,"w":5,"d":4.5,"label":"女廁"},{"type":"changing","x":-5.5,"z":12.75,"rot":0,"w":5,"d":4.5},{"type":"rug","x":2.5,"z":12.5,"rot":0,"w":7,"d":4},{"type":"sofa","x":0.8,"z":14.2,"rot":0},{"type":"sofa","x":4.2,"z":14.2,"rot":0},{"type":"table","x":2.5,"z":12,"rot":0},{"type":"locker","x":7,"z":14.6,"rot":0,"w":1.8,"d":0.5},{"type":"counter","x":10,"z":13.5,"rot":0,"w":3,"d":0.8},{"type":"vending","x":14.5,"z":14.4,"rot":0},{"type":"water","x":16.2,"z":14.5,"rot":0},{"type":"bench","x":12.6,"z":11,"rot":0},{"type":"ballcart","x":15.5,"z":11.2,"rot":0},{"type":"aed","x":17.8,"z":11,"rot":90},{"type":"light","x":-15.5,"z":-12,"rot":0},{"type":"light","x":-15.5,"z":-6,"rot":0},{"type":"light","x":-15.5,"z":0,"rot":0},{"type":"light","x":-15.5,"z":6,"rot":0},{"type":"light","x":-3,"z":-12,"rot":0},{"type":"light","x":-3,"z":-6,"rot":0},{"type":"light","x":-3,"z":0,"rot":0},{"type":"light","x":-3,"z":6,"rot":0},{"type":"light","x":3,"z":-12,"rot":0},{"type":"light","x":3,"z":-6,"rot":0},{"type":"light","x":3,"z":0,"rot":0},{"type":"light","x":3,"z":6,"rot":0},{"type":"light","x":15.5,"z":-12,"rot":0},{"type":"light","x":15.5,"z":-6,"rot":0},{"type":"light","x":15.5,"z":0,"rot":0},{"type":"light","x":15.5,"z":6,"rot":0},{"type":"netwall","x":0,"z":-2.5,"rot":90,"w":25,"d":0.1},{"type":"netwall","x":9,"z":10,"rot":0,"w":18,"d":0.1},{"type":"netwall","x":-9,"z":10,"rot":0,"w":18,"d":0.1}]}}]</script>
+<script>
+// Equipment reports are not part of the game. Existing optional callers check for this hook.
+</script>
+<script type="importmap" id="app-importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="js/session-guard.js"></script>
+<script type="module">import { startLastSeen } from './js/last-seen.js'; startLastSeen();</script>
+<script type="module" id="app-script">
+//@@APP_SCRIPT@@
+</script>
+
+<script>
+document.getElementById('goback').addEventListener('click', (e) => { e.preventDefault(); window.__leavingOk = true; location.href = 'index.html#lobby'; });
+document.querySelectorAll('[data-nav="gym"]').forEach((a) => { try { const s = sessionStorage.getItem('vb.lastSite'); if (s) a.href = 'gym.html?site=' + encodeURIComponent(s); } catch (e) {} });
+</script>
+</body>
+</html>

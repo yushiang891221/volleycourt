@@ -10,11 +10,12 @@
 ```
 volleycourt/
 ├─ index.html            大廳（開始畫面、登入、房間列表）
-├─ gym.html              球館（打球、練習、比賽）＝遊戲本體
+├─ gym.html              球館（打球、練習、比賽）＝遊戲本體；**由 src/gym 組裝出來，不要直接改**
 ├─ vbtv.html             球館 TV（嵌在 gym.html 裡播影片）
 ├─ character-creator.html  捏臉
 ├─ privacy.html          隱私權說明
 ├─ toy-preview.html      角色模型預覽（開發用）
+├─ src/gym/              gym.html 的原始檔：shell.html 外框、style.css 樣式、game/ 遊戲主程式（照檔名順序接起來）
 ├─ js/                   網頁用的程式（帳號、大廳、設定、捏臉、教學、比賽同步…）
 ├─ css/                  網頁樣式
 ├─ assets/               網頁素材：img 圖片／貼圖、models 角色與球館模型、sfx 音效、video 影片、data 球館資料
@@ -38,6 +39,7 @@ volleycourt/
 |---|---|
 | 本機開網站 | `python -m http.server 5180`，開 http://localhost:5180 |
 | 本機不登入直接進練習房 | http://localhost:5180/gym.html?site=bs-shenjing&practice=1&dev（只有 localhost 有效） |
+| 改完 src/gym 後重新組裝 gym.html | `node tools/build-gym.cjs` |
 | 跑全部自動檢查 | `node tools/run-tests.cjs` |
 | 更新台北伺服器 | `bash server/rt/deploy.sh` |
 | 上線網站 | 推到 GitHub 的 `main`，Vercel 自動部署（開發在 `game-site` 分支） |
