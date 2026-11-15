@@ -1,0 +1,8 @@
+使用者說：繼續做我們剛才討論好的事情（新手教學新版流程＋遊戲本身的調整：體力條加大加粗、正式比賽體力消耗降低 30%、撲救回球高度提高）。照你上一則回覆整理好的計畫逐項實作、測試、驗收。
+
+協作注意（Claude 這段時間在主工作目錄 D:\開排球場\volleycourt 的 game-site 分支做 B5「網頁改接伺服器」）：
+1. 請在你自己的 worktree（D:\開排球場\tutorial-release）裡做，開工前先 git fetch 並把 origin/main 合併或 rebase 進來（main 目前是 917b71a 之後的版本，已含你的教學 v2、輪盤放大、Claude 的 B4 與連線量測）。
+2. 改 src/gym 之後要跑 node tools/build-gym.cjs 和 node tools/build-headless.cjs（伺服器版比賽核心會檢查是不是最新的），再跑 node tools/run-tests.cjs，沒有「新失敗」才算過。
+3. 比賽邏輯的亂數請用 gameRandom()，純畫面效果用 fxRandom()，不要直接用 Math.random()（伺服器與網頁要算出一樣的比賽）。
+4. 盡量不要動 src/gym/game/07-net.js 與 server/ 底下的檔案（Claude 的 B5 會改這些）；真的需要改請在交接文件寫清楚。
+5. 完成後照你上次的方式驗收、推上 origin/main，並把結果補在 volleycourt/docs/CODEX_教學交接.md。推之前再 fetch 一次，main 有新提交就先合併再推。

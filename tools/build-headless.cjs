@@ -14,10 +14,11 @@ const all = files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('');
 const ast = acorn.parse(all, { ecmaVersion: 'latest', sourceType: 'module', allowAwaitOutsideFunction: true });
 
 // 畫面、音效、提示、連線、戰績上傳：伺服器不需要，換成空殼（S.名字 有提供就用 S 的）
-const STUB = `toast sfx vmSay vmBroadcast vbImpact vbBurst netBallHit vmSendResult vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
+const STUB = `toast sfx vmSay vbImpact vbBurst netBallHit vmSendResult vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
 vmRenderAi vbWallFx vmTrailPush vmMark vmOut netBallSound netFxHit netFxStep ballShadowSync updateTweens updateDoors updateWind vbBlockFx
 vmGradeShow vmShout labelSprite vmServeHint renderRoomRules vm6RotToast recHit recEvent vbFx tutEv vmPerfTouch vmPerfPoint
-makeAvatar avDrive renderUseBar setMenuClose setMenuPick vbManualSetCancel vbNpcToggle`.split(/\s+/);
+makeAvatar avDrive renderUseBar setMenuClose setMenuPick vbManualSetCancel vbNpcToggle
+netPeerPlayback rkOnNet refreshPeerAppearance emoOnNet avPoseOf langziReceive renderMpList rkPeerAi makeRacket sqFromMotion myPoseCode rkAiState`.split(/\s+/);
 // 一開始就碰到畫面的頂層變數：換成伺服器版本（S.名字 或下面的預設值）
 const REPLACE = {
   renderer: '{ domElement: {}, setSize() {}, render() {} }',
@@ -27,12 +28,16 @@ const REPLACE = {
 // 空殼要回傳東西的（AI 的人形：伺服器只要位置，用空的 three.js 群組代替）
 const STUB_DEFAULT = {
   makeAvatar: '({ g: new THREE.Group(), body: new THREE.Group(), hands: [new THREE.Group(), new THREE.Group()], phase: 0, fall: null })',
+  // 伺服器不播放別人的動畫：其他玩家的位置直接用他最新送來的那一筆
+  netPeerPlayback: '(a[0] && a[0].last ? [a[0].last.x, a[0].last.z, a[0].last.yaw, a[0].last.y || 0] : [0, 0, 0, 0])',
+  myPoseCode: '0',
 };
 const IMPORT = {
   THREE: null,   // 用真的 three（伺服器上只做數學，不畫圖）
   ballSubstep: 'ball', ballSubsteps: 'ball', touchCounts: 'rules', judgeTouch: 'rules', scorePoint: 'rules', judgeLanding: 'rules', createAi: 'ai',
 };
-const ENTRY = ['gameRandom', 'GAME_RNG', 'vm6Start', 'vmStart', 'vmUpdate', 'updateBalls', 'vmSetupServe', 'vmAiServe', 'staTick'];
+// B5：伺服器當房主——也要會收發連線訊息（收擊球請求、送比賽畫格與狀態）
+const ENTRY = ['vmApplyRoomRules', 'netOnMessage', 'netTick', 'vmWireTick', 'vmBroadcast', 'vmStatePayload', 'gameRandom', 'GAME_RNG', 'vm6Start', 'vmStart', 'vmUpdate', 'updateBalls', 'vmSetupServe', 'vmAiServe', 'staTick'];
 
 const top = new Map();
 function ids(p) { if (!p) return []; if (p.type === 'Identifier') return [p.name]; if (p.type === 'ObjectPattern') return p.properties.flatMap(q => ids(q.value || q.argument)); if (p.type === 'ArrayPattern') return p.elements.flatMap(ids); if (p.type === 'AssignmentPattern') return ids(p.left); if (p.type === 'RestElement') return ids(p.argument); return []; }
@@ -68,6 +73,9 @@ import * as THREE from 'three';
 import { ballSubstep, ballSubsteps } from '../../engine/ball.js';
 import { touchCounts, judgeTouch, scorePoint, judgeLanding } from '../../engine/rules.js';
 import { createAi } from '../../engine/ai.js';
+import fs from 'node:fs';
+// 比賽畫格同步（網頁是另外載入的 js/match-sync.js）：直接讀檔執行，給它一個 module 物件拿 VBMatchSync（不管 Node 把 .js 當 CommonJS 或模組都一樣）
+if (!globalThis.VBMatchSync) { const mod = { exports: {} }; new Function('module', fs.readFileSync(new URL('../../js/match-sync.js', import.meta.url), 'utf8'))(mod); globalThis.VBMatchSync = mod.exports; }
 export const STUBS = ${JSON.stringify(STUB)};
 // 伺服器上沒有網頁：DOM／畫布一律給「什麼都不做、怎麼用都不會壞」的假物件（three.js 建貼圖時也會用到 document）
 const dummy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : k === 'then' ? undefined : dummy, apply: () => dummy, construct: () => dummy, set: () => true });
@@ -84,7 +92,9 @@ ${other.map(n => n === 'CSS2DObject' ? `  const CSS2DObject = S.CSS2DObject || c
 ${out.join('\n').replace(/^/gm, '  ')}
   // 一格比賽：跟網頁 drawFrame 裡比賽相關的順序一樣（體力 → 比賽 → 球）
   function step(dt) { staTick(dt); vmUpdate(dt); updateBalls(dt); }
-  return { GAME_RNG, VM, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, get state() { return state; }, setState(v) { state = v; } };
+  // 伺服器當房主時的一格：跟網頁 drawFrame 的順序一樣（連線送狀態 → 比賽 → 球 → 送比賽畫格）
+  function hostStep(dt) { const now = performance.now(); staTick(dt); netTick(dt, now); vmUpdate(dt); updateBalls(dt); vmWireTick(); }
+  return { GAME_RNG, VM, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, hostStep, netOnMessage, vmApplyRoomRules, get state() { return state; }, setState(v) { state = v; } };
 }
 `;
 const file = path.join(root, 'server/match/game-core.mjs');

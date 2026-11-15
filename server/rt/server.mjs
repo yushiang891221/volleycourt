@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { verifiedPlayer } from '../shared/verify-player.mjs';
+import { MatchHost, HOST_ID } from '../match/host.mjs';
 
 const PORT = Number(process.env.PORT || 8787);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || 'https://volleycourts.vercel.app').split(',').map(s => s.trim()).filter(Boolean);
@@ -23,6 +24,7 @@ setInterval(() => { const now = Date.now(); for (const [k, b] of buckets) if (no
 
 // ---- 房間：誰送的訊息就轉給同房其他人；有人進出通知大家
 const rooms = new Map();   // 房號 → Set(ws)
+const hosts = new Map();   // 房號 → MatchHost（B5：伺服器當房主，網頁加 &srv=1 才會用到）
 function cast(set, from, obj) {
   const s = JSON.stringify(obj);
   for (const ws of set) if (ws !== from && ws.readyState === 1) { try { ws.send(s); } catch (_) { /* ignore */ } }
@@ -47,13 +49,23 @@ function roomJoin(ws, name, id, player) {
     if (me.n > MAX_RATE) return;
     let m; try { m = JSON.parse(msg); } catch (_) { return; }
     if (m.k === 'enter') { me.d = m.d && typeof m.d === 'object' ? m.d : {}; cast(set, ws, { k: 'p', a: 'enter', id: me.id, d: me.d }); return; }
-    if (m.k === 'm' && typeof m.t === 'string') cast(set, ws, { k: 'm', t: m.t, d: m.d, f: me.id });
+    if (m.k === 'm' && typeof m.t === 'string') {
+      if (m.t === 'srv-start') {   // B5：房主請伺服器開賽（伺服器當房主）
+        let h = hosts.get(name);
+        if (!h) { h = new MatchHost((t, d) => cast(set, null, { k: 'm', t, d, f: HOST_ID }), (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h); }
+        try { h.stop(); h.start(m.d); } catch (e) { console.warn('[比賽] 開賽失敗', name, e.message); }
+        return;
+      }
+      if (m.t === 'srv-stop') { hosts.get(name)?.stop(); hosts.delete(name); return; }
+      cast(set, ws, { k: 'm', t: m.t, d: m.d, f: me.id });
+      const h = hosts.get(name); if (h && h.running) h.receive(m.t, m.d, me.id);
+    }
   });
   ws.on('close', () => {
     set.delete(ws);
     const me = ws.meta;
     if (me.d && !me.replaced && ![...set].some(o => o.meta.id === me.id)) cast(set, ws, { k: 'p', a: 'leave', id: me.id, d: {} });
-    if (!set.size) rooms.delete(name);
+    if (!set.size) { rooms.delete(name); hosts.get(name)?.stop(); hosts.delete(name); }
   });
 }
 
@@ -201,12 +213,12 @@ server.on('upgrade', async (req, socket, head) => {
     const origin = req.headers.origin || '';
     if (ALLOWED.length && !ALLOWED.includes(origin) && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return reject(403, 'Forbidden');
     const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
-    if (!id) return reject(400, 'Bad Request');
+    if (!id || id === HOST_ID) return reject(400, 'Bad Request');   /* srv 是伺服器裁判的代號，任何人都不能用 */
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
     if (!allow('ip:' + ip, 120)) return reject(429, 'Too Many Requests');
     const [protocol, token] = String(req.headers['sec-websocket-protocol'] || '').split(',').map(v => v.trim());
     let player;
-    try { player = protocol === 'volleycourt' && await verifiedPlayer(token); }
+    try { player = protocol === 'volleycourt' && (process.env.ALLOW_DEV_TOKEN === '1' && token === 'dev.local.token' ? 'dev-' + id : await verifiedPlayer(token)); }   /* 測試通行證只在本機開發時開 ALLOW_DEV_TOKEN=1 才收 */
     catch (e) { console.warn('auth unavailable', e.name); return reject(503, 'Service Unavailable'); }
     if (!player) return reject(401, 'Unauthorized');
     if (!allow('acct:' + player, 30)) return reject(429, 'Too Many Requests');

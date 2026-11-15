@@ -30,6 +30,13 @@ function roomRulesChanged(rules) {
     const [depth,left] = rules.count === 6 ? V6_BASE[k] : rules.count === 2 ? [6,k === 0 ? 2.1 : -2.1] : CourtFormations.home(rules.count,k);
     [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
   }
+  if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
+    roomLaunched = f.round;
+    const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
+    NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, rules: JSON.parse(JSON.stringify(rules)) });
+    netStatus('比賽由台北伺服器裁判', 'ok');
+    return;
+  }
   if (rules.isHost && roomLaunched !== f.round) {
     roomLaunched = f.round;
     const seats = [f.picks.slice(0,rules.count),f.picks.slice(rules.count)];
@@ -55,6 +62,10 @@ function renderRoomRules() {
   else $('room-title').textContent = '房間 ' + NET.room + (host ? ' · 你是房主' : ROOM && ROOM.host ? ' · 房主：' + (NET.peers.get(ROOM.host)?.n || '球友') : ' · 確認房主中…');
 }
 addEventListener('pagehide', () => netLeave(true));
+// B5：伺服器當房主。房主網址加 &srv=1 時，開賽改請台北伺服器開（伺服器的代號是 srv），大家都當加入者照伺服器的結果顯示；
+// 加入者不用改網址：收到 srv 送來的開賽就跟上（房間伺服器不讓任何人用 srv 這個代號連進來，假冒不了）
+const SRV_ID = 'srv';
+const SRV_MODE = new URLSearchParams(location.search).get('srv') === '1';
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null, lat: new Map(), pingT: 0 };
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
@@ -130,7 +141,7 @@ async function cfTransport(room, cid, base) {
   const url = base + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(cid), members = new Map(), mainNet = cid === NET.me;
   let ws = null, onMsg = null, onPres = null, mine = null, closed = false, tries = 0, ping = 0;
   const open = async () => {
-    const token = await gameAccount.accessToken();
+    const token = typeof DEV_LOCAL !== 'undefined' && DEV_LOCAL ? 'dev.local.token' : await gameAccount.accessToken();   /* 本機開發（localhost＋&dev）用測試通行證，只有開了 ALLOW_DEV_TOKEN 的本機伺服器收 */
     return new Promise((ok, bad) => {
     const w = new WebSocket(url, ['volleycourt', token]); let done = false;
     const to = setTimeout(() => { if (!done) { done = true; try { w.close(); } catch (e) { /* ignore */ } bad(new Error('timeout')); } }, 6000);
@@ -174,6 +185,8 @@ async function cfTransport(room, cid, base) {
 let RT_CFG = undefined;
 async function rtConfig() {
   if (RT_CFG !== undefined) return RT_CFG;
+  const devCf = typeof DEV_LOCAL !== 'undefined' && DEV_LOCAL && new URLSearchParams(location.search).get('cf');   /* 本機開發：&cf=ws://localhost:8787 直接連本機房間伺服器 */
+  if (devCf && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(devCf)) return (RT_CFG = { cf: devCf, prefer: 'cf' });
   try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CFG = r.ok && (r.headers.get('content-type') || '').includes('json') ? await r.json() : { cf: null }; } catch (e) { RT_CFG = { cf: null }; }
   return RT_CFG;
 }
@@ -1338,12 +1351,17 @@ function netOnMessage(t, d, from) {
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
   if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t, hostTime: performance.now() }); return; }   // 量延遲
-  if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); if (VM.wire && !VM.host && from === VM.hostId && Number.isFinite(d.hostTime)) { const offset = d.hostTime + half - performance.now(); VM.wire.offset = VM.wire.offset == null ? offset : VM.wire.offset * .8 + offset * .2; } } return; }
+  if (t === 'pong') { if (d.to === NET.me) { const half = (performance.now() - d.t) / 2, o = NET.lat.get(from); NET.lat.set(from, o == null ? half : o * 0.7 + half * 0.3); if (VM.wire && !VM.host && from === VM.hostId && Number.isFinite(d.hostTime)) { const offset = d.hostTime + half - performance.now(); VM.wire.offsetN = (VM.wire.offsetN || 0) + 1; VM.wire.offset = VM.wire.offset == null || VM.wire.offsetN === 1 ? offset : VM.wire.offset * .8 + offset * .2; }   /* 第一次量到就直接用（開賽時的估計可能差 0.1 秒），之後再慢慢平均 */ } return; }
   if (t === 'st') {
+    if (from === 'srv' && d.vm && VM.on && !VM.host && from === VM.hostId) {   /* B5：伺服器不是球員，只拿它的比賽狀態 */
+      vmOnNet({ e: 'st', ...d.vm }, from);
+      if (d.vm.phase === 'over' && ROOM?.isHost && ROOM.snapshot?.flow?.phase === 'playing') ROOM.end();   /* 伺服器打完，房主把房間流程收回等待 */
+      return;
+    }
     const p2 = NET.peers.get(from) || netPeer(from, { n: d.n, c: d.c });
     // 位置與朝向依個別真人時間軸播放，動作保留最新狀態。
     if (!netPeerSnapshot(p2, d, performance.now())) return;
-    if (d.vm && !VM.on && (!ROOM || from === ROOM.host) && performance.now() - (NET.matchSyncAt || -Infinity) > 1000) {
+    if (d.vm && !VM.on && (!ROOM || from === ROOM.host || from === 'srv') && performance.now() - (NET.matchSyncAt || -Infinity) > 1000) {
       NET.matchSyncAt = performance.now();
       NET.tx.publish('room-match-sync', {});
     }
@@ -1456,7 +1474,9 @@ function netBallMsg(b, kind) {
 function netGrab() { if (!NET.on) return; NET.hitN++; NET.hitBy = NET.me; NET.ownBall = false; NET.tx.publish('grab', { h: NET.hitN, by: NET.me }); }
 function netTick(dt, now) {
   if (!NET.on) return;
-  if (NET.peers.size && now - NET.pingT > (VM.on ? 5000 : 3000)) { NET.pingT = now; NET.tx.publish('ping', { t: now }); }   /* 比賽每 5 秒量一次延遲 */
+  /* 比賽每 5 秒量一次延遲；剛開賽的加入者先密集量 4 次（每 0.5 秒）校正跟房主的時鐘。房主是伺服器（srv）時它不算玩家，也要量（B5） */
+  const srvHost = VM.on && !VM.host && VM.hostId === 'srv', calibrating = VM.on && !VM.host && VM.wire && (VM.wire.offsetN || 0) < 4;
+  if ((NET.peers.size || srvHost) && now - NET.pingT > (calibrating ? 500 : VM.on ? 5000 : 3000)) { NET.pingT = now; NET.tx.publish('ping', { t: now }); }
   // 我的狀態：移動中每秒 3 次、站著每 2 秒 1 次；帶上移動速度，別人用速度往前推算，畫面不用等下一筆
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球

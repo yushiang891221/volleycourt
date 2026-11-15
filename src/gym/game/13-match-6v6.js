@@ -344,8 +344,8 @@ function vmBroadcast(force, msg, pt) {
 }
 function vmOnNet(d, from) {
   if (d.e === 'result') { if (!ROOM || from === ROOM.host) vmGotResult(d); return; }   // WEB-010 戰績
-  if (d.e === 'start' && (!ROOM || from === ROOM.host)) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
-  if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host) return;
+  if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
+  if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
   if (d.e === 'start') {
     if (VM.on) return;
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
