@@ -37,6 +37,19 @@ function publicError(error) {
 }
 
 // 注入 client 供離線驗證；不讀寫 UI 或遊戲設定，也不記錄服務回傳內容。
+// 球隊錯誤（資料庫丟出的英文代碼）→ 給玩家看的中文
+export function teamError(error) {
+  const m = (error && error.message) || '', code = error && error.code;
+  if (code === 'PGRST202') return '球隊功能還沒開通（要先在 Supabase 執行 019_team_guild.sql）';
+  const map = [['level', '要 Lv10 才能加入或建立球隊'], ['already in team', '你已經在一個球隊裡了'], ['cooldown', '離開球隊 24 小時內不能加入或建立別的球隊'],
+    ['coins', '金幣不夠'], ['bad name', '隊名要 2～12 字，不能有不適合的字'], ['name taken', '隊名已經有人用了'], ['no team', '找不到這個球隊（邀請碼錯了嗎？）'],
+    ['full', '這個球隊滿了'], ['closed', '這個球隊沒有開放申請'], ['too many applications', '同時最多申請 5 個球隊'], ['not manager', '只有隊長、副隊長可以做這件事'],
+    ['not owner', '只有隊長可以做這件事'], ['no permission', '你沒有權限對這位隊員這樣做'], ['too many vice', '副隊長最多 2 個'], ['bad role', '職位只能是副隊長或隊員'], ['not member', '這個人不是隊員'],
+    ['no application', '找不到這個申請（可能已經處理過了）'], ['bad notice', '公告要 1～200 字，不能有不適合的字'], ['bad amount', '捐款金額不對'], ['not in team', '你還沒有球隊'],
+    ['bad jersey', '球衣的款式或文字不符合規定'], ['not signed in', '尚未登入或登入已失效']];
+  const hit = map.find(([k]) => m.includes(k));
+  return hit ? hit[1] : `球隊操作失敗（${m.slice(0, 60)}）`;
+}
 export function createAccountService(client) {
   let profile = null;
   const columns = 'id,nickname,appearance';
@@ -146,14 +159,22 @@ export function createAccountService(client) {
       if (error) { const m = error.message || ''; throw Object.assign(new Error(error.code === 'PGRST202' ? '球衣存帳號功能還沒開通' : m.includes('bad jersey') ? '球衣的款式或文字不符合規定，沒有存進帳號' : '球衣存進帳號失敗，稍後會再試'), { notReady: error.code === 'PGRST202' }); }
     },
     async setWheel(w) { await userId(); const { error } = await client.rpc('set_wheel', { p_wheel: w }); if (error) throw new Error('T 輪盤儲存失敗'); },
+    // 球隊（004 + 019_team_guild.sql）：op 對到資料庫函式，錯誤轉成中文
     async team(op, arg) {
       await userId();
-      const call = { mine: ['my_team'], create: ['create_team', { p_name: arg }], join: ['join_team', { p_code: arg }], leave: ['leave_team'], jersey: ['set_team_jersey', { p_jersey: arg }] }[op];
+      const a = arg || {};
+      const call = {
+        mine: ['my_team'], create: ['create_team', { p_name: arg }], join: ['join_team', { p_code: arg }], leave: ['leave_team'], jersey: ['set_team_jersey', { p_jersey: arg }],
+        list: ['team_list', { p_query: arg || '' }], apply: ['apply_team', { p_team: arg }], cancelApply: ['cancel_application', { p_team: arg }],
+        applications: ['team_applications'], decide: ['decide_application', { p_user: a.user, p_accept: !!a.accept }],
+        kick: ['kick_member', { p_user: arg }], role: ['set_member_role', { p_user: a.user, p_role: a.role }], transfer: ['transfer_owner', { p_user: arg }],
+        disband: ['disband_team'], rename: ['set_team_name', { p_name: arg }], open: ['set_team_open', { p_open: !!arg }],
+        post: ['post_notice', { p_body: a.body, p_pinned: !!a.pinned }], unpost: ['delete_notice', { p_id: arg }], pin: ['pin_notice', { p_id: a.id, p_pinned: !!a.pinned }],
+        donate: ['donate_coins', { p_amount: arg }], history: ['my_team_history'],
+      }[op];
+      if (!call) throw new Error('不認得的球隊操作：' + op);
       const { data, error } = await client.rpc(...call);
-      if (error) {
-        const m = error.message || '';
-        throw new Error(error.code === 'PGRST202' ? '球隊功能還沒開通' : m.includes('level') ? '要 Lv10 才能加入或建立球隊' : m.includes('already') ? '你已經在一個球隊裡了' : m.includes('no team') ? '找不到這個邀請碼' : m.includes('full') ? '這個球隊滿了（30 人）' : m.includes('duplicate') || m.includes('unique') ? '隊名已經有人用了' : m.includes('not owner') ? '只有隊長可以改球衣' : '球隊操作失敗');
-      }
+      if (error) throw new Error(teamError(error));
       return data;
     },
     // WEB-011 好友、私訊（server/supabase/005_friends.sql）：通用呼叫，錯誤轉成中文
