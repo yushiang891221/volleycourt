@@ -55,6 +55,9 @@
       const config = settings();
       return '<kbd>' + escape(config?.keyName(config.values.keys[action]) || '未設定') + '</kbd>';
     };
+    // 說明文字的重點（秒數、次數、顏色目標、角度…）用黃色粗體；只改標籤外的文字
+    const HL = /(\d+(?:\.\d+)?\s*(?:秒|顆|次|球|公尺|米|°|%|號位?)|[一二三五六]\s*(?:顆|次|個位置|處)|[黃藍紅綠金]色(?:圈|區域|區|線)?|[黃藍紅綠金](?:圈|區域|區|線)|發球線|六米|三米線|甜蜜點|完整轉一圈|落地進區)/g;
+    function highlight(html) { return String(html).split(/(<[^>]+>)/).map((t, i) => i % 2 ? t : t.replace(HL, '<b class="vb-hl">$1</b>')).join(''); }
     function instruction() {
       if (!section) return '';
       const movement = ['w', 'a', 's', 'd'].map(key).join(' ');
@@ -150,7 +153,7 @@
         ? full && next?.enabled
           ? `<p>這段完成！馬上進入下一段：${next.name}</p><button data-action="next">現在就開始</button> <button data-action="stop">離開教學</button>`
           : `<p>這段完成！${view().allDone ? '恭喜！六段教學全部完成。' : ''}</p>${!full && next?.enabled ? `<button data-start="${next.id}">下一段</button>` : ''} <button data-action="open">回選單</button> <button data-action="stop">自由練習</button>`
-        : `<p>${instruction()}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? hint : '') : hint}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
+        : `<p>${highlight(instruction())}</p><p role="status">${phase === 'success' ? skipped ? '已略過這步' : '做到了！' + (section?.id === 'block' ? hint : '') : hint}</p><button data-action="skip">略過這步</button> <button data-action="stop">離開教學</button>`;
       const head = full && section ? `新手教學 第 ${sections.indexOf(section) + 1}／${sections.length} 段・` : '';
       const markup = `<strong>${head}${section?.name || ''} ${step + 1}／${section?.count || 0}</strong>${body}`;
       panel.dataset.phase = phase;
@@ -292,19 +295,25 @@
       style.textContent += '.vb-tut-card .vb-tut-big{margin:auto 0 0}.vb-tut-menu:has(.vb-tut-chips){width:min(480px,calc(100vw - 32px))}.vb-tut-chips{margin:8px 0 16px}';
       style.textContent += `
         .vb-tut-panel {
-          top: max(8px, env(safe-area-inset-top));
-          left: max(8px, env(safe-area-inset-left));
+          /* 放在畫面左側中段：人物和球會在畫面中間，左側中段大多是牆和地板，不擋接球；左下角留給按鍵面板 */
+          top: 30vh;
+          left: max(16px, env(safe-area-inset-left));
           box-sizing: border-box;
-          width: min(340px, calc(100vw - 24px));
-          max-height: calc(100dvh - 24px);
+          width: min(440px, calc(100vw - 32px));
+          max-height: calc(70vh - 290px);
+          min-height: 0;
           overflow: auto;
-          padding: 12px 14px;
-          border-radius: 8px;
-          font-size: 15px;
-          line-height: 1.5;
+          padding: 14px 18px;
+          border-radius: 10px;
+          background: #172431e8;
+          font-size: 19px;
+          line-height: 1.55;
         }
-        .vb-tut-panel p { margin: 4px 0 6px; }
-        .vb-tut-panel button { margin: 0; padding: 4px 8px; }
+        .vb-tut-panel > strong { font-size: 17px; color: #b7c6d3; }
+        .vb-tut-panel p { margin: 6px 0 8px; }
+        .vb-tut-panel button { margin: 0; padding: 5px 10px; font-size: 15px; }
+        .vb-tut-panel .vb-hl, .vb-tut-panel kbd { color: #ffd44b; font-weight: 800; }
+        @media (max-height: 760px) { .vb-tut-panel { top: 12vh; max-height: calc(88vh - 290px); } }
       `;
       style.textContent+='.vb-tut-progress{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:151;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#14212cdd;border-radius:24px;color:#fff;font:13px sans-serif;pointer-events:none}.vb-tut-progress[hidden]{display:none}.vb-tut-progress i{width:15px;height:15px;border:2px solid #f5cd4f;border-radius:50%;background:#263646}.vb-tut-progress i.done{background:#45d58a;border-color:#78f5b4}';
       style.textContent+='.vb-tut-route{display:block;font-size:21px;color:#ffdc68;padding:8px 0}.vb-tut-stamina .sta{width:min(560px,70vw);height:32px;bottom:100px}.vb-tut-stamina .sta b{font-size:19px}';

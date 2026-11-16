@@ -83,6 +83,6 @@ console.log('PASS actual contact: front/back, short/medium/long hold, pitch angl
   const {c}=fixture();c.state.items=[{id:'court',type:'vb',x:0,z:0,rot:0}];
   for(const [x,z,expected] of [[8.9,0,false],[9.2,0,true],[-10,0,true],[10,4.6,false],[20,0,false]]) { c.walk.x=x;c.walk.z=z;assert.equal(c.vbAtServeLine(),expected); }
   assert(!source('vbHitAttack').includes("walk.keys.has('s')"));
-  const tutorial=fs.readFileSync(path.join(root,'js/tutorial.js'),'utf8');assert(tutorial.includes('width: min(340px'));assert(tutorial.includes('font-size: 15px'));
-  console.log('PASS serve-area boundaries, S no shot modifier, larger upper-left tutorial panel');
+  const tutorial=fs.readFileSync(path.join(root,'js/tutorial.js'),'utf8');assert(tutorial.includes('width: min(440px'));assert(tutorial.includes('font-size: 19px'));assert(tutorial.includes('top: 30vh'));
+  console.log('PASS serve-area boundaries, S no shot modifier, larger left-middle tutorial panel');
 }

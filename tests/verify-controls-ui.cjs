@@ -35,7 +35,7 @@ let browser,ws,server;
   await send('Page.enable');await send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/fixture?practice=1`});
   for(let i=0;i<30;i++){if(await evaluate('!!window.lesson'))break;await new Promise(r=>setTimeout(r,100));}
   const box=await evaluate(`(()=>{const p=document.querySelector('.vb-tut-panel'),r=p.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,font:getComputedStyle(p).fontSize,overflow:p.scrollWidth>p.clientWidth}})()`);
-  assert.equal(box.w,340);assert(box.x<=10&&box.y<=10);assert.equal(box.font,'15px');assert(!box.overflow);
+  assert.equal(box.w,440);assert(box.x<=20&&box.y>=100);assert.equal(box.font,'19px');assert(!box.overflow);
   const keysBox=await evaluate("(()=>{const k=document.querySelector('.wk-keys'),r=k.getBoundingClientRect();return {x:r.x,width:r.width,display:getComputedStyle(k.firstElementChild).display}})()");
   assert.equal(keysBox.x,12);assert.equal(keysBox.width,270);assert.equal(keysBox.display,'grid');
   const output=path.resolve(root,'..','tools');fs.mkdirSync(output,{recursive:true});
@@ -101,5 +101,5 @@ let browser,ws,server;
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await evaluate("VBSettings.close();lesson.start('set')");
   assert(await evaluate("document.querySelector('.vb-tut-panel').getBoundingClientRect().right <= innerWidth"));
-  console.log('PASS rendered tutorial upper-left 340px/15px, keyboard map/settings, narrow viewport bounds');console.log(JSON.stringify({box,controls,output}));
+  console.log('PASS rendered tutorial left-middle 440px/19px, keyboard map/settings, narrow viewport bounds');console.log(JSON.stringify({box,controls,output}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{ws?.close();browser?.kill();server?.close();});
