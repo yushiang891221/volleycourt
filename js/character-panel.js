@@ -36,7 +36,7 @@ export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝�
     const W = opt.w || 240, H = opt.h || 300;
     renderer.setSize(W, H);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#152236');
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#e9e6dc');   /* Play One 風格：米白底 */
     scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
     const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
     const av = makeToyAvatar(decodeLook(code), opt.jersey === undefined ? readWornJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣

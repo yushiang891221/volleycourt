@@ -399,7 +399,8 @@ function vmHud() {
   vmServeHint();
   if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
-  const t = `${VM.sc[0]}：${VM.sc[1]}`; if ($('vm-sc').textContent !== t) $('vm-sc').textContent = t;
+  const t = `${VM.sc[0]}：${VM.sc[1]}`, sk = t + '|' + (VM.six ? VM.setNo : '');   /* Play One 風格：兩塊大比分、中間黑底局數（只是顯示） */
+  if ($('vm-sc').dataset.k !== sk) { $('vm-sc').dataset.k = sk; $('vm-sc').innerHTML = `<i class="sa">${VM.sc[0]}</i><b>${VM.six ? `<small>第</small>${VM.setNo}<small>局</small>` : '：'}</b><i class="sb">${VM.sc[1]}</i>`; $('vm-sc').setAttribute('aria-label', t); }
   drawScore();   // 球館裡的計分板跟著比賽比分
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
   const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;

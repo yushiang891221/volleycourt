@@ -71,7 +71,7 @@
   if (!intro.open) intro.showModal();
   $('start').focus({ preventScroll: true });
 
-  // 開場的球：Let's Play 的球圖，慢慢轉、上下浮動
+  // 開場的球：Play One 的球圖，慢慢轉、上下浮動
   const bc = $('ball'), bctx = bc.getContext('2d');
   const ballImg = new Image();
   ballImg.src = 'assets/img/brand/ball-512.webp';

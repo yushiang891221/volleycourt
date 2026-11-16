@@ -345,7 +345,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .pcwin[hidden] { display: none !important; }
 .pc-mon { width: min(1100px, 100%); aspect-ratio: 16 / 10; max-height: 100%; background: #0B0D10; border-radius: 14px; padding: 12px 12px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 2px #22262C; }
 .pc-screen { position: relative; width: 100%; height: 100%; border-radius: 4px; overflow: hidden; background: radial-gradient(circle at 70% 30%, #2F5FA8 0, #1B2638 55%, #0E1420 100%); color: #fff; font-size: 13px; }
-.pc-screen::before { content: "Let's Play"; position: absolute; right: 28px; bottom: 56px; font-size: clamp(20px, 4vw, 44px); font-weight: 900; letter-spacing: .1em; color: rgba(242,183,5,.18); }
+.pc-screen::before { content: "Play One"; position: absolute; right: 28px; bottom: 56px; font-size: clamp(20px, 4vw, 44px); font-weight: 900; letter-spacing: .1em; color: rgba(242,183,5,.18); }
 .pc-desk { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .pc-icon { width: 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: 1px solid transparent; color: #fff; padding: 6px 4px; border-radius: 8px; min-height: 0; }
 .pc-icon:hover, .pc-icon:focus-visible { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); }
@@ -704,3 +704,34 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .set-wheel.all-wheel.two-wheel{width:min(380px,70vmin);height:min(380px,70vmin);background:var(--sector),linear-gradient(90deg,transparent calc(50% - 1px),#bac6d060 calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)),#101720d9!important}
 .two-wheel .sw-opt{width:120px;max-width:32%}
 .two-wheel .sw-center{width:38%;height:38%;font-size:18px}
+
+/* ===== Play One 介面風格（2026-11-16，參考 volleygame/素材 的設計）：只改比賽資訊、輪轉表、按鍵面板「看起來的樣子」，位置和遊戲本身不動 ===== */
+:root { --po-paper: #f4f2ea; --po-ink: #141414; --po-yellow: #ffd21f; --po-blue: #1f46c9; --po-display: 'Barlow Condensed', 'Noto Sans TC', sans-serif; }
+/* 計分板：米白卡片＋黑框＋硬陰影；比分是兩塊大字（我方黃、對方白），中間黑底局數 */
+.vm-sb { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); padding: 4px 6px 4px 10px; gap: 10px; }
+.vm-sb #vm-title { font-weight: 900; }
+.vm-sb span { font-weight: 900; font-size: 14px; }
+.vm-sb span.srv::after { content: ' ●'; color: var(--po-ink); }
+.vm-sb em#vm-sc { display: inline-flex; align-items: stretch; gap: 0; min-width: 0; border: 3px solid var(--po-ink); font: inherit; }
+.vm-sb em#vm-sc i { font-family: var(--po-display); font-style: italic; font-weight: 900; font-size: 34px; line-height: 1; padding: 4px 12px; min-width: 56px; text-align: center; }
+.vm-sb em#vm-sc i.sa { background: var(--po-yellow); } .vm-sb em#vm-sc i.sb { background: #fff; }
+.vm-sb em#vm-sc b { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--po-ink); color: var(--po-yellow); font-family: var(--po-display); font-style: italic; font-size: 22px; padding: 0 8px; line-height: 1; }
+.vm-sb em#vm-sc b small { font-family: 'Noto Sans TC', sans-serif; font-style: normal; font-size: 10px; color: #fff; opacity: 1; }
+.vm-sb small#vm-tc { opacity: 1; background: var(--po-ink); color: #fff; font-weight: 800; padding: 3px 8px; font-size: 12px; }
+.vm-sb button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
+.vm-sb button:hover { background: var(--po-yellow); }
+/* 輪轉表：米白卡片、黑框；我方格子藍、自己黃框 */
+.vm-rot { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); }
+.vm-rot .rt b { color: var(--po-ink); font-weight: 900; opacity: 1; }
+.vm-rot .rt .net { background: repeating-linear-gradient(90deg, #e2372b 0 6px, #fff 6px 10px); height: 4px; border-radius: 0; }
+.vm-rot .rt i { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
+.vm-rot .rt i.fr { background: #dbe4ff; }
+.vm-rot .rt i.me { outline: 3px solid var(--po-yellow); outline-offset: -3px; background: var(--po-yellow); }
+.vm-rot .rt i em { font-family: var(--po-display); font-style: italic; font-weight: 900; font-size: 13px; }
+.vm-rot .rt i u { opacity: .75; }
+/* 練習房按鍵面板：每個鍵是白底黑框方塊（像設計稿右下角） */
+.wk-keys { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); }
+.wk-keys span { background: #fff; border: 2px solid var(--po-ink); border-bottom-width: 3px; border-radius: 0; }
+.wk-keys kbd { color: var(--po-ink); font-weight: 800; }
+.wk-keys small, .wk-keys p { color: var(--po-ink); }
+.wk-keys span.pressed { background: var(--po-yellow); border-color: var(--po-ink); box-shadow: none; }

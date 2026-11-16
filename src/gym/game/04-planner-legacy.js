@@ -962,13 +962,13 @@ async function generateFromSite(id, opts = {}) {
   const plan = planHall(site);
   if (GAME_ONLY) {
     window.__site = site;
-    $('gym-title').textContent = "Let's Play";
+    $('gym-title').textContent = "Play One";
     const rec = await pullShared('bs-shenjing');
     if (rec && rec.data) {
       state = sanitize({ ...rec.data, id: null });
     } else {
       // Same generator and dimensions as before; only editor presentation is skipped.
-      state = sanitize({ name: "Let's Play", building: { L: plan.L, W: plan.W, H: plan.H }, floor: 'pu', net: 'men', items: plan.items.length ? plan.items : [{ id: uid(), type: 'vbs', x: 0, z: 0, rot: 0, locked: true, label: '1 號場' }] });
+      state = sanitize({ name: "Play One", building: { L: plan.L, W: plan.W, H: plan.H }, floor: 'pu', net: 'men', items: plan.items.length ? plan.items : [{ id: uid(), type: 'vbs', x: 0, z: 0, rot: 0, locked: true, label: '1 號場' }] });
       let n = 1;
       for (const court of state.items.filter(i => CAT[i.type].court === 'vb')) state.items.push(cameraFor(court, n++));
       state.zones = autoZones();
@@ -1990,7 +1990,7 @@ function titleBlock(x0, z0, x1, z1, K, text, line, sw) {
   a(`<rect class="tb" x="${X(x0)}" y="${Y(z0)}" width="${M(w)}" height="${M(z1 - z0)}"/>`);
   let z = z0 + 1.1 * K;
   a(text(cx, z, 'HSINCHU VOLLEYBALL', 'bt mono', 0.42 * K, ' style="letter-spacing:.3em"'));
-  z += 0.6 * K; a(text(cx, z, "Let's Play", 'tk', 0.3 * K));
+  z += 0.6 * K; a(text(cx, z, "Play One", 'tk', 0.3 * K));
   z += 0.45 * K; a(line(x0, z, x1, z, 'tbl'));
   z += 0.75 * K; a(text(cx, z, (site ? site.name : state.name).slice(0, 18), 'bt', 0.42 * K));
   z += 0.55 * K; a(text(cx, z, site ? `${site.town || ''}${site.road ? '・' + site.road : ''}` : '自由規劃', 'tk', 0.26 * K));

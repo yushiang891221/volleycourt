@@ -15,9 +15,10 @@
 <script src="js/lobby-client.js"></script>
 <script src="js/game-lobby.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Let's Play｜球館</title>
+<title>Play One｜球館</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/brand/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/img/brand/favicon-64.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800;1,900&display=swap">
 <link rel="apple-touch-icon" href="assets/img/brand/apple-touch-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -38,7 +39,7 @@ html{background:#0b1220}#plan-host{display:none!important}
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
-<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>VOLLEYCOURT</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html#lobby">回大廳</a></div></div>
+<div id="game-loading" role="status" aria-live="polite"><div class="entry-box"><small>PLAY ONE</small><h1>進入球館中…</h1><progress id="entry-progress" max="100" value="5" aria-label="球館載入進度"></progress><p id="entry-stage">5% · 載入遊戲程式</p><a href="index.html#lobby">回大廳</a></div></div>
 <script>
 // 出錯時直接顯示在畫面左下角（方便截圖回報；同一個錯誤只列一次）
 (() => { const seen = new Set(), NL = String.fromCharCode(10); const show = (msg) => { if (seen.has(msg) || seen.size > 4) return; seen.add(msg); let box = document.getElementById('err-box'); if (!box) { box = document.createElement('div'); box.id = 'err-box'; box.style.cssText = 'position:fixed;left:10px;bottom:60px;z-index:99999;max-width:min(90vw,720px);background:#3a0d12f0;color:#fff;border:2px solid #ff6b6b;border-radius:8px;padding:8px 12px;font:12px/1.5 monospace;white-space:pre-wrap;pointer-events:auto'; box.title = '點一下關閉'; box.onclick = () => box.remove(); document.body.appendChild(box); box.textContent = '⚠ 遊戲出錯（請截圖回報）'; } box.textContent += NL + msg; };
@@ -202,7 +203,7 @@ html{background:#0b1220}#plan-host{display:none!important}
       <div class="pcwin" id="pcwin" hidden><div class="pc-mon"><div class="pc-screen">
         <div class="pc-desk" id="pc-desk"></div>
         <div class="pc-app" id="pc-app" hidden><div class="pc-tb"><span id="pc-title"></span><button type="button" id="pc-min" aria-label="最小化">–</button><button type="button" id="pc-close" aria-label="關閉視窗">✕</button></div><div class="pc-body" id="pc-body"></div></div>
-        <div class="pc-bar"><span class="pc-start">🏐 Let's Play</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
+        <div class="pc-bar"><span class="pc-start">🏐 Play One</span><span class="pc-tasks" id="pc-tasks"></span><span class="pc-clock" id="pc-clock"></span><button type="button" id="pc-off">離開電腦（Esc）</button></div>
       </div></div></div>
       <div class="camview" id="camview" hidden><canvas id="cv-canvas" width="640" height="360"></canvas><div class="cv-row"><b id="cv-name"></b><button type="button" id="cv-rec">● 錄影</button><button type="button" id="cv-play" disabled>▶ 球路回放</button><button type="button" id="cv-snap">拍照</button><button type="button" id="cv-big">放大</button><button type="button" id="cv-x" aria-label="關閉">✕</button></div></div>
       <div class="wk-lock" id="wk-lock" hidden>點一下畫面：全螢幕；再點一下：滑鼠變準心　Esc：放開滑鼠，再按一次離開全螢幕</div>
