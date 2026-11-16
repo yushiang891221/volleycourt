@@ -8981,10 +8981,27 @@ document.addEventListener('click', (e) => { if (e.target.closest && e.target.clo
 addEventListener('beforeunload', (e) => { if (location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
 function lockMouse() { if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
 let pointerLockOffT = 0; document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) pointerLockOffT = performance.now(); });
-function lockMouseNow() { if (!coarse() && renderer.domElement.requestPointerLock) { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } } }
+// 鎖滑鼠：先用「原始滑鼠輸入」（unadjustedMovement）——Chrome 在 Windows 鎖滑鼠時偶爾會回報一次超大的假移動量，視角瞬間被甩走甚至轉到背後（2026-11-17 玩家錄影）；不支援就退回一般鎖定
+function lockMouseNow() {
+  if (coarse() || !renderer.domElement.requestPointerLock) return;
+  const plain = () => { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (er) { /* 不支援就用拖的 */ } };
+  try { const r = renderer.domElement.requestPointerLock({ unadjustedMovement: true }); if (r && r.catch) r.catch(() => { if (!locked()) plain(); }); else if (!r) setTimeout(() => { if (!locked()) plain(); }, 0); }
+  catch (er) { plain(); }
+}
+// 滑鼠移動量過濾：這一下比最近幾下大很多（又超過 220 像素）就當成假訊號丟掉；真的甩很快的話，最近幾下本來就大，不會被擋
+const MOUSE_HIST = [];
+function mouseDelta(e) {
+  const mx = e.movementX || 0, my = e.movementY || 0, m = Math.max(Math.abs(mx), Math.abs(my));
+  const avg = MOUSE_HIST.length ? MOUSE_HIST.reduce((a, b) => a + b, 0) / MOUSE_HIST.length : 0;
+  if (m > 220 && m > avg * 6 + 60) return null;
+  MOUSE_HIST.push(m); if (MOUSE_HIST.length > 6) MOUSE_HIST.shift();
+  return [mx, my];
+}
 function unlockMouse() { if (locked()) { walk.programmaticUnlock = true; document.exitPointerLock(); } }
 document.addEventListener('mousemove', (e) => {
   if (!walk.on || !locked() || walk.paused || (walk.spike && walk.spike.t > 0.98)) return;
+  const md = mouseDelta(e); if (!md) return;   /* 假的超大移動量：丟掉 */
+  e = { movementX: md[0], movementY: md[1] };
   if (EMO.menu) { emoMenuMove(e.movementX, e.movementY); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
   if (setMenuHolds()) { if (SETM.m) setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
   if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003 * VBSettings.values.sensitivity, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
