@@ -11,7 +11,7 @@ function preferences(raw) {
 }
 {
   const p=preferences().api;
-  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyB',q:'KeyC',e:'KeyE',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
+  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyB',q:'KeyC',1:'KeyQ',2:'KeyE',3:'KeyR',6:'Digit1',4:'Digit2',5:'Digit3',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
   assert.equal(new Set(Object.values(p.values.keys)).size,p.bindings.length,'every default has a unique key');
   const old={...p.values,controlVersion:1,volume:37,keys:{...p.values.keys,w:'KeyI',b:'KeyB',e:'KeyE',q:'KeyQ',f:'KeyF',ready:'KeyR'}};delete old.keys.interact;
   const migrated=preferences(old).api;assert.equal(migrated.values.keys.b,'KeyB');assert.equal(migrated.values.keys.ready,'KeyH');assert.equal(migrated.values.keys.w,'KeyI');assert.equal(migrated.values.volume,37);
@@ -40,7 +40,7 @@ function fixture() {
   const {c,key,events}=fixture();
   key('keydown','c','KeyC');assert(c.SETM.m.all);assert(!events.includes('receive'));
   key('keyup','c','KeyC');assert.equal(c.SETM.m,null);
-  key('keydown','e','KeyE');assert(!c.walk.setAim);assert(!events.includes('interact'));
+  key('keydown','z','KeyZ');assert(!c.walk.setAim);assert(!events.includes('interact'));
   key('keydown','v','KeyV');assert(events.includes('receive'));
   key('keydown','b','KeyB');assert(events.includes('block'));assert(!events.includes('ready'));
   key('keydown','h','KeyH');assert(events.includes('ready'));

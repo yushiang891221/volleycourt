@@ -4,9 +4,9 @@
   const bindings = [
     ['w','前進','KeyW'],['s','後退','KeyS'],['a','左移','KeyA'],['d','右移','KeyD'],
     ['arrowup','前進（別名）','ArrowUp'],['arrowdown','後退（別名）','ArrowDown'],['arrowleft','左移（別名）','ArrowLeft'],['arrowright','右移（別名）','ArrowRight'],
-    ['shift','衝刺／撲救修飾鍵','Shift'],['crouch','蹲下（按住；接重扣比較穩）','Control'],['q','舉球輪盤','KeyC'],['e','保留鍵（目前無動作）','KeyE'],['v','接球','KeyV'],['interact','場景互動','KeyF'],
+    ['shift','衝刺／撲救修飾鍵','Shift'],['crouch','蹲下（按住；接重扣比較穩）','Control'],['q','舉球輪盤','KeyC'],['v','接球','KeyV'],['interact','場景互動','KeyF'],
     [' ','跳／跳發','Space'],['b','攔網','KeyB'],['t','擊掌／嘲諷選單','KeyT'],['p','切換視角','KeyP'],['f','拋給隊友','KeyX'],
-    ['1','舉球：4 號位','Digit1'],['2','舉球：快攻','Digit2'],['3','舉球：2 號位','Digit3'],['4','舉球：後排中間','Digit4'],['5','舉球：老三','Digit5'],['6','舉球：後排 5 號位（左後）','Digit6'],
+    ['1','直接舉球：4 號位','KeyQ'],['2','直接舉球：快攻','KeyE'],['3','直接舉球：2 號位','KeyR'],['6','直接舉球：後排 5 號位（左後）','Digit1'],['4','直接舉球：後排中間','Digit2'],['5','直接舉球：老三（後排 1 號位）','Digit3'],
 
     ['j','羽球／匹克球：軟球','KeyJ'],['k','羽球／匹克球：抽球','KeyK'],['l','羽球／匹克球：挑球','KeyL']
     ,['ready','準備／取消準備','KeyH'],['start','房主開始遊戲','KeyG']
@@ -14,14 +14,23 @@
   const defaultKeys = () => Object.fromEntries(bindings.map(([a,,k]) => [a,k]));
   const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true, showFps:false, nameTags:true, keyPanel:true, bloom:true,
     quality: matchMedia('(pointer: coarse)').matches || innerWidth < 900 ? 'low' : 'high', fov:85,
-    sensitivity:1, swap:[false,false,false], volume:100, mute:false, nickname:'', controlVersion:3, setFast:11, setSlow:5.5, setCharge:.9, keys:defaultKeys() });
+    sensitivity:1, swap:[false,false,false], volume:100, mute:false, nickname:'', controlVersion:4, setFast:11, setSlow:5.5, setCharge:.9, keys:defaultKeys() });
   const read = key => { try { return localStorage.getItem(key); } catch (_) { return null; } };
   function clean(raw) {
     const v=defaults(); if (!raw || typeof raw !== 'object') return v;
-    if (raw.keys && ![2,3].includes(raw.controlVersion)) raw={...raw,keys:{...raw.keys,q:'KeyQ',e:'KeyE',b:'KeyR',interact:'KeyF',f:'KeyX',ready:'KeyH'}};
-    if(raw.keys && raw.controlVersion!==3) {
+    if (raw.keys && ![2,3,4].includes(raw.controlVersion)) raw={...raw,keys:{...raw.keys,q:'KeyQ',e:'KeyE',b:'KeyR',interact:'KeyF',f:'KeyX',ready:'KeyH'}};
+    if(raw.keys && raw.controlVersion!==3 && raw.controlVersion!==4) {
       const keys={...raw.keys};
       for(const [action,oldCode,newCode] of [['q','KeyQ','KeyC'],['b','KeyR','KeyB']]) if(keys[action]===oldCode && !Object.values(keys).includes(newCode))keys[action]=newCode;
+      raw={...raw,keys};
+    }
+    // v4（2026-11-16）：直接舉球改成 Q／E／R（前排 4 號位、快攻、2 號位）與 1／2／3（後排 5 號位、後中、老三）；保留鍵 E 拿掉。
+    // 只有六個舉球鍵都還是舊預設時才換，玩家自己改過的不動
+    if (raw.keys && raw.controlVersion!==4) {
+      const keys={...raw.keys}; delete keys.e;
+      const old={1:'Digit1',2:'Digit2',3:'Digit3',4:'Digit4',5:'Digit5',6:'Digit6'}, now={1:'KeyQ',2:'KeyE',3:'KeyR',6:'Digit1',4:'Digit2',5:'Digit3'};
+      const others=Object.entries(keys).filter(([a])=>!(a in old)).map(([,c])=>c);
+      if(Object.entries(old).every(([a,c])=>keys[a]===c) && Object.values(now).every(c=>!others.includes(c))) Object.assign(keys,now);
       raw={...raw,keys};
     }
     for (const k of ['assist','cameraAssist','landing','cues','third','rings','mute','showFps','nameTags','keyPanel','bloom']) if (typeof raw[k]==='boolean') v[k]=raw[k];
