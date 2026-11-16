@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>球隊主頁預覽（開發用）</title>
+<link rel="stylesheet" href="../css/lobby.css">
+<style>body { margin: 0; padding: 12px; background: #0b1220; color: #e8eef8; font: 14px sans-serif; } button { margin: 2px; }</style>
+</head>
+<body>
+<p>開發用：在瀏覽器裡跑 PGlite（記憶體裡的 Postgres），執行 supabase/001～最新的 SQL，用假玩家測球隊主頁。需要 <code>cd server && npm install</code>。</p>
+<div id="who"></div>
+<p id="status">載入資料庫中…</p>
+<script type="module">
+import { PGlite } from '../server/node_modules/@electric-sql/pglite/dist/index.js';
+import { teamError } from '../js/auth.js';
+import { openTeamHub } from '../js/team-panel.js';
+const SQL = ['001_profiles', '002_single_session', '003_delete_account', '004_progress', '005_friends', '006_fix_record_match', '007_friend_badge', '008_assists_tiers', '009_match_rating', '010_public_profile',
+  '011_cannon_oh', '012_role_wins', '013_last_seen', '014_langzi', '015_profile_mastery', '016_private_profile_rows', '017_my_jerseys', '018_jersey_sleeves', '019_team_guild'];
+const db = new PGlite();
+await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth;
+  create table auth.users (id uuid primary key default gen_random_uuid(), email text);
+  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  grant usage on schema auth to anon, authenticated; grant usage on schema public to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;`);
+for (const f of SQL) await db.exec(await (await fetch(`../supabase/${f}.sql`)).text());
+// 跟 js/auth.js 的 team(op) 一樣的對照
+const OPS = { mine: ['my_team'], create: ['create_team', 'p_name'], join: ['join_team', 'p_code'], leave: ['leave_team'], list: ['team_list', 'p_query'], apply: ['apply_team', 'p_team'],
+  cancelApply: ['cancel_application', 'p_team'], applications: ['team_applications'], decide: ['decide_application', (a) => ({ p_user: a.user, p_accept: !!a.accept })],
+  kick: ['kick_member', 'p_user'], role: ['set_member_role', (a) => ({ p_user: a.user, p_role: a.role })], transfer: ['transfer_owner', 'p_user'], disband: ['disband_team'],
+  rename: ['set_team_name', 'p_name'], open: ['set_team_open', (a) => ({ p_open: !!a })], post: ['post_notice', (a) => ({ p_body: a.body, p_pinned: !!a.pinned })],
+  unpost: ['delete_notice', 'p_id'], pin: ['pin_notice', (a) => ({ p_id: a.id, p_pinned: !!a.pinned })], donate: ['donate_coins', 'p_amount'], history: ['my_team_history'] };
+let me = null;
+const rpc = async (uid, fn, args = {}) => {
+  const keys = Object.keys(args), sql = `select public.${fn}(${keys.map((k, i) => `${k} => $${i + 1}`).join(', ')}) as r`;
+  await db.exec(`begin; set local role authenticated; select set_config('request.jwt.claim.sub', '${uid}', true);`);
+  try { const r = await db.query(sql, keys.map((k) => args[k])); await db.exec('commit'); return r.rows[0].r; } catch (e) { await db.exec('rollback'); throw new Error(teamError(e)); }
+};
+const api = (op, arg) => { const [fn, p] = OPS[op]; return rpc(me, fn, typeof p === 'function' ? p(arg) : p ? { [p]: arg } : {}); };
+const progress = { loadProgress: async () => (await db.query('select exp, coins from public.player_progress where user_id = $1', [me])).rows[0], levelOf: (e) => Math.floor(e / 500) + 1 };
+// 假玩家
+const player = async (nick, exp, coins) => { const id = (await db.query('insert into auth.users default values returning id')).rows[0].id;
+  await db.query('update public.profiles set nickname = $2, last_seen_at = now() where id = $1', [id, nick]); await db.query('insert into public.player_progress(user_id, exp, coins) values ($1, $2, $3)', [id, exp, coins]); return id; };
+const P = { 阿翔: await player('阿翔', 4600, 3000), 小美: await player('小美', 5000, 200), 大雄: await player('大雄', 6000, 50), 新手: await player('新手', 800, 0), 路人: await player('路人', 4500, 1500) };
+window.teamDev = { db, P, rpc, use: (n) => { me = P[n]; }, open: (n) => { me = P[n]; return openTeamHub({ api, progress }); } };
+document.getElementById('who').innerHTML = Object.keys(P).map((n) => `<button data-n="${n}">以「${n}」打開</button>`).join('');
+document.getElementById('who').onclick = (e) => { const n = e.target.dataset.n; if (n) window.teamDev.open(n); };
+document.getElementById('status').textContent = '資料庫好了（' + SQL.length + ' 個 SQL）。';
+window.teamReady = true;
+</script>
+</body>
+</html>

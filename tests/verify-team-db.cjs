@@ -138,6 +138,16 @@ const { makeDb } = require('./supabase-db.cjs');
   assert.equal(teamError({ code: 'PGRST202', message: '' }).includes('019'), true);
   ok(`資料庫的 ${codes.length} 種錯誤都有中文訊息`);
 
+  // ---------- 網頁的等級表＝資料庫的等級規則 ----------
+  const TP = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/team-panel.js')).href);
+  for (const L of TP.TEAM_LEVELS) {
+    const r = (await db.query('select public.team_level($1) lv, public.team_cap($1) cap, public.team_level($2) below', [L.exp, Math.max(0, L.exp - 1)])).rows[0];
+    assert.equal(r.lv, L.lv); assert.equal(r.cap, L.cap); if (L.exp > 0) assert.equal(r.below, L.lv - 1);
+  }
+  assert.equal(TP.TEAM_CREATE_COST, 1000); assert.equal(TP.TEAM_LEVEL_REQ, 10);
+  for (const k of ['create', 'join', 'leave', 'kick', 'vice', 'member', 'owner', 'rename', 'levelup', 'donate']) assert(!TP.logText({ kind: k, actor: 'A', target: 'B', data: { level: 2, amount: 5, name: 'X' } }).includes(k), k);
+  ok('球隊主頁的等級表、人數上限、建隊條件跟資料庫一樣；每種動態都有中文');
+
   // ---------- 舊球隊（004 建的）升級後隊長補上職位 ----------
   const old = await db.player('老隊長', { exp: LV10 });
   const ot = (await db.query("insert into public.teams(code, name, owner) values ('OLD123', '老球隊', $1) returning id", [old])).rows[0].id;

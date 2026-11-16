@@ -243,42 +243,10 @@ export async function openAchievementPanel() {
 }
 // WEB-010 球隊（Lv10 解鎖）：建立／用邀請碼加入、成員名單、隊長設計球衣並取名、穿上球隊球衣、離開
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-export async function openTeamPanel() {
+export async function openTeamPanel() {   // 球隊系統（T2）：新的球隊主頁在 js/team-panel.js
   if (!document.getElementById('lobby-shell') || editing) return;
-  let d = document.getElementById('team-panel');
-  if (!d) {
-    d = document.createElement('dialog'); d.id = 'team-panel'; d.setAttribute('aria-labelledby', 'team-title');
-    d.innerHTML = '<form method="dialog"><h2 id="team-title">球隊</h2><div class="tm-body"></div><p class="form-error" role="status"></p><div class="buttons"><button class="orange">關閉</button></div></form>';
-    document.body.append(d);
-  }
-  const body = d.querySelector('.tm-body'), err = d.querySelector('.form-error'), P = await import('./progress.js');
-  const run = async (fn) => { err.textContent = ''; try { await fn(); } catch (x) { err.textContent = (x && x.message) || '球隊操作失敗'; } };
-  const draw = async () => {
-    const prog = (await P.loadProgress()) || {}, lv = P.levelOf(prog.exp);
-    if (lv < P.TEAM_LEVEL) { body.innerHTML = `<p class="tm-lock">🔒 Lv${P.TEAM_LEVEL} 解鎖球隊系統（你現在 Lv${lv}）。<br>開房間打比賽就會累積經驗（練習模式不算）。</p>`; return; }
-    let team = null; try { team = await P.teamApi('mine'); } catch (x) { body.innerHTML = `<p class="tm-lock">${esc(x.message)}</p>`; return; }
-    if (!team) {
-      body.innerHTML = '<div class="tm-row"><b>建立球隊</b><input id="tm-name" maxlength="12" placeholder="隊名（2～12 字）"><button type="button" data-op="create" class="orange">建立</button></div><div class="tm-row"><b>加入球隊</b><input id="tm-code" maxlength="6" placeholder="6 碼邀請碼" style="text-transform:uppercase"><button type="button" data-op="join">加入</button></div>';
-      return;
-    }
-    const j = team.jersey || {}, wearing = !!readTeamJersey();
-    if (wearing) saveTeamJersey(j);   // 隊長改了球衣：穿著的人跟著更新
-    body.innerHTML = `<div class="tm-head"><h3>${esc(team.name)}</h3><span>邀請碼 <b>${esc(team.code)}</b>（給隊友輸入就能加入）</span></div>
-      <div class="tm-cols"><div><b>成員（${team.members.length}）</b><ul class="tm-members">${team.members.map((m) => `<li>${m.owner ? '👑 ' : ''}${esc(m.nickname)}</li>`).join('')}</ul></div>
-      <div><b>球隊球衣「${esc(j.name)}」</b><div class="tm-shirt" style="background:${esc(j.body)};border-color:${esc(j.trim)};color:${esc(j.num)}">10</div>
-      ${team.isOwner ? `<div class="tm-design"><input id="tj-name" maxlength="12" value="${esc(j.name)}" placeholder="球衣名稱"><label>衣身 <input type="color" id="tj-body" value="${esc(j.body)}"></label><label>邊條 <input type="color" id="tj-trim" value="${esc(j.trim)}"></label><label>背號 <input type="color" id="tj-num" value="${esc(j.num)}"></label><button type="button" data-op="jersey">儲存球衣</button></div>` : '<p class="eq-note">隊長可以設計球衣、取名字。</p>'}
-      <button type="button" data-op="wear" class="${wearing ? '' : 'orange'}">${wearing ? '脫下球隊球衣' : '穿上球隊球衣'}</button><p class="eq-note">比賽以外（大廳、練習、走動）穿；比賽中照兩隊隊服。</p></div></div>
-      <button type="button" data-op="leave" class="tm-leave">離開球隊</button>`;
-  };
-  body.onclick = (e) => {
-    const b = e.target.closest('button[data-op]'); if (!b) return; const op = b.dataset.op;
-    if (op === 'create') run(async () => { const n = d.querySelector('#tm-name').value.trim(); if ([...n].length < 2) throw new Error('隊名要 2～12 字'); await P.teamApi('create', n); await draw(); });
-    if (op === 'join') run(async () => { await P.teamApi('join', d.querySelector('#tm-code').value.trim().toUpperCase()); await draw(); });
-    if (op === 'jersey') run(async () => { await P.teamApi('jersey', { name: d.querySelector('#tj-name').value.trim() || '球隊球衣', body: d.querySelector('#tj-body').value, trim: d.querySelector('#tj-trim').value, num: d.querySelector('#tj-num').value }); await draw(); });
-    if (op === 'wear') run(async () => { if (readTeamJersey()) saveTeamJersey(null); else { const t = await P.teamApi('mine'); if (t) saveTeamJersey(t.jersey); } await draw(); });
-    if (op === 'leave') run(async () => { if (!confirm('確定要離開球隊嗎？')) return; await P.teamApi('leave'); saveTeamJersey(null); await draw(); });
-  };
-  body.innerHTML = '<p class="tm-lock">載入中…</p>'; d.showModal(); await draw();
+  const { openTeamHub } = await import('./team-panel.js');
+  return openTeamHub();
 }
 // 大廳右欄下半部的角色資訊卡（登出、刪除帳號在「系統設定 → 其他」）
 export function mountCharacterCard(card) {
