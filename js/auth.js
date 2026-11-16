@@ -46,7 +46,7 @@ export function teamError(error) {
     ['full', '這個球隊滿了'], ['closed', '這個球隊沒有開放申請'], ['too many applications', '同時最多申請 5 個球隊'], ['not manager', '只有隊長、副隊長可以做這件事'],
     ['not owner', '只有隊長可以做這件事'], ['no permission', '你沒有權限對這位隊員這樣做'], ['too many vice', '副隊長最多 2 個'], ['bad role', '職位只能是副隊長或隊員'], ['not member', '這個人不是隊員'],
     ['no application', '找不到這個申請（可能已經處理過了）'], ['bad notice', '公告要 1～200 字，不能有不適合的字'], ['bad amount', '捐款金額不對'], ['not in team', '你還沒有球隊'],
-    ['bad jersey', '球衣的款式或文字不符合規定'], ['not signed in', '尚未登入或登入已失效']];
+    ['bad jersey', '球衣的款式或文字不符合規定'], ['too many jerseys', '球衣件數超過球隊等級可以設計的數量'], ['bad wear', '這件球衣已經不在了'], ['not signed in', '尚未登入或登入已失效']];
   const hit = map.find(([k]) => m.includes(k));
   return hit ? hit[1] : `球隊操作失敗（${m.slice(0, 60)}）`;
 }
@@ -171,6 +171,7 @@ export function createAccountService(client) {
         disband: ['disband_team'], rename: ['set_team_name', { p_name: arg }], open: ['set_team_open', { p_open: !!arg }],
         post: ['post_notice', { p_body: a.body, p_pinned: !!a.pinned }], unpost: ['delete_notice', { p_id: arg }], pin: ['pin_notice', { p_id: a.id, p_pinned: !!a.pinned }],
         donate: ['donate_coins', { p_amount: arg }], history: ['my_team_history'],
+        jerseys: ['set_team_jerseys', { p_list: arg }], wear: ['set_team_wear', { p_idx: arg }], myWear: ['my_team_wear'],
       }[op];
       if (!call) throw new Error('不認得的球隊操作：' + op);
       const { data, error } = await client.rpc(...call);

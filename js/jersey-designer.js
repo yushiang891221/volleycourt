@@ -50,7 +50,7 @@ const SILHOUETTE = [
   [[.36, .08], [.44, .14], [.56, .14], [.64, .08], [.92, .24], [.84, .42], [.76, .36], [.76, .66], [.24, .66], [.24, .36], [.16, .42], [.08, .24]],   // 短版
   [[.38, .08], [.44, .14], [.56, .14], [.62, .08], [.72, .1], [.74, .3], [.76, .94], [.24, .94], [.26, .3], [.28, .1]],   // 無袖
 ];
-function shirtThumb(d, w = 112, h = 96, side = 'front') {
+export function shirtThumb(d, w = 112, h = 96, side = 'front') {
   const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const x = c.getContext('2d'), W = c.width, H = c.height;
   const col = jerseyColors(d), P = (a, b) => [a * W, b * H], pts = SILHOUETTE[normalizeJersey(d).cut].map(([a, b]) => P(a, b));
   const shirt = new Path2D(); shirt.moveTo(...pts[0]); for (const p of pts.slice(1)) shirt.lineTo(...p); shirt.closePath();
@@ -68,20 +68,20 @@ function shirtThumb(d, w = 112, h = 96, side = 'front') {
 }
 
 let open = false;
-export function openJerseyDesigner({ code, slot = 0 } = {}) {
+export function openJerseyDesigner({ code, slot = 0, title = '設計我的球衣', note, saveLabel = '存檔並穿上' } = {}) {
   if (open) return Promise.resolve(null);
   open = true;
   if (!document.getElementById('jd-css')) { const s = document.createElement('style'); s.id = 'jd-css'; s.textContent = CSS; document.head.append(s); }
   let d = normalizeJersey(decodeJersey(code) || DEFAULT_DESIGN), tab = 'style', part = 'body', sub = 'front', face = 'front';
   const dlg = document.createElement('dialog'); dlg.id = 'jersey-designer'; dlg.setAttribute('aria-labelledby', 'jd-title');
   dlg.innerHTML = `<form method="dialog">
-    <header class="jd-top"><h2 id="jd-title">設計我的球衣</h2><small>第 ${slot + 1} 件・走動、大廳、練習時穿；正式比賽照兩隊隊服</small></header>
+    <header class="jd-top"><h2 id="jd-title">${esc(title)}</h2><small>${esc(note || `第 ${slot + 1} 件・走動、大廳、練習時穿；正式比賽照兩隊隊服`)}</small></header>
     <div class="jd-body">
       <section class="jd-left"><span class="jd-hint">拖曳轉動・滾輪拉近拉遠</span><canvas aria-label="球衣預覽（按住拖曳可以轉）"></canvas>
         <div class="jd-face"><button type="button" data-face="front">正面</button><button type="button" data-face="back">背面</button></div></section>
       <section class="jd-right"><nav class="jd-tabs" role="tablist"></nav><div class="jd-pane"></div></section>
     </div>
-    <footer class="jd-foot"><span class="jd-err" role="status"></span><button type="button" data-act="cancel">取消</button><button type="button" class="orange" data-act="save">存檔並穿上</button></footer>
+    <footer class="jd-foot"><span class="jd-err" role="status"></span><button type="button" data-act="cancel">取消</button><button type="button" class="orange" data-act="save">${esc(saveLabel)}</button></footer>
   </form>`;
   document.body.append(dlg);
   const $q = (s) => dlg.querySelector(s);

@@ -17,7 +17,7 @@ const TABS = [['home', '🏠 主頁'], ['members', '👥 成員'], ['jersey', '�
 export function logText(l) {
   const a = esc(l.actor || '有人'), t = esc(l.target || '某人');
   return { create: `${a} 建立了球隊`, join: `${a} 加入了球隊`, leave: `${a} 離開了球隊`, kick: `${a} 把 ${t} 移出球隊`, vice: `${a} 把 ${t} 升為副隊長`,
-    member: `${a} 把 ${t} 改為隊員`, owner: `${t} 成為新的隊長`, rename: `${a} 把隊名改成「${esc(l.data?.name)}」`, levelup: `🎉 球隊升到 Lv${l.data?.level}！`,
+    member: `${a} 把 ${t} 改為隊員`, jersey: `${a} 更新了球隊球衣`, owner: `${t} 成為新的隊長`, rename: `${a} 把隊名改成「${esc(l.data?.name)}」`, levelup: `🎉 球隊升到 Lv${l.data?.level}！`,
     donate: `${a} 捐了 ${Number(l.data?.amount || 0).toLocaleString()} 金幣` }[l.kind] || esc(l.kind);
 }
 const when = (t) => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
@@ -61,6 +61,8 @@ const CSS = `
 .th-code{font-family:Consolas,monospace;font-size:20px;letter-spacing:3px;color:#f2b705}
 .th-soon{text-align:center;padding:60px 20px;color:#b9c8d6}.th-soon b{display:block;font-size:22px;color:#fff;margin-bottom:8px}
 .th-levels{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}.th-levels td{padding:4px 6px;border-bottom:1px solid #1f2e42}.th-levels tr.now td{color:#f2b705;font-weight:700}
+.th-jerseys{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.th-jersey{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border-radius:12px;background:#1b2b40;border:1px solid #26384c;min-height:200px;justify-content:center;text-align:center}
+.th-jersey canvas{width:150px;height:auto;aspect-ratio:7/6}.th-jersey small{color:#7ee2a8}.th-jersey.th-slot{border-style:dashed;color:#8fa6ba}
 .th-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .th-team{padding:12px;border-radius:10px;background:#1b2b40;border:1px solid #26384c}.th-team b{font-size:16px}.th-team small{display:block;color:#8fa6ba;margin:4px 0 8px}
 `;
@@ -81,6 +83,7 @@ export async function openTeamHub({ api, progress } = {}) {
   const reload = async () => {
     try { prog = (await P.loadProgress()) || P.cachedProgress?.() || prog; } catch {}
     team = await call('mine');
+    if (team) team.myWear = await call('myWear').catch(() => -1);
     apps = team && ['owner', 'vice'].includes(team.myRole) ? await call('applications').catch(() => []) : [];
     if (!team) list = await call('list', query).catch(() => []);
     draw();
@@ -140,7 +143,17 @@ export async function openTeamHub({ api, progress } = {}) {
         ${isOwner() ? `<div class="th-row"><input type="text" id="th-rename" maxlength="12" value="${esc(team.name)}" style="max-width:220px"><button type="button" class="th-btn" data-op="rename">改隊名</button></div>` : ''}
         <div class="th-row"><button type="button" class="th-btn red" data-op="leave">離開球隊</button>${isOwner() ? '<button type="button" class="th-btn red" data-op="disband">解散球隊</button>' : ''}</div>
         <p class="th-note">離開後 24 小時內不能加入或建立別的球隊。${isOwner() ? '隊長離開會自動交給副隊長（沒有就交給最早加入的隊員）。' : ''}</p></div>`,
-    jersey: () => soon('👕 球隊球衣', `隊長、副隊長可以幫球隊設計球衣（Lv${team.level} 可以設計 ${TEAM_LEVELS[team.level - 1].jerseys} 件），隊員在「球衣與裝備」選穿。下一段（T3）開放。`),
+    jersey: () => {
+      const n = TEAM_LEVELS[team.level - 1].jerseys, list = team.jerseys || [];
+      return `<div class="th-box"><h3>👕 球隊球衣（${list.length} / ${n} 件）</h3>
+        <p class="th-note">${isMgr() ? '隊長、副隊長可以設計。' : '隊長、副隊長負責設計。'}球隊 Lv${team.level} 可以有 ${n} 件，升級可以設計更多。隊員在「球衣與裝備」選要穿哪一件；退出球隊後球衣會留下當紀念（不能穿）。</p>
+        <div class="th-jerseys">${Array.from({ length: n }, (_, i) => list[i]
+          ? `<div class="th-jersey"><canvas data-jt="${i}"></canvas><b>球隊球衣 ${i + 1}</b>${team.myWear === i ? '<small>✓ 你正在穿</small>' : ''}<div class="th-row">
+              <button type="button" class="th-btn${team.myWear === i ? '' : ' orange'}" data-op="wearJ" data-id="${i}">${team.myWear === i ? '脫下' : '穿這件'}</button>
+              ${isMgr() ? `<button type="button" class="th-btn" data-op="designJ" data-id="${i}">修改</button><button type="button" class="th-btn red" data-op="dropJ" data-id="${i}">刪除</button>` : ''}</div></div>`
+          : `<div class="th-jersey th-slot">${isMgr() && i === list.length ? `<button type="button" class="th-btn orange" data-op="designJ" data-id="${i}">＋ 設計第 ${i + 1} 件</button>` : `<span>${i < list.length + 1 ? '還沒設計' : '空格'}</span>`}</div>`).join('')}
+        ${TEAM_LEVELS[team.level] ? `<div class="th-jersey th-slot"><span>🔒 球隊 Lv${team.level + 1} 多 1 件</span></div>` : ''}</div></div>`;
+    },
     shop: () => soon('🛒 球隊商店', team.level >= 2 ? '用球隊資金買全隊共用的東西（球衣格、花紋、字型、徽章…）。之後的段落（T5）開放。' : '球隊 Lv2 解鎖。用球隊資金買全隊共用的東西。'),
     chat: () => soon('💬 球隊聊天室', '只有隊員看得到的聊天室。之後的段落（T4）開放。'),
     war: () => soon('⚔️ 球隊戰', team.level >= 3 ? '排隊配對等級差不多的球隊，6 對 6 比賽。之後的段落（T6）開放。' : '球隊 Lv3 解鎖：排隊配對等級差不多的球隊，6 對 6 比賽。'),
@@ -154,7 +167,12 @@ export async function openTeamHub({ api, progress } = {}) {
     if (isOwner() || (team.myRole === 'vice' && m.role === 'member')) out.push(btn('kick', '移出', 'red'));
     return out.join(' ');
   };
-  const draw = () => { drawTop(); if (!team) { drawNoTeam(); return; } drawTabs(); $q('.th-body').innerHTML = panes[tab](); };
+  const draw = () => {
+    drawTop(); if (!team) { drawNoTeam(); return; } drawTabs(); $q('.th-body').innerHTML = panes[tab]();
+    if (tab === 'jersey') import('./jersey-designer.js').then(({ shirtThumb }) => import('./jersey.js').then((J) => {
+      for (const cv of dlg.querySelectorAll('canvas[data-jt]')) { const d = J.decodeJersey(team.jerseys[+cv.dataset.jt]); if (!d) continue; const img = shirtThumb(d, 150, 128); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); }
+    }));
+  };
 
   // ---------- 按鈕 ----------
   dlg.addEventListener('click', (e) => {
@@ -181,6 +199,16 @@ export async function openTeamHub({ api, progress } = {}) {
       transfer: () => run(async () => { if (!confirm(`把隊長轉讓給 ${name}？你會變成副隊長。`)) return; await call('transfer', id); await reload(); }, `✓ ${name} 是新的隊長`),
       kick: () => run(async () => { if (!confirm(`把 ${name} 移出球隊？`)) return; await call('kick', id); await reload(); }, `已把 ${name} 移出球隊`),
       rename: () => run(async () => { await call('rename', v('#th-rename').trim()); await reload(); }, '✓ 隊名已更改'),
+      designJ: () => run(async () => {
+        const i = +id, { openJerseyDesigner } = await import('./jersey-designer.js'), list = [...(team.jerseys || [])];
+        const code = await openJerseyDesigner({ code: list[i], slot: i, title: `設計球隊球衣 ${i + 1}`, note: `「${team.name}」的球衣・隊員在球衣與裝備選穿；退隊後留下當紀念`, saveLabel: '存成球隊球衣' });
+        if (!code) return; list[i] = code; await call('jerseys', list); await reload(); say('✓ 球隊球衣已存檔', true);
+      }),
+      dropJ: () => run(async () => { if (!confirm(`刪除球隊球衣 ${+id + 1}？正在穿的隊員會換回基本球衣。`)) return; const list = [...team.jerseys]; list.splice(+id, 1); await call('jerseys', list); await reload(); }, '已刪除'),
+      wearJ: () => run(async () => {
+        const i = +id, off = team.myWear === i, A = await import('./appearance.js');
+        await call('wear', off ? -1 : i); A.wearTeamJersey(off ? -1 : i, team.jerseys[i]); await reload();
+      }, team && team.myWear === +id ? '已脫下，換回基本球衣' : '✓ 已穿上球隊球衣'),
       leave: () => run(async () => { if (!confirm('確定要離開球隊嗎？24 小時內不能加入別的球隊。')) return; await call('leave'); await reload(); }, '已離開球隊'),
       disband: () => run(async () => { if (prompt(`解散後無法復原。請輸入隊名「${team.name}」確認：`) !== team.name) return; await call('disband'); await reload(); }, '球隊已解散'),
     }[op];

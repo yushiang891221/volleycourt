@@ -58,15 +58,25 @@ export function wearMyJersey(i) {   // i＝-1 脫掉自己的
 export const BASIC_JERSEYS = CUTS.map((name, i) => ({ name: `基本球衣・${name}`, top: CUT_TOP[i] }));
 export function wearBasicJersey(i) {
   saveTeamJersey(null, false); setLookTop(BASIC_JERSEYS[i].top);
-  const v = readMyJerseys(); if (v.wear >= 0) { v.wear = -1; saveMyJerseys(v); } else try { dispatchEvent(new Event('vb-look-change')); } catch {}
+  try { localStorage.removeItem(TEAM_WEAR_KEY); } catch {}
+  try { dispatchEvent(new Event('vb-look-change')); } catch {}
 }
 // 袖型存在外觀裡（比賽穿隊服時也用這種袖子；外觀會同步到帳號）
 function setLookTop(top) { const L = decodeLook(readLook()); if (L.top !== top) { L.top = top; saveLook(L); } }
-// 比賽以外穿什麼：自己的球衣 { design: 代碼 } ＞ 球隊球衣 ＞ null（照預設隊服）
+// 球隊球衣（T3）：穿球隊的第幾件，存在這台電腦 { idx, code }（帳號裡也有，登入時 account-flow 會同步）
+// 個人設計的「我的球衣」已經拿掉（使用者決定球衣只有球隊能設計），資料保留但不再穿
+export const TEAM_WEAR_KEY = 'vb.teamWear';
+export function readTeamWear() { try { const v = JSON.parse(localStorage.getItem(TEAM_WEAR_KEY) || 'null'); return v && Number.isInteger(v.idx) && decodeJersey(v.code) ? v : null; } catch { return null; } }
+export function wearTeamJersey(idx, code) {   // idx＝-1 或 code 空＝脫掉（穿基本球衣）
+  const d = idx >= 0 && decodeJersey(code);
+  try { if (d) localStorage.setItem(TEAM_WEAR_KEY, JSON.stringify({ idx, code })); else localStorage.removeItem(TEAM_WEAR_KEY); } catch {}
+  if (d) setLookTop(CUT_TOP[d.cut]);
+  try { dispatchEvent(new Event('vb-look-change')); } catch {}
+}
+// 比賽以外穿什麼：球隊球衣 { design: 代碼 } ＞ null（基本球衣，照預設隊服顏色）
 export function readWornJersey() {
-  const v = readMyJerseys();
-  if (v.wear >= 0) return { design: v.list[v.wear] };
-  return readTeamJersey();
+  const w = readTeamWear();
+  return w ? { design: w.code } : null;
 }
 // 自己的外觀＋裝備（連線送給別人、遊戲裡的角色用這個）
 export const myLookCode = () => encodeLook({ ...decodeLook(readLook()), eq: readEquip() });

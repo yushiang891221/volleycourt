@@ -43,7 +43,7 @@ const { pathToFileURL } = require('node:url');
   // 不雅字：網頁與資料庫（supabase/017_my_jerseys.sql）清單一樣；去掉空白、標點、大小寫也擋得到
   const fs = require('node:fs'), sqlDir = path.join(__dirname, '../supabase'), read = (f) => fs.readFileSync(path.join(sqlDir, f), 'utf8');
   const sqlFiles = fs.readdirSync(sqlDir).filter((f) => /^\d+_.*\.sql$/.test(f)).sort(), sql = read('017_my_jerseys.sql');
-  const latest = read(sqlFiles.filter((f) => /jersey_code_ok/.test(read(f))).pop());
+  const latest = read(sqlFiles.filter((f) => /function public.jersey_code_ok/.test(read(f))).pop());
   const sqlWords = [...sql.match(/unnest\(array\[([\s\S]*?)\]\) w/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   assert.deepEqual(sqlWords, J.BAD_WORDS, '網頁和資料庫的不雅字清單要一樣');
   for (const t of ['F u c k', '靠.北', 'SHIT', '幹你!']) assert(J.badWord(t), t);

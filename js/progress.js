@@ -165,4 +165,5 @@ export async function setWheel(w) {
   const p = cachedProgress() || {}; p.wheel = w; cacheProgress(p);
   const s = await svc(); if (s) { try { await s.setWheel(w); } catch { /* 資料表還沒建：先存在這台電腦 */ } }
 }
-export async function teamApi(op, arg) { const s = await svc(); if (!s) throw new Error('要登入才能使用球隊'); return s.team(op, arg); }
+export async function teamApi(op, arg) { if (globalThis.__vbTeamApi) return globalThis.__vbTeamApi(op, arg);   /* 開發預覽頁（tools/team-preview.html）換成假的；資料庫照樣會檢查權限 */
+  const s = await svc(); if (!s) throw new Error('要登入才能使用球隊'); return s.team(op, arg); }

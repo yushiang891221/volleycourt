@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeToyAvatar, decodeLook, preloadAvatars, EQUIP, OPTIONS } from './avatar-toy.js';
 import { openCreator } from './creator.js';
-import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, readMyJerseys, saveMyJersey, wearMyJersey, BASIC_JERSEYS, wearBasicJersey } from './appearance.js';
+import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, BASIC_JERSEYS, wearBasicJersey, readTeamWear, wearTeamJersey } from './appearance.js';
 import { decodeJersey, PALETTE, CUTS } from './jersey.js';
 
 let editing = false;
@@ -80,6 +80,7 @@ function livePreview(old, bg = '#101a2a') {
 const EQ_TABS = [['jersey', '球衣', '👕'], ['knee', '護膝', '🦵'], ['hat', '帽子', '🧢'], ['glasses', '眼鏡', '🕶️'], ['neck', '項鍊', '📿'], ['wrist', '護腕', '🎽']];
 const ITEM_ICON = { knee: ['⬛', '⬜', '🚫'], hat: ['🚫', '🧢', '🧢'], glasses: ['🚫', '👓', '👓', '🕶️'], neck: ['🚫', '⚪', '🟡'], wrist: ['🚫', '⬜', '⬛'] };
 const ITEM_TINT = { knee: ['#1c1c21', '#f2f2ee', ''], hat: ['', '#22252b', '#f2f2ee'], glasses: ['', '#1c1e24', '#d4af5a', '#14171c'], neck: ['', '#d9dde3', '#e8b94a'], wrist: ['', '#f4f4f0', '#22252b'] };
+const dayText = (t) => { const x = new Date(t); return isNaN(x) ? '?' : x.toLocaleDateString('zh-TW'); };
 const SLEEVE_ICON = ['👕', '🥋', '🩱', '🎽'];   // 短袖、長袖、短版、無袖
 const syncLook = async () => { try { const { syncAppearance } = await import('./account-flow.js'); await syncAppearance(); } catch {} };
 const ROLE_NAME = { S: '舉球', OPP: '舉對', OH: '大砲（主攻）', MB: '中間手' };
@@ -107,18 +108,19 @@ export async function openEquipPanel() {
     document.body.append(d);
   }
   const $q = (sel) => d.querySelector(sel), P = await import('./progress.js');
-  let tab = 'jersey', ang = 0, prog = P.cachedProgress() || {}, team = undefined, ttIdx = 0;
+  let tab = 'jersey', ang = 0, prog = P.cachedProgress() || {}, team = undefined, ttIdx = 0, history = [];
   const setErr = (t) => { $q('.eqx-err').textContent = t || ''; };
   if (!d._live) { d._live = livePreview($q('.eqx-img')); d.addEventListener('close', () => { d._live?.dispose(); d._live = null; }, { once: true }); }   // 關面板就釋放 WebGL，下次開再建（換新畫布）
   const drawStage = () => { try { d._live.rebuild(myLookCode()); } catch { setErr('角色預覽載入失敗'); } };
   const itemsOf = (k) => {
     if (k === 'jersey') {
-      const tj = readTeamJersey(), my = readMyJerseys();
-      // 0～3 基本球衣（短袖、長袖、短版、無袖）、4 球隊球衣、5～7 我的球衣
-      const top = decodeLook(readLook()).top, B = BASIC_JERSEYS.length;
-      const basic = BASIC_JERSEYS.map((b, n) => ({ i: n, name: b.name, icon: SLEEVE_ICON[n], tint: '#F07C24', on: !tj && my.wear < 0 && top === b.top }));
-      const mine = my.list.map((c, n) => { const d = c && decodeJersey(c); return d ? { i: B + 1 + n, name: `我的球衣 ${n + 1}・${CUTS[d.cut]}`, icon: SLEEVE_ICON[d.cut], tint: PALETTE[d.body], on: my.wear === n } : { i: B + 1 + n, name: `＋ 設計第 ${n + 1} 件`, icon: '✏️', tint: '#1d2a3d', on: false }; });
-      return [...basic, { i: B, name: team ? `球隊球衣「${team.jersey?.name || ''}」` : '球隊球衣', icon: '🎽', tint: team?.jersey?.body || '#2B6CB0', on: !!tj && my.wear < 0, lock: !team ? '加入球隊後解鎖' : '' }, ...mine];
+      // 0～3 基本球衣（短袖、長袖、短版、無袖）、10＋n 目前球隊的第 n 件（可以穿）、100＋k 紀念球衣（待過的球隊，不能穿）
+      const worn = readTeamWear(), top = decodeLook(readLook()).top;
+      const basic = BASIC_JERSEYS.map((b, n) => ({ i: n, name: b.name, icon: SLEEVE_ICON[n], tint: '#F07C24', on: !worn && top === b.top }));
+      const mine = ((team && team.jerseys) || []).map((c, n) => { const dd = decodeJersey(c); return dd && { i: 10 + n, name: `${team.name}・球衣 ${n + 1}（${CUTS[dd.cut]}）`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: !!worn && worn.idx === n && worn.code === c }; }).filter(Boolean);
+      const keep = [];
+      history.forEach((h, k) => (h.jerseys || []).forEach((c, n) => { const dd = decodeJersey(c); if (dd) keep.push({ i: 100 + keep.length, name: `紀念｜${h.team}・球衣 ${n + 1}`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: false, lock: `${dayText(h.joined)}～${dayText(h.left)} 待在這隊` }); }));
+      return [...basic, ...mine, ...keep];
     }
     const L = decodeLook(readLook()), eq = readEquip(), list = k === 'knee' ? OPTIONS.knee : EQUIP[k].items, cur = k === 'knee' ? L.knee : eq[k] | 0;
     return list.map((name, i) => ({ i, name, icon: ITEM_ICON[k][i], tint: ITEM_TINT[k][i], on: cur === i, lock: k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : '' }));
@@ -129,8 +131,7 @@ export async function openEquipPanel() {
   const drawMid = () => {
     $q('.eqx-tabs').innerHTML = EQ_TABS.map(([k, name, icon]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${tab === k}">${icon} ${name}</button>`).join('');
     $q('.eqx-grid').innerHTML = itemsOf(tab).map((it) => `<button type="button" class="eqx-item${it.on ? ' on' : ''}${it.lock ? ' lock' : ''}" data-k="${tab}" data-i="${it.i}"${it.lock ? ' disabled' : ''}><span class="eqx-ii" style="--t:${it.tint || '#1d2a3d'}">${it.lock ? '🔒' : it.icon}</span><b>${esc(it.name)}</b>${it.on ? '<i class="eqx-check">✓</i>' : ''}${it.lock ? `<small>${esc(it.lock)}</small>` : ''}</button>`).join('');
-    const myWear = readMyJerseys().wear;
-    $q('.eqx-hint').innerHTML = tab === 'jersey' ? `比賽中照兩隊隊服；球隊球衣、我的球衣在大廳、練習、走動時穿。${myWear >= 0 ? ` <button type="button" class="orange" data-jd-edit="${myWear}">✏️ 修改我的球衣 ${myWear + 1}</button>` : ''}` : tab === 'knee' ? '護膝會存在帳號裡。' : '之後商店買到的配件也會出現在這裡。';
+    $q('.eqx-hint').innerHTML = tab === 'jersey' ? `比賽中照兩隊隊服；球隊球衣在大廳、練習、走動時穿。球衣由球隊的隊長、副隊長在「球隊 → 球衣」設計。${team ? '' : '加入球隊後，球隊的球衣會出現在這裡。'}退出球隊後，球衣會留下當紀念（不能穿）。` : tab === 'knee' ? '護膝會存在帳號裡。' : '之後商店買到的配件也會出現在這裡。';
   };
   const unlockedTitles = () => [null, ...Object.keys(P.ACHIEVEMENTS).filter((k) => (prog.achievements || []).includes(k))];
   const drawRight = () => {
@@ -150,31 +151,20 @@ export async function openEquipPanel() {
     $q('[data-lv]').textContent = `Lv${lv}`; $q('.eqx-bar i').style.width = `${(into / P.EXP_PER_LEVEL) * 100}%`; $q('[data-exp]').textContent = `${into} / ${P.EXP_PER_LEVEL}`;
   };
   const drawAll = () => { drawStage(); drawWorn(); drawMid(); drawRight(); drawInfo(); };
-  // 個人球衣設計器：存檔就存到第 n 件並穿上
-  const designMine = async (n) => {
-    const { openJerseyDesigner } = await import('./jersey-designer.js');
-    const code = await openJerseyDesigner({ code: readMyJerseys().list[n], slot: n });
-    if (!code) return;
-    saveMyJersey(n, code, true); syncLook(); setErr('✓ 球衣已存檔並穿上');
-    try { const A = await import('./account-flow.js'); if (await A.uploadJerseys()) setErr('✓ 球衣已存檔並穿上（已存進帳號）'); } catch (x) { setErr(`球衣已存在這台電腦；${(x && x.message) || '存進帳號失敗'}`); }
-  };
   d.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     if (b.dataset.tab) { tab = b.dataset.tab; drawMid(); return; }
     if (b.dataset.k) {
       const k = b.dataset.k, i = +b.dataset.i; setErr('');
       if (k === 'jersey') {
-        const B = BASIC_JERSEYS.length;
-        if (i < B) wearBasicJersey(i);
-        else if (i === B) { if (team) saveTeamJersey(team.jersey); }
-        else { const n = i - B - 1; if (readMyJerseys().list[n]) wearMyJersey(n); else await designMine(n); }
+        if (i < BASIC_JERSEYS.length) { wearBasicJersey(i); if (team) P.teamApi('wear', -1).catch(() => {}); }
+        else if (i >= 10 && i < 100 && team) { const n = i - 10; try { await P.teamApi('wear', n); wearTeamJersey(n, team.jerseys[n]); } catch (x) { setErr((x && x.message) || '換球衣失敗'); } }
         syncLook();   // 袖型存在外觀裡，同步到帳號
       }
       else if (k === 'knee') { const L = decodeLook(readLook()); L.knee = i; saveLook(L); try { const { syncAppearance } = await import('./account-flow.js'); await syncAppearance(); } catch (x) { setErr((x && x.message) || '護膝存到帳號失敗，稍後會再同步。'); } }
       else { const eq = readEquip(); eq[k] = i; saveEquip(eq); }
       drawStage(); drawWorn(); drawMid(); return;
     }
-    if (b.dataset.jdEdit) { await designMine(+b.dataset.jdEdit); drawStage(); drawWorn(); drawMid(); return; }
     if (b.dataset.tt) { const n = d._titles.length; ttIdx = (ttIdx + (+b.dataset.tt) + n) % n; d._showTitle(); return; }
     if (b.hasAttribute('data-tt-apply')) { try { await P.setTitle(d._titles[ttIdx]); prog = P.cachedProgress() || prog; setErr(''); } catch (x) { setErr((x && x.message) || '套用稱號失敗'); } drawRight(); drawInfo(); return; }
     if (b.dataset.emo) { let w = P.myWheel(); const k = b.dataset.emo; if (w.includes(k)) w = w.filter((x) => x !== k); else if (w.length >= 4) { setErr('輪盤最多 4 個，先拿掉一個'); return; } else w = [...w, k]; await P.setWheel(w.length ? w : P.DEFAULT_WHEEL.slice(0, 1)); setErr(''); drawRight(); return; }
@@ -189,6 +179,8 @@ export async function openEquipPanel() {
   preloadAvatars().then(() => { if (d.open) drawStage(); }, () => {});   // 模型載好再畫一次（配件只有正式模型才有）
   prog = (await P.loadProgress()) || prog;
   try { team = await P.teamApi('mine'); } catch { team = null; }
+  try { history = (await P.teamApi('history')) || []; } catch { history = []; }
+  { const w = readTeamWear(), now = w && team && team.jerseys && team.jerseys[w.idx]; if (w && now !== w.code) { wearTeamJersey(now ? w.idx : -1, now); if (d.open) drawStage(); } }   // 球隊改了那件：換成新的；不在球隊或那件被刪了：換回基本球衣
   if (d.open) { drawWorn(); drawMid(); drawRight(); drawInfo(); }
 }
 

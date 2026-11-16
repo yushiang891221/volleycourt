@@ -1,7 +1,7 @@
 // 登入閘門與帳號同步。
 // 流程：開始遊戲 → 沒登入顯示 Google 登入 → 登入後把本機暱稱／外觀帶進帳號 → 沒暱稱先取暱稱 → 沒外觀進捏臉 → 大廳
 import { getAccountService, authMode, cleanNickname } from './auth.js';
-import { readLook, saveLook, normalizeLook, readMyJerseys, saveMyJerseys, MY_JERSEYS_KEY, MY_JERSEY_MAX } from './appearance.js';
+import { readLook, saveLook, normalizeLook, readMyJerseys, saveMyJerseys, MY_JERSEYS_KEY, MY_JERSEY_MAX, readTeamWear, wearTeamJersey } from './appearance.js';
 import { decodeJersey } from './jersey.js';
 import { decodeLook } from './avatar-toy.js';
 
@@ -93,7 +93,7 @@ export async function accountGate() {
       if (profile.appearance) saveLook(decodeLook(profile.appearance));
       else if (owner && owner !== uid) store.del('vb.settings.look');
       watchNickname();
-      await loadJerseys(owner, uid);   // 個人球衣 J3：帳號有就用帳號的，沒有就把這台電腦的傳上去
+      await syncTeamWear();   // 球隊球衣 T3：照帳號裡「穿球隊第幾件」更新這台電腦（個人設計的球衣已經拿掉，不再同步）
       try { const g = await import('./session-guard.js'); await g.claim(); } catch {}   // WEB-007：登記「現在是這台裝置」，別處登入的會被踢掉
       return 'account';
     } catch (e) {
@@ -132,6 +132,18 @@ export async function uploadJerseys(svc = service) {
   try { await svc.setMyJerseys(v.list, v.wear); jerseySyncError = ''; return true; }
   catch (e) { if (e?.notReady) { jerseyReady = false; return false; } jerseySyncError = e?.message || '球衣存進帳號失敗'; throw e; }
 }
+
+// 球隊球衣（T3）：登入時、球隊主頁關掉時，照帳號裡的球隊和「穿第幾件」更新這台電腦；不在球隊或那件被刪了就換回基本球衣
+export async function syncTeamWear(svc = service) {
+  if (!svc) return;
+  try {
+    const t = await svc.team('mine');
+    const list = (t && t.jerseys) || [], w = t ? await svc.team('myWear').catch(() => -1) : -1;
+    if (w >= 0 && list[w]) { const cur = readTeamWear(); if (!cur || cur.idx !== w || cur.code !== list[w]) wearTeamJersey(w, list[w]); }
+    else if (readTeamWear()) wearTeamJersey(-1);
+  } catch (e) { console.warn('[球隊球衣] 同步失敗', e && e.message); }
+}
+addEventListener('vb-team-change', () => { syncTeamWear().catch(() => {}); });
 
 let watching = false;
 function watchNickname() {   // 設定裡改暱稱 → 同步到帳號

@@ -122,6 +122,35 @@ const { makeDb } = require('./supabase-db.cjs');
   await call(p0, 'create_team', ['新的開始']);   // 解散不算冷卻
   ok('轉讓隊長、隊長離開自動交給副隊長、改隊名、解散（每個人都留紀念、解散不算冷卻）');
 
+  // ---------- T3 球隊球衣、選穿、紀念 ----------
+  {
+    const J = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/jersey.js')).href);
+    const o = await db.player('球衣隊長', { exp: LV10, coins: 1000 }), v = await db.player('球衣副隊', { exp: LV10 }), m = await db.player('球衣隊員', { exp: LV10 });
+    const tj = await call(o, 'create_team', ['球衣測試隊']);
+    for (const u of [v, m]) await call(u, 'join_team', [tj.code]);
+    await call(o, 'set_member_role', [v, 'vice']);
+    const c1 = J.encodeJersey(J.applyPreset({ style: 4, front: '球衣隊', back: 'ONE' }, 1)), c2 = J.encodeJersey(J.applyPreset({ style: 11, cut: 3 }, 2));
+    await fails(m, 'set_team_jerseys', [[c1]], 'not manager');
+    await fails(o, 'set_team_jerseys', [[c1, c2]], 'too many jerseys');   // Lv1 只能 1 件
+    await fails(o, 'set_team_jerseys', [[J.encodeJersey({ front: '' }).replace('~~', '~幹你~')]], 'bad jersey');
+    await call(v, 'set_team_jerseys', [[c1]]);                             // 副隊長可以設計
+    assert.deepEqual((await call(m, 'my_team')).jerseys, [c1]);
+    await fails(m, 'set_team_wear', [1], 'bad wear');
+    await call(m, 'set_team_wear', [0]); assert.equal(await call(m, 'my_team_wear'), 0);
+    await db.query('update public.teams set exp = 3000 where id = $1', [tj.id]);   // 升到 Lv2：可以 2 件
+    await call(o, 'set_team_jerseys', [[c2, c1]]);
+    await call(o, 'set_team_jerseys', [[c2]]);                            // 刪掉第 2 件：穿第 1 件（index 0）的人不受影響
+    assert.equal(await call(m, 'my_team_wear'), 0);
+    await call(m, 'set_team_wear', [-1]); assert.equal(await call(m, 'my_team_wear'), -1);
+    await call(m, 'leave_team');
+    const h = (await call(m, 'my_team_history'))[0];
+    assert.equal(h.team, '球衣測試隊'); assert.deepEqual(h.jerseys, [c2], '退隊時存一份當時的球衣');
+    await call(o, 'set_team_jerseys', [[c1]]);
+    assert.deepEqual((await call(m, 'my_team_history'))[0].jerseys, [c2], '球隊之後改球衣，紀念不會跟著變');
+    assert.equal(await call(m, 'my_team_wear'), -1, '沒有球隊＝沒穿球隊球衣');
+    ok('T3 球衣：件數＝球隊等級、隊長／副隊長才能設計、格式與不雅字檢查、選穿、退隊留下當時的紀念球衣');
+  }
+
   // ---------- 權限：表格不能直接改、沒登入不能用 ----------
   await assert.rejects(db.as(p0, "update public.teams set funds = 999999"), /permission denied/);
   await assert.rejects(db.as(p0, "insert into public.team_board(team_id, body) select id, 'x' from public.teams limit 1"), /permission denied/);
@@ -132,7 +161,7 @@ const { makeDb } = require('./supabase-db.cjs');
 
   // ---------- 每個資料庫錯誤都有中文訊息 ----------
   const { teamError } = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/auth.js')).href);
-  const sql019 = require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/019_team_guild.sql'), 'utf8');
+  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
   const codes = [...new Set([...sql019.matchAll(/raise exception '([^']+)'/g)].map((m) => m[1]))];
   for (const c of codes) assert(!teamError({ message: c }).startsWith('球隊操作失敗'), `資料庫錯誤「${c}」沒有中文訊息`);
   assert.equal(teamError({ code: 'PGRST202', message: '' }).includes('019'), true);
