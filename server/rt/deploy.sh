@@ -18,7 +18,7 @@ scp -i "$KEY" -q server/match/game-core.mjs server/match/host.mjs server/match/r
 scp -i "$KEY" -q server/rt/server.mjs "$HOST:/opt/volleycourt/server/rt/"
 scp -i "$KEY" -q server/package.json "$HOST:/opt/volleycourt/package.json"
 scp -i "$KEY" -q server/shared/verify-player.mjs "$HOST:/opt/volleycourt/server/shared/"
-scp -i "$KEY" -q js/auth-config.js js/match-sync.js "$HOST:/opt/volleycourt/js/"
+scp -i "$KEY" -q js/auth-config.js js/match-sync.js js/court-formations.js "$HOST:/opt/volleycourt/js/"
 scp -i "$KEY" -q server/rt/volleycourt-rt.service "$HOST:/etc/systemd/system/volleycourt-rt.service"
 scp -i "$KEY" -q server/rt/Caddyfile "$HOST:/etc/caddy/Caddyfile"
 $SSH 'cd /opt/volleycourt && npm install --omit=dev --no-audit --no-fund -q >/dev/null && rm -rf vps server/verify-player.mjs auth-config.js && chown -R volley:volley /opt/volleycourt && systemctl daemon-reload && systemctl restart volleycourt-rt && systemctl reload caddy && sleep 1 && systemctl is-active volleycourt-rt && curl -s localhost:8787/health'

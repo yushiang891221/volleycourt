@@ -51,9 +51,12 @@ function roomJoin(ws, name, id, player) {
     if (m.k === 'enter') { me.d = m.d && typeof m.d === 'object' ? m.d : {}; cast(set, ws, { k: 'p', a: 'enter', id: me.id, d: me.d }); return; }
     if (m.k === 'm' && typeof m.t === 'string') {
       if (m.t === 'srv-start') {   // B5：房主請伺服器開賽（伺服器當房主）
-        let h = hosts.get(name);
-        if (!h) { h = new MatchHost((t, d) => cast(set, null, { k: 'm', t, d, f: HOST_ID }), (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h); }
-        try { h.stop(); h.start(m.d); } catch (e) { console.warn('[比賽] 開賽失敗', name, e.message); }
+        hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留
+        const h = new MatchHost((t, d) => cast(set, null, { k: 'm', t, d, f: HOST_ID }), (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
+        try { h.start(m.d); } catch (e) {
+          console.warn('[比賽] 開賽失敗', name, e && e.stack || e); h.stop(); hosts.delete(name);
+          cast(set, null, { k: 'm', t: 'srv-fail', d: { why: String(e && e.message || e).slice(0, 200) }, f: HOST_ID });   // 叫大家這一場改回房主電腦裁判
+        }
         return;
       }
       if (m.t === 'srv-stop') { hosts.get(name)?.stop(); hosts.delete(name); return; }

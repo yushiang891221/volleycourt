@@ -34,7 +34,7 @@ export class MatchHost {
   tick() {
     const now = performance.now(); let dt = (now - this.last) / 1000; this.last = now;
     dt = Math.min(0.05, Math.max(0, dt));
-    try { this.g.hostStep(dt); } catch (e) { this.log('match error', e && e.stack || e); this.stop(); }
+    try { this.g.hostStep(dt); } catch (e) { this.log('match error', e && e.stack || e); this.stop(); this.publish('srv-fail', { why: String(e && e.message || e).slice(0, 200) }); }   // 比賽途中出錯：叫大家改回房主電腦裁判
     if (this.g.VM.phase === 'over' || !this.g.VM.on) this.stop();
   }
   // 房裡的人送來的訊息（擊球請求、位置、量延遲…）

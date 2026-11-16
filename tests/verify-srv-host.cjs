@@ -26,4 +26,15 @@ const root = path.resolve(__dirname, '..');
   const res = out2.find(([t, d]) => t === 'vm' && d.e === 'result'); assert(res, '打完要送戰績');
   assert.equal(Object.keys(res[1].rate).length, 4, '四個人都有評分'); assert(Math.max(...res[1].sc) >= 15);
   console.log('PASS 伺服器打完送戰績：' + res[1].sc.join('：'));
+  // 1～6 人制都能開賽（2026-11-16 正式站 3～5 人制少了 CourtFormations，開賽失敗、大家卡在沒有裁判的比賽裡）
+  for (const count of [1, 3, 4, 5, 6]) {
+    const h3 = new MatchHost(() => {}); const seats = [Array(count).fill(null), Array(count).fill(null)]; seats[0][0] = 'p1';
+    h3.start({ c: { id: 'test-court', x: 0, z: -2.5, rot: 90 }, sg: -1, six: true, count, seats, rules: { speed: 0.7, count, lv: 3, to: 15 } }); h3.stop();
+    for (let n = 0; n < 300; n++) h3.g.hostStep(1 / 60);
+    assert.equal(h3.g.VM.team[0].length, count, count + ' 人制開賽');
+  }
+  console.log('PASS 1～6 人制都能由伺服器開賽');
+  const srvSrc = fs.readFileSync(path.join(root, 'server/rt/server.mjs'), 'utf8'), hostSrc = fs.readFileSync(path.join(root, 'server/match/host.mjs'), 'utf8');
+  assert(srvSrc.includes("t: 'srv-fail'") && hostSrc.includes("this.publish('srv-fail'"), '開賽失敗、比賽途中出錯都要通知大家改回房主電腦');
+  assert(fs.readFileSync(path.join(root, 'server/rt/deploy.sh'), 'utf8').includes('js/court-formations.js'), '部署要帶站位程式');
 })().catch(e => { console.error(e); process.exit(1); });
