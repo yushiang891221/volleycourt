@@ -2,8 +2,8 @@
 // 主畫面與大廳的背景音樂：小聲、循環播放；跟著「系統設定」的主音量、音樂音量與靜音。
 // 瀏覽器不允許一打開就出聲，所以等玩家第一次點擊或按鍵才開始播。
 (() => {
-  // 設定裡「音樂音量」顯示 100% 時，實際只播 25%（背景音樂要比音效小聲）
-  const BASE = 0.25;
+  // 設定裡「音樂音量」顯示 100% 時，實際只播 10%（背景音樂要比音效小聲）
+  const BASE = 0.10;
   const music = new Audio('assets/bgm/lobby-theme.mp3');
   music.loop = true;
   music.preload = 'auto';
@@ -45,6 +45,9 @@
     if (document.hidden) music.pause();
     else music.play().then(() => fadeTo(target(), 600)).catch(() => {});
   });
-  // 離開這一頁（進房間、練習模式）就停掉
+  // 一按進房間、練習模式（開始載入下一頁）就淡出，不要等新頁面載完
+  addEventListener('beforeunload', () => { if (started) fadeTo(0, 400); });
   addEventListener('pagehide', () => { clearInterval(fadeTimer); music.pause(); });
+  // 從房間按「上一頁」回到大廳時（瀏覽器直接拿舊頁面出來），音樂接著播
+  addEventListener('pageshow', e => { if (e.persisted && started && !document.hidden) music.play().then(() => fadeTo(target(), 600)).catch(() => {}); });
 })();
