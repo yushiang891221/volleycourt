@@ -27,7 +27,7 @@ export async function probeServer(s, tries = 3) {
     return { online: true, ping: Math.round(best.ms), players: best.j.players | 0, rooms: best.j.rooms | 0 };
   } catch { return { online: false, ping: null, players: null, rooms: null }; }
 }
-export const pingLevel = (ms) => (ms == null ? 'off' : ms < 30 ? 'good' : ms < 80 ? 'ok' : 'bad');   // 綠：30 毫秒內（台北實測 ping 約 5 ms，網頁量會多一點）、黃：80 內、紅：更慢
+export const pingLevel = (ms) => (ms == null ? 'off' : ms < 20 ? 'good' : ms < 60 ? 'ok' : 'bad');   // 綠：20 毫秒內（台北實測約 5 ms）、橘：20～60、紅：超過 60（使用者 2026-11-16 定的）
 
 // ---------- 選伺服器頁面（開始遊戲後、進大廳前；大廳也可以按「換伺服器」再打開） ----------
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -42,7 +42,7 @@ const CSS = `
 .ss-row:hover{background:#fffbe6}.ss-row[aria-pressed=true]{background:#ffd21f}.ss-row:disabled{opacity:.55;cursor:default}
 .ss-name b{display:block;font-size:22px;font-weight:900}.ss-name small{color:#555;font-size:13px}.ss-tag{display:inline-block;margin-left:8px;padding:0 8px;background:#141414;color:#ffd21f;font-size:12px;font-weight:800;vertical-align:middle}
 .ss-num{text-align:center;min-width:86px}.ss-num b{display:block;font:italic 900 30px/1 'Barlow Condensed','Noto Sans TC',sans-serif}.ss-num small{color:#555;font-size:12px}
-.ss-ping b{padding:0 8px;border:2px solid #141414}.ss-ping.good b{background:#7be0a5}.ss-ping.ok b{background:#ffd21f}.ss-ping.bad b{background:#ff9c8a}.ss-ping.off b{background:#ddd;color:#777}
+.ss-ping b{padding:0 8px;border:2px solid #141414}.ss-ping.good b{background:#7be0a5}.ss-ping.ok b{background:#ff9f1c}.ss-ping.bad b{background:#ff9c8a}.ss-ping.off b{background:#ddd;color:#777}
 .ss-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
 .ss-foot button{padding:12px 26px;border:2px solid #141414;background:#fff;color:#141414;font:inherit;font-size:16px;font-weight:900;cursor:pointer}
 .ss-foot .ss-go{background:#ffd21f;box-shadow:4px 4px 0 #141414;font-size:18px}.ss-foot button:disabled{opacity:.5;cursor:default}
