@@ -468,7 +468,13 @@ function makeChibi(C) {
   chMerge(g);
   return { g, body, root, spine, head, hc, arms, elbows, hands, legs, knees, feet, phase: 0, rig: true, L1: 0.46, L2: 0.52, hipH: 0.98, chibi: true };
 }
-const tjOk = (j) => (j && typeof j === 'object' && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? { name: String(j.name || '').slice(0, 12), body: j.body, trim: j.trim, num: j.num } : null);
+// 別人比賽以外穿的球衣：球隊球衣（物件）或個人球衣（代碼字串，J4）；格式不對就當沒穿
+const tjOk = (j) => (typeof j === 'string' ? (decodeJersey(j) ? { design: j } : null) : j && typeof j === 'object' && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? { name: String(j.name || '').slice(0, 12), body: j.body, trim: j.trim, num: j.num } : null);
+// 自己穿的球衣（送給別人用）：每秒最多讀一次本機設定；個人球衣送代碼字串、球隊球衣送物件、沒穿送 0
+function myWornForNet(now) {
+  if (!NET.worn || now - NET.worn.at > 1000) { const w = readWornJersey(); NET.worn = { at: now, v: w ? (w.design || w) : 0 }; }
+  return NET.worn.v;
+}
 function makeAvatar(color, ch, team = -1, tj = null) {   // tj＝球隊球衣（比賽以外才穿）
   const av = tj && team < 0 ? makeToyAvatar(decodeLook(ch), tj) : makeToyAvatar(decodeLook(ch), teamKit(team));
   av.g.scale.setScalar(AV_SCALE);   // 遊戲裡整個人放大一點（維持 Q 版比例；捏臉畫面不放大）
@@ -1367,8 +1373,8 @@ function netOnMessage(t, d, from) {
     }
     if (d.vm && VM.on && !VM.host && from === VM.hostId) vmOnNet({ e: 'st', ...d.vm }, from);
     const dch = normalizeLook(d.ch);
+    if ('tj' in d) p2.tj = d.tj || null;   // WEB-010 球隊球衣／J4 個人球衣：只有換衣服或每 4 秒才帶，沒帶就照舊（先存再換外觀，馬上穿上）
     p2.ch = dch; refreshPeerAppearance(p2);
-    p2.tj = d.tj || null;   // WEB-010 球隊球衣
     if ((d.tt || '') !== (p2.tt || '')) { p2.tt = String(d.tt || '').slice(0, 12); p2.tag.element.textContent = peerTag(p2); }   // WEB-010 稱號
     if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
@@ -1481,15 +1487,17 @@ function netTick(dt, now) {
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
   let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, tj: VM.on ? undefined : readTeamJersey() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
   const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
+  // 球衣（比賽以外）：換了衣服、或每 4 秒才帶一次（新進來的人也拿得到），平常不帶，訊息比較小
+  if (!VM.on) { const wv = myWornForNet(now), wk = JSON.stringify(wv); if (wk !== NET.tjKey || now - (NET.tjAt || 0) > 4000) st.tj = wv; }
   if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
   const rally = VM.on && VM.phase === 'rally';
   const fast = netFast();
   const gap = fast ? (toss ? 66 : document.hidden ? 10000 : rally ? (moved ? 66 : 300) : moved ? 100 : 1000) : toss ? 80 : VM.on && VM.host ? (document.hidden ? 10000 : rally ? 150 : 400) * NETQ.slow :(document.hidden ? 10000 : rally ? (moved ? 150 : 600) : moved ? 330 : 2000) * NETQ.slow;
-  if (NET.forceSt || (poseChanged && now - NET.lastSt > (fast ? 60 : 120)) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); }
+  if (NET.forceSt || (poseChanged && now - NET.lastSt > (fast ? 60 : 120)) || now - NET.lastSt > gap) { NET.forceSt = false; NET.lastSt = now; NET.lastSent = st; NET.tx.publish('st', st); if ('tj' in st) { NET.tjKey = JSON.stringify(st.tj); NET.tjAt = now; } }
   // 我負責的球：擊球那一下已經送了（位置＋速度，大家各自算物理）；飛行中每秒校正 1 次就好
   const rb = !VM.wire && NET.ownBall && balls.find((q) => q.room);
   if (rb && rb.rest < 0.5 && now - NET.lastBall > (VM.on && VM.phase === 'rally' ? 400 : 1000) * NETQ.slow) { NET.lastBall = now; NET.tx.publish('ball', netBallMsg(rb)); }
