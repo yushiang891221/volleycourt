@@ -78,7 +78,7 @@ export async function openFriendsPanel(onlineNames = () => [], selectedName = nu
   const $q = (s) => d.querySelector(s), msg = (t) => { $q('.fr-msg').textContent = t || ''; };
   let list = [], sel = null, poll = 0;
   const drawList = () => {
-    const online = new Set(onlineNames()), fr = list.filter((f) => f.state === 'friend'), inc = list.filter((f) => f.state === 'incoming'), out = list.filter((f) => f.state === 'outgoing');
+    const online = new Set(onlineNames()), fr = list.filter((f) => f.state === 'friend').sort((a, b) => online.has(b.nickname) - online.has(a.nickname)), inc = list.filter((f) => f.state === 'incoming'), out = list.filter((f) => f.state === 'outgoing');
     const row = (f, extra) => `<div class="fr-row${sel && sel.id === f.id ? ' on' : ''}" data-id="${f.id}"><span class="fr-dot${online.has(f.nickname) ? ' online' : ''}"></span><b data-player="${esc(f.nickname)}" title="按右鍵查看更多">${esc(f.nickname)}</b>${f.unread ? `<span class="fr-unread">${f.unread}</span>` : ''}${extra || ''}</div>`;
     $q('.fr-list').innerHTML = (inc.length ? `<h4>好友邀請（${inc.length}）</h4>${inc.map((f) => row(f, `<button type="button" data-op="accept" class="orange">接受</button><button type="button" data-op="reject">拒絕</button>`)).join('')}` : '')
       + `<h4>好友（${fr.length}）・綠點＝在大廳</h4>${fr.length ? fr.map((f) => row(f)).join('') : '<p class="eq-note">還沒有好友：在玩家名字上按右鍵，或在上面輸入暱稱。</p>'}`
