@@ -89,7 +89,7 @@ export function openJerseyDesigner({ code, slot = 0, title = '設計我的球衣
   // ---------- 左邊：角色預覽 ----------
   const canvas = $q('.jd-left canvas'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#0c1522');
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#e9e6dc');   // Play One 風格：米白底
   scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2)); const sun = new THREE.DirectionalLight('#ffffff', 3); sun.position.set(2, 4, 4); scene.add(sun);
   const back = new THREE.DirectionalLight('#ffffff', 1.6); back.position.set(-2, 3, -4); scene.add(back);
   const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20);

@@ -4,6 +4,7 @@
 <script>if (!location.search) location.replace("index.html#lobby");</script>
 <meta charset="utf-8">
 <link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/theme-playone-dialogs.css">
 <script src="js/room-chat.js"></script>
 <script src="js/match-sync.js"></script>
 <link rel="stylesheet" href="css/room-chat.css">
@@ -772,6 +773,17 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .wk-keys kbd { color: var(--po-ink); font-weight: 800; }
 .wk-keys small, .wk-keys p { color: var(--po-ink); }
 .wk-keys span.pressed { background: var(--po-yellow); border-color: var(--po-ink); box-shadow: none; }
+/* 遊戲介面（.walk-ui 裡的面板、按鈕、選單）：把顏色變數換成 Play One 的米白／黑／黃；3D 場景不在這裡面，不受影響 */
+.walk-ui { --paper: #f4f2ea; --paper-2: #ffffff; --paper-3: #e9e6dc; --sheet: #f4f2ea; --ink: #141414; --ink-2: #333333; --soft: #5f5f5f; --faint: #9a9a9a;
+  --rule: #141414; --hl: #141414; --accent: #ffd21f; --accent-ink: #141414; --chip: #ffffff; --line: #141414; --muted: #5f5f5f; color-scheme: light; }
+.walk-ui button { border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
+.walk-ui button:hover { background: var(--po-yellow); border-color: var(--po-ink); }
+.walk-ui button.primary { background: var(--po-yellow); color: var(--po-ink); box-shadow: 3px 3px 0 var(--po-ink); }
+.walk-top button { box-shadow: 3px 3px 0 var(--po-ink); }
+/* 體力條：白底黑框、黃色體力（只換樣子） */
+.sta { background: #fff; border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 4px 4px 0 var(--po-ink); }
+.sta i { background: var(--po-yellow); border-radius: 0; }
+.sta b { color: var(--po-ink); background: var(--po-paper); border: 2px solid var(--po-ink); padding: 0 8px; text-shadow: none; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
