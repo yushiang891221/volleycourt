@@ -35,8 +35,10 @@ export async function openPlayerMenu(event, nickname) {
   box.append(profile, action);
   const parent = event.target?.closest('dialog[open]') || document.body; parent.append(box); menu = box;
   const position = () => {
-    box.style.left = Math.max(4, Math.min(event.clientX, innerWidth - box.offsetWidth - 4)) + 'px';
-    box.style.top = Math.max(4, Math.min(event.clientY, innerHeight - box.offsetHeight - 4)) + 'px';
+    // 大廳整頁有放大（body 的 zoom，例如 1.12）：選單的 left/top 也會被放大，要先換回沒放大的座標，不然越下面越偏、跑出畫面
+    const z = (box.offsetWidth && box.getBoundingClientRect?.().width / box.offsetWidth) || 1, w = box.offsetWidth * z, h = box.offsetHeight * z;
+    box.style.left = Math.max(4, Math.min(event.clientX, innerWidth - w - 4)) / z + 'px';
+    box.style.top = Math.max(4, Math.min(event.clientY, innerHeight - h - 4)) / z + 'px';
   };
   position(); profile.focus();
   try { await bindFriendAction(action, nickname, closeMenu); }

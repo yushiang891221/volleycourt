@@ -45,13 +45,16 @@ export class MatchHost {
     if (from === HOST_ID) return;
     if (t === 'room-match-sync') { if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; } return; }
     if (t === 'match-claim' && process.env.DEBUG_CLAIM === '1') this.debugClaim(d, from);
+    const seen = t === 'match-claim' && d && this.g.VM.wire ? this.g.VM.wire.seen.has(`${from}:${d.id}`) : true;
     try { this.g.netOnMessage(t, d, from); } catch (e) { this.log('receive error', t, e && e.message); }
+    // 擊球被拒絕：一律記下原因（玩家回報「扣完球突然甩出去」時查得到）；同一個請求重送不重複記
+    if (!seen && process.env.DEBUG_CLAIM !== '1' && this.g.VM.wire?.seen.get(`${from}:${d.id}`) === false) { this.log('claim rejected'); this.debugClaim(d, from); }
   }
   // 除錯：擊球請求為什麼被拒（DEBUG_CLAIM=1 時才印）
   debugClaim(d, from) {
     const g = this.g, w = g.VM.wire, now = performance.now(), peer = g.NET.peers.get(from)?.last;
-    const at = Math.min(now, Math.max(now - 350, d.at));
-    const hist = w ? w.history.filter(h => h.seq === d.base && Math.abs(h.at - at) < 100 && !h.floor) : [];
+    const at = Math.min(now, Math.max(now - 900, d.at));
+    const hist = w ? w.history.filter(h => h.seq === d.base && Math.abs(h.at - at) < 150 && !h.floor) : [];
     const near = hist.length ? Math.min(...hist.map(h => Math.hypot(...h.p.map((n, i) => n - d.ball.p[i])))) : null;
     this.log('claim', JSON.stringify({ from, kind: d.kind, phase: g.VM.phase, session: d.session === w?.session, round: [d.round, w?.order.round], base: [d.base, w?.order.seq], atAge: Math.round(now - d.at), hist: hist.length, near, peer: peer ? Math.hypot(peer.x - d.ball.p[0], peer.z - d.ball.p[2]).toFixed(2) : null, team: g.VM.team[0].includes(from) ? 0 : g.VM.team[1].includes(from) ? 1 : -1 }));
   }

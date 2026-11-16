@@ -38,4 +38,8 @@ const root = path.resolve(__dirname, '..');
   const srvSrc = fs.readFileSync(path.join(root, 'server/rt/server.mjs'), 'utf8'), hostSrc = fs.readFileSync(path.join(root, 'server/match/host.mjs'), 'utf8');
   assert(srvSrc.includes("t: 'srv-fail'") && hostSrc.includes("this.publish('srv-fail'"), '開賽失敗、比賽途中出錯都要通知大家改回房主電腦');
   assert(fs.readFileSync(path.join(root, 'server/rt/deploy.sh'), 'utf8').includes('js/court-formations.js'), '部署要帶站位程式');
+  // 擊球審核（放寬過的門檻）與被拒絕時的記錄
+  const net = fs.readFileSync(path.join(root, 'src/gym/game/07-net.js'), 'utf8');
+  for (const s of ['d.at >= now - 900', 'Math.abs(h.at - at) < 150', '< 1.3);', 'd.ball.p[2]) < 4.5', "now - 1100"]) assert(net.includes(s), '審核門檻：' + s);
+  assert(hostSrc.includes("this.log('claim rejected')"), '擊球被拒絕要記原因');
 })().catch(e => { console.error(e); process.exit(1); });

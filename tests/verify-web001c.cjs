@@ -106,7 +106,8 @@ await check('physics, point scoring, rotation and match transport unchanged; tou
  /* netTick：2026-11-15 台北伺服器上位置送得比較密（netFast），走 Ably 時節奏不變，由 verify-web015 檢查訊息量 */
  /* vmPoint：2026-11-15 B2 比分判定移到 engine/rules.js，行為由 verify-engine-rules 檢查 */
  /* netOnMessage：2026-11-16 加連線量測（每秒收幾筆），只多一行計數 */
- for(const name of ['vm6Rotate','vm6Overlap','vmWireClaim'])   /* vmWireReceive：2026-11-15 落地後本機彈跳時不再套用同一個落地球路（使用者要求球落地照常滾動） */assert.equal(fn(gym,name),fn(old,name),name);
+ /* vmWireClaim：2026-11-16 使用者回報擊球常被判不成立，審核放寬（150 ms、1.3 m、4.5 m、0.9 秒），由 verify-srv-host 檢查 */
+ for(const name of ['vm6Rotate','vm6Overlap'])   /* vmWireReceive：2026-11-15 落地後本機彈跳時不再套用同一個落地球路（使用者要求球落地照常滾動） */assert.equal(fn(gym,name),fn(old,name),name);
 });
 console.log(`${checks} checks passed${staged?' (PREPARED FILES; NOT YET APPLIED)':''}`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -8240,14 +8240,15 @@ function vmWireClaim(d, from) {
   if (!VM.host || !d || d.session !== w.session || vmTeamOf(from) < 0 || !Number.isInteger(d.id)) return;
   const key = `${from}:${d.id}`;
   if (w.seen.has(key)) { NET.tx.publish('match-ack', { session: w.session, to: from, id: d.id, accepted: w.seen.get(key) }); w.dirty = true; return; }
-  let valid = VBMatchSync.validBall(d.ball) && Number.isFinite(d.at) && d.at <= now + 100 && d.at >= now - 600;
+  /* 審核放寬（2026-11-16 玩家回報擊球常被判不成立）：時間差 150 ms 內、離裁判那邊的球 1.3 m 內、人離球 4.5 m 內都算；網路慢到 0.9 秒內的請求也收 */
+  let valid = VBMatchSync.validBall(d.ball) && Number.isFinite(d.at) && d.at <= now + 150 && d.at >= now - 900;
   if (valid && VM.phase === 'serve') valid = d.kind === 'serve' && from === vmServer();
   else if (valid && VM.phase === 'rally' && d.kind !== 'serve') {
-    const at = clamp(d.at, now - 350, now);
-    const history = w.history.filter(h => h.seq === d.base && Math.abs(h.at - at) < 100 && !h.floor);
-    valid = history.some(h => Math.hypot(...h.p.map((n, i) => n - d.ball.p[i])) < .95);
+    const at = clamp(d.at, now - 900, now);
+    const history = w.history.filter(h => h.seq === d.base && Math.abs(h.at - at) < 150 && !h.floor);
+    valid = history.some(h => Math.hypot(...h.p.map((n, i) => n - d.ball.p[i])) < 1.3);
     const peer = NET.peers.get(from)?.last;
-    valid = valid && !!peer && Math.hypot(peer.x - d.ball.p[0], peer.z - d.ball.p[2]) < 3.5;
+    valid = valid && !!peer && Math.hypot(peer.x - d.ball.p[0], peer.z - d.ball.p[2]) < 4.5;
   } else valid = false;
   const accepted = !!(valid && w.order.claim(d));
   w.seen.set(key, accepted); if (w.seen.size > 128) w.seen.delete(w.seen.keys().next().value);
@@ -8333,7 +8334,7 @@ function vmWireTick() {
   }
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null;
   if (b) w.history.push({ at: now, seq: w.order.seq, p: b.m.position.toArray(), floor: !!b.floorHit });
-  while (w.history.length && w.history[0].at < now - 700) w.history.shift();
+  while (w.history.length && w.history[0].at < now - 1100) w.history.shift();   /* 要涵蓋審核時往回找的 0.9 秒 */
   if (!w.dirty && now - w.sent < (VM.phase === 'rally' ? (typeof netFast === 'function' && netFast() ? 66 : 100) : (typeof netFast === 'function' && netFast() ? 200 : 400))) return;
   w.sent = now; w.dirty = false;
   NET.tx.publish('match-frame', { session: w.session, frame: ++w.frame, round: w.order.round, seq: w.order.seq, at: now, time: VM.t, ai: vmStatePayload().ai, ball: b ? vmWireBall(b) : null, event: w.event, sc: VM.sc, phase: VM.phase, server: vmServer(), tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null });
@@ -8354,7 +8355,7 @@ function netOnMessage(t, d, from) {
     if (t === 'match-claim') { vmWireClaim(d, from); return; }
     if (t === 'match-frame') { vmWireReceive(d, from); return; }
     if (t === 'match-ack') {
-      if (from === VM.hostId && d.session === VM.wire.session && d.to === NET.me && d.id === VM.wire.pending?.request.id && !d.accepted) { VM.wire.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
+      if (from === VM.hostId && d.session === VM.wire.session && d.to === NET.me && d.id === VM.wire.pending?.request.id && !d.accepted) { const k = VM.wire.pending.request.kind; VM.wire.pending = null; if (VM.ball) VM.ball.wirePrediction = null; toast(`這一下${{ serve: '發球', bump: '接球', set: '舉球', spike: '扣球', hit: '擊球', tip: '吊球', block: '攔網' }[k] || '擊球'}裁判沒算到（球照裁判那邊的走）`, 1600); }   /* 以前被拒絕沒有任何提示，球會突然甩到別的方向 */
       return;
     }
     if (t === 'ball' && d.w !== 'kick') return;
