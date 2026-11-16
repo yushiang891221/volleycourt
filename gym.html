@@ -7018,8 +7018,12 @@ function roomRulesChanged(rules) {
     const [depth,left] = rules.count === 6 ? V6_BASE[k] : rules.count === 2 ? [6,k === 0 ? 2.1 : -2.1] : CourtFormations.home(rules.count,k);
     [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
   }
-  if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
-    roomLaunched = f.round;
+  if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.srvDown !== f.round && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
+    roomLaunched = f.round; const round = f.round;
+    setTimeout(() => {   /* 伺服器 4 秒沒開賽（連不上、舊版）：這一場改回房主電腦裁判 */
+      if (VM.on || !ROOM?.isHost || roomLaunched !== round || ROOM.snapshot?.flow?.phase !== 'playing' || ROOM.snapshot.flow.round !== round) return;
+      NET.srvDown = round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器沒回應：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot);   /* 只有這一場；下一場還是先請伺服器 */
+    }, 4000);
     const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
     NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, rules: JSON.parse(JSON.stringify(rules)) });
     netStatus('比賽由台北伺服器裁判', 'ok');
@@ -7050,10 +7054,10 @@ function renderRoomRules() {
   else $('room-title').textContent = '房間 ' + NET.room + (host ? ' · 你是房主' : ROOM && ROOM.host ? ' · 房主：' + (NET.peers.get(ROOM.host)?.n || '球友') : ' · 確認房主中…');
 }
 addEventListener('pagehide', () => netLeave(true));
-// B5：伺服器當房主。房主網址加 &srv=1 時，開賽改請台北伺服器開（伺服器的代號是 srv），大家都當加入者照伺服器的結果顯示；
+// B5：伺服器當房主。開賽一律請台北伺服器開（房主網址加 &srv=0 才不用；伺服器 4 秒沒開賽，這一場就自動改回房主電腦裁判，並請伺服器停掉）（伺服器的代號是 srv），大家都當加入者照伺服器的結果顯示；
 // 加入者不用改網址：收到 srv 送來的開賽就跟上（房間伺服器不讓任何人用 srv 這個代號連進來，假冒不了）
 const SRV_ID = 'srv';
-const SRV_MODE = new URLSearchParams(location.search).get('srv') === '1';
+const SRV_MODE = new URLSearchParams(location.search).get('srv') !== '0';   /* 預設由台北伺服器裁判；網址加 &srv=0 才改回房主電腦裁判（除錯用） */
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null, lat: new Map(), pingT: 0 };
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
@@ -10977,7 +10981,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
   if (MREC.save) { if (win === MREC.save.team) mrecPf(MREC.save.id).fs++; MREC.save = null; }   // 救起來後直接得分也算；救起來直接失分不算
   if (MREC.id) {   // 絕處逢生：對方到局末點（例：24）、我方還在 to−5 以下（例：20），最後這局是我方拿下
     const sc = [VM.sc[0] + (win === 0 ? 1 : 0), VM.sc[1] + (win === 1 ? 1 : 0)], deciding = VM.six && VM.bestOf > 1 && (VM.sets?.[0] || 0) + (VM.sets?.[1] || 0) === VM.bestOf - 1, to = deciding ? 15 : VM.to;
-    for (const t of [0, 1]) for (const S of [VM.sc, sc]) if (S[1 - t] >= to - 1 && S[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
+    for (const t of [0, 1]) for (const now of [VM.sc, sc]) if (now[1 - t] >= to - 1 && now[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
     if (Math.max(...sc) >= to && Math.abs(sc[0] - sc[1]) >= 2) { const w = sc[0] > sc[1] ? 0 : 1; if (MREC.cbF[w]) MREC.cb[w]++; MREC.cbF = [false, false]; }
   }
   if (MREC.id) MREC.tp[win] = (MREC.tp[win] || 0) + 1;
@@ -11025,7 +11029,7 @@ function vmRateMatch() {
   return { rate: out, mvp: winner < 0 ? null : best(winner), bestLoser: winner < 0 ? null : best(1 - winner) };
 }
 function vmSendResult() {   // 房主：比賽結束，把結果送給大家（也給自己）
-  if (!ROOM || !ROOM.isHost || vmIsPractice() || !MREC.id) return;
+  if ((NET.me !== 'srv' && (!ROOM || !ROOM.isHost)) || vmIsPractice() || !MREC.id) return;   /* B5：伺服器當房主時由伺服器送 */
   const RT = vmRateMatch();
   if (!Object.keys(RT.rate).length) return;
   const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
@@ -12037,7 +12041,7 @@ function vmBroadcast(force, msg, pt) {
   if (force) NET.forceSt = true;
 }
 function vmOnNet(d, from) {
-  if (d.e === 'result') { if (!ROOM || from === ROOM.host) vmGotResult(d); return; }   // WEB-010 戰績
+  if (d.e === 'result') { if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
   if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
   if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
   if (d.e === 'start') {

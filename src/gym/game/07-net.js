@@ -30,8 +30,12 @@ function roomRulesChanged(rules) {
     const [depth,left] = rules.count === 6 ? V6_BASE[k] : rules.count === 2 ? [6,k === 0 ? 2.1 : -2.1] : CourtFormations.home(rules.count,k);
     [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
   }
-  if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
-    roomLaunched = f.round;
+  if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.srvDown !== f.round && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
+    roomLaunched = f.round; const round = f.round;
+    setTimeout(() => {   /* 伺服器 4 秒沒開賽（連不上、舊版）：這一場改回房主電腦裁判 */
+      if (VM.on || !ROOM?.isHost || roomLaunched !== round || ROOM.snapshot?.flow?.phase !== 'playing' || ROOM.snapshot.flow.round !== round) return;
+      NET.srvDown = round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器沒回應：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot);   /* 只有這一場；下一場還是先請伺服器 */
+    }, 4000);
     const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
     NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, rules: JSON.parse(JSON.stringify(rules)) });
     netStatus('比賽由台北伺服器裁判', 'ok');
@@ -62,10 +66,10 @@ function renderRoomRules() {
   else $('room-title').textContent = '房間 ' + NET.room + (host ? ' · 你是房主' : ROOM && ROOM.host ? ' · 房主：' + (NET.peers.get(ROOM.host)?.n || '球友') : ' · 確認房主中…');
 }
 addEventListener('pagehide', () => netLeave(true));
-// B5：伺服器當房主。房主網址加 &srv=1 時，開賽改請台北伺服器開（伺服器的代號是 srv），大家都當加入者照伺服器的結果顯示；
+// B5：伺服器當房主。開賽一律請台北伺服器開（房主網址加 &srv=0 才不用；伺服器 4 秒沒開賽，這一場就自動改回房主電腦裁判，並請伺服器停掉）（伺服器的代號是 srv），大家都當加入者照伺服器的結果顯示；
 // 加入者不用改網址：收到 srv 送來的開賽就跟上（房間伺服器不讓任何人用 srv 這個代號連進來，假冒不了）
 const SRV_ID = 'srv';
-const SRV_MODE = new URLSearchParams(location.search).get('srv') === '1';
+const SRV_MODE = new URLSearchParams(location.search).get('srv') !== '0';   /* 預設由台北伺服器裁判；網址加 &srv=0 才改回房主電腦裁判（除錯用） */
 const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(), lastSt: 0, lastBall: 0, hitN: 0, hitBy: '', ownBall: false, lastSent: null, lat: new Map(), pingT: 0 };
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);

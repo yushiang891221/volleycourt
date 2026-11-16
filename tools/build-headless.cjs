@@ -13,10 +13,10 @@ const files = fs.readdirSync(dir).filter(f => /^\d+-.*\.js$/.test(f)).sort();
 const all = files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('');
 const ast = acorn.parse(all, { ecmaVersion: 'latest', sourceType: 'module', allowAwaitOutsideFunction: true });
 
-// 畫面、音效、提示、連線、戰績上傳：伺服器不需要，換成空殼（S.名字 有提供就用 S 的）
-const STUB = `toast sfx vmSay vbImpact vbBurst netBallHit vmSendResult vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
+// 畫面、音效、提示、連線：伺服器不需要，換成空殼（S.名字 有提供就用 S 的）。戰績（vmSendResult、vmPerfTouch、vmPerfPoint）要留：B5 伺服器當裁判時由伺服器送結果
+const STUB = `toast sfx vmSay vbImpact vbBurst netBallHit vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
 vmRenderAi vbWallFx vmTrailPush vmMark vmOut netBallSound netFxHit netFxStep ballShadowSync updateTweens updateDoors updateWind vbBlockFx
-vmGradeShow vmShout labelSprite vmServeHint renderRoomRules vm6RotToast recHit recEvent vbFx tutEv vmPerfTouch vmPerfPoint
+vmGradeShow vmShout labelSprite vmServeHint renderRoomRules vm6RotToast recHit recEvent vbFx tutEv
 makeAvatar avDrive renderUseBar setMenuClose setMenuPick vbManualSetCancel vbNpcToggle
 netPeerPlayback rkOnNet refreshPeerAppearance emoOnNet avPoseOf langziReceive renderMpList rkPeerAi makeRacket sqFromMotion myPoseCode rkAiState`.split(/\s+/);
 // 一開始就碰到畫面的頂層變數：換成伺服器版本（S.名字 或下面的預設值）

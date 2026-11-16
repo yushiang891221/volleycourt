@@ -1253,7 +1253,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
   if (MREC.save) { if (win === MREC.save.team) mrecPf(MREC.save.id).fs++; MREC.save = null; }   // 救起來後直接得分也算；救起來直接失分不算
   if (MREC.id) {   // 絕處逢生：對方到局末點（例：24）、我方還在 to−5 以下（例：20），最後這局是我方拿下
     const sc = [VM.sc[0] + (win === 0 ? 1 : 0), VM.sc[1] + (win === 1 ? 1 : 0)], deciding = VM.six && VM.bestOf > 1 && (VM.sets?.[0] || 0) + (VM.sets?.[1] || 0) === VM.bestOf - 1, to = deciding ? 15 : VM.to;
-    for (const t of [0, 1]) for (const S of [VM.sc, sc]) if (S[1 - t] >= to - 1 && S[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
+    for (const t of [0, 1]) for (const now of [VM.sc, sc]) if (now[1 - t] >= to - 1 && now[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
     if (Math.max(...sc) >= to && Math.abs(sc[0] - sc[1]) >= 2) { const w = sc[0] > sc[1] ? 0 : 1; if (MREC.cbF[w]) MREC.cb[w]++; MREC.cbF = [false, false]; }
   }
   if (MREC.id) MREC.tp[win] = (MREC.tp[win] || 0) + 1;
@@ -1301,7 +1301,7 @@ function vmRateMatch() {
   return { rate: out, mvp: winner < 0 ? null : best(winner), bestLoser: winner < 0 ? null : best(1 - winner) };
 }
 function vmSendResult() {   // 房主：比賽結束，把結果送給大家（也給自己）
-  if (!ROOM || !ROOM.isHost || vmIsPractice() || !MREC.id) return;
+  if ((NET.me !== 'srv' && (!ROOM || !ROOM.isHost)) || vmIsPractice() || !MREC.id) return;   /* B5：伺服器當房主時由伺服器送 */
   const RT = vmRateMatch();
   if (!Object.keys(RT.rate).length) return;
   const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };

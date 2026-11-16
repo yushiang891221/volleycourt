@@ -18,4 +18,12 @@ const root = path.resolve(__dirname, '..');
   const src = fs.readFileSync(path.join(root, 'server/rt/server.mjs'), 'utf8');
   assert(src.includes("if (!id || id === HOST_ID) return reject(400, 'Bad Request');"), '不能用 srv 代號連進來');
   console.log('PASS 伺服器當房主：' + JSON.stringify(types));
+  // 伺服器打完一場要送戰績（e: 'result'），大家才拿得到經驗、金幣；全 AI 2 對 2 打到 15 分（直接推進，不等真的時間）
+  const out2 = []; const h2 = new MatchHost((t, d) => out2.push([t, d]));
+  h2.start({ c: { id: 'test-court', x: 0, z: -2.5, rot: 90 }, sg: -1, six: false, seats: [[null, null], [null, null]], rules: { speed: 1, to: 15, lv: 3 } }); h2.stop();
+  for (let n = 0; n < 60 * 60 * 20 && h2.g.VM.on && h2.g.VM.phase !== 'over'; n++) h2.g.hostStep(1 / 60);
+  assert.equal(h2.g.VM.phase, 'over', '20 分鐘內要打完');
+  const res = out2.find(([t, d]) => t === 'vm' && d.e === 'result'); assert(res, '打完要送戰績');
+  assert.equal(Object.keys(res[1].rate).length, 4, '四個人都有評分'); assert(Math.max(...res[1].sc) >= 15);
+  console.log('PASS 伺服器打完送戰績：' + res[1].sc.join('：'));
 })().catch(e => { console.error(e); process.exit(1); });

@@ -7,7 +7,7 @@ import { createAi } from '../../engine/ai.js';
 import fs from 'node:fs';
 // 比賽畫格同步（網頁是另外載入的 js/match-sync.js）：直接讀檔執行，給它一個 module 物件拿 VBMatchSync（不管 Node 把 .js 當 CommonJS 或模組都一樣）
 if (!globalThis.VBMatchSync) { const mod = { exports: {} }; new Function('module', fs.readFileSync(new URL('../../js/match-sync.js', import.meta.url), 'utf8'))(mod); globalThis.VBMatchSync = mod.exports; }
-export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","netBallHit","vmSendResult","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","vmPerfTouch","vmPerfPoint","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState"];
+export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState"];
 // 伺服器上沒有網頁：DOM／畫布一律給「什麼都不做、怎麼用都不會壞」的假物件（three.js 建貼圖時也會用到 document）
 const dummy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : k === 'then' ? undefined : dummy, apply: () => dummy, construct: () => dummy, set: () => true });
 if (!globalThis.document) globalThis.document = { createElementNS: () => dummy, createElement: () => dummy };
@@ -186,6 +186,7 @@ export function createGameCore(S = {}) {
   function inside(poly) { if (state.building.poly) return poly.every(([x, z]) => pip(x, z, state.building.poly) || nearestEdge(x, z, state.building.poly).d < 0.05); const { L, W } = state.building; return poly.every(([x, z]) => Math.abs(x) <= L / 2 + 0.03 && Math.abs(z) <= W / 2 + 0.03); }
   function toast(...a) { return S.toast ? S.toast(...a) : undefined; }
   function snap(v) { return snapOn ? Math.round(v * 2) / 2 : Math.round(v * 100) / 100; }
+  const share = { mode: 'unknown', known: null, timer: null, busy: false, pending: false };
   function polyArea(P) { let a = 0; for (let i = 0; i < P.length; i++) { const [x1, z1] = P[i], [x2, z2] = P[(i + 1) % P.length]; a += x1 * z2 - x2 * z1; } return a / 2; }
   function pip(x, z, P) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, zi] = P[i], [xj, zj] = P[j]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
   function edgesOf(P) {
@@ -1032,9 +1033,90 @@ export function createGameCore(S = {}) {
     }
     MREC.roleSnapshot = { ...VM.role }; MREC.roleAt = now;
   }
-  function vmPerfTouch(...a) { return S.vmPerfTouch ? S.vmPerfTouch(...a) : undefined; }
-  function vmPerfPoint(...a) { return S.vmPerfPoint ? S.vmPerfPoint(...a) : undefined; }
-  function vmSendResult(...a) { return S.vmSendResult ? S.vmSendResult(...a) : undefined; }
+  function mrecLongestRoles() {
+    mrecRoles();
+    const roles = {};
+    for (const [id, times] of Object.entries(MREC.roleTime)) {
+      roles[id] = Object.keys(times).reduce((best, role) => times[role] > times[best] ? role : best);
+    }
+    return roles;
+  }
+  const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, kc: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });
+  function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
+    if (!MREC.id) return;
+    const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
+    P.t++; if (['spike', 'tip', 'hit'].includes(kind)) P.sp++; else if (kind === 'serve') P.sv++; else if (kind === 'bump') P.rc++; else if (kind === 'set') P.st++; else if (kind === 'block') P.bt++;
+    if (MREC.save && MREC.save.id !== id) mrecPf(MREC.save.id).fs++;   // 救起來的球有人再碰到＝救球成功
+    MREC.save = null;
+    MREC.last = { id, kind, team, role: VM.six ? VM.role?.[id] : null, t: performance.now() };
+    if (kind === 'spike' && prev && prev.kind === 'set' && prev.team === team && MREC.last.t - prev.t < 700) MREC.last.quick = true;
+    if ((kind === 'spike' || kind === 'tip') && prev && prev.kind === 'set' && prev.team === team && prev.id !== id) MREC.last.setBy = prev.id;   // 這球是誰舉的（請享用吧！）   // 快攻：舉球到扣球不到 0.7 秒
+    if (kind === 'tip' && VM.touch && VM.touch.team === team && VM.touch.n === 1) MREC.last.dump = true;   // 第二下就吊過去＝二次進攻
+    if (kind === 'spike' && VM.touch && VM.touch.team === team && VM.touch.n === 1) MREC.last.self = true;   // 第二下就自己扣＝我自己來好了
+    // 救回場外球：球在場外 2 m 以外，而且是被打飛出去的（前一下是自己隊碰的，或攔網碰出來的 touch out）
+    if (b && VM.c && ['bump', 'set', 'hit'].includes(kind) && prev && (prev.team === team || prev.kind === 'block')) { const B = vmBallL(b); if (Math.abs(B.x) > 11 || Math.abs(B.z) > 6.5) MREC.save = { id, team }; }
+    if (kind === 'spike') { const q = vmPos(id); MREC.last.az = q ? q.z : null; }   // 扣球時攻擊手站的左右位置（判斷直線）
+    if (kind === 'block') { MREC.blkR[id] = (MREC.blkR[id] || 0) + 1; if (MREC.blkR[id] >= 10) mrecPf(id).wall = true;   /* 禁止通行：同一球內攔網碰到 10 次 */ }
+  }
+  function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人）；順便記絕處逢生
+    const L = MREC.last; MREC.blkR = {}; MREC.last = null;
+    if (MREC.save) { if (win === MREC.save.team) mrecPf(MREC.save.id).fs++; MREC.save = null; }   // 救起來後直接得分也算；救起來直接失分不算
+    if (MREC.id) {   // 絕處逢生：對方到局末點（例：24）、我方還在 to−5 以下（例：20），最後這局是我方拿下
+      const sc = [VM.sc[0] + (win === 0 ? 1 : 0), VM.sc[1] + (win === 1 ? 1 : 0)], deciding = VM.six && VM.bestOf > 1 && (VM.sets?.[0] || 0) + (VM.sets?.[1] || 0) === VM.bestOf - 1, to = deciding ? 15 : VM.to;
+      for (const t of [0, 1]) for (const now of [VM.sc, sc]) if (now[1 - t] >= to - 1 && now[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
+      if (Math.max(...sc) >= to && Math.abs(sc[0] - sc[1]) >= 2) { const w = sc[0] > sc[1] ? 0 : 1; if (MREC.cbF[w]) MREC.cb[w]++; MREC.cbF = [false, false]; }
+    }
+    if (MREC.id) MREC.tp[win] = (MREC.tp[win] || 0) + 1;
+    if (!MREC.id || !L || L.team < 0) return;
+    if (L.team === win) {
+      if (L.kind === 'serve') mrecPf(L.id).a++; else if (L.kind === 'block') mrecPf(L.id).b++; else if (['spike', 'tip', 'hit'].includes(L.kind)) mrecPf(L.id).k++;
+      if (L.kind === 'spike' && !L.quick && !L.self && L.role === 'OH') mrecPf(L.id).kc++;
+      if (L.dump) mrecPf(L.id).md++;   // 二次進攻吊球得分
+      if (L.quick) mrecPf(L.id).qk++;
+      if (L.self) mrecPf(L.id).ss++;
+      if (L.setBy) mrecPf(L.setBy).as++;   // 舉球助攻：攻擊手得分，舉球員記一顆   // 快攻直接落地得分（最後一下就是扣球，中間沒被攔網碰到）
+      if (L.kind === 'spike' && VM.ball && VM.c) {   // 落點（球場座標）：直線＝攻擊手靠邊線、球沿同一條邊線下去；三米內＝落在對方三米線以內
+        const B = vmBallL(VM.ball); if (L.az != null && Math.abs(L.az) > 2.2 && Math.abs(B.z - L.az) < 1.0 && Math.sign(B.z) === Math.sign(L.az)) mrecPf(L.id).kl++;
+        if (Math.abs(B.x) < 3) mrecPf(L.id).ks++;
+      }
+    }
+    else { mrecPf(L.id).e++; if (L.kind === 'bump') mrecPf(L.id).eb++; else if (L.kind === 'serve') mrecPf(L.id).es++; }
+  }
+  function vmRateMatch() {
+    const cl = (v) => Math.max(0, Math.min(100, v)), out = {};
+    const score = VM.six ? VM.sets : VM.sc, total = (MREC.tp?.[0] || 0) + (MREC.tp?.[1] || 0);
+    if (!Array.isArray(score) || score.length !== 2 || !score.every(Number.isFinite) || score.some((v) => v < 0) || score[0] + score[1] <= 0 || total <= 0) return { rate: out, mvp: null, bestLoser: null };
+    const winner = score[0] === score[1] ? -1 : score[0] > score[1] ? 0 : 1;
+    const average = total / Math.max(1, VM.team.reduce((sum, ids) => sum + ids.filter(Boolean).length, 0));
+    for (const t of [0, 1]) {
+      const ids = (VM.team[t] || []).filter(Boolean), n = Math.max(1, ids.length), share = (MREC.tp[t] || 0) / total;
+      const result = winner < 0 ? 50 : t === winner ? Math.max(65, Math.min(100, 65 + (share - 0.5) * 140)) : Math.max(0, Math.min(45, 45 - (0.5 - share) * 150));
+      const touches = ids.reduce((sum, id) => sum + (mrecPf(id).t || 0), 0) || 1;
+      for (const id of ids) {
+        const P = mrecPf(id), pts = P.k + P.b + P.a;
+        const contrib = cl(((pts + P.as * 0.5 + P.fs + Math.max(0, P.rc - P.eb) * 0.2) / average) * 50);   /* 跟全場每人平均一樣＝50，兩倍＝100 */
+        const eff = P.t ? cl(100 * (1 - (2.5 * P.e) / P.t)) : 0;   /* 失誤直接送對手一分 */
+        const part = cl((P.t / (touches / n)) * 50);   // 碰球次數跟隊上平均一樣＝50
+        const main = [['st', P.st], ['rc', P.rc], ['sp', P.sp], ['bt', P.bt]].sort((x, y) => y[1] - x[1])[0];   // 這場主要在做什麼
+        const role = !main[1] ? 50 : main[0] === 'st' ? cl((P.as / P.st) * 200) : main[0] === 'rc' ? cl((1 - P.eb / P.rc) * 100) : main[0] === 'sp' ? cl((P.k / P.sp) * 160) : cl((P.b / P.bt) * 200);
+        const rt = Math.round(0.30 * contrib + 0.20 * eff + 0.15 * part + 0.20 * role + 0.15 * result);
+        // 戰力六角圖：攻擊、攔網、發球、接球、舉球、穩定（各 0～100）
+        const hx = [P.sp ? cl((P.k / P.sp) * 110 + Math.min(P.k, 12) * 3.5) : 0, cl(P.b * 22 + P.bt * 4), P.sv ? cl((1 - P.es / P.sv) * 65 + P.a * 15) : 0,
+          P.rc ? cl((1 - P.eb / P.rc) * 65 + Math.min(P.rc, 20) * 1.75 + P.fs * 8) : 0, P.st ? cl((P.as / P.st) * 130 + Math.min(P.st, 25) * 1.4) : 0, P.t ? Math.round(cl(100 * (1 - (1.5 * P.e) / P.t))) : 0].map((v) => Math.round(v));
+        out[id] = { rt, gr: rt >= 90 ? 'S' : rt >= 75 ? 'A' : rt >= 60 ? 'B' : rt >= 40 ? 'C' : 'D', c: Math.round(contrib), f: Math.round(eff), p: Math.round(part), r: Math.round(role), w: Math.round(result), m: main[1] ? main[0] : '', hx };
+      }
+    }
+    const best = (t) => (VM.team[t] || []).filter((id) => out[id]).reduce((id, next) => !id || out[next].rt > out[id].rt ? next : id, null);
+    return { rate: out, mvp: winner < 0 ? null : best(winner), bestLoser: winner < 0 ? null : best(1 - winner) };
+  }
+  function vmSendResult() {   // 房主：比賽結束，把結果送給大家（也給自己）
+    if ((NET.me !== 'srv' && (!ROOM || !ROOM.isHost)) || vmIsPractice() || !MREC.id) return;   /* B5：伺服器當房主時由伺服器送 */
+    const RT = vmRateMatch();
+    if (!Object.keys(RT.rate).length) return;
+    const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+    if (NET.on) NET.tx.publish('vm', d);
+    vmGotResult(d); MREC.id = '';
+  }
   async function vmGotResult(d) {
     if (!d || typeof d.id !== 'string' || vmIsPractice()) return;
     const me = vmMe(), team = Array.isArray(d.team) ? d.team.findIndex((t) => Array.isArray(t) && t.includes(me)) : -1; if (team < 0) return;   // 觀眾不記
@@ -1516,7 +1598,7 @@ export function createGameCore(S = {}) {
     if (force) NET.forceSt = true;
   }
   function vmOnNet(d, from) {
-    if (d.e === 'result') { if (!ROOM || from === ROOM.host) vmGotResult(d); return; }   // WEB-010 戰績
+    if (d.e === 'result') { if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
     if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
     if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
     if (d.e === 'start') {
