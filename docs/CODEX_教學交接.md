@@ -49,3 +49,5 @@
 驗證通過：verify-web006、verify-tutorial-v3（完整攻擊／發球／攔網真實接觸與落點、五球併攔、側吊、目標外落地失敗、站接重扣、撲救高度、體力倍率）、verify-tutorial-physics（專項與兩側旋轉場地／多球速攔網）、verify-controls-ui（獨立無頭 Edge UI，非整個遊戲手動操作）、verify-web001c、verify-headless（6v6/2v2 同種子重現）、verify-wheel-backrow、verify-manual-controls、verify-match-sync、verify-engine-ball、verify-engine-rules、verify-gym-build。尚未進行五名真人連線體感驗收。
 
 注意：headless 建置器會把區域變數誤認成同名頂層函式依賴；教學餵球來源命名 feedOrigin，避免用 start（會把整個登入畫面拉進伺服器核心）。
+
+部署結果：0b1338c 已推送 origin/main。正式站 js/tutorial.js、gym.html、engine/ai.js 回應 200，SHA-256 與提交內容相同。台北伺服器確認 0 房間後，僅更新 engine/ai.js 與 server/match/game-core.mjs（原檔留 .previous），服務 active，health 為 ok 0 rooms；未改 Claude 的 B5 host/server。完整 run-tests（允許隔離瀏覽器）40 項：33 通過、7 個既有失敗、0 新失敗。
