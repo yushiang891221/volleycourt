@@ -38,7 +38,8 @@ export const STYLES = [
 export const CUTS = ['短袖', '長袖', '短版', '無袖'];
 export const CUT_TOP = [1, 2, 3, 0];
 export const NECKS = ['圓領', '交叉領'];
-export const LAYOUTS = ['胸前號碼', '大字＋號碼', '左胸小字＋號碼', '直排字＋號碼'];
+// 版位：第 3 個（左胸小字＋號碼）使用者說不要，拿掉了；代碼裡的位置保留（舊的代碼還讀得懂），舊的那種一律當成「大字＋號碼」
+export const LAYOUTS = ['胸前號碼', '大字＋號碼', null, '直排字＋號碼'];
 
 // ---------- 字體（Google Fonts，只下載用得到的字；latin 給英文和號碼、cjk 給中文） ----------
 export const FONTS = [
@@ -108,6 +109,8 @@ export function normalizeJersey(d) {
   if (d && typeof d.backIcon === 'boolean') v.backIcon = d.backIcon;
   if (d && typeof d.shortsNum === 'boolean') v.shortsNum = d.shortsNum;
   v.front = sanitizeText(d?.front); v.back = sanitizeText(d?.back);
+  if (!LAYOUTS[v.layout]) v.layout = 1;
+  v.neck = 0;   // 使用者決定全部都是圓領（交叉領拿掉；代碼裡的位置保留，舊的一律當圓領）
   return v;
 }
 // 實際顏色（號碼外框自動挑對比色）
@@ -215,11 +218,11 @@ export function drawJerseyTorso(x, w, h, d, num, opt = {}) {
     x.restore();
   }
   const ny = v.neck === 1 ? 0.07 : 0;   // 交叉領：正面的字和號碼往下移，不要壓到 V 領
-  const fn = opt.frontNumSize ?? 0.13, ft = opt.frontNumT ?? 0.7, bn = opt.backNumSize ?? 0.21, bt = opt.backNumT ?? 0.6, cx = w * 0.5;
+  // 正面的字和號碼：t 越大越靠近領口（角色頭大，太高會貼在領口下面），胸口中間大約 t＝0.45～0.65
+  const fn = opt.frontNumSize ?? 0.13, ft = opt.frontNumT ?? 0.57, bn = opt.backNumSize ?? 0.21, bt = opt.backNumT ?? 0.6, cx = w * 0.5;
   if (v.layout === 0 || !v.front) drawNum(x, f, num, cx, Y(ft - ny), w * fn, c);
-  else if (v.layout === 1) { drawText(x, f, v.front, cx, Y(0.76 - ny), w * 0.07, w * 0.3, c.ink, c.inkEdge); drawNum(x, f, num, cx, Y(0.56 - ny), w * fn * 0.85, c); }
-  else if (v.layout === 2) { drawText(x, f, v.front, cx - w * 0.075, Y(0.78 - ny), w * 0.04, w * 0.12, c.ink); drawNum(x, f, num, cx + w * 0.08, Y(0.77 - ny), w * 0.07, c); }
-  else { const ch = [...v.front], s = Math.min(w * 0.055, h * 0.55 / ch.length); ch.forEach((t, i) => drawText(x, f, t, cx + w * 0.11, Y(0.84 - ny) + s * (i + 0.5), s, s * 1.1, c.ink, c.inkEdge)); drawNum(x, f, num, cx - w * 0.07, Y(0.74 - ny), w * 0.08, c); }
+  else if (v.layout === 1) { drawText(x, f, v.front, cx, Y(0.66 - ny), w * 0.07, w * 0.3, c.ink, c.inkEdge); drawNum(x, f, num, cx, Y(0.47 - ny), w * fn * 0.85, c); }
+  else { const ch = [...v.front], s = Math.min(w * 0.055, h * 0.55 / ch.length); ch.forEach((t, i) => drawText(x, f, t, cx + w * 0.11, Y(0.74 - ny) + s * (i + 0.5), s, s * 1.1, c.ink, c.inkEdge)); drawNum(x, f, num, cx - w * 0.07, Y(0.63 - ny), w * 0.08, c); }
   for (const bx of [0, w]) {   // 背面在左右兩端各畫一次（接縫兩邊各一半）
     if (v.backIcon) drawIcon(x, bx, Y(0.88), w * 0.014, c);
     if (v.back) drawText(x, f, v.back, bx, Y(0.745), w * 0.065, w * 0.24, c.ink, c.inkEdge);   // 名字放低一點：太高會被頭髮擋住

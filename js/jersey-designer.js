@@ -110,14 +110,13 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
 
   // ---------- 右邊：分頁 ----------
   const pressed = (on) => `aria-pressed="${!!on}"`;
-  const cards = (list, cur, attr) => `<div class="jd-cards">${list.map((name, i) => `<button type="button" class="jd-card" data-${attr}="${i}" ${pressed(cur === i)}><canvas data-thumb="${attr}:${i}"></canvas><span>${esc(name)}</span></button>`).join('')}</div>`;
+  const cards = (list, cur, attr) => `<div class="jd-cards">${list.map((name, i) => name == null ? '' : `<button type="button" class="jd-card" data-${attr}="${i}" ${pressed(cur === i)}><canvas data-thumb="${attr}:${i}"></canvas><span>${esc(name)}</span></button>`).join('')}</div>`;
   const myNum = () => decodeLook(myLookCode()).num;
   const sample = () => ({ front: d.front || '我的球隊', back: d.back || '球員' });   // 字型樣字：用你自己的字
   const swatches = (key) => `<div class="jd-sw">${PALETTE.map((c, i) => `<button type="button" data-color="${key}:${i}" style="background:${c}" ${pressed(d[key] === i)} aria-label="顏色 ${i + 1}"></button>`).join('')}</div>`;
   const chips = (list, cur, attr) => `<div class="jd-row">${list.map(([k, name]) => `<button type="button" class="jd-chip" data-${attr}="${k}" ${pressed(cur === k)}>${esc(name)}</button>`).join('')}</div>`;
   const panes = {
-    cut: () => `<h4>袖型</h4>${cards(CUTS, d.cut, 'cut')}<p class="jd-note">穿上這件時角色換成這種袖子；比賽換隊服時也照這種袖子。</p>
-      <h4>領口</h4>${chips(NECKS.map((n, i) => [i, n]), d.neck, 'neck')}`,
+    cut: () => `<h4>袖型</h4>${cards(CUTS, d.cut, 'cut')}<p class="jd-note">穿上這件時角色換成這種袖子；比賽換隊服時也照這種袖子。</p>`,
     style: () => `<h4>花紋（${STYLES.length} 款，顏色到「配色」調）</h4>${cards(STYLES.map((s) => s.name), d.style, 'style')}`,
     color: () => `<h4>一鍵配色</h4>${cards(PRESETS.map((p) => p.name), PRESETS.findIndex((p) => ['body', 'accent', 'trim', 'ink', 'shorts'].every((k) => p[k] === d[k])), 'preset')}
       <h4>每個部位自己挑</h4>${chips(COLOR_PARTS, part, 'part')}<div style="height:10px"></div>${swatches(part)}`,
@@ -160,7 +159,6 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
     if (ds.tab) { tab = ds.tab; render(); return; }
     if (ds.face) { setFace(ds.face); return; }
     if (ds.cut) return change({ cut: +ds.cut });
-    if (ds.neck) return change({ neck: +ds.neck });
     if (ds.style) return change({ style: +ds.style });
     if (ds.preset) return change(applyPreset(d, +ds.preset));
     if (ds.part) { part = ds.part; render(); return; }

@@ -18,6 +18,8 @@ const { pathToFileURL } = require('node:url');
     all.push(J.applyPreset({ style, neck: style % 2, layout: style % 4, font: style % 8, backIcon: !!(style % 2), shortsNum: !(p % 2), front: '台北排球', back: 'KEVIN' }, p));
   for (let cut = 0; cut < J.CUTS.length; cut++) all.push({ cut, style: 9, front: '', back: '' });
   for (const d of all) { const code = J.encodeJersey(d), back = J.decodeJersey(code); assert.deepEqual(back, J.normalizeJersey(d), code); assert.equal(J.encodeJersey(back), code); }
+  assert.equal(J.normalizeJersey({ neck: 1 }).neck, 0, '全部圓領'); assert.equal(J.decodeJersey('j1104' + '9h707003~~').neck, 0);
+  assert.equal(J.LAYOUTS[2], null, '左胸小字＋號碼拿掉了'); assert.equal(J.normalizeJersey({ layout: 2 }).layout, 1, '舊的左胸小字變成大字＋號碼'); assert.equal(J.decodeJersey('j10049h707203~早安~').layout, 1);
   assert.deepEqual(J.CUTS, ['短袖', '長袖', '短版', '無袖']); assert.deepEqual(J.CUT_TOP, [1, 2, 3, 0]);
   ok(`代碼來回一致（${all.length} 種）`);
 
