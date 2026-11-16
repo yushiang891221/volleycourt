@@ -24,6 +24,7 @@
   <script type="module">import { mountServerBadge } from './js/servers.js'; mountServerBadge(document.getElementById('server-pick'));</script>
   <script type="module">import { mountLobbyTicker } from './js/lobby-ticker.js'; if (globalThis.VBIntro?.entered) mountLobbyTicker(); else addEventListener('vb-lobby-enter', mountLobbyTicker, { once: true });</script>
   <script src="js/lobby.js" defer></script>
+  <script src="js/bgm.js" defer></script>
 </head>
 <body class="intro-active">
 <dialog id="intro" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
