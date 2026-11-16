@@ -188,6 +188,8 @@ async function rtConfig() {
   const devCf = typeof DEV_LOCAL !== 'undefined' && DEV_LOCAL && new URLSearchParams(location.search).get('cf');   /* 本機開發：&cf=ws://localhost:8787 直接連本機房間伺服器 */
   if (devCf && /^wss?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(devCf)) return (RT_CFG = { cf: devCf, prefer: 'cf' });
   try { const r = await fetch('api/rt-config', { cache: 'no-store' }); RT_CFG = r.ok && (r.headers.get('content-type') || '').includes('json') ? await r.json() : { cf: null }; } catch (e) { RT_CFG = { cf: null }; }
+  /* 選伺服器：網址的 server（球隊戰）＞這台電腦選過的＞清單第一台 */
+  if (Array.isArray(RT_CFG.servers) && RT_CFG.servers.length) { const s = pickServer(RT_CFG.servers); if (s && s.url) RT_CFG = { ...RT_CFG, cf: s.url, server: s }; }
   return RT_CFG;
 }
 // 選連線方式：&localnet＝同一個瀏覽器的分頁互傳；兩種都有設定時先用 prefer 那個（預設 Ably：台灣通常比較快），

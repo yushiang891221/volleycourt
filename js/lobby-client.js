@@ -15,6 +15,7 @@
   function override() { return local ? new URLSearchParams(location.search).get('lobby') : null; }
   async function endpoint() {
     let base=null;
+    try{const S=await import('./servers.js');base=S.pickServer(await S.serverList())?.url||null;}catch(_){base=null;}   /* 選伺服器：連使用者選的那台 */
     if(!base) {
       const response=await fetch('/api/rt-config',{signal:AbortSignal.timeout(8000)});
       if(!response.ok)throw new Error('config');base=(await response.json()).cf;

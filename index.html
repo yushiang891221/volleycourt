@@ -21,6 +21,7 @@
   <script src="js/intro.js" defer></script>
   <script type="module" src="js/session-guard.js"></script>
   <script type="module" src="js/account-line.js"></script>
+  <script type="module">import { mountServerBadge } from './js/servers.js'; mountServerBadge(document.getElementById('server-pick'));</script>
   <script src="js/lobby.js" defer></script>
 </head>
 <body class="intro-active">
@@ -44,7 +45,7 @@
 </script>
 <div id="lobby-shell" inert>
 <header class="top panel">
-  <div class="brand"><img class="logo logo-img" src="assets/img/brand/ball-512.webp" alt=""><div><div class="brand-line"><h1>Play One</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><span class="server-note">多人遊戲 · 好友同樂</span></div></div></div>
+  <div class="brand"><img class="logo logo-img" src="assets/img/brand/ball-512.webp" alt=""><div><div class="brand-line"><h1>Play One</h1><span class="wordmark">VOLLEYBALL ONLINE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><button type="button" class="server-pick" id="server-pick" title="換伺服器">伺服器…</button></div></div></div>
   <div class="actions">
     <button class="orange" id="create"><span data-icon="plus"></span>開啟房間</button>
     <button class="green" id="practice"><span data-icon="court"></span>練習模式</button>

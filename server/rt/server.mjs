@@ -201,6 +201,14 @@ const L = {
 // ---- HTTP／WebSocket 入口
 const server = http.createServer((req, res) => {
   if (req.url === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok ' + rooms.size + ' rooms'); return; }
+  // 選伺服器頁面用：目前人數（大廳＋房間裡的帳號，同一個人只算一次）、房間數；網頁從別的網域來問，所以開放跨網域讀取（只有數字）
+  if (req.url === '/status') {
+    const who = new Set();
+    for (const ws of L.sockets()) if (ws.meta && ws.meta.player) who.add(ws.meta.player);
+    for (const set of rooms.values()) for (const ws of set) if (ws.readyState === 1 && ws.meta && ws.meta.player) who.add(ws.meta.player);
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ ok: true, players: who.size, rooms: rooms.size, t: Date.now() })); return;
+  }
   res.writeHead(404, { 'content-type': 'text/plain' }); res.end('volleycourt rt');
 });
 const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_BYTES * 2, perMessageDeflate: false, handleProtocols: () => 'volleycourt' });

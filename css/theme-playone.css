@@ -139,3 +139,6 @@ footer button:hover { background: var(--po-yellow); }
 #intro .intro-skip { color: #e8eeff; } #intro .intro-skip:hover { color: var(--po-yellow); background: transparent; }
 .intro-account { color: #e8eeff; } .intro-account b { color: #fff; }
 #phase { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); } #phase b { color: var(--po-blue); }
+/* 大廳上方：目前伺服器（點了可以換） */
+.server-pick { margin-left: 6px; padding: 1px 8px; font-size: 11px; font-weight: 800; background: #fff; border: 2px solid var(--po-ink); box-shadow: 2px 2px 0 var(--po-ink); }
+.server-pick b { padding: 0 4px; } .server-pick .lv-good { background: #7be0a5; } .server-pick .lv-ok { background: var(--po-yellow); } .server-pick .lv-bad { background: #ff9c8a; } .server-pick .lv-off { background: #ddd; }

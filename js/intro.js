@@ -23,6 +23,11 @@
           await editAppearance('create');
         }
         creatorReady = true;
+        // 選伺服器：從開場進來都會問；從比賽回大廳（#lobby）且已經選過就不問
+        try {
+          const S = await import('./servers.js');
+          if (location.hash !== '#lobby' || !S.savedServerId()) { if ((await S.serverList()).length) await S.openServerSelect(); }
+        } catch (e) { console.warn('[選伺服器] 載入失敗，用預設伺服器', e); }
       } catch {
         stage = 'intro'; intro.hidden = false;
         $('intro-content').hidden = false; $('anim3d').hidden = true;

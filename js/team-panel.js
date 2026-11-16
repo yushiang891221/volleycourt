@@ -262,7 +262,8 @@ export async function openTeamHub({ api, progress } = {}) {
       warLeave: () => run(async () => { await call('warLeave'); await pullWar(); }, '已取消排隊'),
       warReport: () => run(async () => { const won = id === '1'; if (!confirm(won ? '回報「我們贏了」？' : '回報「我們輸了」？')) return; const r = await call('warReport', won); await pullWar(); await reload();
         say(r.status === 'done' ? '✓ 結果已結算' : r.status === 'disputed' ? '兩隊回報的結果不一樣，這場記為「有爭議」，不給獎勵' : '✓ 已回報，等對方回報', r.status !== 'disputed'); }),
-      warEnter: () => { const w = war && war.war; if (!w) return; const q = new URLSearchParams({ site: 'bs-shenjing', room: w.room, mode: '6v6' }); if (w.host && isOwner()) { q.set('host', '1'); q.set('srv', '1'); } try { window.VBLobby && VBLobby.carry && VBLobby.carry(q); } catch {} location.href = `gym.html?${q}`; },
+      warEnter: async () => { const w = war && war.war; if (!w) return; const q = new URLSearchParams({ site: 'bs-shenjing', room: w.room, mode: '6v6' });
+        try { const S = await import('./servers.js'); const first = (await S.serverList())[0]; if (first) q.set('server', first.id); } catch {}   /* 球隊戰兩隊都連第一台伺服器，才會在同一個房間 */ if (w.host && isOwner()) { q.set('host', '1'); q.set('srv', '1'); } try { window.VBLobby && VBLobby.carry && VBLobby.carry(q); } catch {} location.href = `gym.html?${q}`; },
       copy: () => { try { navigator.clipboard.writeText(team.code); say('✓ 邀請碼已複製', true); } catch { say('複製失敗，請自己記下邀請碼'); } },
       accept: () => run(async () => { await call('decide', { user: id, accept: true }); await reload(); }, '✓ 已加入球隊'),
       reject: () => run(async () => { await call('decide', { user: id, accept: false }); await reload(); }, '已拒絕'),
