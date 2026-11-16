@@ -27,7 +27,7 @@ export async function probeServer(s, tries = 3) {
     return { online: true, ping: Math.round(best.ms), players: best.j.players | 0, rooms: best.j.rooms | 0 };
   } catch { return { online: false, ping: null, players: null, rooms: null }; }
 }
-export const pingLevel = (ms) => (ms == null ? 'off' : ms < 60 ? 'good' : ms < 120 ? 'ok' : 'bad');
+export const pingLevel = (ms) => (ms == null ? 'off' : ms < 30 ? 'good' : ms < 80 ? 'ok' : 'bad');   // 綠：30 毫秒內（台北實測 ping 約 5 ms，網頁量會多一點）、黃：80 內、紅：更慢
 
 // ---------- 選伺服器頁面（開始遊戲後、進大廳前；大廳也可以按「換伺服器」再打開） ----------
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
