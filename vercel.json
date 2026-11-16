@@ -1,5 +1,7 @@
 {
   "cleanUrls": false,
+  "crons": [{ "path": "/api/feedback", "schedule": "0 1 * * *" }],
+  "functions": { "api/feedback.js": { "maxDuration": 300 } },
   "headers": [
     { "source": "/(.*)", "headers": [
       { "key": "X-Content-Type-Options", "value": "nosniff" },

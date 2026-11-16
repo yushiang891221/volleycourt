@@ -139,6 +139,12 @@ export function createAccountService(client) {
       if (error) throw new Error(error.code === 'PGRST202' ? '戰績功能還沒開通' : '讀取戰績失敗');
       return data;
     },
+    async feedbackStatus() {
+      await userId();
+      const { data, error } = await client.rpc('feedback_status');
+      if (error) throw new Error('匿名建議信箱暫時無法讀取，請稍後再試。');
+      return data;
+    },
     async recordMatch(m) {
       await userId();
       const { data, error } = await client.rpc('record_match', { p_match: m.id, p_level: m.level, p_human: !!m.human, p_won: !!m.won, p_sets: m.sets, p_points: m.points, p_seconds: m.seconds, p_perf: m.perf || {} });

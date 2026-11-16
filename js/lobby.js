@@ -146,6 +146,7 @@ $('equip-open').addEventListener('click', () => import('./character-panel.js').t
 import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCard($('character-info'))).catch(() => { const e = $('character-info').querySelector('.me-err'); if (e) e.textContent = '角色資訊載入失敗，請重新整理'; });
 $('news-open').addEventListener('click', () => $('lobby-news').showModal());
 $('system-settings').addEventListener('click',()=>VBSettings.open());
+$('feedback-open').addEventListener('click',()=>import('./feedback.js').then(m=>m.openFeedback()).catch(()=>notify('建議信箱暫時無法開啟，請稍後再試')));
 addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
 let tutorialWelcomeHandled=false;
 function offerTutorial(){
