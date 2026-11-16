@@ -12049,6 +12049,7 @@ function vmOnNet(d, from) {
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
     Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
+    VM.names = { ...VM.names }; for (const id of [...d.team[0], ...d.team[1]]) if (id && !/^ai/.test(id) && NET.peers.get(id)?.n) VM.names[id] = NET.peers.get(id).n;   /* 伺服器開賽時不知道暱稱（名單寫「球友」）：真人一律用自己這邊知道的暱稱 */
     if (d.wire === 2 && globalThis.VBMatchSync) vmWireInit(false, d);
     VM.tactics = d.six?.tactics === 'rotation' ? 'rotation' : 'roles';
     vm6SyncRotationRoles();
