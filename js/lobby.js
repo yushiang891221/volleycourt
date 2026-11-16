@@ -147,9 +147,31 @@ import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCa
 $('news-open').addEventListener('click', () => $('lobby-news').showModal());
 $('system-settings').addEventListener('click',()=>VBSettings.open());
 addEventListener('vb-settings-change',()=>{nickname=VBSettings.values.nickname;send({k:'hello',name:nickname,status:'大廳中'});});
+let tutorialWelcomeHandled=false;
+function offerTutorial(){
+ if(tutorialWelcomeHandled)return;
+ try {
+  if(localStorage.getItem('vb.tutorial.welcome')==='1' || localStorage.getItem('vb.tutorial.graduated')==='1')return;
+ } catch {}
+ tutorialWelcomeHandled=true;
+ $('tutorial-welcome').showModal();
+}
+function dismissTutorial(){
+ try { localStorage.setItem('vb.tutorial.welcome','1'); } catch {}
+ $('tutorial-welcome').close();
+}
+function enterPractice(tutorial=false){
+ const q=new URLSearchParams({site:'bs-shenjing',practice:'1'});
+ if(tutorial)q.set('tutorial','1');
+ VBLobby.carry(q);location.href=`gym.html?${q}`;
+}
+$('tutorial-dismiss').addEventListener('click',dismissTutorial);
+$('tutorial-start').addEventListener('click',()=>{dismissTutorial();enterPractice(true);});
+$('tutorial-welcome').addEventListener('cancel',e=>{e.preventDefault();dismissTutorial();});
+$('nickname').addEventListener('close',()=>{if(nickname)offerTutorial();});
 function welcome(){
  const news=$('lobby-news');
- const askForNickname=()=>{if(!nickname)$('nickname').showModal();};
+ const askForNickname=()=>{if(!nickname)$('nickname').showModal();else offerTutorial();};
  let seen;
  try { seen=sessionStorage.getItem('vb-lobby-news-seen')==='1'; }
  catch { seen=location.hash==='#lobby'; }
@@ -167,7 +189,7 @@ for(const [prefix,render] of [['rooms',renderRooms],['players',renderPlayers]])f
 $('create').addEventListener('click',()=>$('room-dialog').showModal());$('cancel').addEventListener('click',()=>$('room-dialog').close());
 $('room-form').addEventListener('submit',e=>{e.preventDefault();send({k:'create',name:$('room-name').value.trim(),mode:$('mode').value,password:$('password').value});$('password').value='';});
 $('password-form').addEventListener('submit',e=>{e.preventDefault();send({k:'join',no:selectedRoom,password:$('join-password').value});$('join-password').value='';});$('password-cancel').addEventListener('click',()=>$('password-dialog').close());
-$('practice').addEventListener('click',()=>{const q=new URLSearchParams({site:'bs-shenjing',practice:'1'});VBLobby.carry(q);location.href=`gym.html?${q}`;});
+$('practice').addEventListener('click',()=>enterPractice());
 $('quick').addEventListener('click',()=>send({k:'quick',mode:$('filter').value}));
 document.querySelectorAll('[data-soon]').forEach(b=>b.addEventListener('click',()=>notify(`${b.textContent.trim()}：即將開放`)));
 $('sound').addEventListener('click',()=>{sound=!sound;const b=$('sound');b.setAttribute('aria-pressed',String(sound));b.innerHTML=icon(sound?'sound':'mute');b.title=sound?'關閉留言音效':'開啟留言音效';b.setAttribute('aria-label',b.title);});
