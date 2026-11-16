@@ -63,6 +63,9 @@ const CSS = `
 .th-levels{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}.th-levels td{padding:4px 6px;border-bottom:1px solid #1f2e42}.th-levels tr.now td{color:#f2b705;font-weight:700}
 .th-jerseys{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.th-jersey{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border-radius:12px;background:#1b2b40;border:1px solid #26384c;min-height:200px;justify-content:center;text-align:center}
 .th-jersey canvas{width:150px;height:auto;aspect-ratio:7/6}.th-jersey small{color:#7ee2a8}.th-jersey.th-slot{border-style:dashed;color:#8fa6ba}
+.th-chatbox{display:flex;flex-direction:column;height:calc(100% - 4px);min-height:420px;margin:0}.th-chat{flex:1;overflow:auto;padding:6px 4px;display:flex;flex-direction:column;gap:6px;min-height:240px}
+.th-msg{max-width:72%;padding:7px 11px;border-radius:12px;background:#1b2b40;line-height:1.45;word-break:break-word;align-self:flex-start}.th-msg small{display:block;color:#8fa6ba;font-size:12px;margin-bottom:2px}
+.th-msg.mine{align-self:flex-end;background:#3a2a17;border:1px solid #f07c2466}
 .th-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .th-team{padding:12px;border-radius:10px;background:#1b2b40;border:1px solid #26384c}.th-team b{font-size:16px}.th-team small{display:block;color:#8fa6ba;margin:4px 0 8px}
 `;
@@ -77,7 +80,7 @@ export async function openTeamHub({ api, progress } = {}) {
   dlg.innerHTML = '<form method="dialog"><header class="th-top"></header><nav class="th-tabs" role="tablist"></nav><p class="th-err" role="status"></p><div class="th-body"></div></form>';
   document.body.append(dlg);
   const $q = (s) => dlg.querySelector(s);
-  let team = null, prog = {}, tab = 'home', apps = [], list = [], query = '';
+  let team = null, prog = {}, tab = 'home', apps = [], list = [], query = '', chat = [], chatTimer = 0, chatBusy = false;
   const say = (t, good = false) => { const e = $q('.th-err'); e.textContent = t || ''; e.classList.toggle('th-ok', good); };
   const run = async (fn, okText) => { say(''); try { await fn(); if (okText) say(okText, true); } catch (x) { say((x && x.message) || '操作失敗'); } };
   const reload = async () => {
@@ -155,7 +158,9 @@ export async function openTeamHub({ api, progress } = {}) {
         ${TEAM_LEVELS[team.level] ? `<div class="th-jersey th-slot"><span>🔒 球隊 Lv${team.level + 1} 多 1 件</span></div>` : ''}</div></div>`;
     },
     shop: () => soon('🛒 球隊商店', team.level >= 2 ? '用球隊資金買全隊共用的東西（球衣格、花紋、字型、徽章…）。之後的段落（T5）開放。' : '球隊 Lv2 解鎖。用球隊資金買全隊共用的東西。'),
-    chat: () => soon('💬 球隊聊天室', '只有隊員看得到的聊天室。之後的段落（T4）開放。'),
+    chat: () => `<div class="th-box th-chatbox"><h3>💬 球隊聊天室</h3><div class="th-chat" aria-live="polite"></div>
+      <div class="th-row"><input type="text" id="th-say" maxlength="200" placeholder="說點什麼（Enter 送出，最多 200 字）"><button type="button" class="th-btn orange" data-op="say">送出</button></div>
+      <p class="th-note">只有隊員看得到；留最近 100 則。</p></div>`,
     war: () => soon('⚔️ 球隊戰', team.level >= 3 ? '排隊配對等級差不多的球隊，6 對 6 比賽。之後的段落（T6）開放。' : '球隊 Lv3 解鎖：排隊配對等級差不多的球隊，6 對 6 比賽。'),
   };
   const soon = (title, text) => `<div class="th-soon"><b>${title}</b>${text}</div>`;
@@ -167,8 +172,22 @@ export async function openTeamHub({ api, progress } = {}) {
     if (isOwner() || (team.myRole === 'vice' && m.role === 'member')) out.push(btn('kick', '移出', 'red'));
     return out.join(' ');
   };
+  // 聊天：分頁打開時每 3 秒抓一次新訊息（只抓比最後一則新的）
+  const drawChat = () => {
+    const box = $q('.th-chat'); if (!box) return;
+    const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.innerHTML = chat.length ? chat.map((c) => `<div class="th-msg${c.mine ? ' mine' : ''}"><small>${esc(c.name)}・${when(c.at)}</small>${esc(c.body)}</div>`).join('') : '<p class="th-note">還沒有人說話，打個招呼吧！</p>';
+    if (atEnd || box.dataset.first !== '1') { box.scrollTop = box.scrollHeight; box.dataset.first = '1'; }
+  };
+  const pullChat = async () => {
+    if (chatBusy || !team) return; chatBusy = true;
+    try { const more = await call('chat', chat.length ? chat[chat.length - 1].id : 0); if (more && more.length) { chat = [...chat, ...more].slice(-100); drawChat(); } }
+    catch (x) { say((x && x.message) || '聊天室連不上'); } finally { chatBusy = false; }
+  };
+  const chatLoop = () => { clearInterval(chatTimer); if (tab === 'chat' && team && openNow) { pullChat(); chatTimer = setInterval(() => { if (document.hidden) return; pullChat(); }, 3000); } };
   const draw = () => {
-    drawTop(); if (!team) { drawNoTeam(); return; } drawTabs(); $q('.th-body').innerHTML = panes[tab]();
+    drawTop(); if (!team) { drawNoTeam(); clearInterval(chatTimer); return; } drawTabs(); $q('.th-body').innerHTML = panes[tab]();
+    if (tab === 'chat') { drawChat(); chatLoop(); } else clearInterval(chatTimer);
     if (tab === 'jersey') import('./jersey-designer.js').then(({ shirtThumb }) => import('./jersey.js').then((J) => {
       for (const cv of dlg.querySelectorAll('canvas[data-jt]')) { const d = J.decodeJersey(team.jerseys[+cv.dataset.jt]); if (!d) continue; const img = shirtThumb(d, 150, 128); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); }
     }));
@@ -178,7 +197,7 @@ export async function openTeamHub({ api, progress } = {}) {
   dlg.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.classList.contains('th-back')) { e.preventDefault(); close(); return; }
-    if (b.dataset.tab) { e.preventDefault(); tab = b.dataset.tab; say(''); draw(); return; }
+    if (b.dataset.tab) { e.preventDefault(); tab = b.dataset.tab; say(''); draw(); if (tab === 'chat') $q('#th-say')?.focus(); return; }
     const op = b.dataset.op; if (!op) return; e.preventDefault();
     const id = b.dataset.id, name = b.dataset.name, v = (sel) => ($q(sel) || {}).value || '';
     const act = {
@@ -191,6 +210,7 @@ export async function openTeamHub({ api, progress } = {}) {
       unpost: () => run(async () => { if (!confirm('刪除這則公告？')) return; await call('unpost', +id); await reload(); }),
       pin: () => run(async () => { await call('pin', { id: +id, pinned: b.dataset.pinned === 'true' }); await reload(); }),
       donate: () => run(async () => { const n = Math.floor(+v('#th-amount')); if (!(n >= 1)) throw new Error('請輸入金額'); if (!confirm(`捐 ${n.toLocaleString()} 金幣給球隊？`)) return; await call('donate', n); await reload(); }, '✓ 謝謝你的捐款！'),
+      say: () => run(async () => { const inp = $q('#th-say'), t = inp.value.trim(); if (!t) return; await call('say', t); inp.value = ''; await pullChat(); inp.focus(); }),
       copy: () => { try { navigator.clipboard.writeText(team.code); say('✓ 邀請碼已複製', true); } catch { say('複製失敗，請自己記下邀請碼'); } },
       accept: () => run(async () => { await call('decide', { user: id, accept: true }); await reload(); }, '✓ 已加入球隊'),
       reject: () => run(async () => { await call('decide', { user: id, accept: false }); await reload(); }, '已拒絕'),
@@ -215,8 +235,11 @@ export async function openTeamHub({ api, progress } = {}) {
     if (act) act();
   });
   dlg.addEventListener('change', (e) => { if (e.target.id === 'th-open') run(async () => { await call('open', e.target.checked); await reload(); }); });
-  dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'th-q') { e.preventDefault(); $q('[data-op=search]').click(); } });
-  const close = () => { if (!openNow) return; openNow = false; dlg.close(); dlg.remove(); dispatchEvent(new Event('vb-team-change')); };
+  dlg.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'th-q') { e.preventDefault(); $q('[data-op=search]').click(); }
+    if (e.key === 'Enter' && e.target.id === 'th-say' && !e.isComposing) { e.preventDefault(); $q('[data-op=say]').click(); }   // 注音選字中按 Enter 不送出
+  });
+  const close = () => { if (!openNow) return; openNow = false; clearInterval(chatTimer); dlg.close(); dlg.remove(); dispatchEvent(new Event('vb-team-change')); };
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   $q('.th-top').innerHTML = '<button class="th-back" aria-label="關閉">←</button><h2 id="th-title">球隊</h2>'; $q('.th-body').innerHTML = '<p class="th-note">載入中…</p>';
   dlg.showModal();

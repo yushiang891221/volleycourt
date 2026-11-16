@@ -17,7 +17,7 @@ import { PGlite } from '../server/node_modules/@electric-sql/pglite/dist/index.j
 import { teamError } from '../js/auth.js';
 import { openTeamHub } from '../js/team-panel.js';
 const SQL = ['001_profiles', '002_single_session', '003_delete_account', '004_progress', '005_friends', '006_fix_record_match', '007_friend_badge', '008_assists_tiers', '009_match_rating', '010_public_profile',
-  '011_cannon_oh', '012_role_wins', '013_last_seen', '014_langzi', '015_profile_mastery', '016_private_profile_rows', '017_my_jerseys', '018_jersey_sleeves', '019_team_guild', '020_team_jerseys'];
+  '011_cannon_oh', '012_role_wins', '013_last_seen', '014_langzi', '015_profile_mastery', '016_private_profile_rows', '017_my_jerseys', '018_jersey_sleeves', '019_team_guild', '020_team_jerseys', '021_team_chat'];
 const db = new PGlite();
 await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth;
   create table auth.users (id uuid primary key default gen_random_uuid(), email text);
@@ -30,7 +30,8 @@ const OPS = { mine: ['my_team'], create: ['create_team', 'p_name'], join: ['join
   kick: ['kick_member', 'p_user'], role: ['set_member_role', (a) => ({ p_user: a.user, p_role: a.role })], transfer: ['transfer_owner', 'p_user'], disband: ['disband_team'],
   rename: ['set_team_name', 'p_name'], open: ['set_team_open', (a) => ({ p_open: !!a })], post: ['post_notice', (a) => ({ p_body: a.body, p_pinned: !!a.pinned })],
   unpost: ['delete_notice', 'p_id'], pin: ['pin_notice', (a) => ({ p_id: a.id, p_pinned: !!a.pinned })], donate: ['donate_coins', 'p_amount'], history: ['my_team_history'],
-  jerseys: ['set_team_jerseys', 'p_list'], wear: ['set_team_wear', 'p_idx'], myWear: ['my_team_wear'] };
+  jerseys: ['set_team_jerseys', 'p_list'], wear: ['set_team_wear', 'p_idx'], myWear: ['my_team_wear'],
+  chat: ['team_chat_since', 'p_after'], say: ['send_team_chat', 'p_body'] };
 let me = null;
 const rpc = async (uid, fn, args = {}) => {
   const keys = Object.keys(args), sql = `select public.${fn}(${keys.map((k, i) => `${k} => $${i + 1}`).join(', ')}) as r`;

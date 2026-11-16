@@ -151,6 +151,29 @@ const { makeDb } = require('./supabase-db.cjs');
     ok('T3 球衣：件數＝球隊等級、隊長／副隊長才能設計、格式與不雅字檢查、選穿、退隊留下當時的紀念球衣');
   }
 
+  // ---------- T4 聊天室 ----------
+  {
+    const o = await db.player('聊天隊長', { exp: LV10, coins: 1000 }), m = await db.player('聊天隊員', { exp: LV10 }), x = await db.player('外人', { exp: LV10 });
+    const tc = await call(o, 'create_team', ['聊天測試隊']); await call(m, 'join_team', [tc.code]);
+    await fails(x, 'send_team_chat', ['我不是隊員'], 'not in team');
+    await fails(x, 'team_chat_since', [0], 'not in team');
+    await fails(o, 'send_team_chat', [''], 'bad chat'); await fails(o, 'send_team_chat', ['x'.repeat(201)], 'bad chat'); await fails(o, 'send_team_chat', ['靠北喔'], 'bad chat');
+    const id1 = await call(o, 'send_team_chat', ['大家好']);
+    await fails(o, 'send_team_chat', ['連發'], 'too fast');
+    await call(m, 'send_team_chat', ['隊長好！']);
+    let msgs = await call(m, 'team_chat_since', [0]);
+    assert.deepEqual(msgs.map((c) => c.body), ['大家好', '隊長好！']); assert.equal(msgs[0].name, '聊天隊長'); assert.equal(msgs[1].mine, true); assert.equal(msgs[0].mine, false);
+    assert.deepEqual((await call(o, 'team_chat_since', [id1])).map((c) => c.body), ['隊長好！'], '只抓比上次新的');
+    await db.query("update public.team_chat set created_at = now() - interval '5 seconds'");
+    for (let i = 0; i < 105; i++) await db.query("insert into public.team_chat(team_id, author, body) values ($1, $2, $3)", [tc.id, m, 'm' + i]);
+    await db.query("update public.team_chat set created_at = now() - interval '5 seconds'");
+    await call(o, 'send_team_chat', ['最新的']);
+    msgs = await call(o, 'team_chat_since', [0]);
+    assert.equal(msgs.length, 100, '每隊只留最近 100 則'); assert.equal(msgs[99].body, '最新的');
+    await assert.rejects(db.as(x, 'select * from public.team_chat'), /permission denied/);
+    ok('T4 聊天：只有隊員能看能說、1～200 字、擋不雅字、1 秒內不能連發、只抓新的、每隊留 100 則');
+  }
+
   // ---------- 權限：表格不能直接改、沒登入不能用 ----------
   await assert.rejects(db.as(p0, "update public.teams set funds = 999999"), /permission denied/);
   await assert.rejects(db.as(p0, "insert into public.team_board(team_id, body) select id, 'x' from public.teams limit 1"), /permission denied/);
@@ -161,7 +184,7 @@ const { makeDb } = require('./supabase-db.cjs');
 
   // ---------- 每個資料庫錯誤都有中文訊息 ----------
   const { teamError } = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/auth.js')).href);
-  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
+  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql', '021_team_chat.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
   const codes = [...new Set([...sql019.matchAll(/raise exception '([^']+)'/g)].map((m) => m[1]))];
   for (const c of codes) assert(!teamError({ message: c }).startsWith('球隊操作失敗'), `資料庫錯誤「${c}」沒有中文訊息`);
   assert.equal(teamError({ code: 'PGRST202', message: '' }).includes('019'), true);
