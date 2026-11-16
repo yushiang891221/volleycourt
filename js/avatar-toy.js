@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { decodeJersey, normalizeJersey, encodeJersey, jerseyColors, drawJerseyTorso, ensureJerseyFonts, jerseyFontsReady } from './jersey.js';
 
 export const OPTIONS = {
   sex: ['男', '女'],
@@ -86,6 +87,10 @@ export const KITS = {
 };
 export function kitOf(team) {
   if (KITS[team]) return KITS[team];
+  if (team && typeof team === 'object' && team.design) {   // 個人球衣（J1）：{ design: 代碼或設計物件 }
+    const d = typeof team.design === 'string' ? decodeJersey(team.design) : normalizeJersey(team.design);
+    if (d) { const c = jerseyColors(d); return { name: 'my:' + encodeJersey(d), label: '我的球衣', body: c.body, trim: c.trim, num: c.ink, numEdge: c.inkEdge, shorts: c.shorts, accent: c.accent, sleeve: c.sleeve, design: d }; }
+  }
   if (team && typeof team === 'object') {   // WEB-010 球隊球衣：{ name, body, trim, num }（短褲跟著邊條色、背號外框白色）
     const hex = (c, d) => (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : d);
     const body = hex(team.body, '#2B6CB0'), trim = hex(team.trim, '#F2F2EE'), num = hex(team.num, '#FFFFFF');
@@ -189,6 +194,7 @@ function jerseyTexture(kit, num, sex, crop) {
   const { len } = torsoProfile(sex, crop), circ = Math.PI * 2 * 0.215 * (1 + TORSO_Z) / 2;
   const W = 1024, H = Math.round((W * len) / circ), ppm = W / circ;   // ppm：每公尺幾像素
   const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  if (kit.design) return designTexture(key, c, (x) => blitTorso(x, kit.design, num, W, H, 0, H, 0), kit.design, (t) => { t.anisotropy = 8; });
   x.fillStyle = color; x.fillRect(0, 0, W, H);
   // 兩側直條、V 領滾邊（前面 u＝0／1）、下擺一條細邊
   x.fillStyle = kit.trim;
@@ -398,6 +404,18 @@ export function preloadAvatars() {
   })();
   return avatarPromise;
 }
+// 個人球衣：先畫在「正面在正中間」的畫布，再照模型的正面位置（frontU）左右各貼一次，接縫兩邊接得起來
+function blitTorso(x, design, num, W, h, y0, y1, frontU) {
+  const o = document.createElement('canvas'); o.width = W; o.height = Math.max(1, Math.round(y1 - y0));
+  drawJerseyTorso(o.getContext('2d'), W, o.height, design, num);
+  const dx = (frontU - 0.5) * W; x.drawImage(o, dx, y0); x.drawImage(o, dx + (dx < 0 ? W : -W), y0);
+}
+function designTexture(key, c, paint, design, setup) {
+  const x = c.getContext('2d'); paint(x);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; setup(t); TEX.set(key, t);
+  if (!jerseyFontsReady(design)) ensureJerseyFonts(design).then(() => { paint(x); t.needsUpdate = true; });   // 球衣字型下載好再重畫
+  return t;
+}
 function glbMaterial(key, params) {
   if (!GLB_MATS.has(key)) GLB_MATS.set(key, new THREE.MeshPhysicalMaterial(params));
   return GLB_MATS.get(key);
@@ -412,6 +430,10 @@ function glbJerseyTexture(kit, num) {
   const d = jerseyLayout, c = document.createElement('canvas'); c.width = c.height = d.size;
   const x = c.getContext('2d'), W = d.size, Y = v => (1 - v) * W;
   const [lo, hi] = d.torso_v, tv = t => lo + (hi - lo) * t;
+  if (kit.design) return designTexture(key, c, (x) => {
+    x.fillStyle = kit.sleeve; x.fillRect(0, 0, W, W);   // 袖子（貼圖下方）先塗袖色
+    blitTorso(x, kit.design, num, W, Y(lo) - Y(hi), Y(hi), Y(lo), d.front_u);
+  }, kit.design, (t) => { t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4; });
   x.fillStyle = kit.body; x.fillRect(0, 0, W, W);
   for (const [width, color] of [[d.side_piping_half, '#FFFFFF'], [d.side_stripe_half, kit.trim]]) {
     x.fillStyle = color;

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>球衣預覽（開發用）</title>
+<style>
+  body { margin: 0; padding: 16px; background: #10161f; color: #e8eef4; font: 14px sans-serif; }
+  h2 { margin: 18px 0 8px; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  figure { margin: 0; background: #1a2430; border-radius: 8px; padding: 6px; text-align: center; }
+  figure canvas { width: 100%; display: block; border-radius: 4px; }
+  #three { width: 100%; height: 420px; display: block; background: #2a3442; border-radius: 8px; }
+  label { margin-right: 12px; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div>
+  <label>配色 <select id="preset"></select></label>
+  <label>領口 <select id="neck"></select></label>
+  <label>版位 <select id="layout"></select></label>
+  <label>字體 <select id="font"></select></label>
+  <label>正面字 <input id="front" value="台北排球" maxlength="8"></label>
+  <label>背面名字 <input id="back" value="KEVIN" maxlength="8"></label>
+  <label><input type="checkbox" id="backside"> 看背面</label>
+  <label>放大看第幾款 <select id="one"><option value="-1">全部</option></select></label>
+</div>
+<h2>平面（左＝背面左半、中＝正面、右＝背面右半）</h2>
+<div class="grid" id="flat"></div>
+<h2>穿在角色上</h2>
+<canvas id="three"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { STYLES, PRESETS, NECKS, LAYOUTS, FONTS, applyPreset, normalizeJersey, drawJerseyTorso, ensureJerseyFonts } from '../js/jersey.js';
+import { makeToyAvatar, preloadAvatars, decodeLook } from '../js/avatar-toy.js';
+const $ = (id) => document.getElementById(id);
+const fill = (id, list) => { $(id).innerHTML = list.map((n, i) => `<option value="${i}">${n.name || n}</option>`).join(''); };
+fill('preset', PRESETS); $('one').innerHTML += STYLES.map((s, i) => `<option value="${i}">${i} ${s.name}</option>`).join(''); fill('neck', NECKS); fill('layout', LAYOUTS); fill('font', FONTS);
+const design = (style) => normalizeJersey({ ...applyPreset({}, +$('preset').value), style, neck: +$('neck').value, layout: +$('layout').value, font: +$('font').value, front: $('front').value, back: $('back').value });
+async function drawFlat() {
+  await ensureJerseyFonts(design(0));
+  $('flat').innerHTML = '';
+  STYLES.forEach((s, i) => {
+    const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = 512; c.height = 360;
+    drawJerseyTorso(c.getContext('2d'), 512, 360, design(i), 7);
+    f.append(c, Object.assign(document.createElement('figcaption'), { textContent: `${i} ${s.name}` })); $('flat').append(f);
+  });
+}
+const renderer = new THREE.WebGLRenderer({ canvas: $('three'), antialias: true }), scene = new THREE.Scene();
+renderer.setPixelRatio(devicePixelRatio); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+scene.add(new THREE.HemisphereLight('#ffffff', '#445566', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 1.6); sun.position.set(2, 4, 5); scene.add(sun);
+let avs = [];
+async function drawAvatars() {
+  await preloadAvatars();
+  for (const a of avs) scene.remove(a.g); avs = [];
+  const one = +$('one').value;
+  STYLES.forEach((s, i) => {
+    if (one >= 0 && i !== one) return;
+    const av = makeToyAvatar(decodeLook(null), { design: design(i) });
+    if (one >= 0) av.g.position.set(0, 0, 0); else av.g.position.set((i % 9 - 4) * 0.9, i < 9 ? 1.9 : 0, 0); av.g.rotation.y = $('backside').checked ? Math.PI : 0;
+    scene.add(av.g); avs.push(av);
+  });
+}
+function frame() {
+  const w = $('three').clientWidth, h = $('three').clientHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  if (+$('one').value >= 0) { cam.position.set(0, 1.25, 3.2); cam.lookAt(0, 1.1, 0); } else { cam.position.set(0, 1.8, 11); cam.lookAt(0, 1.8, 0); } renderer.render(scene, cam); requestAnimationFrame(frame);
+}
+for (const id of ['preset', 'neck', 'layout', 'font', 'front', 'back', 'backside', 'one']) $(id).addEventListener('change', () => { drawFlat(); drawAvatars(); });
+await drawFlat(); await drawAvatars(); frame(); window.previewReady = true;
+</script>
+</body>
+</html>
