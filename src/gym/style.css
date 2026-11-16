@@ -700,3 +700,7 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 
 .sta b { font-size: 15px; font-weight: 800; left: 0; right: auto; top: -6px; transform: translateY(-100%); }
 .sta { border: 2px solid #ffffffaa; box-shadow: 0 2px 12px #0009; }
+/* Q／E／R 快慢球輪盤：跟 C 輪盤同樣式，左右兩半各 180°（中間一條直線分隔） */
+.set-wheel.all-wheel.two-wheel{width:min(380px,70vmin);height:min(380px,70vmin);background:var(--sector),linear-gradient(90deg,transparent calc(50% - 1px),#bac6d060 calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)),#101720d9!important}
+.two-wheel .sw-opt{width:120px;max-width:32%}
+.two-wheel .sw-center{width:38%;height:38%;font-size:18px}

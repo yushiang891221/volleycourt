@@ -704,7 +704,7 @@ function setWheelOpen(page = SETM.page) {
   if (!walk.on || walk.paused || walk.sit || (VM.on && (roomSpectator() || VM.phase !== 'rally'))) return;
   vbManualSetCancel(); clearTimeout(SETM.to); SETM.page = page;
   SETM.m = { all:true, page, n:0, dx:0, dy:0, hov:-1 };
-  const el = $('set-menu'); el.classList.add('all-wheel');
+  const el = $('set-menu'); el.classList.add('all-wheel'); el.classList.remove('two-wheel');
   el.onpointermove = e => {
     if(!SETM.m?.all || document.pointerLockElement)return;
     const rect=el.getBoundingClientRect(), m=SETM.m;
@@ -749,36 +749,36 @@ practiceKeysRender();
 const setAng = (i, n) => Math.PI - (i * Math.PI * 2) / n + (SETM.m && VBSettings.values.swap[SETM.m.n - 1] ? Math.PI : 0);
 function setMenuOpen(n) {
   if (SETM.m) setMenuClose(true);
-  $('set-menu').classList.remove('all-wheel');
+  $('set-menu').classList.add('all-wheel','two-wheel');   // Q／E／R：跟 C 輪盤一樣的樣式，只是兩個選項各占 180°
   for(const o of $('set-menu').querySelectorAll('.sw-center'))o.remove();
   const opts = SET_OPT[n], N = opts.length, el = $('set-menu'), m = SETM.m = { n, dx: 0, dy: 0, hov: -1, t0: performance.now() };
   clearTimeout(SETM.to); SETM.to = setTimeout(() => { if (SETM.m === m) setMenuClose(true); }, 2500);   // 點一下就放開：轉盤留著等你拖，2.5 秒沒動作＝預設
   for (const o of el.querySelectorAll('.sw-opt')) o.remove();
   opts.forEach(([, label], i) => {
-    const o = document.createElement('div'), a = setAng(i, N); o.className = 'sw-opt'; o.dataset.sv = i; o.textContent = label;
+    const o = document.createElement('div'), a = setAng(i, N); o.className = 'sw-opt'; o.dataset.sv = i; o.innerHTML = '<strong>' + label + '</strong><small>' + (i ? '快' : '慢') + '</small>';
     o.style.left = `${50 + Math.cos(a) * 34}%`; o.style.top = `${50 - Math.sin(a) * 34}%`;
     o.addEventListener('pointerenter', () => setMenuHover(i)); o.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); setMenuPick(i); });   // 沒鎖定滑鼠時：直接點
     el.appendChild(o);
   });
-  const degs = opts.map((_, i) => ((((90 - ((setAng(i, N) + Math.PI / N) * 180) / Math.PI) % 360) + 360) % 360)).sort((x, y) => x - y);   // 扇形分界（CSS 角度：從上面順時針）
-  const lines = degs.map((d) => `transparent ${Math.max(0, d - 0.8)}deg, rgba(255,255,255,.4) ${Math.max(0, d - 0.8)}deg ${d + 0.8}deg, transparent ${d + 0.8}deg`);
-  el.style.background = `conic-gradient(from 0deg, ${lines.join(', ')}), rgba(15,23,36,.55)`;
+  const name = { 1: '4 號位', 2: '快攻', 3: '2 號位' }[n] || '', center = document.createElement('div'); center.className = 'sw-center';
+  center.innerHTML = '<strong>' + name + '</strong><small>往左右拖選<br>拖出去就舉</small>'; el.appendChild(center);
+  el.style.background = ''; el.style.setProperty('--sector', 'linear-gradient(transparent,transparent)');
   $('set-cur').style.transform = 'translate(0px, 0px)'; el.hidden = false;
 }
-function setMenuHover(i) { const m = SETM.m; if (!m || m.hov === i) return; m.hov = i; m.invalid=false; if(m.all){const d=i*60;$('set-menu').style.setProperty('--sector',`conic-gradient(from -60deg,transparent 0deg ${d}deg,rgba(255,205,55,.65) ${d}deg ${d+60}deg,transparent ${d+60}deg 360deg)`);} for (const o of $('set-menu').querySelectorAll('.sw-opt')) o.classList.toggle('on', +o.dataset.sv === i); }
+function setMenuHover(i) { const m = SETM.m; if (!m || m.hov === i) return; m.hov = i; m.invalid=false; if(m.all){const d=i*60;$('set-menu').style.setProperty('--sector',`conic-gradient(from -60deg,transparent 0deg ${d}deg,rgba(255,205,55,.65) ${d}deg ${d+60}deg,transparent ${d+60}deg 360deg)`);} else { const c=90-setAng(i,SET_OPT[m.n].length)*180/Math.PI; $('set-menu').style.setProperty('--sector',`conic-gradient(from ${c-90}deg,rgba(255,205,55,.65) 0deg 180deg,transparent 180deg 360deg)`); } for (const o of $('set-menu').querySelectorAll('.sw-opt')) o.classList.toggle('on', +o.dataset.sv === i); }
 // 滑鼠移動：游標在轉盤裡跟著動（不轉頭）；方向最接近哪個選項就亮哪個，拖出去夠遠（45 px）就舉
 function setMenuMove(dx, dy) {
   const m = SETM.m; if (!m) return; m.dx += dx; m.dy += dy;
   const r = Math.hypot(m.dx, m.dy), N = m.all ? 6 : SET_OPT[m.n].length;
-  const radius=m.all ? $('set-menu').clientWidth*.43 : 60;
-  const deadZone=m.all ? $('set-menu').querySelector('.sw-center').offsetWidth/2+6 : 12;
+  const radius=$('set-menu').clientWidth*.43;
+  const deadZone=$('set-menu').querySelector('.sw-center') ? $('set-menu').querySelector('.sw-center').offsetWidth/2+6 : 12;
   if (r > radius) { m.dx *= radius / r; m.dy *= radius / r; }
   $('set-cur').style.transform = `translate(${m.dx.toFixed(0)}px, ${m.dy.toFixed(0)}px)`;
-  if (r <= deadZone) { if(m.all){m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');} return; }
+  if (r <= deadZone) { m.hov=-1;m.invalid=false;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on'); return; }
   const phi = Math.atan2(-m.dy, m.dx); let best = 0, bd = 9;
   for (let i = 0; i < N; i++) { const a=m.all ? setWheelAngle(i) : setAng(i,N); const d = Math.abs(Math.atan2(Math.sin(phi-a),Math.cos(phi-a))); if (d < bd) { bd = d; best = i; } }
   if(m.all && !SET_WHEEL[m.page][best]){m.hov=-1;m.invalid=true;$('set-menu').style.setProperty('--sector','linear-gradient(transparent,transparent)');for(const o of $('set-menu').querySelectorAll('.sw-opt'))o.classList.remove('on');return;}
-  m.invalid=false; setMenuHover(best); if (!m.all && r >= 45) setMenuPick(best);
+  m.invalid=false; setMenuHover(best); if (!m.all && r >= deadZone + 30) setMenuPick(best);
 }
 function setMenuPick(i) { const m = SETM.m; if (!m) return; if(m.all){const route=SET_WHEEL[m.page][i];if(!route)return;SETM.last[m.page]=i;SETM.m=null;SETM.until=0;$('set-menu').hidden=true;vbSet(route[0],route[1],true);return;} SETM.m = null; SETM.until = performance.now() + 350; clearTimeout(SETM.to); $('set-menu').hidden = true; vbSet(m.n, SET_OPT[m.n][i][0], true); }   // 選完 0.35 秒內滑鼠還在滑也不轉視角
 const setMenuHolds = () => !!SETM.m || performance.now() < (SETM.until || 0);
