@@ -12,12 +12,13 @@ export const TEAM_LEVELS = [   // 跟 019 SQL 的 team_level／team_cap 一樣
   { lv: 5, exp: 25000, cap: 30, jerseys: 5, open: '球隊徽章外框' },
 ];
 export const ROLE_NAME = { owner: '隊長', vice: '副隊長', member: '隊員' };
+const BADGES = ['🏐', '🔥', '⚡', '🦅', '🐯', '🌊', '⭐', '👑'];   // 跟 022 SQL 的 team_badge_ok 一樣
 const TABS = [['home', '🏠 主頁'], ['members', '👥 成員'], ['jersey', '👕 球衣'], ['shop', '🛒 商店'], ['chat', '💬 聊天'], ['war', '⚔️ 球隊戰']];
 // 動態的說法
 export function logText(l) {
   const a = esc(l.actor || '有人'), t = esc(l.target || '某人');
   return { create: `${a} 建立了球隊`, join: `${a} 加入了球隊`, leave: `${a} 離開了球隊`, kick: `${a} 把 ${t} 移出球隊`, vice: `${a} 把 ${t} 升為副隊長`,
-    member: `${a} 把 ${t} 改為隊員`, jersey: `${a} 更新了球隊球衣`, owner: `${t} 成為新的隊長`, rename: `${a} 把隊名改成「${esc(l.data?.name)}」`, levelup: `🎉 球隊升到 Lv${l.data?.level}！`,
+    member: `${a} 把 ${t} 改為隊員`, jersey: `${a} 更新了球隊球衣`, buy: `${a} 用 ${Number(l.data?.price || 0).toLocaleString()} 球隊資金買了${{ jersey_slot: '額外球衣格', cap5: '擴充人數', gold: '金色隊名', badge: '徽章 ' + esc(l.data?.arg || '') }[l.data?.item] || '東西'}`, owner: `${t} 成為新的隊長`, rename: `${a} 把隊名改成「${esc(l.data?.name)}」`, levelup: `🎉 球隊升到 Lv${l.data?.level}！`,
     donate: `${a} 捐了 ${Number(l.data?.amount || 0).toLocaleString()} 金幣` }[l.kind] || esc(l.kind);
 }
 const when = (t) => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
@@ -66,6 +67,9 @@ const CSS = `
 .th-chatbox{display:flex;flex-direction:column;height:calc(100% - 4px);min-height:420px;margin:0}.th-chat{flex:1;overflow:auto;padding:6px 4px;display:flex;flex-direction:column;gap:6px;min-height:240px}
 .th-msg{max-width:72%;padding:7px 11px;border-radius:12px;background:#1b2b40;line-height:1.45;word-break:break-word;align-self:flex-start}.th-msg small{display:block;color:#8fa6ba;font-size:12px;margin-bottom:2px}
 .th-msg.mine{align-self:flex-end;background:#3a2a17;border:1px solid #f07c2466}
+.th-gold{color:#f7c948!important;text-shadow:0 0 10px #f7c94866}
+.th-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}.th-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;border-radius:12px;background:#1b2b40;border:1px solid #26384c;text-align:center}
+.th-item.on{border-color:#f2b705}.th-item-ic{font-size:34px;line-height:1.2}.th-item small{color:#8fa6ba;min-height:32px}.th-price{color:#f2b705;font-weight:700}
 .th-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .th-team{padding:12px;border-radius:10px;background:#1b2b40;border:1px solid #26384c}.th-team b{font-size:16px}.th-team small{display:block;color:#8fa6ba;margin:4px 0 8px}
 `;
@@ -97,7 +101,7 @@ export async function openTeamHub({ api, progress } = {}) {
   const drawTop = () => {
     if (!team) { $q('.th-top').innerHTML = '<button class="th-back" aria-label="關閉">←</button><h2 id="th-title">球隊</h2>'; return; }
     const cur = TEAM_LEVELS[team.level - 1], pct = team.next ? Math.round(((team.exp - cur.exp) / (team.next - cur.exp)) * 100) : 100;
-    $q('.th-top').innerHTML = `<button class="th-back" aria-label="關閉">←</button><h2 id="th-title">${esc(team.name)}</h2><span class="th-badge">Lv${team.level}</span>
+    $q('.th-top').innerHTML = `<button class="th-back" aria-label="關閉">←</button><h2 id="th-title" class="${team.gold_name ? 'th-gold' : ''}">${team.badge ? esc(team.badge) + ' ' : ''}${esc(team.name)}</h2><span class="th-badge">Lv${team.level}</span>
       <span class="th-bar" title="球隊經驗 ${team.exp.toLocaleString()}${team.next ? ' / ' + team.next.toLocaleString() : '（最高等級）'}"><i style="width:${pct}%"></i></span>
       <span class="th-stat">經驗 <b>${Number(team.exp).toLocaleString()}</b>${team.next ? ` / ${team.next.toLocaleString()}` : ''}</span>
       <span class="th-stat">👥 <b>${team.members.length}</b> / ${team.cap}</span><span class="th-stat">🪙 資金 <b>${Number(team.funds).toLocaleString()}</b></span>`;
@@ -115,7 +119,7 @@ export async function openTeamHub({ api, progress } = {}) {
     </div><div>
       <div class="th-box"><h3>🔍 找球隊</h3><div class="th-row"><input type="text" id="th-q" placeholder="搜尋隊名" value="${esc(query)}"><button type="button" class="th-btn" data-op="search">搜尋</button></div>
         <p class="th-note">按「申請加入」後，等隊長或副隊長同意。同時最多申請 5 個。</p>
-        <div class="th-teams">${list.length ? list.map((t) => `<div class="th-team"><b>${esc(t.name)}</b> <span class="th-badge">Lv${t.level}</span><small>隊長 ${esc(t.owner)}・👥 ${t.members} / ${t.cap}${t.open ? '' : '・不開放申請'}</small>
+        <div class="th-teams">${list.length ? list.map((t) => `<div class="th-team"><b class="${t.gold ? 'th-gold' : ''}">${t.badge ? esc(t.badge) + ' ' : ''}${esc(t.name)}</b> <span class="th-badge">Lv${t.level}</span><small>隊長 ${esc(t.owner)}・👥 ${t.members} / ${t.cap}${t.open ? '' : '・不開放申請'}</small>
           ${t.applied ? `<button type="button" class="th-btn" data-op="cancelApply" data-id="${esc(t.id)}">取消申請</button>` : `<button type="button" class="th-btn orange" data-op="apply" data-id="${esc(t.id)}" ${t.open && t.members < t.cap && lv >= TEAM_LEVEL_REQ ? '' : 'disabled'}>申請加入</button>`}</div>`).join('') : '<p class="th-note">找不到球隊。</p>'}</div></div>
     </div></div>`;
   };
@@ -147,7 +151,7 @@ export async function openTeamHub({ api, progress } = {}) {
         <div class="th-row"><button type="button" class="th-btn red" data-op="leave">離開球隊</button>${isOwner() ? '<button type="button" class="th-btn red" data-op="disband">解散球隊</button>' : ''}</div>
         <p class="th-note">離開後 24 小時內不能加入或建立別的球隊。${isOwner() ? '隊長離開會自動交給副隊長（沒有就交給最早加入的隊員）。' : ''}</p></div>`,
     jersey: () => {
-      const n = TEAM_LEVELS[team.level - 1].jerseys, list = team.jerseys || [];
+      const n = team.jerseyCap || TEAM_LEVELS[team.level - 1].jerseys, list = team.jerseys || [];   // 等級＋商店買的球衣格
       return `<div class="th-box"><h3>👕 球隊球衣（${list.length} / ${n} 件）</h3>
         <p class="th-note">${isMgr() ? '隊長、副隊長可以設計。' : '隊長、副隊長負責設計。'}球隊 Lv${team.level} 可以有 ${n} 件，升級可以設計更多。隊員在「球衣與裝備」選要穿哪一件；退出球隊後球衣會留下當紀念（不能穿）。</p>
         <div class="th-jerseys">${Array.from({ length: n }, (_, i) => list[i]
@@ -157,7 +161,23 @@ export async function openTeamHub({ api, progress } = {}) {
           : `<div class="th-jersey th-slot">${isMgr() && i === list.length ? `<button type="button" class="th-btn orange" data-op="designJ" data-id="${i}">＋ 設計第 ${i + 1} 件</button>` : `<span>${i < list.length + 1 ? '還沒設計' : '空格'}</span>`}</div>`).join('')}
         ${TEAM_LEVELS[team.level] ? `<div class="th-jersey th-slot"><span>🔒 球隊 Lv${team.level + 1} 多 1 件</span></div>` : ''}</div></div>`;
     },
-    shop: () => soon('🛒 球隊商店', team.level >= 2 ? '用球隊資金買全隊共用的東西（球衣格、花紋、字型、徽章…）。之後的段落（T5）開放。' : '球隊 Lv2 解鎖。用球隊資金買全隊共用的東西。'),
+    shop: () => {
+      if (team.level < 2) return soon('🛒 球隊商店', '球隊 Lv2 解鎖。用球隊資金（隊員捐的金幣）買全隊共用的東西。');
+      const owner = isOwner(), funds = Number(team.funds), owned = team.badges || [];
+      const item = (key, arg, icon, name, desc, price, have, max) => { const full = have >= max, poor = funds < price;
+        return `<div class="th-item"><span class="th-item-ic">${icon}</span><b>${name}</b><small>${desc}</small><span class="th-price">🪙 ${price.toLocaleString()}</span>
+          <button type="button" class="th-btn orange" data-op="buy" data-id="${key}" data-arg="${esc(arg || '')}" data-name="${esc(name)}" data-price="${price}" ${!owner || full || poor ? 'disabled' : ''}>${full ? (max > 1 ? `已買滿（${have}/${max}）` : '已擁有') : max > 1 ? `購買（${have}/${max}）` : '購買'}</button></div>`; };
+      return `<div class="th-box"><h3>🛒 球隊商店</h3><p class="th-note">用球隊資金購買，全隊共用。${owner ? '只有隊長可以購買。' : '只有隊長可以購買；隊員可以在「主頁」捐金幣增加球隊資金。'}球隊資金：🪙 ${funds.toLocaleString()}</p>
+        <div class="th-shop">
+          ${item('jersey_slot', '', '👕', '額外球衣格', '球隊多 1 件球衣可以設計', 2000, team.extra_jerseys | 0, 3)}
+          ${item('cap5', '', '👥', '擴充人數', '人數上限 +5', 3000, (team.extra_cap | 0) / 5, 2)}
+          ${item('gold', '', '✨', '金色隊名', '隊名在球隊主頁和找球隊列表變成金色', 5000, team.gold_name ? 1 : 0, 1)}
+        </div></div>
+        <div class="th-box"><h3>🏅 球隊徽章</h3><p class="th-note">每個 1,000，買了就顯示在隊名旁邊；${isMgr() ? '隊長、副隊長可以換成買過的其他徽章。' : '隊長、副隊長可以換。'}</p>
+        <div class="th-shop">${BADGES.map((b) => owned.includes(b)
+          ? `<div class="th-item${team.badge === b ? ' on' : ''}"><span class="th-item-ic">${b}</span><b>${team.badge === b ? '使用中' : '已擁有'}</b>${isMgr() ? `<button type="button" class="th-btn" data-op="badge" data-arg="${team.badge === b ? '' : b}">${team.badge === b ? '不顯示' : '換成這個'}</button>` : ''}</div>`
+          : item('badge', b, b, '徽章', '顯示在隊名旁邊', 1000, 0, 1)).join('')}</div></div>`;
+    },
     chat: () => `<div class="th-box th-chatbox"><h3>💬 球隊聊天室</h3><div class="th-chat" aria-live="polite"></div>
       <div class="th-row"><input type="text" id="th-say" maxlength="200" placeholder="說點什麼（Enter 送出，最多 200 字）"><button type="button" class="th-btn orange" data-op="say">送出</button></div>
       <p class="th-note">只有隊員看得到；留最近 100 則。</p></div>`,
@@ -211,6 +231,8 @@ export async function openTeamHub({ api, progress } = {}) {
       pin: () => run(async () => { await call('pin', { id: +id, pinned: b.dataset.pinned === 'true' }); await reload(); }),
       donate: () => run(async () => { const n = Math.floor(+v('#th-amount')); if (!(n >= 1)) throw new Error('請輸入金額'); if (!confirm(`捐 ${n.toLocaleString()} 金幣給球隊？`)) return; await call('donate', n); await reload(); }, '✓ 謝謝你的捐款！'),
       say: () => run(async () => { const inp = $q('#th-say'), t = inp.value.trim(); if (!t) return; await call('say', t); inp.value = ''; await pullChat(); inp.focus(); }),
+      buy: () => run(async () => { if (!confirm(`用 ${(+b.dataset.price).toLocaleString()} 球隊資金購買「${name}${b.dataset.arg ? ' ' + b.dataset.arg : ''}」？`)) return; await call('buy', { item: id, arg: b.dataset.arg || null }); await reload(); }, '✓ 購買完成'),
+      badge: () => run(async () => { await call('badge', b.dataset.arg || null); await reload(); }, '✓ 徽章已更換'),
       copy: () => { try { navigator.clipboard.writeText(team.code); say('✓ 邀請碼已複製', true); } catch { say('複製失敗，請自己記下邀請碼'); } },
       accept: () => run(async () => { await call('decide', { user: id, accept: true }); await reload(); }, '✓ 已加入球隊'),
       reject: () => run(async () => { await call('decide', { user: id, accept: false }); await reload(); }, '已拒絕'),

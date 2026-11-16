@@ -174,6 +174,32 @@ const { makeDb } = require('./supabase-db.cjs');
     ok('T4 聊天：只有隊員能看能說、1～200 字、擋不雅字、1 秒內不能連發、只抓新的、每隊留 100 則');
   }
 
+  // ---------- T5 球隊商店 ----------
+  {
+    const J = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/jersey.js')).href);
+    const o = await db.player('商店隊長', { exp: LV10, coins: 30000 }), v = await db.player('商店副隊', { exp: LV10 });
+    const ts = await call(o, 'create_team', ['商店測試隊']); await call(v, 'join_team', [ts.code]); await call(o, 'set_member_role', [v, 'vice']);
+    await fails(o, 'team_buy', ['gold', null], 'shop locked');                  // Lv1 還不能買
+    await call(o, 'donate_coins', [20000]);                                       // 經驗 20000 → Lv4、資金 20000
+    let t = await call(o, 'my_team'); assert.equal(t.level, 4); assert.equal(t.cap, 25); assert.equal(t.jerseyCap, 4);
+    await fails(v, 'team_buy', ['gold', null], 'not owner');
+    await fails(o, 'team_buy', ['帽子', null], 'bad item'); await fails(o, 'team_buy', ['badge', '💩'], 'bad item');
+    await call(o, 'team_buy', ['jersey_slot', null]); await call(o, 'team_buy', ['cap5', null]); await call(o, 'team_buy', ['badge', '🔥']); await call(o, 'team_buy', ['gold', null]);
+    t = await call(o, 'my_team');
+    assert.equal(t.funds, 20000 - 2000 - 3000 - 1000 - 5000); assert.equal(t.cap, 30); assert.equal(t.jerseyCap, 5); assert.equal(t.badge, '🔥'); assert.equal(t.gold_name, true);
+    await fails(o, 'team_buy', ['gold', null], 'max owned'); await fails(o, 'team_buy', ['badge', '🔥'], 'max owned');
+    for (const [item, arg] of [['cap5', null], ['jersey_slot', null], ['jersey_slot', null], ['badge', '⚡'], ['badge', '🦅']]) await call(o, 'team_buy', [item, arg]);   // 9000 花光
+    await fails(o, 'team_buy', ['cap5', null], 'max owned'); await fails(o, 'team_buy', ['jersey_slot', null], 'max owned');
+    await fails(o, 'team_buy', ['badge', '🐯'], 'funds');
+    t = await call(o, 'my_team'); assert.equal(t.funds, 0); assert.equal(t.cap, 35); assert.equal(t.jerseyCap, 7); assert.deepEqual(t.badges, ['🔥', '⚡', '🦅']);
+    const listed = (await call(v, 'team_list', ['商店']))[0]; assert.equal(listed.badge, '🦅'); assert.equal(listed.gold, true); assert.equal(listed.cap, 35);
+    const c = J.encodeJersey({ front: '' }); await call(v, 'set_team_jerseys', [Array(7).fill(c)]);   // 等級 4＋買的 3＝7 件
+    await fails(v, 'set_team_jerseys', [Array(8).fill(c)], 'too many jerseys');
+    await fails(v, 'set_team_badge', ['⭐'], 'bad item'); await call(v, 'set_team_badge', ['🔥']); assert.equal((await call(o, 'my_team')).badge, '🔥'); await call(v, 'set_team_badge', [null]); assert.equal((await call(o, 'my_team')).badge, null);
+    assert((await call(o, 'my_team')).log.some((l) => l.kind === 'buy'));
+    ok('T5 商店：Lv2 開放、只有隊長能買、扣球隊資金、球衣格／人數／徽章／金色隊名都生效、買到上限、徽章只能用買過的');
+  }
+
   // ---------- 權限：表格不能直接改、沒登入不能用 ----------
   await assert.rejects(db.as(p0, "update public.teams set funds = 999999"), /permission denied/);
   await assert.rejects(db.as(p0, "insert into public.team_board(team_id, body) select id, 'x' from public.teams limit 1"), /permission denied/);
@@ -184,7 +210,7 @@ const { makeDb } = require('./supabase-db.cjs');
 
   // ---------- 每個資料庫錯誤都有中文訊息 ----------
   const { teamError } = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/auth.js')).href);
-  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql', '021_team_chat.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
+  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql', '021_team_chat.sql', '022_team_shop.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
   const codes = [...new Set([...sql019.matchAll(/raise exception '([^']+)'/g)].map((m) => m[1]))];
   for (const c of codes) assert(!teamError({ message: c }).startsWith('球隊操作失敗'), `資料庫錯誤「${c}」沒有中文訊息`);
   assert.equal(teamError({ code: 'PGRST202', message: '' }).includes('019'), true);
@@ -197,7 +223,7 @@ const { makeDb } = require('./supabase-db.cjs');
     assert.equal(r.lv, L.lv); assert.equal(r.cap, L.cap); if (L.exp > 0) assert.equal(r.below, L.lv - 1);
   }
   assert.equal(TP.TEAM_CREATE_COST, 1000); assert.equal(TP.TEAM_LEVEL_REQ, 10);
-  for (const k of ['create', 'join', 'leave', 'kick', 'vice', 'member', 'owner', 'rename', 'levelup', 'donate']) assert(!TP.logText({ kind: k, actor: 'A', target: 'B', data: { level: 2, amount: 5, name: 'X' } }).includes(k), k);
+  for (const k of ['create', 'join', 'leave', 'kick', 'vice', 'member', 'owner', 'rename', 'levelup', 'donate', 'jersey', 'buy']) assert(!TP.logText({ kind: k, actor: 'A', target: 'B', data: { level: 2, amount: 5, name: 'X' } }).includes(k), k);
   ok('球隊主頁的等級表、人數上限、建隊條件跟資料庫一樣；每種動態都有中文');
 
   // ---------- 舊球隊（004 建的）升級後隊長補上職位 ----------

@@ -46,7 +46,7 @@ export function teamError(error) {
     ['full', '這個球隊滿了'], ['closed', '這個球隊沒有開放申請'], ['too many applications', '同時最多申請 5 個球隊'], ['not manager', '只有隊長、副隊長可以做這件事'],
     ['not owner', '只有隊長可以做這件事'], ['no permission', '你沒有權限對這位隊員這樣做'], ['too many vice', '副隊長最多 2 個'], ['bad role', '職位只能是副隊長或隊員'], ['not member', '這個人不是隊員'],
     ['no application', '找不到這個申請（可能已經處理過了）'], ['bad notice', '公告要 1～200 字，不能有不適合的字'], ['bad amount', '捐款金額不對'], ['not in team', '你還沒有球隊'],
-    ['bad jersey', '球衣的款式或文字不符合規定'], ['too many jerseys', '球衣件數超過球隊等級可以設計的數量'], ['bad chat', '訊息要 1～200 字，不能有不適合的字'], ['too fast', '說太快了，等一下再送'], ['bad wear', '這件球衣已經不在了'], ['not signed in', '尚未登入或登入已失效']];
+    ['bad jersey', '球衣的款式或文字不符合規定'], ['too many jerseys', '球衣件數超過球隊等級可以設計的數量'], ['bad chat', '訊息要 1～200 字，不能有不適合的字'], ['shop locked', '球隊商店要球隊 Lv2 才開放'], ['max owned', '這個已經買到上限了'], ['bad item', '沒有這個商品'], ['funds', '球隊資金不夠'], ['too fast', '說太快了，等一下再送'], ['bad wear', '這件球衣已經不在了'], ['not signed in', '尚未登入或登入已失效']];
   const hit = map.find(([k]) => m.includes(k));
   return hit ? hit[1] : `球隊操作失敗（${m.slice(0, 60)}）`;
 }
@@ -173,6 +173,7 @@ export function createAccountService(client) {
         donate: ['donate_coins', { p_amount: arg }], history: ['my_team_history'],
         jerseys: ['set_team_jerseys', { p_list: arg }], wear: ['set_team_wear', { p_idx: arg }], myWear: ['my_team_wear'],
         chat: ['team_chat_since', { p_after: arg || 0 }], say: ['send_team_chat', { p_body: arg }],
+        buy: ['team_buy', { p_item: a.item, p_arg: a.arg ?? null }], badge: ['set_team_badge', { p_badge: arg ?? null }],
       }[op];
       if (!call) throw new Error('不認得的球隊操作：' + op);
       const { data, error } = await client.rpc(...call);
