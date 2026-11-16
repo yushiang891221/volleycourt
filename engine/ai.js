@@ -80,7 +80,7 @@ export function createAi(G) {
       if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && G.VM.t - (a.sqT || 0) > 0.5) { a.sqT = G.VM.t; const [wx, wz] = G.vmW(a.x, a.z); G.sfx('squeak', 0.6 + G.gameRandom() * 0.3, new G.THREE.Vector3(wx, 0.05, wz)); }
       const kf = Math.min(1, dt * 4); a.pvx = (a.pvx || 0) + (a.vx - (a.pvx || 0)) * kf; a.pvz = (a.pvz || 0) + (a.vz - (a.pvz || 0)) * kf; }   // 跟著慢慢走的速度：跟現在差很多＝剛急停／急轉
     // 移動、跳
-    { const v0 = Math.hypot(a.vx, a.vz); const c = G.staCfg(); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - (c.sprint / 100) * 0.6 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + ((G.VM.phase === 'rally' ? (v0 < 0.5 ? c.regStill : c.regMove) : c.regDead) / 100) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
+    { const v0 = Math.hypot(a.vx, a.vz); const c = G.staCfg(); if (v0 > 3.6 && a.y <= 0) a.sta = Math.max(0, (a.sta ?? 1) - G.staCost('sprint', a.id) * 0.6 * dt); else a.sta = Math.min(1, (a.sta ?? 1) + ((G.VM.phase === 'rally' ? (v0 < 0.5 ? c.regStill : c.regMove) : c.regDead) / 100) * dt); }   // AI 體力：全速跑會耗、停下來慢慢回
     const spMax = G.vmLv(a).speed * (0.85 + 0.15 * G.clamp((a.sta ?? 1) / 0.3, 0, 1));   // 累了跑比較慢
     const nav = vmAiYieldRoute(a);
     const dx = nav.x - a.x, dz = nav.z - a.z, d = Math.hypot(dx, dz), sp = d > 0.05 ? (a.run ? Math.max(spMax, 4.8 * (0.85 + 0.15 * G.clamp((a.sta ?? 1) / 0.3, 0, 1))) : Math.min(spMax, d * 5)) : 0, kk = 1 - Math.exp(-dt * (a.run ? 12 : 9));   // 助跑：不減速一路衝到起跳點

@@ -5,7 +5,7 @@ const css=gym.match(/<style id="app-style">([\s\S]*?)<\/style>/)[1];
 const keyboard=gym.split('\n').find(s=>s.includes('id="wk-keys"'));
 const wheel=gym.slice(gym.indexOf('const SET_OPT ='),gym.indexOf('// Q/E choose the side'));
 const coach=gym.slice(gym.indexOf('const TUT_COACH ='),gym.indexOf('// ---------------------------------------------------------------- loop',gym.indexOf('const TUT_COACH =')));
-const fixture=`<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><link rel="stylesheet" href="css/settings.css"><style>${css}\nbody{margin:0;background:#284347!important;color:#fff}#test-court{position:fixed;inset:25% 10%;border:2px solid #eee;background:#a7654e}#test-court:after{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:2px solid white}</style><div id="test-court"></div>${keyboard}<div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div><script src="js/settings.js"></script><script src="js/tutorial.js"></script><script>const walk={on:true},VM={on:false},$=id=>document.getElementById(id);const vbManualSetCancel=()=>{},roomSpectator=()=>false,vbSet=(...args)=>window.lastSet=args;${wheel};window.lesson=VBTutorialFactory.create({now:()=>window.lessonClock||0});lesson.mount(document);lesson.start('move');</script><script type="module">
+const fixture=`<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><link rel="stylesheet" href="css/settings.css"><style>${css}\nbody{margin:0;background:#284347!important;color:#fff}#test-court{position:fixed;inset:25% 10%;border:2px solid #eee;background:#a7654e}#test-court:after{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:2px solid white}</style><div id="test-court"></div><div class="sta" id="sta" style="--v:.55"><b>體力 55%</b><i></i></div>${keyboard}<div class="set-wheel" id="set-menu" hidden><i id="set-cur"></i></div><script src="js/settings.js"></script><script src="js/tutorial.js"></script><script>const walk={on:true},VM={on:false},$=id=>document.getElementById(id);const vbManualSetCancel=()=>{},roomSpectator=()=>false,vbSet=(...args)=>window.lastSet=args;${wheel};window.lesson=VBTutorialFactory.create({now:()=>window.lessonClock||0});lesson.mount(document);lesson.start('move');</script><script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 const scene=new THREE.Scene(),BALL_R=.105,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,100);camera.position.set(6,8,10);camera.lookAt(0,0,0);
@@ -93,6 +93,11 @@ let browser,ws,server;
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.vb-tut-panel')).backgroundColor"),'rgb(23, 36, 49)');
   await evaluate('preview.coach.progress(1);preview.render()');
   fs.writeFileSync(path.join(output,'tutorial-complete-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  await evaluate("lesson.start('move');for(let i=0;i<4;i++){lesson.skip();lessonClock=(window.lessonClock||0)+800;lesson.frame({focused:true});}");
+  assert(await evaluate("document.body.classList.contains('vb-tut-stamina')"));
+  assert(await evaluate("document.querySelector('#sta').getBoundingClientRect().height>=32"));
+  fs.writeFileSync(path.join(output,'tutorial-stamina-preview.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+  await evaluate("lesson.stop()");assert(await evaluate("document.querySelector('#sta').getBoundingClientRect().height>=20"));
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await evaluate("VBSettings.close();lesson.start('set')");
   assert(await evaluate("document.querySelector('.vb-tut-panel').getBoundingClientRect().right <= innerWidth"));

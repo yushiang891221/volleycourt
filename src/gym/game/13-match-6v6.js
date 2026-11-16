@@ -546,11 +546,20 @@ const TUT_COACH = {
     if(index===5)return this.world([5,6,4][rep],[-1.8,1.8,0][rep]*this.sg);
     return new THREE.Vector3(walk.x,0,walk.z);
   },
+  deferSuccess(done){if(this.ball && !this.ball.floorHit && !this.settled){this.afterLanding=done;return true;}return false;},
   roundComplete(){if(this.id!=='move'){this.settled=true;this.next=performance.now()+1800;}},
   repeat(id,index,rep){
     this.rep=rep;
-    if(id==='move'){if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}const p=this.moveTarget(index,rep);this.ring.position.set(p.x,.035,p.z);return {x:p.x,z:p.z};}
-    this.next=Math.max(this.next===Infinity?0:this.next,performance.now()+900);return null;
+    if(id==='move'){if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}const p=this.moveTarget(index,rep);if(this.ring)this.ring.position.set(p.x,.035,p.z);return {x:p.x,z:p.z};}
+    this.updateZone();this.next=Math.max(this.next===Infinity?0:this.next,performance.now()+900);return null;
+  },
+  updateZone(){
+    const needed=this.id==='recv' && [1,2].includes(this.index) || this.id==='atk' && this.index>0 || this.id==='serve';
+    if(!needed)return;
+    const recv=this.id==='recv',z=recv?-1.2*this.sg:[-2.4,0,2.4][(this.rep||0)%3]*this.sg;
+    this.zone={p:this.world(recv?1.8:this.id==='atk' && this.index===3?-2:-6,z),r:recv?1.8:2};
+    if(!this.zoneMesh){this.zoneMesh=this.circle(this.zone.p,0x65dfff);this.zoneMesh.scale.set(this.zone.r/.8, this.zone.r/.8,1);}
+    this.zoneMesh.position.set(this.zone.p.x,.045,this.zone.p.z);
   },
   avatar(p) {
     const av = makeAvatar('#30A46C', myChar());
@@ -687,7 +696,7 @@ const TUT_COACH = {
       if (object.isMesh || object.isLine) { object.geometry.dispose(); object.material.dispose(); }
     }
     this.objects = []; this.mate = null; this.ring = null; this.ball = null; this.next = 0;
-    this.coach = null; this.toss = null; this.cj = 0; this.path=null;this.hitUntil=0;
+    this.coach = null; this.toss = null; this.cj = 0; this.pending=null;this.afterLanding=null;this.zone=null;this.zoneMesh=null;this.blockers=[];this.hitters=[];this.activeHitter=null;this.path=null;this.hitUntil=0;
     if (this.held) {
       this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
       this.held = null;
@@ -706,7 +715,7 @@ const TUT_COACH = {
     if (VB.npc) vbNpcToggle();
     if (walk.hold) { walk.hold.removeFromParent(); walk.hold = null; }
     skill.mode = null; walk.sit = null; walk.spike = null; walk.keys.clear();
-    this.place(id === 'move' ? 7 : id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
+    this.place(id === 'move' ? 12 : id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
     return true;
   },
   step(id, index) {
@@ -714,25 +723,28 @@ const TUT_COACH = {
     this.settled = false; this.failed = false; this.next = performance.now() + 1200;
     if (id === 'move') {
       if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}
-      const p=this.moveTarget(index);this.ring=this.circle(p);this.progress(0);return {x:p.x,z:p.z};
+      const p=this.moveTarget(index);if(index!==4)this.ring=this.circle(p);this.progress(0);return {x:p.x,z:p.z};
     }
     this.place(id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
+    this.updateZone();
     if (id === 'serve') {
       this.next = Math.max(performance.now(), this.lastServe + 1500);
       if (performance.now() >= this.next) this.give();
       return null;
     }
-    this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0));
+    this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? -1.5*this.sg : 0));
     if(id==='recv' && index>=2){
       const base=this.world(-1.25,0);const stool=new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),new THREE.MeshStandardMaterial({color:0x876849}));
       stool.position.copy(base);stool.position.y=.425;scene.add(stool);this.objects.push(stool);base.y=.85;this.coach.g.position.copy(base);
     }
     if (id === 'block') {
-      this.ring = this.circle(this.world(0.7, 0));
-      if (index === 3) {
-        const av = this.avatar(this.world(0.7, 1.1)); av.g.rotation.y = walk.yaw + Math.PI;   // 隊友跟你一樣面向網子
-        this.mate = { av, jumping: false };
+      this.coach.g.position.copy(this.world(-3,1.4*this.sg));
+      this.ring=this.circle(this.world(.7,0));
+      for(const z of (index===3?[-3.25,0,3.25]:[0])){
+        const base=this.world(-1.25,z),box=new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),new THREE.MeshStandardMaterial({color:0x876849}));
+        box.position.copy(base);box.position.y=.425;scene.add(box);this.objects.push(box);base.y=.85;this.hitters.push(this.avatar(base));
       }
+      if(index===3)for(const z of [-3.25,3.25]){const av=this.avatar(this.world(.7,z));av.g.rotation.y=walk.yaw+Math.PI;this.blockers.push({av,jumping:false});}
     } else this.ring = this.circle(this.world(id === 'recv' ? 5 : 1.45, 0));
     return null;
   },
@@ -749,22 +761,29 @@ const TUT_COACH = {
   feed() {
     const id = this.id;
     const hard=id==='recv' && this.index>=2;
-    const from = this.world(hard?-1.25:id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, hard?3.15:id === 'block' ? this.TOSS.y0 : 2.2);
+    const from = this.world(hard?-1.25:id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? -1.5*this.sg : 0, hard?3.15:id === 'block' ? this.TOSS.y0 : 2.2);
     const mesh = newBallMesh(); mesh.position.copy(from);
     const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.failed = false; this.next = Infinity;
     if(hard){
+      ball.tutorialHeavy=this.index===2;
       const target=this.recvTarget(this.index);target.y=BALL_R;
-      const flight=this.index===3?.65:.55;
+      const flight=this.index===3?.65:.32;
       vbLaunch(ball,from,new THREE.Vector3(0,2.8,0),'set');
       this.toss={ball,receive:true,target,flight};
       const contact=from.clone();contact.y=3.25;const v=target.clone().sub(contact).multiplyScalar(1/flight);v.y+=4.9*flight;this.trajectory(contact,v);
     } else if (id === 'block') {
-      /* 攔網：教練先把球往上拋（預兆），球落回扣球高度時起跳扣過來（frame 裡做） */
-      vbLaunch(ball, from, new THREE.Vector3(0, this.TOSS.vy, 0), 'set');
-      this.toss = { ball, t0: performance.now(), apex: 0 };
-      const cp=this.world(-2,0,this.TOSS.hitY),v=this.world(-1,0).sub(this.world(-2,0)).multiplyScalar(this.TOSS.speed);v.y=-.5;this.trajectory(cp,v);
+      const lane=this.index===3?((this.rep||0)%2===0?-3.25:3.25):0;
+      const hitter=this.hitters.find(av=>Math.abs(toLocalOf(this.court,av.g.position.x,av.g.position.z)[1]-lane)<.1);
+      const cp=this.world(-1.25,lane,3.25),feedOrigin=this.coach.g.position.clone();feedOrigin.y=2.1;
+      const v=cp.clone().sub(feedOrigin).multiplyScalar(1/1.18);v.y+=4.9*1.18;ball.m.position.copy(feedOrigin);vbLaunch(ball,feedOrigin,v,'set');
+      const target=this.world(6,lane+(this.rep%2?1:-1)*.7,BALL_R);
+      this.activeHitter=hitter;if(hitter)hitter.g.rotation.y=Math.atan2(target.x-cp.x,target.z-cp.z);
+      this.toss={ball,receive:true,target,flight:.55,block:true,hitter};
+      this.ring.position.copy(this.world(.7,lane));this.ring.position.y=.035;
+      this.mate=this.blockers.find(m=>Math.abs(toLocalOf(this.court,m.av.g.position.x,m.av.g.position.z)[1]-lane)<.1)||null;
+      const attackV=target.clone().sub(cp).multiplyScalar(1/.55);attackV.y+=4.9*.55;this.trajectory(cp,attackV);
     } else if (id === 'atk') {
       const target = this.world(1.45, 0);
       vbSendSet(ball, target.x, target.z, 3.05, 1.1, 2, '教練', from);this.trajectory(ball.m.position,ball.v);
@@ -772,7 +791,7 @@ const TUT_COACH = {
       const target = id === 'recv' ? this.recvTarget(this.index) : new THREE.Vector3(walk.x - Math.sin(walk.yaw) * 0.3, 0, walk.z - Math.cos(walk.yaw) * 0.3);
       const velocity = id === 'recv' ? solveShot(from, target.x, target.z, this.court, -this.sg, this.index === 2 ? 1.25 : 1.65)
         : new THREE.Vector3((target.x - from.x) / 1.15, (2.05 - from.y) / 1.15 + 4.9 * 1.15, (target.z - from.z) / 1.15);
-      vbLaunch(ball, from, velocity, id === 'set' ? 'set' : 'bump');this.trajectory(ball.m.position,ball.v);
+      vbLaunch(ball, from, velocity, 'bump');this.trajectory(ball.m.position,ball.v);
     }
   },
   incoming() {
@@ -797,11 +816,13 @@ const TUT_COACH = {
       if (!this.ball || this.settled || this.failed) return false;
       this.failed = true;
     }
-    if (['recv', 'set', 'atk', 'block', 'serve'].includes(name)) {
-      if(ball && ball===this.ball && this.settled)return false;
-      if (ball) this.owned.add(ball);
-      if (name === 'serve') this.lastServe = performance.now();
-      this.settled = true; this.next = performance.now() + (this.id === 'serve' ? 1500 : 2000);
+    if (['recv','set','atk','block','serve'].includes(name) && ball) {
+      if(this.pending || ball.floorHit || ball===this.ball && this.settled)return false;
+      this.owned.add(ball);this.ball=ball;this.settled=false;
+      if(name==='serve')this.lastServe=performance.now();
+      this.pending={name,data,zoneReached:false};this.next=Infinity;this.toss=null;
+      if(this.path)this.path.visible=false;
+      return false;
     }
     return true;
   },
@@ -817,7 +838,7 @@ const TUT_COACH = {
     }
     if (this.coach) this.face(this.coach);   // 拋球／餵球的教練一直面向玩家
     if (this.toss) this.tossStep(now);
-    if (this.coach && this.id === 'block') this.coachAnim(now);
+    if(this.id==='block'){if(this.coach)avDrive(this.coach,this.toss?AVP.setPush:AVP.ready,.5);for(const av of this.hitters)avDrive(av,this.toss?.hitter===av?AVP.airUp:av===this.activeHitter && now<this.hitUntil?AVP.spikeHit:AVP.ready,.5);}
     if(this.coach && this.id==='recv' && this.index>=2)avDrive(this.coach,this.toss?AVP.serveToss:now<this.hitUntil?AVP.spikeHit:AVP.ready,.5,0,false);
     const incoming = this.incoming();
     if (this.id === 'recv' && this.ring) {
@@ -825,17 +846,26 @@ const TUT_COACH = {
       if (incoming) this.ring.position.set(incoming.x, 0.035, incoming.z);
       const arc=this.ring.userData.progress;if(arc){arc.position.copy(this.ring.position);arc.position.y+=.003;}
     }
+    if(this.pending && this.zone && this.id==='recv'){
+      const p=this.ball.m.position;
+      if(p.y>=1.5 && p.y<=3.2 && this.ball.v.y<0 && Math.hypot(p.x-this.zone.p.x,p.z-this.zone.p.z)<=this.zone.r)this.pending.zoneReached=true;
+    }
     if (this.ball && !this.settled && (this.ball.floorHit || this.ball.rest > 0.3 || !balls.includes(this.ball))) {
-      this.settled = true; this.next = now + 2000;
-      if (!this.failed) { this.failed = true; window.VBTutorial.emit('feedMiss'); }
+      this.settled=true;this.next=now+2000;
+      const pending=this.pending;this.pending=null;
+      const floor=this.ball.floorHit;
+      const inside=!this.zone || (this.id==='recv'?pending?.zoneReached:floor && Math.hypot(floor[0]-this.zone.p.x,floor[1]-this.zone.p.z)<=this.zone.r);
+      if(this.afterLanding){const finish=this.afterLanding;this.afterLanding=null;finish();}
+      else if(pending && inside)window.VBTutorial.emit(pending.name,pending.data);
+      else if(!this.failed){this.failed=true;window.VBTutorial.emit('feedMiss',pending && this.zone?{reason:this.id==='recv'?'球沒有進入藍色舉球區。面向目標、站穩再接；重扣要蹲低卸力。':'落點未進入藍色區域，調整方向再試一次。'}:{});}
     }
     if (this.id === 'serve') {
-      if (!walk.hold && !walk.serve && !walk.jserve && this.next === Infinity) this.next = now + 1500;
+      if (!this.pending && !walk.hold && !walk.serve && !walk.jserve && this.next === Infinity) this.next = now + 1500;
       if (now >= this.next) this.give();
       return;
     }
     if (this.id === 'move' || now < this.next || !locked()) return;
-    if (this.id === 'block' && Math.hypot(walk.x - this.ring.position.x, walk.z - this.ring.position.z) > 0.8) return;
+    if (this.id === 'block' && this.index!==3 && Math.hypot(walk.x - this.ring.position.x, walk.z - this.ring.position.z) > 0.8) return;
     if (this.ball) { this.ball.m.removeFromParent(); const i = balls.indexOf(this.ball); if (i >= 0) balls.splice(i, 1); this.owned.delete(this.ball); }
     this.feed();
   },

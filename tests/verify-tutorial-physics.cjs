@@ -89,9 +89,9 @@ for (const speed of [.55, .7, 1]) for (const side of [-1, 1]) for (const rotatio
   for (let step = 0; step < 2; step++) { test.api.skip(); test.advance(); }
   let jumped = false;
   test.until(() => test.api.view().reps>0, () => {
-    if (g.coach.cj && !jumped && g.performance.now() - g.coach.cj >= 250) { jumped = true; g.vbJump('block'); }
+    if (g.coach.hitUntil && !jumped) { jumped = true; g.vbJump('block'); }
   }, 400);
-  assert(!g.coach.ball.floorHit, '碰手發生於落地前');
+  assert(g.coach.ball.floorHit, '碰手之後等落地才結算');
   test.api.stop(); assert.equal(g.balls.length, 0);
 }
 

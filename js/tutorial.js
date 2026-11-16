@@ -4,12 +4,12 @@
   const sections = [
     { id: 'move', name: '移動與視角', count: 7, enabled: true },
     { id: 'recv', name: '接球', count: 4, enabled: true },
-    { id: 'set', name: '舉球', count: 4, enabled: true },
+    { id: 'set', name: '舉球', count: 5, enabled: true },
     { id: 'atk', name: '攻擊', count: 4, enabled: true },
     { id: 'serve', name: '發球', count: 3, enabled: true },
     { id: 'block', name: '攔網', count: 4, enabled: true }
   ];
-  const empty = () => ({ v: 2, done: {}, at: {}, updated: 0 });
+  const empty = () => ({ v: 3, done: {}, at: {}, updated: 0 });
   const copy = value => JSON.parse(JSON.stringify(value));
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -22,7 +22,7 @@
     let saved = empty();
     try {
       const raw = JSON.parse(storage?.getItem('vb.tutorial') || 'null');
-      if (raw && raw.v === 2 && raw.done && raw.at && !Array.isArray(raw.done) && !Array.isArray(raw.at)) {
+      if (raw && raw.v === 3 && raw.done && raw.at && !Array.isArray(raw.done) && !Array.isArray(raw.at)) {
         for (const section of sections) {
           if (raw.done[section.id] === true) saved.done[section.id] = true;
           const at = raw.at[section.id];
@@ -36,7 +36,9 @@
     let seen = new Set(), failures = 0, dived = false, hint = '', skipped = false;
     let menu, panel, button, dots, lastMarkup = '';
     let reps=0, fraction=0, holdTime=0, turnMin=0, turnMax=0, looked=false, sprintSeen=false, repeatAt=0, landedSinceRep=true;
-    const required=()=>section?.id==='move' && [0,6].includes(step)?1:3;
+    const routes=[[[1,'high','4 號位高球']],[[2,'high3','3 號位高球'],[2,'wheelQuick','中間快攻'],[3,'high','2 號位高球']],[[7,'line3','後排 5 號位'],[4,'line3','後排 6 號位'],[5,'line3','後排 1 號位']],[[1,'flat','4 號位快球'],[3,'flat','2 號位快球']]];
+    const route=()=>routes[step]?.[Math.min(routes[step].length-1,Math.floor(reps/3))];
+    const required=()=>section?.id==='move' ? ([1,3].includes(step)?3:1) : section?.id==='set' && step<4 ? routes[step].length*3 : section?.id==='block' && step===3 ? 5 : 3;
     const drills = { atk: '攻擊', set: '舉球', block: '攔網', defense: '防守' };
     const drillHints = { atk: '後中 AI 先拋球給舉球手，再舉出指定球種。看一傳到位的時機助跑、起跳扣球。', set: '移動到球下方再舉球。約七成會到舉球區，其餘需要跑動修正。', block: '看對面舉球員把球送給誰，沿網移動，在攻擊手出手時起跳攔網。', defense: '看誰拋球，再看他的身體朝向，移動到直線或斜線上蹲低接球。' };
     const sets = { '1-high': '1｜左前高球', '1-flat': '1｜左前平球', '2-quick': '2｜中間快攻', '2-high3': '2｜3 號位高球', '3-high': '3｜右前高球', '3-flat': '3｜右前平球', '4-high': '4｜後排中間', '5-high': '5｜後排右側', '6-high': '6｜後排左側' };
@@ -59,11 +61,11 @@
       const texts = {
         move: [
           '點一下遊戲畫面，鎖定滑鼠。',
-          '用 '+movement+' 依序走到發球線、六米、三米線的黃圈，各停留 3 秒；走出圈外會重新計時。',
+          '用 '+movement+' 依序走到發球線、六米、三米線的黃圈，各停留 1 秒；走出圈外會重新計時。',
           '移動滑鼠，完整轉一圈 360°。地上圓圈會隨探索過的角度填綠，來回小幅擺頭不會累加。',
-          '先轉頭看向黃色圈，再走進圈內停留 3 秒。隨機換三個位置練習。',
+          '先轉頭看向黃色圈，再走進圈內停留 1 秒。隨機換三個位置練習。',
           '按住 '+key('shift')+' 加 '+movement+' 衝刺，將體力從 100% 跑到 0%。沒體力會變慢，放開衝刺讓體力恢復。',
-          '走進黃圈，按住 '+key('crouch')+' 蹲滿 3 秒，感受視野從 85° 平滑擴大到 100°。離開圈或放開按鍵都重新計時，共三個位置。',
+          '走進黃圈，按住 '+key('crouch')+' 蹲滿 1 秒，感受視野從 85° 平滑擴大到 100°。離開圈或放開按鍵都重新計時，這項做一次。',
           '按 '+key('p')+' 切換視角，看看自己。'
         ],
         recv: [
@@ -90,13 +92,14 @@
           `拿著球按 ${key(' ')} 拋球起跳，等球發亮，在空中按住左鍵蓄力再放開跳發；改用右鍵可以跳飄，這一步請完成跳發。`
         ],
         block: [
-          `走進網前黃色圈（離網 1 公尺內）。看教練把球拋起來，他起跳時你也按 ${key('b')} 起跳攔網。`,
+          `走進網前黃色圈（離網 1 公尺內）。看地面舉球員把球舉給箱上的攻擊手，球到扣球高度時按 ${key('b')} 起跳攔網。`,
           `按 ${key('b')} 起跳後，在空中左右移動滑鼠移手，練習封直線或斜線。`,
-          `教練拋球、起跳扣球時跟著按 ${key('b')}，讓球碰到攔網手；任何碰手都算。`,
-          `站在隊友旁 1.5 公尺內，教練起跳時按 ${key('b')}，隊友會跟你一起跳，攔到球。`
+          `地面舉球員傳給箱上的攻擊手，扣球時按 ${key('b')}，讓球碰到攔網手；任何碰手都算。`,
+          `你是攔中：看舉球往哪邊，跑到 2 號或 4 號位隊友旁 1.5 公尺內，扣球時按 ${key('b')}，隊友會跟你一起跳，完成五顆併攔。`
         ]
       };
-      return texts[section.id]?.[step] || '';
+      if(section.id==='set')return step===4 ? '<strong class="vb-tut-route">本球：舉球員第二球側吊 · '+(reps+1)+' / 3</strong>教練先傳第一球，跳起來按右鍵，將第二球往側邊吊過網。' : '<strong class="vb-tut-route">本球：'+route()[2]+' · '+(reps%3+1)+' / 3</strong>按住 '+key('q')+' 選指定球路，球到額頭前上方時放開；同一球路連續練三顆。';
+      return (texts[section.id]?.[step] || '') + (section.id==='recv' && [1,2].includes(step)?' 面向藍色舉球區，把球傳進區域；等球落地再換球。': ['atk','serve'].includes(section.id) && !(section.id==='atk' && step===0)?' 瞄準對面藍色指定區域，落地進區才完成。':'');
     }
     function view() {
       return { phase, section: section?.id || null, name: section?.name || '', step, count: section?.count || 0,
@@ -105,6 +108,7 @@
     }
     function render() {
       options.changed?.(view());
+      if(panel)panel.ownerDocument.body.classList.toggle('vb-tut-stamina',section?.id==='move' && step===4 && phase==='running');
       if(dots){dots.hidden=!['running','success'].includes(phase);dots.innerHTML=Array.from({length:required()},(_,i)=>'<i class="'+(i<reps?'done':'')+'"></i>').join('')+'<span>'+reps+' / '+required()+(fraction>0 && phase==='running'?' · '+Math.round(fraction*100)+'%':'')+'</span>';}
       if (!panel) return;
       menu.hidden = !['menu','lessons','setup'].includes(phase);
@@ -193,6 +197,7 @@
     }
     function succeed(skip = false) {
       if (phase !== 'running') return;
+      if(!skip && coach.deferSuccess?.(()=>succeed()))return;
       if (!(section?.id === 'block' && /攔網成功|碰到球/.test(hint))) hint = '';   // 做到了：清掉舊的失敗提示（攔網保留成功的那句）
       if(!skip){
         if(repeatAt)return;
@@ -215,7 +220,7 @@
       if (phase !== 'running' || repeatAt) return;
       if (name === 'recvMiss' || name === 'whiff' || name === 'feedMiss') {
         if (name !== 'whiff') failures++;
-        hint = missHint();
+        hint = data.reason || missHint();
 
       }
       if (section.id === 'recv') {
@@ -223,14 +228,11 @@
         if (name === 'recv' && (step === 1 || step === 2 && data.crouch || step === 3 && dived && data.dive)) succeed();
       }
       if (section.id === 'set' && name === 'set') {
-        if (data.manual) {
-          if (step === 3) { if (data.fraction <= .2) seen.add('fast'); if (data.fraction >= .8) seen.add('slow'); }
-          if (step === 0 && !data.back || step === 1 && data.back || step === 2 && data.angle >= 40 * Math.PI / 180 || step === 3 && seen.has('fast') && seen.has('slow')) succeed();
-          return;
-        }
-        if (step === 1 && [2, 3].includes(data.n)) seen.add(data.n);
-        if (step === 0 && data.n === 1 || step === 1 && seen.size === 2 || step === 2 && [4, 5, 7].includes(data.n) || step === 3 && data.menu && data.def === false) succeed();
+        const wanted=route();
+        if(wanted && data.n===wanted[0] && data.v===wanted[1])succeed();
+        else hint='這顆要練「'+(wanted?.[2]||'第二球側吊')+'」，請照提示再試一次。';
       }
+      if(section.id==='set' && step===4 && name==='atk' && data.dump && data.air)succeed();
       if (section.id === 'atk') {
         if (name === 'whiff') hint = '等球發亮、掉到身前上方再放開左鍵，太早揮會打不到。';
         if (step === 0 && name === 'jump' && data.block === false && data.speed >= 2) succeed();
@@ -239,8 +241,7 @@
       if (section.id === 'serve' && name === 'serve' && data.type === ['std', 'float', 'jump'][step]) succeed();
       if (section.id === 'block') {
         if(step===1 && name==='jump' && data.block)landedSinceRep=true;
-        if (step === 0 && name === 'jump' && data.block && snapshot && Number.isFinite(snapshot.nearNet) && snapshot.nearNet >= 0 && snapshot.nearNet <= 1) succeed();
-        if (name === 'block' && (step === 2 || step === 3 && data.mate === true)) {
+        if (name === 'block' && (step<=2 && (step!==1 || Math.abs(data.aim)>=.2) || step === 3 && data.mate === true)) {
           hint = data.kind === 'stuff' ? '攔網成功！' : '碰到球了！'; succeed();
         }
       }
@@ -271,16 +272,15 @@
         if([1,3,5].includes(step)){
           if(step===3 && target && !inCircle){const bearing=Math.atan2(-(target.x-state.x),-(target.z-state.z));if(Math.abs(Math.atan2(Math.sin(bearing-state.yaw),Math.cos(bearing-state.yaw)))<.3)looked=true;}
           const valid=inCircle && (step!==5 || state.crouch) && (step!==3 || looked);
-          holdTime=valid?holdTime+dt:0;fraction=Math.min(1,holdTime/3);
-          hint=valid?'持續 '+holdTime.toFixed(1)+' / 3.0 秒':step===5?'走入圈內並按住蹲下，放開就重新計時。':step===3&&!looked?'先轉頭看向目標圈。':'走進圈內停留，離開會重新計時。';
-          if(holdTime>=3-1e-6)succeed();
+          holdTime=valid?holdTime+dt:0;fraction=Math.min(1,holdTime/1);
+          hint=valid?'持續 '+holdTime.toFixed(1)+' / 1.0 秒':step===5?'走入圈內並按住蹲下，放開就重新計時。':step===3&&!looked?'先轉頭看向目標圈。':'走進圈內停留，離開會重新計時。';
+          if(holdTime>=1-1e-6)succeed();
         }
         if(step===4){sprintSeen=sprintSeen||state.sprint;fraction=Math.max(0,Math.min(1,1-(state.stamina??1)));hint='體力 '+Math.round((state.stamina??1)*100)+'% · 持續衝刺直到耗盡';if(sprintSeen && state.stamina<=0)succeed();}
         if(step===6 && previous && state.tp!==previous.tp)succeed();
         coach.progress?.(fraction);
       }
       if (section.id === 'recv' && step === 0 && state.incoming && Math.hypot(state.x - state.incoming.x, state.z - state.incoming.z) <= 0.8) succeed();
-      if (section.id === 'block' && step === 1 && landedSinceRep && state.air && state.airBlock && Math.abs(state.blkAim) >= 0.2) succeed();
       if (now() - since > 12000 && !hint) hint = '可以再試一次，或放開滑鼠後按「略過這步」。';
       previous = { ...state, time: now() }; render();
     }
@@ -307,6 +307,7 @@
         .vb-tut-panel button { margin: 0; padding: 4px 8px; }
       `;
       style.textContent+='.vb-tut-progress{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:151;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#14212cdd;border-radius:24px;color:#fff;font:13px sans-serif;pointer-events:none}.vb-tut-progress[hidden]{display:none}.vb-tut-progress i{width:15px;height:15px;border:2px solid #f5cd4f;border-radius:50%;background:#263646}.vb-tut-progress i.done{background:#45d58a;border-color:#78f5b4}';
+      style.textContent+='.vb-tut-route{display:block;font-size:21px;color:#ffdc68;padding:8px 0}.vb-tut-stamina .sta{width:min(560px,70vw);height:32px;bottom:100px}.vb-tut-stamina .sta b{font-size:19px}';
       document.head.append(style);
       menu = document.createElement('section'); menu.className = 'vb-tut-menu'; menu.setAttribute('aria-label', '新手教學選單');
       panel = document.createElement('section'); panel.className = 'vb-tut-panel'; panel.setAttribute('aria-label', '教學步驟');

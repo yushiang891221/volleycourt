@@ -80,9 +80,9 @@ function engine() {
   vm.runInContext('Math.random = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', c);   /* 固定亂數：教練落點每次一樣，測試結果穩定 */
   for (const name of ['toWorldOf', 'toLocalOf', 'courtAt', 'vbCourt', 'solveShot', 'vbPredict', 'vbMine', 'vbLaunch',
     'netFloorHit', 'netBallSound', 'vbNetCourts', 'updateBalls', 'vbJumpVy', 'vbSpikeCamOffset', 'vbClearAir', 'vbJump', 'vbAirStep', 'vbHand', 'vbAttack', 'vbSwingStep', 'vbShotVel',
-    'vbAtServeLine', 'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
+    'vbIsSetter', 'vbAtServeLine', 'vbChargeOf', 'vbHitAttack', 'vbReceive', 'vbDive', 'vbRecvStep', 'vbDoReceive', 'vbNext',
     'vbSet', 'vbSetStep', 'vbSpot', 'vbSendSet', 'vbDoSet', 'vbBlockTest', 'vbBlockOutcome', 'vbBlockApply',
-    'staGame', 'staPay', 'staUse', 'staTick', 'staSprint', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {
+    'staGame', 'staPay', 'staUse', 'staTick', 'staSprint', 'serveVel', 'grabBall', 'startServe', 'updateServe', 'startJumpServe', 'updateJumpServe', 'jumpServeHit', 'serveLaunch']) {
     if (name === 'updateBalls') vm.runInContext(require('./engine-for-tests.cjs').engineScript(gym), c);   /* B1：球的物理在 engine/ball.js */
     vm.runInContext(source(name), c);
   }

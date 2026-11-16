@@ -431,7 +431,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .ch-tile span { font-size: 12px; font-weight: 700; }
 .ch-tile[aria-pressed="true"] { border-color: #F2B705; box-shadow: 0 0 0 2px #F2B705; }
 /* 體力條 */
-.sta { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); width: 240px; height: 9px; border-radius: 6px; background: rgba(15,23,36,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); pointer-events: none !important; z-index: 7; }
+.sta { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); width: min(360px, 65vw); height: 20px; border-radius: 6px; background: rgba(15,23,36,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); pointer-events: none !important; z-index: 7; }
 .sta[hidden] { display: none !important; }
 .sta b { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; }
 .sta i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v, 1) * 100%); border-radius: 6px; background: #3DD68C; }
@@ -439,7 +439,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .sta[data-k="lock"] i { background: #FF5A5F; animation: staBlink .5s steps(2) infinite; }
 @keyframes staBlink { 50% { opacity: .35; } }
 .walk-ui.rk .sta { bottom: 78px; }
-@media (pointer: coarse) { .sta { bottom: auto; top: 56px; width: 180px; } .walk-ui.rk .sta { bottom: auto; top: 108px; } }
+@media (pointer: coarse) { .sta { bottom: auto; top: 56px; width: min(300px, 60vw); } .walk-ui.rk .sta { bottom: auto; top: 108px; } }
 /* 排球時機提示 */
 .vb-cue { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); padding: 6px 18px; border-radius: 999px; font-size: 24px; font-weight: 900; letter-spacing: .04em; color: #fff; background: rgba(15,23,36,.55); pointer-events: none !important; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .vb-cue[hidden] { display: none !important; }
@@ -697,3 +697,6 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .wk-keys span.pressed{background:#ffd44b;border-color:#ffe793;color:#17202e;box-shadow:0 0 12px #ffd44b66}.wk-keys span.pressed kbd,.wk-keys span.pressed small{color:#17202e}.wk-keys[hidden]{display:none!important}
 .set-wheel.all-wheel{width:min(520px,90vmin);height:min(520px,90vmin);margin:0;transform:translate(-50%,-50%);border:2px solid #bac6d080;box-shadow:0 12px 50px #0008;background:var(--sector),repeating-conic-gradient(from -60deg,#bac6d060 0deg 1deg,transparent 1deg 60deg),#101720d9!important;backdrop-filter:blur(4px)}
 .all-wheel .sw-opt{width:145px;max-width:29%;font-size:18px;line-height:1.5;color:#fff;text-shadow:0 1px 3px #000;pointer-events:auto}.all-wheel .sw-opt small{display:block;font-size:14px;color:#d1dae4}.all-wheel .sw-opt{box-sizing:border-box;padding:5px;background:transparent;border-color:transparent}.all-wheel .sw-opt.on{color:#fff5bb;background:transparent;border-color:transparent}.sw-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34%;height:34%;font-size:20px;border-radius:50%;background:#17202ff5;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ffffff50;text-align:center;color:white;pointer-events:none}.sw-center small{font-size:13px;color:#bfcbd8;margin-top:6px}.all-wheel #set-cur{z-index:3}
+
+.sta b { font-size: 15px; font-weight: 800; left: 0; right: auto; top: -6px; transform: translateY(-100%); }
+.sta { border: 2px solid #ffffffaa; box-shadow: 0 2px 12px #0009; }

@@ -467,7 +467,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .ch-tile span { font-size: 12px; font-weight: 700; }
 .ch-tile[aria-pressed="true"] { border-color: #F2B705; box-shadow: 0 0 0 2px #F2B705; }
 /* 體力條 */
-.sta { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); width: 240px; height: 9px; border-radius: 6px; background: rgba(15,23,36,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); pointer-events: none !important; z-index: 7; }
+.sta { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); width: min(360px, 65vw); height: 20px; border-radius: 6px; background: rgba(15,23,36,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); pointer-events: none !important; z-index: 7; }
 .sta[hidden] { display: none !important; }
 .sta b { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; }
 .sta i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v, 1) * 100%); border-radius: 6px; background: #3DD68C; }
@@ -475,7 +475,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .sta[data-k="lock"] i { background: #FF5A5F; animation: staBlink .5s steps(2) infinite; }
 @keyframes staBlink { 50% { opacity: .35; } }
 .walk-ui.rk .sta { bottom: 78px; }
-@media (pointer: coarse) { .sta { bottom: auto; top: 56px; width: 180px; } .walk-ui.rk .sta { bottom: auto; top: 108px; } }
+@media (pointer: coarse) { .sta { bottom: auto; top: 56px; width: min(300px, 60vw); } .walk-ui.rk .sta { bottom: auto; top: 108px; } }
 /* 排球時機提示 */
 .vb-cue { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); padding: 6px 18px; border-radius: 999px; font-size: 24px; font-weight: 900; letter-spacing: .04em; color: #fff; background: rgba(15,23,36,.55); pointer-events: none !important; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .vb-cue[hidden] { display: none !important; }
@@ -733,6 +733,9 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .wk-keys span.pressed{background:#ffd44b;border-color:#ffe793;color:#17202e;box-shadow:0 0 12px #ffd44b66}.wk-keys span.pressed kbd,.wk-keys span.pressed small{color:#17202e}.wk-keys[hidden]{display:none!important}
 .set-wheel.all-wheel{width:min(520px,90vmin);height:min(520px,90vmin);margin:0;transform:translate(-50%,-50%);border:2px solid #bac6d080;box-shadow:0 12px 50px #0008;background:var(--sector),repeating-conic-gradient(from -60deg,#bac6d060 0deg 1deg,transparent 1deg 60deg),#101720d9!important;backdrop-filter:blur(4px)}
 .all-wheel .sw-opt{width:145px;max-width:29%;font-size:18px;line-height:1.5;color:#fff;text-shadow:0 1px 3px #000;pointer-events:auto}.all-wheel .sw-opt small{display:block;font-size:14px;color:#d1dae4}.all-wheel .sw-opt{box-sizing:border-box;padding:5px;background:transparent;border-color:transparent}.all-wheel .sw-opt.on{color:#fff5bb;background:transparent;border-color:transparent}.sw-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34%;height:34%;font-size:20px;border-radius:50%;background:#17202ff5;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ffffff50;text-align:center;color:white;pointer-events:none}.sw-center small{font-size:13px;color:#bfcbd8;margin-top:6px}.all-wheel #set-cur{z-index:3}
+
+.sta b { font-size: 15px; font-weight: 800; left: 0; right: auto; top: -6px; transform: translateY(-100%); }
+.sta { border: 2px solid #ffffffaa; box-shadow: 0 2px 12px #0009; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -9673,7 +9676,7 @@ let STA_CFG = { ...STA_DEF }; try { Object.assign(STA_CFG, JSON.parse(localStora
 // 6 對 6 專職：做自己位置專長的動作少耗（spec %）——舉球：舉球、二次球吊；大砲：扣、起跳、接球、撲救；舉對：扣、起跳、攔網；攔中：攔網、起跳（快攻）、扣
 const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP: ['spike', 'jump', 'block'], MB: ['block', 'jump', 'spike'] };
 function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
-function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100; return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
+function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100 * (VM.on ? 0.7 : 1); return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
 function staPay(kind, mul = 1) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe()) * mul); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(vmIsPractice() || window.__rkOn || VM.on || VB.npc); }
@@ -9683,7 +9686,7 @@ function staSprint(want, dt) {
   if (!staGame()) return want;
   if (!want) return false;
   if (STA.lock) { staWarn(); return false; }
-  STA.v = Math.max(0, STA.v - (staCfg().sprint / 100) * dt); STA.useT = performance.now();
+  STA.v = Math.max(0, STA.v - staCost('sprint', vmMe()) * dt); STA.useT = performance.now();
   if (STA.v <= 0) { STA.lock = true; staWarn(); return false; }
   return true;
 }
@@ -9697,6 +9700,7 @@ function staTick(dt) {
   }
   if (STA.lock && STA.v >= 0.25) STA.lock = false;
   if (!el) return;
+  const staminaLabel=el.querySelector('b');if(staminaLabel)staminaLabel.textContent='體力 '+Math.round(STA.v*100)+'%';
   el.hidden = false; el.style.setProperty('--v', STA.v.toFixed(3)); const k = STA.lock ? 'lock' : STA.v < 0.3 ? 'low' : ''; if (el.dataset.k !== k) el.dataset.k = k;
 }
 const VB = { assist: true, target: null, setSpot: null, npc: null, ringLand: null, ringSet: null, ts: 0.7 };
@@ -10031,7 +10035,7 @@ function vbAttack(tip, chg = null) {
   }
   if ((walk.swing && !walk.swing.done) || walk.sit || walk.serve) return;   // 上一下揮完了（收手中）可以馬上再揮
   const ct0 = tip ? vbCourt() : null;
-  walk.swing = { t: 0, tip: !!tip, done: false, prev: null, chg, dump: !!(ct0 && Math.abs(ct0.lx) < 4.5 && vbIsSetter()) };   // dump＝舉球員吊球（姿勢是雙手往上推，不是拉弓）
+  walk.swing = { t: 0, tip: !!tip, done: false, prev: null, chg, dump: !!(tip && ct0 && Math.abs(ct0.lx) < 4.5 && vbIsSetter() && (!VM.on || vmSecond())) };   // dump＝舉球員吊球（姿勢是雙手往上推，不是拉弓）
   pose = 'cock'; hands.visible = true;
 }
 // ---- 扣球蓄力：空中按住左鍵蓄力、放開才揮臂（放開後 0.6 秒內球到手邊就打）
@@ -10111,7 +10115,7 @@ function vbHitAttack(b, d, tip, chg = null) {
   const C = air && !tip ? vbChargeOf(chg == null ? 0.55 : chg, chg == null ? null : ROLE_SUPER[vbMyRole()]) : null;   // 蓄力（沒有蓄力的手機按鈕＝中等力道）
   if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air, chg, zone: C && C.zone, pw: C && C.pw };
   const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-  const dump = tip && ct && Math.abs(ct.lx) < 4.5 && vbIsSetter();   // 舉球員吊球（舉球員才有）：跳起來推＝貼網；沒跳＝只能送高球（下面另外算）
+  const dump = tip && ct && Math.abs(ct.lx) < 4.5 && vbIsSetter() && (!VM.on || vmSecond());   // 舉球員吊球（舉球員才有）：跳起來推＝貼網；沒跳＝只能送高球（下面另外算）
   // 深淺：平視打到網後 6.6 m，越往下看落點越近、越釘（往下看約 35 度＝網後 2 m）；按著 S 是 3.4 m 短斜線；吊球落在網後 1.5～2.5 m
   const down = clamp((-walk.pitch - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
   const depth = dump ? 1 + Math.random() : tip ? 1.5 + Math.random() : Math.min(6.6, 6.6 - 4.6 * down);
@@ -10136,7 +10140,7 @@ function vbHitAttack(b, d, tip, chg = null) {
   }
   let dumpNote = '';
   if (dump) {
-    const sg = Math.sign(ct.lx) || 1, [plx] = toLocalOf(ct.c, p.x, p.z), netH = NETS[state.net].h, lz0 = (Math.random() - 0.5) * 0.6;
+    const sg = Math.sign(ct.lx) || 1, [plx] = toLocalOf(ct.c, p.x, p.z), netH = NETS[state.net].h, lz0 = clamp(toLocalOf(ct.c,p.x,p.z)[1]-sg*2,-3.6,3.6);
     const arc = (dep, lz, clear, Tmin) => { const [tx, tz] = toWorldOf(ct.c, -sg * dep, lz), f = clamp(Math.abs(plx) / (Math.abs(plx) + dep), 0.05, 0.95), base = p.y + (BALL_R - p.y) * f, T = Math.max(Tmin, Math.sqrt(Math.max(0.02, clear - base) / (4.9 * f * (1 - f)))); return new THREE.Vector3((tx - p.x) / T, (BALL_R - p.y) / T + 4.9 * T, (tz - p.z) / T); };
     if (air) { v = arc(3, lz0, netH + BALL_R + 0.12, 0.55); dumpNote = '舉球員吊球！'; }   // 跳起來雙手往右推：剛好擦過網子上緣、落在對面三米線正中間
     else if (p.y < netH - 0.15 && Math.random() < 0.45) {   // 沒跳、球又比網子低：推不上去，掛網
@@ -10147,7 +10151,7 @@ function vbHitAttack(b, d, tip, chg = null) {
   vbMine(b);
   b.spike = ct ? { c: ct.c, sg: Math.sign(ct.lx) || 1 } : null;
   vbLaunch(b, p, v, tip ? 'tip' : air ? 'spike' : 'hit', q);
-  tutEv('atk', { tip, air, chg, zone: C && C.zone, q }, b);
+  tutEv('atk', { tip, air, dump, chg, zone: C && C.zone, q }, b);
   if (VM.on) {
     b.spike = null; vmOnTouch(b, vmMe(), tip ? 'tip' : air ? 'spike' : 'hit');
     // 正式規則：球還在對面的空間就打（手伸過網）＝過網擊球；起跳攻擊時身體離網太近＝觸網
@@ -10270,6 +10274,9 @@ function vbDoReceive(o, dive) {
   else { const e = (1 - q) * 2.4 + 0.6 * tilt; tx += rkGauss() * e; tz += rkGauss() * e; T = 1.25 + (1 - q) * 0.35 * (Math.random() - 0.3); }
   // 接球的落點留在自己這邊（離網至少 0.9 m）：偏掉也是偏在自己場上，不會平平的從網子下面飄過去
   if (ct && !pep && !back && !intoNet) { const sg = Math.sign(ct.lx) || 1, [lx, lz] = toLocalOf(ct.c, tx, tz); if (lx * sg < 0.9 && lx * sg > 0) {   /* 落點太靠網才往後推；面向對面接過網的就讓它過去 */ [tx, tz] = toWorldOf(ct.c, sg * (0.9 + Math.random() * 0.8), lz); if (ty < 1.5) { ty = 1.8; T = 1.1; } } }
+  // Keep the rescue arc after quality/noise adjustments.
+  if(dive){T=Math.max(T,1.8);ty=Math.max(ty,1.5);}
+  if(b.tutorialHeavy && !dive && !walk.crouch){tx=walk.x+fx*10;tz=walk.z+fz*10;ty=.4;T=.8;note='重扣需要蹲低卸力';}
   const plat = new THREE.Vector3(walk.x + fx * (dive ? 0.95 : 0.42), dive ? Math.max(0.15, p.y) : 0.72 + (walk.air ? walk.air.y : 0), walk.z + fz * (dive ? 0.95 : 0.42)), cp = p.clone().lerp(plat, 0.6);   // 前臂平台
   b.spike = null; vbMine(b);
   pose = 'bumpHit'; hands.visible = true; walk.flash = 0.45; skill.dip = 0.05; staPay('bump');
@@ -10986,7 +10993,7 @@ async function vmGotResult(d) {
 }
 // 我是不是這一波的舉球員（比賽：這一波指定的舉球員，或六人制專職舉球；練習：都算）
 function vbIsSetter() {
-  if (!VM.on) return true;
+  if (!VM.on) return !window.VBTutorial?.active || window.VBTutorial.view().section==='set';
   const me = vmMe(), t = vmTeamOf(me), P = VM.host ? VM.poss[t] : null, setter = P ? P.setter : VM.remoteSetters?.[t];
   return setter ? setter === me : !!(VM.six && VM.role && VM.role[me] === 'S');
 }
@@ -12169,11 +12176,20 @@ const TUT_COACH = {
     if(index===5)return this.world([5,6,4][rep],[-1.8,1.8,0][rep]*this.sg);
     return new THREE.Vector3(walk.x,0,walk.z);
   },
+  deferSuccess(done){if(this.ball && !this.ball.floorHit && !this.settled){this.afterLanding=done;return true;}return false;},
   roundComplete(){if(this.id!=='move'){this.settled=true;this.next=performance.now()+1800;}},
   repeat(id,index,rep){
     this.rep=rep;
-    if(id==='move'){if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}const p=this.moveTarget(index,rep);this.ring.position.set(p.x,.035,p.z);return {x:p.x,z:p.z};}
-    this.next=Math.max(this.next===Infinity?0:this.next,performance.now()+900);return null;
+    if(id==='move'){if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}const p=this.moveTarget(index,rep);if(this.ring)this.ring.position.set(p.x,.035,p.z);return {x:p.x,z:p.z};}
+    this.updateZone();this.next=Math.max(this.next===Infinity?0:this.next,performance.now()+900);return null;
+  },
+  updateZone(){
+    const needed=this.id==='recv' && [1,2].includes(this.index) || this.id==='atk' && this.index>0 || this.id==='serve';
+    if(!needed)return;
+    const recv=this.id==='recv',z=recv?-1.2*this.sg:[-2.4,0,2.4][(this.rep||0)%3]*this.sg;
+    this.zone={p:this.world(recv?1.8:this.id==='atk' && this.index===3?-2:-6,z),r:recv?1.8:2};
+    if(!this.zoneMesh){this.zoneMesh=this.circle(this.zone.p,0x65dfff);this.zoneMesh.scale.set(this.zone.r/.8, this.zone.r/.8,1);}
+    this.zoneMesh.position.set(this.zone.p.x,.045,this.zone.p.z);
   },
   avatar(p) {
     const av = makeAvatar('#30A46C', myChar());
@@ -12310,7 +12326,7 @@ const TUT_COACH = {
       if (object.isMesh || object.isLine) { object.geometry.dispose(); object.material.dispose(); }
     }
     this.objects = []; this.mate = null; this.ring = null; this.ball = null; this.next = 0;
-    this.coach = null; this.toss = null; this.cj = 0; this.path=null;this.hitUntil=0;
+    this.coach = null; this.toss = null; this.cj = 0; this.pending=null;this.afterLanding=null;this.zone=null;this.zoneMesh=null;this.blockers=[];this.hitters=[];this.activeHitter=null;this.path=null;this.hitUntil=0;
     if (this.held) {
       this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
       this.held = null;
@@ -12329,7 +12345,7 @@ const TUT_COACH = {
     if (VB.npc) vbNpcToggle();
     if (walk.hold) { walk.hold.removeFromParent(); walk.hold = null; }
     skill.mode = null; walk.sit = null; walk.spike = null; walk.keys.clear();
-    this.place(id === 'move' ? 7 : id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
+    this.place(id === 'move' ? 12 : id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
     return true;
   },
   step(id, index) {
@@ -12337,25 +12353,28 @@ const TUT_COACH = {
     this.settled = false; this.failed = false; this.next = performance.now() + 1200;
     if (id === 'move') {
       if(index===4){STA.v=1;STA.lock=false;STA.useT=performance.now();}
-      const p=this.moveTarget(index);this.ring=this.circle(p);this.progress(0);return {x:p.x,z:p.z};
+      const p=this.moveTarget(index);if(index!==4)this.ring=this.circle(p);this.progress(0);return {x:p.x,z:p.z};
     }
     this.place(id === 'recv' ? 5 : id === 'serve' ? 10 : id === 'block' ? 0.7 : 1.8, 0);
+    this.updateZone();
     if (id === 'serve') {
       this.next = Math.max(performance.now(), this.lastServe + 1500);
       if (performance.now() >= this.next) this.give();
       return null;
     }
-    this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0));
+    this.coach = this.avatar(this.world(id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? -1.5*this.sg : 0));
     if(id==='recv' && index>=2){
       const base=this.world(-1.25,0);const stool=new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),new THREE.MeshStandardMaterial({color:0x876849}));
       stool.position.copy(base);stool.position.y=.425;scene.add(stool);this.objects.push(stool);base.y=.85;this.coach.g.position.copy(base);
     }
     if (id === 'block') {
-      this.ring = this.circle(this.world(0.7, 0));
-      if (index === 3) {
-        const av = this.avatar(this.world(0.7, 1.1)); av.g.rotation.y = walk.yaw + Math.PI;   // 隊友跟你一樣面向網子
-        this.mate = { av, jumping: false };
+      this.coach.g.position.copy(this.world(-3,1.4*this.sg));
+      this.ring=this.circle(this.world(.7,0));
+      for(const z of (index===3?[-3.25,0,3.25]:[0])){
+        const base=this.world(-1.25,z),box=new THREE.Mesh(new THREE.BoxGeometry(.85,.85,.85),new THREE.MeshStandardMaterial({color:0x876849}));
+        box.position.copy(base);box.position.y=.425;scene.add(box);this.objects.push(box);base.y=.85;this.hitters.push(this.avatar(base));
       }
+      if(index===3)for(const z of [-3.25,3.25]){const av=this.avatar(this.world(.7,z));av.g.rotation.y=walk.yaw+Math.PI;this.blockers.push({av,jumping:false});}
     } else this.ring = this.circle(this.world(id === 'recv' ? 5 : 1.45, 0));
     return null;
   },
@@ -12372,22 +12391,29 @@ const TUT_COACH = {
   feed() {
     const id = this.id;
     const hard=id==='recv' && this.index>=2;
-    const from = this.world(hard?-1.25:id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? 1.5 : 0, hard?3.15:id === 'block' ? this.TOSS.y0 : 2.2);
+    const from = this.world(hard?-1.25:id === 'recv' ? -4 : id === 'block' ? -2 : 0.9, id === 'set' || id === 'atk' ? -1.5*this.sg : 0, hard?3.15:id === 'block' ? this.TOSS.y0 : 2.2);
     const mesh = newBallMesh(); mesh.position.copy(from);
     const ball = { m: mesh, v: new THREE.Vector3(), rest: 0 };
     mesh.userData.ball = ball; ballsGroup.add(mesh); balls.push(ball); this.owned.add(ball);
     this.ball = ball; this.settled = false; this.failed = false; this.next = Infinity;
     if(hard){
+      ball.tutorialHeavy=this.index===2;
       const target=this.recvTarget(this.index);target.y=BALL_R;
-      const flight=this.index===3?.65:.55;
+      const flight=this.index===3?.65:.32;
       vbLaunch(ball,from,new THREE.Vector3(0,2.8,0),'set');
       this.toss={ball,receive:true,target,flight};
       const contact=from.clone();contact.y=3.25;const v=target.clone().sub(contact).multiplyScalar(1/flight);v.y+=4.9*flight;this.trajectory(contact,v);
     } else if (id === 'block') {
-      /* 攔網：教練先把球往上拋（預兆），球落回扣球高度時起跳扣過來（frame 裡做） */
-      vbLaunch(ball, from, new THREE.Vector3(0, this.TOSS.vy, 0), 'set');
-      this.toss = { ball, t0: performance.now(), apex: 0 };
-      const cp=this.world(-2,0,this.TOSS.hitY),v=this.world(-1,0).sub(this.world(-2,0)).multiplyScalar(this.TOSS.speed);v.y=-.5;this.trajectory(cp,v);
+      const lane=this.index===3?((this.rep||0)%2===0?-3.25:3.25):0;
+      const hitter=this.hitters.find(av=>Math.abs(toLocalOf(this.court,av.g.position.x,av.g.position.z)[1]-lane)<.1);
+      const cp=this.world(-1.25,lane,3.25),feedOrigin=this.coach.g.position.clone();feedOrigin.y=2.1;
+      const v=cp.clone().sub(feedOrigin).multiplyScalar(1/1.18);v.y+=4.9*1.18;ball.m.position.copy(feedOrigin);vbLaunch(ball,feedOrigin,v,'set');
+      const target=this.world(6,lane+(this.rep%2?1:-1)*.7,BALL_R);
+      this.activeHitter=hitter;if(hitter)hitter.g.rotation.y=Math.atan2(target.x-cp.x,target.z-cp.z);
+      this.toss={ball,receive:true,target,flight:.55,block:true,hitter};
+      this.ring.position.copy(this.world(.7,lane));this.ring.position.y=.035;
+      this.mate=this.blockers.find(m=>Math.abs(toLocalOf(this.court,m.av.g.position.x,m.av.g.position.z)[1]-lane)<.1)||null;
+      const attackV=target.clone().sub(cp).multiplyScalar(1/.55);attackV.y+=4.9*.55;this.trajectory(cp,attackV);
     } else if (id === 'atk') {
       const target = this.world(1.45, 0);
       vbSendSet(ball, target.x, target.z, 3.05, 1.1, 2, '教練', from);this.trajectory(ball.m.position,ball.v);
@@ -12395,7 +12421,7 @@ const TUT_COACH = {
       const target = id === 'recv' ? this.recvTarget(this.index) : new THREE.Vector3(walk.x - Math.sin(walk.yaw) * 0.3, 0, walk.z - Math.cos(walk.yaw) * 0.3);
       const velocity = id === 'recv' ? solveShot(from, target.x, target.z, this.court, -this.sg, this.index === 2 ? 1.25 : 1.65)
         : new THREE.Vector3((target.x - from.x) / 1.15, (2.05 - from.y) / 1.15 + 4.9 * 1.15, (target.z - from.z) / 1.15);
-      vbLaunch(ball, from, velocity, id === 'set' ? 'set' : 'bump');this.trajectory(ball.m.position,ball.v);
+      vbLaunch(ball, from, velocity, 'bump');this.trajectory(ball.m.position,ball.v);
     }
   },
   incoming() {
@@ -12420,11 +12446,13 @@ const TUT_COACH = {
       if (!this.ball || this.settled || this.failed) return false;
       this.failed = true;
     }
-    if (['recv', 'set', 'atk', 'block', 'serve'].includes(name)) {
-      if(ball && ball===this.ball && this.settled)return false;
-      if (ball) this.owned.add(ball);
-      if (name === 'serve') this.lastServe = performance.now();
-      this.settled = true; this.next = performance.now() + (this.id === 'serve' ? 1500 : 2000);
+    if (['recv','set','atk','block','serve'].includes(name) && ball) {
+      if(this.pending || ball.floorHit || ball===this.ball && this.settled)return false;
+      this.owned.add(ball);this.ball=ball;this.settled=false;
+      if(name==='serve')this.lastServe=performance.now();
+      this.pending={name,data,zoneReached:false};this.next=Infinity;this.toss=null;
+      if(this.path)this.path.visible=false;
+      return false;
     }
     return true;
   },
@@ -12440,7 +12468,7 @@ const TUT_COACH = {
     }
     if (this.coach) this.face(this.coach);   // 拋球／餵球的教練一直面向玩家
     if (this.toss) this.tossStep(now);
-    if (this.coach && this.id === 'block') this.coachAnim(now);
+    if(this.id==='block'){if(this.coach)avDrive(this.coach,this.toss?AVP.setPush:AVP.ready,.5);for(const av of this.hitters)avDrive(av,this.toss?.hitter===av?AVP.airUp:av===this.activeHitter && now<this.hitUntil?AVP.spikeHit:AVP.ready,.5);}
     if(this.coach && this.id==='recv' && this.index>=2)avDrive(this.coach,this.toss?AVP.serveToss:now<this.hitUntil?AVP.spikeHit:AVP.ready,.5,0,false);
     const incoming = this.incoming();
     if (this.id === 'recv' && this.ring) {
@@ -12448,17 +12476,26 @@ const TUT_COACH = {
       if (incoming) this.ring.position.set(incoming.x, 0.035, incoming.z);
       const arc=this.ring.userData.progress;if(arc){arc.position.copy(this.ring.position);arc.position.y+=.003;}
     }
+    if(this.pending && this.zone && this.id==='recv'){
+      const p=this.ball.m.position;
+      if(p.y>=1.5 && p.y<=3.2 && this.ball.v.y<0 && Math.hypot(p.x-this.zone.p.x,p.z-this.zone.p.z)<=this.zone.r)this.pending.zoneReached=true;
+    }
     if (this.ball && !this.settled && (this.ball.floorHit || this.ball.rest > 0.3 || !balls.includes(this.ball))) {
-      this.settled = true; this.next = now + 2000;
-      if (!this.failed) { this.failed = true; window.VBTutorial.emit('feedMiss'); }
+      this.settled=true;this.next=now+2000;
+      const pending=this.pending;this.pending=null;
+      const floor=this.ball.floorHit;
+      const inside=!this.zone || (this.id==='recv'?pending?.zoneReached:floor && Math.hypot(floor[0]-this.zone.p.x,floor[1]-this.zone.p.z)<=this.zone.r);
+      if(this.afterLanding){const finish=this.afterLanding;this.afterLanding=null;finish();}
+      else if(pending && inside)window.VBTutorial.emit(pending.name,pending.data);
+      else if(!this.failed){this.failed=true;window.VBTutorial.emit('feedMiss',pending && this.zone?{reason:this.id==='recv'?'球沒有進入藍色舉球區。面向目標、站穩再接；重扣要蹲低卸力。':'落點未進入藍色區域，調整方向再試一次。'}:{});}
     }
     if (this.id === 'serve') {
-      if (!walk.hold && !walk.serve && !walk.jserve && this.next === Infinity) this.next = now + 1500;
+      if (!this.pending && !walk.hold && !walk.serve && !walk.jserve && this.next === Infinity) this.next = now + 1500;
       if (now >= this.next) this.give();
       return;
     }
     if (this.id === 'move' || now < this.next || !locked()) return;
-    if (this.id === 'block' && Math.hypot(walk.x - this.ring.position.x, walk.z - this.ring.position.z) > 0.8) return;
+    if (this.id === 'block' && this.index!==3 && Math.hypot(walk.x - this.ring.position.x, walk.z - this.ring.position.z) > 0.8) return;
     if (this.ball) { this.ball.m.removeFromParent(); const i = balls.indexOf(this.ball); if (i >= 0) balls.splice(i, 1); this.owned.delete(this.ball); }
     this.feed();
   },
