@@ -200,6 +200,45 @@ const { makeDb } = require('./supabase-db.cjs');
     ok('T5 商店：Lv2 開放、只有隊長能買、扣球隊資金、球衣格／人數／徽章／金色隊名都生效、買到上限、徽章只能用買過的');
   }
 
+  // ---------- T6 球隊戰 ----------
+  {
+    const mk = async (name, exp) => { const o = await db.player(name + '隊長', { exp: LV10, coins: 1000 }); const t = await call(o, 'create_team', [name]); await db.query('update public.teams set exp = $2 where id = $1', [t.id, exp]); return { o, t }; };
+    const A = await mk('戰隊甲', 8000), B = await mk('戰隊乙', 9000), C = await mk('戰隊丙', 25000), D = await mk('戰隊丁', 3000);
+    const am = await db.player('甲隊員', { exp: LV10 }); await call(am, 'join_team', [A.t.code]);
+    await fails(D.o, 'war_join_queue', [], 'war locked');                                     // Lv2 還不能打
+    await fails(am, 'war_join_queue', [], 'not manager');
+    await call(C.o, 'war_join_queue'); await call(A.o, 'war_join_queue');
+    let sa = await call(A.o, 'war_status'); assert.equal(sa.queued, true); assert.equal(sa.war, null, 'Lv3 和 Lv5 差 2：剛排隊時不配');
+    await call(B.o, 'war_join_queue');
+    const sb = await call(B.o, 'war_status');                                                  // 乙（Lv3）跟先排的甲（Lv3）配到
+    assert.equal(sb.war.opponent, '戰隊甲'); assert.equal(sb.war.side, 'b'); assert.equal(sb.war.host, false); assert.match(sb.war.room, /^TW[0-9A-F]{10}$/);
+    sa = await call(am, 'war_status'); assert.equal(sa.war.opponent, '戰隊乙'); assert.equal(sa.war.host, true); assert.equal(sa.war.room, sb.war.room, '一般隊員也看得到房間代碼');
+    assert.equal(sa.queued, false);
+    await fails(A.o, 'war_join_queue', [], 'in war');
+    await fails(am, 'war_report', [true], 'not manager');
+    let r = await call(A.o, 'war_report', [true]); assert.equal(r.status, 'reported');
+    r = await call(B.o, 'war_report', [false]); assert.equal(r.status, 'done');                // 兩隊說法一致：甲贏
+    let rec = (await call(A.o, 'war_status')).record; assert.deepEqual(rec, { wins: 1, losses: 0, points: 1025 });
+    assert.deepEqual((await call(B.o, 'war_status')).record, { wins: 0, losses: 1, points: 990 });
+    assert.equal((await call(A.o, 'my_team')).exp, 8000 + 500); assert.equal((await call(B.o, 'my_team')).exp, 9000 + 100);
+    assert.equal((await call(A.o, 'war_status')).recent[0].won, true);
+    // 丙（Lv5）等了 3 分鐘：可以跟 Lv3 配
+    await db.query("update public.team_war_queue set created_at = now() - interval '3 minutes' where team_id = $1", [C.t.id]);
+    await call(B.o, 'war_join_queue'); await db.query("update public.team_war_queue set created_at = now() - interval '3 minutes' where team_id = $1", [B.t.id]);
+    assert.equal((await call(B.o, 'war_status')).war.opponent, '戰隊丙');
+    await call(B.o, 'war_report', [true]); r = await call(C.o, 'war_report', [true]);       // 兩隊都說自己贏
+    assert.equal(r.status, 'disputed'); assert.equal((await call(C.o, 'war_status')).record.points, 1000, '有爭議不給獎勵');
+    // 只有一隊回報、30 分鐘後照那隊結算
+    await call(A.o, 'war_join_queue'); await call(B.o, 'war_join_queue');
+    const w3 = (await call(A.o, 'war_status')).war; assert.equal(w3.opponent, '戰隊乙');
+    await call(B.o, 'war_report', [true]);
+    await db.query("update public.team_wars set first_report_at = now() - interval '31 minutes' where id = $1", [w3.id]);
+    const sa3 = await call(A.o, 'war_status'); assert.equal(sa3.war, null); assert.deepEqual(sa3.record, { wins: 1, losses: 1, points: 1015 });
+    await call(A.o, 'war_join_queue'); await call(A.o, 'war_leave_queue'); assert.equal((await call(A.o, 'war_status')).queued, false);
+    await assert.rejects(db.as(A.o, 'select * from public.team_wars'), /permission denied/);
+    ok('T6 球隊戰：Lv3 開放、隊長／副隊長排隊、等級相近才配（等越久越寬）、同一個房間代碼、兩隊回報一致才結算、爭議不給獎勵、30 分鐘只有一隊回報照它結算');
+  }
+
   // ---------- 權限：表格不能直接改、沒登入不能用 ----------
   await assert.rejects(db.as(p0, "update public.teams set funds = 999999"), /permission denied/);
   await assert.rejects(db.as(p0, "insert into public.team_board(team_id, body) select id, 'x' from public.teams limit 1"), /permission denied/);
@@ -210,7 +249,7 @@ const { makeDb } = require('./supabase-db.cjs');
 
   // ---------- 每個資料庫錯誤都有中文訊息 ----------
   const { teamError } = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '../js/auth.js')).href);
-  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql', '021_team_chat.sql', '022_team_shop.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
+  const sql019 = ['019_team_guild.sql', '020_team_jerseys.sql', '021_team_chat.sql', '022_team_shop.sql', '023_team_war.sql'].map((f) => require('node:fs').readFileSync(require('node:path').join(__dirname, '../supabase/' + f), 'utf8')).join(String.fromCharCode(10));
   const codes = [...new Set([...sql019.matchAll(/raise exception '([^']+)'/g)].map((m) => m[1]))];
   for (const c of codes) assert(!teamError({ message: c }).startsWith('球隊操作失敗'), `資料庫錯誤「${c}」沒有中文訊息`);
   assert.equal(teamError({ code: 'PGRST202', message: '' }).includes('019'), true);
@@ -223,7 +262,7 @@ const { makeDb } = require('./supabase-db.cjs');
     assert.equal(r.lv, L.lv); assert.equal(r.cap, L.cap); if (L.exp > 0) assert.equal(r.below, L.lv - 1);
   }
   assert.equal(TP.TEAM_CREATE_COST, 1000); assert.equal(TP.TEAM_LEVEL_REQ, 10);
-  for (const k of ['create', 'join', 'leave', 'kick', 'vice', 'member', 'owner', 'rename', 'levelup', 'donate', 'jersey', 'buy']) assert(!TP.logText({ kind: k, actor: 'A', target: 'B', data: { level: 2, amount: 5, name: 'X' } }).includes(k), k);
+  for (const k of ['create', 'join', 'leave', 'kick', 'vice', 'member', 'owner', 'rename', 'levelup', 'donate', 'jersey', 'buy', 'warmatch', 'warwin', 'warloss']) assert(!TP.logText({ kind: k, actor: 'A', target: 'B', data: { level: 2, amount: 5, name: 'X' } }).includes(k), k);
   ok('球隊主頁的等級表、人數上限、建隊條件跟資料庫一樣；每種動態都有中文');
 
   // ---------- 舊球隊（004 建的）升級後隊長補上職位 ----------

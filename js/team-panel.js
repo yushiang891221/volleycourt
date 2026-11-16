@@ -18,6 +18,7 @@ const TABS = [['home', '🏠 主頁'], ['members', '👥 成員'], ['jersey', '�
 export function logText(l) {
   const a = esc(l.actor || '有人'), t = esc(l.target || '某人');
   return { create: `${a} 建立了球隊`, join: `${a} 加入了球隊`, leave: `${a} 離開了球隊`, kick: `${a} 把 ${t} 移出球隊`, vice: `${a} 把 ${t} 升為副隊長`,
+    warmatch: `⚔️ 球隊戰配到對手「${esc(l.data?.vs)}」`, warwin: `🏆 球隊戰贏了「${esc(l.data?.vs)}」（+25 積分、+500 經驗）`, warloss: `球隊戰輸給「${esc(l.data?.vs)}」（+100 經驗）`,
     member: `${a} 把 ${t} 改為隊員`, jersey: `${a} 更新了球隊球衣`, buy: `${a} 用 ${Number(l.data?.price || 0).toLocaleString()} 球隊資金買了${{ jersey_slot: '額外球衣格', cap5: '擴充人數', gold: '金色隊名', badge: '徽章 ' + esc(l.data?.arg || '') }[l.data?.item] || '東西'}`, owner: `${t} 成為新的隊長`, rename: `${a} 把隊名改成「${esc(l.data?.name)}」`, levelup: `🎉 球隊升到 Lv${l.data?.level}！`,
     donate: `${a} 捐了 ${Number(l.data?.amount || 0).toLocaleString()} 金幣` }[l.kind] || esc(l.kind);
 }
@@ -70,6 +71,8 @@ const CSS = `
 .th-gold{color:#f7c948!important;text-shadow:0 0 10px #f7c94866}
 .th-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}.th-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;border-radius:12px;background:#1b2b40;border:1px solid #26384c;text-align:center}
 .th-item.on{border-color:#f2b705}.th-item-ic{font-size:34px;line-height:1.2}.th-item small{color:#8fa6ba;min-height:32px}.th-price{color:#f2b705;font-weight:700}
+.th-war{padding:10px 0}.th-vs{display:flex;align-items:center;justify-content:center;gap:22px;font-size:22px;margin:6px 0 12px}.th-vs span{color:#f07c24;font-weight:900}
+#team-hub button.th-btn.th-big{font-size:18px;padding:12px 28px}
 .th-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .th-team{padding:12px;border-radius:10px;background:#1b2b40;border:1px solid #26384c}.th-team b{font-size:16px}.th-team small{display:block;color:#8fa6ba;margin:4px 0 8px}
 `;
@@ -84,7 +87,7 @@ export async function openTeamHub({ api, progress } = {}) {
   dlg.innerHTML = '<form method="dialog"><header class="th-top"></header><nav class="th-tabs" role="tablist"></nav><p class="th-err" role="status"></p><div class="th-body"></div></form>';
   document.body.append(dlg);
   const $q = (s) => dlg.querySelector(s);
-  let team = null, prog = {}, tab = 'home', apps = [], list = [], query = '', chat = [], chatTimer = 0, chatBusy = false;
+  let team = null, prog = {}, tab = 'home', apps = [], list = [], query = '', chat = [], chatTimer = 0, chatBusy = false, war = null, warTimer = 0;
   const say = (t, good = false) => { const e = $q('.th-err'); e.textContent = t || ''; e.classList.toggle('th-ok', good); };
   const run = async (fn, okText) => { say(''); try { await fn(); if (okText) say(okText, true); } catch (x) { say((x && x.message) || '操作失敗'); } };
   const reload = async () => {
@@ -181,7 +184,25 @@ export async function openTeamHub({ api, progress } = {}) {
     chat: () => `<div class="th-box th-chatbox"><h3>💬 球隊聊天室</h3><div class="th-chat" aria-live="polite"></div>
       <div class="th-row"><input type="text" id="th-say" maxlength="200" placeholder="說點什麼（Enter 送出，最多 200 字）"><button type="button" class="th-btn orange" data-op="say">送出</button></div>
       <p class="th-note">只有隊員看得到；留最近 100 則。</p></div>`,
-    war: () => soon('⚔️ 球隊戰', team.level >= 3 ? '排隊配對等級差不多的球隊，6 對 6 比賽。之後的段落（T6）開放。' : '球隊 Lv3 解鎖：排隊配對等級差不多的球隊，6 對 6 比賽。'),
+    war: () => {
+      const st = war;
+      if (!st) return '<div class="th-soon"><b>⚔️ 球隊戰</b>載入中…</div>';
+      if (st.level < 3) return soon('⚔️ 球隊戰', `球隊 Lv3 解鎖（現在 Lv${st.level}）：排隊配對等級差不多的球隊，6 對 6 比賽。`);
+      const rec = st.record, w = st.war, claimText = (c) => (c == null ? '還沒回報' : c === w.me ? '我們贏' : '對方贏');
+      const head = `<div class="th-box"><h3>⚔️ 球隊戰</h3><p class="th-note">戰績 <b>${rec.wins}</b> 勝 <b>${rec.losses}</b> 敗・積分 <b>${rec.points}</b>（贏 +25、輸 -10；贏的球隊 +500 經驗、輸的 +100）</p>`;
+      let body;
+      if (w) body = `<div class="th-war"><div class="th-vs"><b>${esc(team.name)}</b><span>VS</span><b>${esc(w.opponent)}</b></div>
+          <p class="th-note">對手 Lv${w.opponentLevel}・積分 ${w.opponentPoints}。房間代碼 <span class="th-code">${esc(w.room)}</span>${w.host ? '（你們是房主隊：隊長先進房）' : ''}</p>
+          <div class="th-row"><button type="button" class="th-btn orange" data-op="warEnter">🏐 進入球隊戰房間</button></div>
+          <p class="th-note">進房後兩隊各站一邊、按準備，由房主開始 6 對 6（人不夠由 AI 補）。打完由隊長或副隊長回報結果：</p>
+          <p class="th-note">我們回報：${claimText(w.myClaim)}・對方回報：${claimText(w.theirClaim)}${w.status === 'reported' ? '（只有一隊回報的話，30 分鐘後照那一隊的結果）' : ''}</p>
+          ${isMgr() ? `<div class="th-row"><button type="button" class="th-btn orange" data-op="warReport" data-id="1">我們贏了</button><button type="button" class="th-btn" data-op="warReport" data-id="0">我們輸了</button></div>` : ''}</div>`;
+      else if (st.queued) body = `<div class="th-war"><p>🔍 正在找對手…（已經等 ${Math.max(0, Math.round((Date.now() - new Date(st.since)) / 1000))} 秒）</p><p class="th-note">先找等級差 1 以內的球隊，等越久放越寬。配到後這裡會出現房間。</p>
+          ${isMgr() ? '<button type="button" class="th-btn" data-op="warLeave">取消排隊</button>' : ''}</div>`;
+      else body = `<div class="th-war">${st.canQueue ? '<button type="button" class="th-btn orange th-big" data-op="warQueue">⚔️ 找對手</button><p class="th-note">按下去開始排隊，配對成功後兩隊隊員都可以從這裡進房。</p>' : '<p class="th-note">隊長或副隊長可以按「找對手」開始排隊。</p>'}</div>`;
+      const recent = st.recent.length ? `<h3 style="margin-top:14px">最近的球隊戰</h3><ul class="th-log">${st.recent.map((r) => `<li>${r.status === 'disputed' ? '⚠️ 有爭議' : r.won ? '🏆 贏' : '輸'}｜vs ${esc(r.vs)}<small>${when(r.at)}</small></li>`).join('')}</ul>` : '';
+      return head + body + recent + '</div>';
+    },
   };
   const soon = (title, text) => `<div class="th-soon"><b>${title}</b>${text}</div>`;
   const memberActions = (m) => {
@@ -205,9 +226,13 @@ export async function openTeamHub({ api, progress } = {}) {
     catch (x) { say((x && x.message) || '聊天室連不上'); } finally { chatBusy = false; }
   };
   const chatLoop = () => { clearInterval(chatTimer); if (tab === 'chat' && team && openNow) { pullChat(); chatTimer = setInterval(() => { if (document.hidden) return; pullChat(); }, 3000); } };
+  // 球隊戰：分頁打開時每 5 秒問一次狀態（伺服器順便配對）
+  const pullWar = async () => { try { const st = await call('warStatus'); const changed = JSON.stringify(st) !== JSON.stringify(war); war = st; if (changed && tab === 'war') $q('.th-body').innerHTML = panes.war(); } catch (x) { say((x && x.message) || '球隊戰狀態讀不到'); } };
+  const warLoop = () => { clearInterval(warTimer); if (tab === 'war' && team && openNow) { pullWar(); warTimer = setInterval(() => { if (!document.hidden) pullWar(); }, 5000); } };
   const draw = () => {
     drawTop(); if (!team) { drawNoTeam(); clearInterval(chatTimer); return; } drawTabs(); $q('.th-body').innerHTML = panes[tab]();
     if (tab === 'chat') { drawChat(); chatLoop(); } else clearInterval(chatTimer);
+    if (tab === 'war') warLoop(); else clearInterval(warTimer);
     if (tab === 'jersey') import('./jersey-designer.js').then(({ shirtThumb }) => import('./jersey.js').then((J) => {
       for (const cv of dlg.querySelectorAll('canvas[data-jt]')) { const d = J.decodeJersey(team.jerseys[+cv.dataset.jt]); if (!d) continue; const img = shirtThumb(d, 150, 128); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); }
     }));
@@ -233,6 +258,11 @@ export async function openTeamHub({ api, progress } = {}) {
       say: () => run(async () => { const inp = $q('#th-say'), t = inp.value.trim(); if (!t) return; await call('say', t); inp.value = ''; await pullChat(); inp.focus(); }),
       buy: () => run(async () => { if (!confirm(`用 ${(+b.dataset.price).toLocaleString()} 球隊資金購買「${name}${b.dataset.arg ? ' ' + b.dataset.arg : ''}」？`)) return; await call('buy', { item: id, arg: b.dataset.arg || null }); await reload(); }, '✓ 購買完成'),
       badge: () => run(async () => { await call('badge', b.dataset.arg || null); await reload(); }, '✓ 徽章已更換'),
+      warQueue: () => run(async () => { await call('warQueue'); await pullWar(); }, '開始找對手…'),
+      warLeave: () => run(async () => { await call('warLeave'); await pullWar(); }, '已取消排隊'),
+      warReport: () => run(async () => { const won = id === '1'; if (!confirm(won ? '回報「我們贏了」？' : '回報「我們輸了」？')) return; const r = await call('warReport', won); await pullWar(); await reload();
+        say(r.status === 'done' ? '✓ 結果已結算' : r.status === 'disputed' ? '兩隊回報的結果不一樣，這場記為「有爭議」，不給獎勵' : '✓ 已回報，等對方回報', r.status !== 'disputed'); }),
+      warEnter: () => { const w = war && war.war; if (!w) return; const q = new URLSearchParams({ site: 'bs-shenjing', room: w.room, mode: '6v6' }); if (w.host && isOwner()) { q.set('host', '1'); q.set('srv', '1'); } try { window.VBLobby && VBLobby.carry && VBLobby.carry(q); } catch {} location.href = `gym.html?${q}`; },
       copy: () => { try { navigator.clipboard.writeText(team.code); say('✓ 邀請碼已複製', true); } catch { say('複製失敗，請自己記下邀請碼'); } },
       accept: () => run(async () => { await call('decide', { user: id, accept: true }); await reload(); }, '✓ 已加入球隊'),
       reject: () => run(async () => { await call('decide', { user: id, accept: false }); await reload(); }, '已拒絕'),
@@ -261,7 +291,7 @@ export async function openTeamHub({ api, progress } = {}) {
     if (e.key === 'Enter' && e.target.id === 'th-q') { e.preventDefault(); $q('[data-op=search]').click(); }
     if (e.key === 'Enter' && e.target.id === 'th-say' && !e.isComposing) { e.preventDefault(); $q('[data-op=say]').click(); }   // 注音選字中按 Enter 不送出
   });
-  const close = () => { if (!openNow) return; openNow = false; clearInterval(chatTimer); dlg.close(); dlg.remove(); dispatchEvent(new Event('vb-team-change')); };
+  const close = () => { if (!openNow) return; openNow = false; clearInterval(chatTimer); clearInterval(warTimer); dlg.close(); dlg.remove(); dispatchEvent(new Event('vb-team-change')); };
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   $q('.th-top').innerHTML = '<button class="th-back" aria-label="關閉">←</button><h2 id="th-title">球隊</h2>'; $q('.th-body').innerHTML = '<p class="th-note">載入中…</p>';
   dlg.showModal();
