@@ -160,3 +160,18 @@ footer button:hover { background: #0E3A2F; transform: translateY(-2px); }
 .server-pick { margin-left: 6px; padding: 1px 9px; font-size: 11px; font-weight: 700; color: var(--pl-text-2); background: #051813; border: 1px solid rgba(229,184,105,.3); border-radius: 6px; }
 .server-pick b { font-family: var(--pl-sport); padding: 0 2px; background: transparent !important; }
 .server-pick .lv-good { color: var(--pl-green); } .server-pick .lv-ok { color: #FB923C; } .server-pick .lv-bad { color: #F87171; } .server-pick .lv-off { color: var(--pl-dim); }
+
+/* ---------- 跑馬燈（LIVE TICKER）：上方列下面一條 ---------- */
+body { grid-template-rows: 62px 26px minmax(0, 1fr) 62px; }
+.po-ticker { display: flex; align-items: center; min-width: 0; overflow: hidden; background: #041510; border: 1px solid var(--pl-line); border-radius: 10px; }
+.po-ticker .tk-label { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; padding: 0 10px; background: var(--pl-blue); color: #fff; font-family: var(--pl-sport); font-weight: 700; font-size: 11px; letter-spacing: .08em; }
+.po-ticker .tk-view { flex: 1; min-width: 0; overflow: hidden; }
+.po-ticker .tk-track { display: flex; width: max-content; gap: 34px; padding-left: 20px; white-space: nowrap; font-size: 12px; font-weight: 700; animation: po-marquee 40s linear infinite; }
+.po-ticker:hover .tk-track { animation-play-state: paused; }   /* 滑鼠移上去停住，方便看 */
+@keyframes po-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.po-ticker .tk-news { color: var(--pl-gold); }
+.po-ticker .tk-brand { color: transparent; -webkit-text-stroke: 1px rgba(229,184,105,.5); font-family: var(--pl-sport); font-size: 13px; letter-spacing: .06em; }
+.po-ticker .tk-join { color: #6EE7B7; } .po-ticker .tk-team { color: var(--pl-cyan); } .po-ticker .tk-war { color: #FDBA74; }
+.po-ticker .tk-win { color: var(--pl-text-2); } .po-ticker .tk-ach { color: var(--pl-gold-l); }
+.po-ticker b { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .po-ticker .tk-track { animation-duration: 120s !important; } }

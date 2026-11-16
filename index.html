@@ -22,6 +22,7 @@
   <script type="module" src="js/session-guard.js"></script>
   <script type="module" src="js/account-line.js"></script>
   <script type="module">import { mountServerBadge } from './js/servers.js'; mountServerBadge(document.getElementById('server-pick'));</script>
+  <script type="module">import { mountLobbyTicker } from './js/lobby-ticker.js'; if (globalThis.VBIntro?.entered) mountLobbyTicker(); else addEventListener('vb-lobby-enter', mountLobbyTicker, { once: true });</script>
   <script src="js/lobby.js" defer></script>
 </head>
 <body class="intro-active">
@@ -54,6 +55,7 @@
     <button id="refresh" class="icon-button" aria-label="重新整理" title="重新整理"><span data-icon="refresh"></span></button>
   </div>
 </header>
+<div class="po-ticker" id="po-ticker" aria-label="大廳動態"><span class="tk-label">LIVE TICKER</span><div class="tk-view"><div class="tk-track"></div></div></div>
 <main>
   <section class="rooms panel" aria-labelledby="rooms-title">
     <div class="panel-head"><h2 id="rooms-title"><span data-icon="game"></span>對戰大廳房間列表 <span id="room-count" class="count">（0 / —）</span></h2><span class="muted" id="list-note">公開房間 · 每房最多 20 人</span></div>
