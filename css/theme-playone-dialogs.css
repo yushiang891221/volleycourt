@@ -1,190 +1,202 @@
-/* Play One 介面風格：對話框（設定、置物櫃〔球衣與裝備〕、好友、成就、球隊主頁、球衣設計器）
-   大廳和遊戲都會載入（設定在兩邊都會開）。只改顏色、邊框、字，不動版面和功能。
-   球隊主頁、設計器的樣式是打開時才加進頁面的，所以這裡的選擇器前面加 html，確保蓋得過去。 */
-:root { --po-paper: #f4f2ea; --po-paper-2: #e9e6dc; --po-ink: #141414; --po-mute: #666; --po-yellow: #ffd21f; --po-blue: #1f46c9; --po-red: #e2372b;
-  --po-display: 'Barlow Condensed', 'Noto Sans TC', sans-serif; }
+/* Play One 介面風格（職業聯賽轉播風，照 volleygame/play_one.html）：對話框
+   設定、置物櫃（球衣與裝備）、好友、成就、球隊主頁、球衣設計器、遊戲裡的準備框／選位／練習選單／教學面板／載入畫面。大廳和遊戲都會載入。
+   只改顏色、邊框、字，不動版面和功能。球隊主頁、設計器、教學的樣式是打開時才加進頁面的，所以選擇器前面加 html，確保蓋得過去。 */
+:root { --pl-deep: #06211A; --pl-main: #0B362B; --pl-card: #0E4235; --pl-row: #07261E; --pl-well: #061D17; --pl-well-2: #041510;
+  --pl-gold: #E5B869; --pl-gold-l: #F5D596; --pl-gold-d: #D49B42; --pl-blue: #0284C7; --pl-cyan: #38BDF8;
+  --pl-text: #F8FAFC; --pl-text-2: #CBD5E1; --pl-mute: #94A3B8; --pl-dim: #64748B; --pl-green: #34D399; --pl-red: #FB7185;
+  --pl-line: rgba(229,184,105,.22); --pl-line-2: rgba(255,255,255,.1); --pl-panel: rgba(10,38,31,.94);
+  --pl-sport: 'Oswald', 'Noto Sans TC', sans-serif; }
 
-/* ---------- 共用外框：米白底、黑框、硬陰影、方角 ---------- */
-html .vb-settings, html #equip-panel, html #friends-panel, html #ach-panel, html #team-hub, html #jersey-designer {
-  background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 10px 10px 0 var(--po-ink); }
-html .vb-settings::backdrop, html #equip-panel::backdrop, html #friends-panel::backdrop, html #ach-panel::backdrop, html #team-hub::backdrop, html #jersey-designer::backdrop { background: #0d1f6fcc; }
+/* ---------- 共用外框：深綠毛玻璃、細金框、圓角 ---------- */
+html .vb-settings, html #equip-panel, html #friends-panel, html #ach-panel, html #team-hub, html #jersey-designer, html #room-pick, html .vb-tut-menu {
+  background: linear-gradient(160deg, rgba(11,54,43,.97), rgba(6,33,26,.97)); color: var(--pl-text); border: 1px solid rgba(229,184,105,.5); border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+html .vb-settings::backdrop, html #equip-panel::backdrop, html #friends-panel::backdrop, html #ach-panel::backdrop, html #team-hub::backdrop, html #jersey-designer::backdrop, html #room-pick::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(6px); }
 /* 標題列 */
-html .vb-settings header, html .vb-settings footer, html #equip-panel .eqx-top, html #friends-panel .fr-top, html #ach-panel .ach-top, html .th-top, html .jd-top { background: var(--po-paper); border-bottom: 3px solid var(--po-ink); }
-html .vb-settings footer { border-bottom: 0; border-top: 3px solid var(--po-ink); }
-html .vb-settings h2, html #equip-panel .eqx-top h2, html #friends-panel .fr-top h2, html #ach-panel .ach-top h2, html .th-top h2, html .jd-top h2 { color: var(--po-ink); font-weight: 900; }
-html .vb-settings small, html .jd-top small { color: var(--po-mute); }
-html #equip-panel .eqx-back, html #friends-panel .fr-back, html #ach-panel .ach-back, html .th-back { color: var(--po-ink); }
+html .vb-settings header, html .vb-settings footer, html #equip-panel .eqx-top, html #friends-panel .fr-top, html #ach-panel .ach-top, html #team-hub .th-top, html #jersey-designer .jd-top { background: transparent; border-bottom: 1px solid var(--pl-line); }
+html .vb-settings footer { border-bottom: 0; border-top: 1px solid var(--pl-line); }
+html .vb-settings h2, html #equip-panel .eqx-top h2, html #friends-panel .fr-top h2, html #ach-panel .ach-top h2, html #team-hub .th-top h2, html #jersey-designer .jd-top h2, html #room-pick h2, html .vb-tut-menu h2 { color: #fff; font-weight: 900; }
+html .vb-settings small { color: #051A14; background: var(--pl-gold); padding: 1px 8px; border-radius: 3px; font-weight: 900; letter-spacing: .15em; }
+html #jersey-designer .jd-top small { color: var(--pl-text-2); }
+html #equip-panel .eqx-back, html #friends-panel .fr-back, html #ach-panel .ach-back, html #team-hub .th-back { color: var(--pl-gold); }
 /* 一般按鈕、輸入框 */
 html .vb-settings button, html .vb-settings select, html .vb-settings input:not([type=range]):not([type=checkbox]),
 html #equip-panel button, html #friends-panel button, html #ach-panel button, html #team-hub button.th-btn, html #jersey-designer .jd-foot button,
 html #friends-panel input, html #equip-panel .eqx-name input, html #team-hub input[type=text], html #team-hub input[type=number], html #team-hub textarea, html #jersey-designer .jd-field input[type=text] {
-  color: var(--po-ink); background: #fff; border: 2px solid var(--po-ink); border-radius: 0; box-shadow: none; }
-html .vb-settings button:hover, html #equip-panel button:hover, html #friends-panel button:hover, html #ach-panel button:hover, html #team-hub button.th-btn:hover, html #jersey-designer .jd-foot button:hover { background: var(--po-yellow); border-color: var(--po-ink); }
-html #equip-panel button.orange, html #friends-panel button.orange, html #team-hub button.th-btn.orange, html #jersey-designer .jd-foot .orange, html #equip-panel .eqx-look {
-  background: var(--po-yellow); color: var(--po-ink); border: 2px solid var(--po-ink); box-shadow: 4px 4px 0 var(--po-ink); font-weight: 900; }
-html #team-hub button.th-btn.red, html .vb-settings .settings-danger { background: #fff; color: var(--po-red); border-color: var(--po-red); }
-/* 分頁：選中的是黑底黃字 */
-html .vb-settings nav, html .th-tabs, html .jd-tabs { border-bottom: 3px solid var(--po-ink); }
-html .vb-settings button[aria-selected=true], html #equip-panel .eqx-tabs button[aria-selected="true"], html #ach-panel .ach-cats button[aria-selected="true"], html .th-tabs button[aria-selected=true], html .jd-tabs button[aria-selected=true] {
-  background: var(--po-ink); color: var(--po-yellow); border-color: var(--po-ink); font-weight: 900; }
-html .th-tabs button, html .jd-tabs button { color: var(--po-ink); border-bottom: 0; }
-html .th-tabs button[aria-selected=true], html .jd-tabs button[aria-selected=true] { border-bottom: 0; }
+  color: var(--pl-text-2); background: var(--pl-well); border: 1px solid var(--pl-line-2); border-radius: 10px; box-shadow: none; }
+html #team-hub input, html #team-hub textarea, html #friends-panel input, html #jersey-designer .jd-field input[type=text] { color: #fff; }
+html .vb-settings button:hover, html #equip-panel button:hover, html #friends-panel button:hover, html #ach-panel button:hover, html #team-hub button.th-btn:hover, html #jersey-designer .jd-foot button:hover {
+  background: #0E3A2F; border-color: rgba(229,184,105,.45); color: #fff; }
+/* 主按鈕：香檳金漸層 */
+html #equip-panel button.orange, html #friends-panel button.orange, html #team-hub button.th-btn.orange, html #jersey-designer .jd-foot .orange, html #equip-panel .eqx-look, html #equip-panel .eqx-apply {
+  color: #051A14; background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); border: 0; font-weight: 900; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+html #team-hub button.th-btn.red, html .vb-settings .settings-danger { background: rgba(225,29,72,.12); color: #FDA4AF; border-color: rgba(253,164,175,.4); }
+/* 分頁：選中的是香檳金底深綠字 */
+html .vb-settings nav, html #team-hub .th-tabs, html #jersey-designer .jd-tabs { border-bottom: 1px solid var(--pl-line); }
+html .vb-settings button[aria-selected=true], html #equip-panel .eqx-tabs button[aria-selected="true"], html #ach-panel .ach-cats button[aria-selected="true"] {
+  background: var(--pl-gold); color: #051A14; border-color: var(--pl-gold); font-weight: 900; }
+html #team-hub .th-tabs button, html #jersey-designer .jd-tabs button { color: var(--pl-text-2); background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; }
+html #team-hub .th-tabs button[aria-selected=true], html #jersey-designer .jd-tabs button[aria-selected=true] { color: var(--pl-gold); border-bottom-color: var(--pl-gold); font-weight: 900; }
 
 /* ---------- 設定 ---------- */
-html .vb-settings .settings-row { border-bottom: 2px solid var(--po-paper-2); }
-html .settings-note, html .settings-pages p { color: var(--po-mute); }
-html .settings-pages h3 { color: var(--po-ink); font-weight: 900; }
-html .settings-row input[type=range], html .settings-row input[type=checkbox] { accent-color: var(--po-ink); }
-html .control-keyboard { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; }
-html .control-keyboard .control-key { background: var(--po-paper); border: 2px solid var(--po-ink); border-bottom-width: 3px; color: var(--po-ink); border-radius: 0; }
-html .control-keyboard .control-key.assigned { background: var(--po-yellow); border-color: var(--po-ink); }
-html .control-keyboard .control-key small { color: var(--po-ink); }
-html .settings-account a { color: var(--po-blue); }
+html .vb-settings .settings-row { border-bottom: 1px solid rgba(255,255,255,.06); }
+html .settings-note, html .settings-pages p { color: var(--pl-mute); }
+html .settings-pages h3 { color: var(--pl-gold); font-weight: 900; }
+html .settings-row input[type=range], html .settings-row input[type=checkbox] { accent-color: var(--pl-gold); }
+html .control-keyboard { background: var(--pl-well-2); border: 1px solid var(--pl-line); border-radius: 12px; }
+html .control-keyboard .control-key { background: var(--pl-well); border: 1px solid var(--pl-line-2); color: var(--pl-text-2); border-radius: 8px; }
+html .control-keyboard .control-key.assigned { background: rgba(229,184,105,.18); border-color: rgba(229,184,105,.6); color: #fff; }
+html .control-keyboard .control-key small { color: var(--pl-gold-l); }
+html .settings-account a { color: var(--pl-gold); }
 
 /* ---------- 置物櫃（球衣與裝備） ---------- */
-html #equip-panel .eqx-money span { background: var(--po-yellow); color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; } html #equip-panel .eqx-money b { color: var(--po-ink); }
-html #equip-panel .eqx-cols > section { background: #fff; border: 3px solid var(--po-ink); border-radius: 0; }
-html #equip-panel .eqx-stage { background: var(--po-paper-2); border: 2px solid var(--po-ink); border-radius: 0; }
-html #equip-panel .eqx-worn { background: #fffdf3; border: 2px solid var(--po-ink); border-radius: 0; } html #equip-panel .eqx-worn h4 { color: var(--po-ink); font-weight: 900; } html #equip-panel .eqx-worn small { color: var(--po-mute); }
-html #equip-panel .eqx-wi, html #equip-panel .eqx-ii { border: 2px solid var(--po-ink); border-radius: 0; background: color-mix(in srgb, var(--t) 35%, #fff); }
-html #equip-panel .eqx-card, html #equip-panel .eqx-box { background: var(--po-paper); border: 2px solid var(--po-ink); border-radius: 0; }
-html #equip-panel .eqx-card dt, html #equip-panel .eqx-card dd small { color: var(--po-mute); }
-html #equip-panel .eqx-bar { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; height: 10px; } html #equip-panel .eqx-bar i { background: repeating-linear-gradient(90deg, var(--po-red) 0 10px, #fff 10px 14px); }
-html #equip-panel .eqx-err { color: var(--po-red); }
-html #equip-panel .eqx-item { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-html #equip-panel .eqx-item:hover { border-color: var(--po-ink); background: #fffbe6; }
-html #equip-panel .eqx-item.on { border: 3px solid var(--po-ink); background: var(--po-yellow); box-shadow: 4px 4px 0 var(--po-ink); }
-html #equip-panel .eqx-item small { color: var(--po-mute); }
-html #equip-panel .eqx-check { background: var(--po-ink); color: var(--po-yellow); border-radius: 0; }
-html #equip-panel .eqx-hint { color: var(--po-mute); }
-html #equip-panel .eqx-box h3 { color: var(--po-ink); font-weight: 900; }
-html #equip-panel .eqx-badge b { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; } html #equip-panel .eqx-badge small { color: var(--po-mute); } html #equip-panel .eqx-badge button { color: var(--po-ink); }
-html #equip-panel .eqx-apply { background: var(--po-yellow); color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 900; }
-html #equip-panel .eqx-wheel { background: #fff; border: 3px solid var(--po-ink); } html #equip-panel .eqx-hub { border-color: var(--po-ink); color: var(--po-ink); background: var(--po-yellow); }
-html #equip-panel .eqx-slot small { color: var(--po-mute); }
-html #equip-panel .eqx-emos button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #equip-panel .eqx-emos button[aria-pressed="true"] { background: var(--po-yellow); color: var(--po-ink); border-color: var(--po-ink); }
-html #equip-panel .eqx-drag { background: #fffc; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #equip-panel .eqx-tabs button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
+html #equip-panel .eqx-money span { background: #051813; color: var(--pl-gold); border: 1px solid rgba(229,184,105,.35); border-radius: 10px; font-weight: 700; } html #equip-panel .eqx-money b { color: #fff; font-family: var(--pl-sport); }
+html #equip-panel .eqx-cols > section { background: rgba(10,38,31,.84); border: 1px solid var(--pl-line); border-radius: 16px; }
+html #equip-panel .eqx-stage { background: linear-gradient(180deg, #0E3F32, #07241C 55%, #041410); border: 1px solid rgba(229,184,105,.35); border-radius: 16px; }
+html #equip-panel .eqx-worn { background: rgba(5,24,19,.85); border: 1px solid rgba(229,184,105,.5); border-radius: 12px; } html #equip-panel .eqx-worn h4 { color: var(--pl-gold); } html #equip-panel .eqx-worn small { color: var(--pl-mute); }
+html #equip-panel .eqx-wi, html #equip-panel .eqx-ii { border: 1px solid rgba(255,255,255,.15); border-radius: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--t) 50%, #06211A), #06211A); }
+html #equip-panel .eqx-card, html #equip-panel .eqx-box { background: rgba(6,29,23,.9); border: 1px solid var(--pl-line-2); border-radius: 12px; }
+html #equip-panel .eqx-card dt, html #equip-panel .eqx-card dd small { color: var(--pl-mute); }
+html #equip-panel .eqx-bar { height: 8px; background: #03100C; border: 1px solid var(--pl-line-2); border-radius: 999px; } html #equip-panel .eqx-bar i { background: linear-gradient(90deg, var(--pl-gold), #FBBF24, #F97316); border-radius: 999px; }
+html #equip-panel .eqx-err { color: var(--pl-gold); }
+html #equip-panel .eqx-item { background: var(--pl-row); border: 1px solid var(--pl-line-2); border-radius: 14px; color: var(--pl-text); }
+html #equip-panel .eqx-item:hover { border-color: rgba(229,184,105,.45); background: #0A2E25; }
+html #equip-panel .eqx-item.on { background: linear-gradient(135deg, rgba(229,184,105,.28), rgba(229,184,105,.08)); border: 1px solid rgba(229,184,105,.8); box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+html #equip-panel .eqx-item small { color: var(--pl-mute); }
+html #equip-panel .eqx-check { background: var(--pl-gold); color: #051A14; }
+html #equip-panel .eqx-hint { color: var(--pl-mute); }
+html #equip-panel .eqx-box h3 { color: var(--pl-gold); font-weight: 900; }
+html #equip-panel .eqx-badge b { background: var(--pl-well); color: var(--pl-gold-l); border: 1px solid rgba(229,184,105,.35); border-radius: 10px; } html #equip-panel .eqx-badge small { color: var(--pl-mute); } html #equip-panel .eqx-badge button { color: var(--pl-gold); background: none; border: 0; }
+html #equip-panel .eqx-wheel { background: radial-gradient(circle, #0E3F32, #051813); border: 1px solid rgba(229,184,105,.35); } html #equip-panel .eqx-hub { border-color: var(--pl-gold); color: #051A14; background: var(--pl-gold); }
+html #equip-panel .eqx-slot small { color: var(--pl-mute); }
+html #equip-panel .eqx-emos button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 8px; }
+html #equip-panel .eqx-emos button[aria-pressed="true"] { background: rgba(229,184,105,.2); color: var(--pl-gold-l); border-color: rgba(229,184,105,.6); }
+html #equip-panel .eqx-drag { background: rgba(5,24,19,.85); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 999px; }
+html #equip-panel .eqx-tabs button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 10px; }
 
 /* ---------- 好友 ---------- */
-html #friends-panel .fr-left { border-right: 3px solid var(--po-ink); }
-html #friends-panel .fr-list h4 { color: var(--po-mute); }
-html #friends-panel .fr-row { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-html #friends-panel .fr-row.on { background: var(--po-yellow); border-color: var(--po-ink); }
-html #friends-panel .fr-msg { color: var(--po-red); }
-html #friends-panel .fr-chat-h { border-bottom: 3px solid var(--po-ink); } html #friends-panel .fr-chat-h b { color: var(--po-ink); }
-html #friends-panel .fr-m span { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-html #friends-panel .fr-m.mine span { background: var(--po-yellow); color: var(--po-ink); }
-html #friends-panel .fr-m small, html #friends-panel .fr-empty { color: var(--po-mute); }
-html #friends-panel .fr-send { border-top: 3px solid var(--po-ink); }
+html #friends-panel .fr-left { border-right: 1px solid var(--pl-line); }
+html #friends-panel .fr-list h4 { color: var(--pl-gold); }
+html #friends-panel .fr-row { background: var(--pl-row); border: 1px solid var(--pl-line-2); border-radius: 12px; color: var(--pl-text); }
+html #friends-panel .fr-row.on { background: linear-gradient(90deg, rgba(229,184,105,.25), rgba(229,184,105,.06)); border-color: rgba(229,184,105,.7); }
+html #friends-panel .fr-msg { color: var(--pl-gold); }
+html #friends-panel .fr-chat-h { border-bottom: 1px solid var(--pl-line); } html #friends-panel .fr-chat-h b { color: var(--pl-gold); }
+html #friends-panel .fr-m span { background: rgba(255,255,255,.06); border: 1px solid var(--pl-line-2); border-radius: 12px; color: var(--pl-text); }
+html #friends-panel .fr-m.mine span { background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); color: #051A14; border: 0; }
+html #friends-panel .fr-m small, html #friends-panel .fr-empty { color: var(--pl-mute); }
+html #friends-panel .fr-send { border-top: 1px solid var(--pl-line); }
+html #friends-panel .fr-dot.online { background: var(--pl-green); box-shadow: 0 0 6px var(--pl-green); }
 
 /* ---------- 成就 ---------- */
-html #ach-panel .ach-detail { border-right: 3px solid var(--po-ink); }
-html #ach-panel .ach-hero { background: #fff; border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); }
-html #ach-panel .ach-hero h3 { color: var(--po-ink); font-weight: 900; } html #ach-panel .ach-hero p, html #ach-panel .ach-hero-pr { color: var(--po-mute); } html #ach-panel .ach-hero-pr b, html #ach-panel .ach-tiers-h b { color: var(--po-ink); }
-html #ach-panel .ach-bar { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; } html #ach-panel .ach-bar i { background: var(--po-yellow); }
-html #ach-panel .ach-tiers-h { color: var(--po-mute); }
-html #ach-panel .ach-t, html #ach-panel .ach-me, html #ach-panel .ach-s { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-html #ach-panel .ach-t.ok { background: #fff8d6; border-color: var(--po-ink); }
-html #ach-panel .ach-t-n { background: var(--po-ink); color: var(--po-yellow); border-radius: 0; }
-html #ach-panel .ach-t p, html #ach-panel .ach-t-pr, html #ach-panel .ach-t-one, html #ach-panel .ach-me-tx span, html #ach-panel .ach-s-tx small, html #ach-panel .ach-s-ar, html #ach-panel .ach-tip { color: var(--po-mute); }
-html #ach-panel .ach-t-done { background: var(--po-ink); color: var(--po-yellow); border: 0; border-radius: 0; font-weight: 800; }
-html #ach-panel .ach-badge { background: var(--po-yellow); color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
-html #ach-panel .ach-badge.off { background: #fff; color: var(--po-mute); border-color: var(--po-mute); }
-html #ach-panel .ach-me-ic, html #ach-panel .ach-s-ic { border: 2px solid var(--po-ink); border-radius: 0; background: var(--po-paper); }
-html #ach-panel .ach-cats button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #ach-panel .ach-s:hover { border-color: var(--po-ink); background: #fffbe6; }
-html #ach-panel .ach-s.on { background: var(--po-yellow); border: 3px solid var(--po-ink); box-shadow: 4px 4px 0 var(--po-ink); }
-html #ach-panel .ach-s-b { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #ach-panel .ach-s.done .ach-s-b { background: var(--po-ink); color: var(--po-yellow); border-color: var(--po-ink); }
-html #ach-panel .ach-tip { border-top: 3px solid var(--po-ink); }
+html #ach-panel .ach-detail { border-right: 1px solid var(--pl-line); }
+html #ach-panel .ach-hero { background: radial-gradient(circle at 50% 0, rgba(229,184,105,.22), rgba(6,33,26,.9) 70%); border: 1px solid rgba(229,184,105,.5); border-radius: 16px; }
+html #ach-panel .ach-hero h3 { color: var(--pl-gold); font-weight: 900; } html #ach-panel .ach-hero p, html #ach-panel .ach-hero-pr { color: var(--pl-text-2); } html #ach-panel .ach-hero-pr b, html #ach-panel .ach-tiers-h b { color: var(--pl-gold); font-family: var(--pl-sport); }
+html #ach-panel .ach-bar { background: #03100C; border: 1px solid var(--pl-line-2); border-radius: 999px; } html #ach-panel .ach-bar i { background: linear-gradient(90deg, var(--pl-gold), #FBBF24, #F97316); }
+html #ach-panel .ach-tiers-h { color: var(--pl-mute); }
+html #ach-panel .ach-t, html #ach-panel .ach-me, html #ach-panel .ach-s { background: var(--pl-row); border: 1px solid var(--pl-line-2); border-radius: 12px; color: var(--pl-text); }
+html #ach-panel .ach-t.ok { background: rgba(229,184,105,.1); border-color: rgba(229,184,105,.55); }
+html #ach-panel .ach-t-n { background: var(--pl-gold); color: #051A14; border-radius: 6px; font-family: var(--pl-sport); }
+html #ach-panel .ach-t p, html #ach-panel .ach-t-pr, html #ach-panel .ach-t-one, html #ach-panel .ach-me-tx span, html #ach-panel .ach-s-tx small, html #ach-panel .ach-s-ar, html #ach-panel .ach-tip { color: var(--pl-mute); }
+html #ach-panel .ach-t-done { background: rgba(52,211,153,.15); color: var(--pl-green); border: 1px solid rgba(52,211,153,.4); border-radius: 8px; font-weight: 700; }
+html #ach-panel .ach-badge { background: rgba(229,184,105,.15); color: var(--pl-gold); border: 1px solid rgba(229,184,105,.45); border-radius: 999px; font-weight: 700; }
+html #ach-panel .ach-badge.off { background: transparent; color: var(--pl-dim); border-color: var(--pl-line-2); }
+html #ach-panel .ach-me-ic, html #ach-panel .ach-s-ic { border: 1px solid rgba(229,184,105,.5); border-radius: 12px; background: var(--pl-well); }
+html #ach-panel .ach-cats button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 999px; }
+html #ach-panel .ach-s:hover { border-color: rgba(229,184,105,.45); }
+html #ach-panel .ach-s.on { background: linear-gradient(90deg, rgba(229,184,105,.22), rgba(229,184,105,.05)); border-color: rgba(229,184,105,.75); box-shadow: none; }
+html #ach-panel .ach-s-b { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 999px; font-family: var(--pl-sport); }
+html #ach-panel .ach-s.done .ach-s-b { background: rgba(52,211,153,.15); color: var(--pl-green); border-color: rgba(52,211,153,.4); }
+html #ach-panel .ach-tip { border-top: 1px solid var(--pl-line); }
 
 /* ---------- 球隊主頁 ---------- */
-html #team-hub .th-badge { background: var(--po-yellow); color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #team-hub .th-bar { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; } html #team-hub .th-bar i { background: repeating-linear-gradient(90deg, var(--po-red) 0 10px, #fff 10px 14px); }
-html #team-hub .th-stat { color: var(--po-mute); } html #team-hub .th-stat b { color: var(--po-ink); }
-html #team-hub .th-box, html #team-hub .th-notice, html #team-hub .th-team, html #team-hub .th-jersey, html #team-hub .th-item, html #team-hub .th-msg { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #team-hub .th-box { border-width: 3px; box-shadow: 5px 5px 0 var(--po-ink); }
-html #team-hub .th-box h3 { color: var(--po-ink); font-weight: 900; }
-html #team-hub .th-note, html #team-hub .th-notice small, html #team-hub .th-log small, html #team-hub .th-team small, html #team-hub .th-item small, html #team-hub .th-msg small, html #team-hub .th-table th { color: var(--po-mute); }
-html #team-hub .th-notice.pin { background: #fff8d6; border-color: var(--po-ink); }
-html #team-hub .th-log li, html #team-hub .th-table td, html #team-hub .th-table th, html #team-hub .th-levels td { border-color: var(--po-paper-2); }
-html #team-hub .th-levels tr.now td { color: var(--po-ink); background: var(--po-yellow); }
-html #team-hub .th-role { background: #fff; border: 2px solid var(--po-ink); color: var(--po-ink); border-radius: 0; } html #team-hub .th-role.owner { background: var(--po-yellow); } html #team-hub .th-role.vice { background: var(--po-ink); color: var(--po-yellow); }
-html #team-hub .th-code { color: var(--po-ink); background: var(--po-yellow); padding: 0 8px; border: 2px solid var(--po-ink); }
-html #team-hub .th-err { color: var(--po-red); } html #team-hub .th-ok { color: #138a43; }
-html #team-hub .th-msg.mine { background: var(--po-yellow); border-color: var(--po-ink); }
-html #team-hub .th-item.on, html #team-hub .th-jersey.th-slot { border-style: dashed; }
-html #team-hub .th-item.on { border-style: solid; background: #fff8d6; }
-html #team-hub .th-price { color: var(--po-ink); } html #team-hub .th-gold { color: #b8860b !important; text-shadow: none; }
-html #team-hub .th-vs span { color: var(--po-red); } html #team-hub .th-soon { color: var(--po-mute); } html #team-hub .th-soon b { color: var(--po-ink); }
-html #team-hub .th-jersey small { color: #138a43; }
-html #team-hub .th-dot { background: #bbb; } html #team-hub .th-dot.on { background: #18a957; }
+html #team-hub .th-badge { background: var(--pl-gold); color: #051A14; border: 0; border-radius: 4px; font-family: var(--pl-sport); }
+html #team-hub .th-bar { height: 8px; background: #03100C; border: 1px solid var(--pl-line-2); border-radius: 999px; } html #team-hub .th-bar i { background: linear-gradient(90deg, var(--pl-gold), #FBBF24, #F97316); border-radius: 999px; }
+html #team-hub .th-stat { color: var(--pl-mute); } html #team-hub .th-stat b { color: #fff; font-family: var(--pl-sport); }
+html #team-hub .th-box { background: rgba(10,38,31,.84); border: 1px solid var(--pl-line); border-radius: 16px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.5); color: var(--pl-text); }
+html #team-hub .th-notice, html #team-hub .th-team, html #team-hub .th-jersey, html #team-hub .th-item, html #team-hub .th-msg { background: var(--pl-row); color: var(--pl-text); border: 1px solid var(--pl-line-2); border-radius: 12px; }
+html #team-hub .th-box h3 { color: #fff; font-weight: 900; }
+html #team-hub .th-note, html #team-hub .th-notice small, html #team-hub .th-log small, html #team-hub .th-team small, html #team-hub .th-item small, html #team-hub .th-msg small, html #team-hub .th-table th { color: var(--pl-mute); }
+html #team-hub .th-notice.pin { background: rgba(229,184,105,.1); border-color: rgba(229,184,105,.6); }
+html #team-hub .th-log li, html #team-hub .th-table td, html #team-hub .th-table th, html #team-hub .th-levels td { border-color: rgba(255,255,255,.06); }
+html #team-hub .th-levels tr.now td { color: var(--pl-gold); background: rgba(229,184,105,.1); }
+html #team-hub .th-role { background: var(--pl-well); border: 1px solid var(--pl-line-2); color: var(--pl-text-2); border-radius: 999px; } html #team-hub .th-role.owner { background: var(--pl-gold); color: #051A14; border-color: var(--pl-gold); } html #team-hub .th-role.vice { background: var(--pl-blue); color: #fff; border-color: var(--pl-blue); }
+html #team-hub .th-code { color: var(--pl-gold); background: transparent; border: 0; padding: 0; font-family: var(--pl-sport); }
+html #team-hub .th-err { color: var(--pl-gold); } html #team-hub .th-ok { color: var(--pl-green); }
+html #team-hub .th-msg.mine { background: linear-gradient(90deg, rgba(229,184,105,.3), rgba(229,184,105,.12)); border-color: rgba(229,184,105,.5); }
+html #team-hub .th-item.on { background: rgba(229,184,105,.12); border-color: rgba(229,184,105,.7); }
+html #team-hub .th-jersey.th-slot { border-style: dashed; border-color: rgba(229,184,105,.35); color: var(--pl-mute); }
+html #team-hub .th-price { color: var(--pl-gold); font-family: var(--pl-sport); } html #team-hub .th-gold { color: var(--pl-gold) !important; text-shadow: 0 0 12px rgba(229,184,105,.5); }
+html #team-hub .th-vs span { color: var(--pl-gold); font-family: var(--pl-sport); } html #team-hub .th-soon { color: var(--pl-mute); } html #team-hub .th-soon b { color: #fff; }
+html #team-hub .th-jersey small { color: var(--pl-green); }
+html #team-hub .th-dot { background: var(--pl-dim); } html #team-hub .th-dot.on { background: var(--pl-green); }
+html #team-hub label { color: var(--pl-text-2) !important; }
 
 /* ---------- 球衣設計器 ---------- */
-html #jersey-designer .jd-left { background: var(--po-paper-2); border-right: 3px solid var(--po-ink); }
-html #jersey-designer .jd-hint { color: var(--po-mute); }
-html #jersey-designer .jd-pane h4 { color: var(--po-ink); font-weight: 900; }
-html #jersey-designer .jd-card { background: #fff !important; color: var(--po-ink) !important; border: 2px solid var(--po-ink) !important; border-radius: 0 !important; }
-html #jersey-designer .jd-card[aria-pressed=true] { background: var(--po-yellow) !important; border-width: 3px !important; box-shadow: 4px 4px 0 var(--po-ink) !important; }
-html #jersey-designer .jd-face button, html #jersey-designer .jd-chip { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html #jersey-designer .jd-face button[aria-pressed=true], html #jersey-designer .jd-chip[aria-pressed=true] { background: var(--po-ink); color: var(--po-yellow); border-color: var(--po-ink); }
-html #jersey-designer .jd-sw button { border: 2px solid var(--po-ink); border-radius: 0; }
-html #jersey-designer .jd-sw button[aria-pressed=true] { outline: 3px solid var(--po-yellow); box-shadow: 0 0 0 5px var(--po-ink); }
-html #jersey-designer .jd-note { color: var(--po-mute); } html #jersey-designer .jd-err { color: var(--po-red); }
-html #jersey-designer .jd-foot { border-top: 3px solid var(--po-ink); }
-html #jersey-designer label { color: var(--po-ink); }
-html #team-hub label { color: var(--po-ink) !important; }
+html #jersey-designer .jd-left { background: linear-gradient(180deg, #0E3F32, #07241C 55%, #041410); border-right: 1px solid var(--pl-line); }
+html #jersey-designer .jd-hint { color: var(--pl-mute); }
+html #jersey-designer .jd-pane h4 { color: var(--pl-gold); font-weight: 900; }
+html #jersey-designer .jd-card { background: var(--pl-row) !important; color: var(--pl-text) !important; border: 1px solid var(--pl-line-2) !important; border-radius: 14px !important; }
+html #jersey-designer .jd-card[aria-pressed=true] { background: linear-gradient(135deg, rgba(229,184,105,.3), rgba(229,184,105,.08)) !important; border-color: rgba(229,184,105,.85) !important; }
+html #jersey-designer .jd-face button, html #jersey-designer .jd-chip { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 999px; }
+html #jersey-designer .jd-face button[aria-pressed=true], html #jersey-designer .jd-chip[aria-pressed=true] { background: var(--pl-gold); color: #051A14; border-color: var(--pl-gold); }
+html #jersey-designer .jd-sw button { border: 2px solid rgba(255,255,255,.25); border-radius: 8px; }
+html #jersey-designer .jd-sw button[aria-pressed=true] { outline: 3px solid var(--pl-gold); box-shadow: none; }
+html #jersey-designer .jd-note { color: var(--pl-mute); } html #jersey-designer .jd-err { color: var(--pl-gold); }
+html #jersey-designer .jd-foot { border-top: 1px solid var(--pl-line); }
+html #jersey-designer label { color: var(--pl-text-2); }
 
-/* ---------- 遊戲裡：準備框、選隊伍與位置（房間等待室，參考設計稿 2） ---------- */
-html #room-flow { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--po-ink); }
-html #room-flow button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 900; box-shadow: 3px 3px 0 var(--po-ink); }
-html #room-flow button:hover { background: var(--po-yellow); }
-html #room-flow #room-start { background: var(--po-yellow); color: var(--po-ink); border-color: var(--po-ink); }
-html #room-flow #room-start:disabled { background: #e6e3da; color: #777; box-shadow: none; }
-html #room-pick { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 10px 10px 0 var(--po-ink); }
-html #room-pick::backdrop { background: #0d1f6fcc; }
-html #room-pick h2 { color: var(--po-ink); font-weight: 900; } html #pick-clock { color: var(--po-ink); font-family: var(--po-display); font-style: italic; font-weight: 900; font-size: 30px; }
-html #room-pick .pick-rule { color: var(--po-red); }
-html .pick-court { background: var(--po-blue); border: 3px solid var(--po-ink); }
-html .pick-half { background: #1a3cb0; border: 3px solid #fff; }
-html .pick-half > b { color: #fff; font-weight: 900; }
-html .pick-half[data-team="0"] { border-right: 6px solid var(--po-ink); } html .pick-half[data-team="1"] { border-left: 6px solid var(--po-ink); }
-html .pick-slot { background: transparent; color: #fff; border-radius: 0; }
-html .pick-slot:disabled { background: transparent; }
-html .pick-avatar { background: #fff; color: var(--po-ink); border: 3px solid var(--po-ink); box-shadow: 3px 3px 0 var(--po-ink); width: 46px; height: 46px; }
-html .setter .pick-avatar { background: var(--po-yellow); border-color: var(--po-ink); }
-html .pick-role { background: var(--po-ink); color: #fff; padding: 1px 6px; font-weight: 800; }
-html .pick-person { color: #fff; font-weight: 800; }
-html .mine { outline: 3px solid var(--po-yellow); outline-offset: 2px; }
-html .pick-zone { border-color: #ffffff99; }
-html #room-pick button:not(.pick-slot) { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
-html #room-pick button.primary, html #room-pick button.orange { background: var(--po-yellow); box-shadow: 4px 4px 0 var(--po-ink); }
+/* ---------- 遊戲裡：準備框、選隊伍與位置 ---------- */
+html #room-flow { background: rgba(10,38,31,.9); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 16px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.55); backdrop-filter: blur(12px); }
+html #room-flow button { background: var(--pl-well); color: var(--pl-text); border: 1px solid var(--pl-line-2); border-radius: 10px; font-weight: 900; }
+html #room-flow button:hover { background: #0E3A2F; border-color: rgba(229,184,105,.45); }
+html #room-flow #room-start { background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); color: #051A14; border: 0; }
+html #room-flow #room-start:disabled { background: var(--pl-well); color: var(--pl-dim); }
+html #pick-clock { color: var(--pl-gold); font-family: var(--pl-sport); }
+html #room-pick .pick-rule { color: var(--pl-gold-l); }
+html .pick-court { background: var(--pl-main); border: 1px solid var(--pl-line); border-radius: 12px; }
+html .pick-half { background: #0E4235; border: 2px solid rgba(255,255,255,.6); }
+html .pick-half > b { color: var(--pl-gold); font-weight: 900; }
+html .pick-half[data-team="0"] { border-right: 4px solid var(--pl-gold); } html .pick-half[data-team="1"] { border-left: 4px solid var(--pl-gold); }
+html .pick-slot { background: rgba(6,33,26,.85); color: #fff; border: 1px solid var(--pl-line-2); border-radius: 12px; }
+html .pick-slot:disabled { background: rgba(6,33,26,.6); }
+html .pick-avatar { background: var(--pl-well); color: var(--pl-text); border: 2px solid rgba(229,184,105,.6); }
+html .setter .pick-avatar { background: var(--pl-blue); border-color: #7DD3FC; }
+html .pick-role { color: var(--pl-gold-l); font-weight: 700; }
+html .pick-person { color: var(--pl-text-2); }
+html .mine { outline: 2px solid var(--pl-gold); outline-offset: 2px; }
+html #room-pick button:not(.pick-slot) { background: var(--pl-well); color: var(--pl-text); border: 1px solid var(--pl-line-2); border-radius: 10px; font-weight: 800; }
+html #room-pick button.primary, html #room-pick button.orange { background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); color: #051A14; border: 0; }
 /* 左上房間資訊、點一下畫面提示 */
-html .room-info { background: var(--po-paper) !important; color: var(--po-ink) !important; border: 3px solid var(--po-ink) !important; border-radius: 0 !important; box-shadow: 4px 4px 0 var(--po-ink); }
-html .room-info strong { color: var(--po-ink) !important; font-weight: 900; } html .room-info p, html .room-info summary { color: var(--po-ink-2, #333) !important; }
-html .wk-lock { background: var(--po-ink); color: #fff; border-radius: 0; font-weight: 800; }
-/* 練習模式選單、新手教學面板（js/tutorial.js 的樣式是打開時才加的） */
-html .vb-tut-menu, html .vb-tut-panel { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 8px 8px 0 var(--po-ink); }
-html .vb-tut-menu { box-shadow: 0 0 0 100vmax #0d1f6f99, 10px 10px 0 var(--po-ink); }
-html .vb-tut-menu h2 { color: var(--po-ink); font-weight: 900; } html .vb-tut-lead, html .vb-tut-sub { color: #555 !important; }
-html .vb-tut-card { background: #fff; border: 3px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-html .vb-tut-card p { color: #333; }
-html .vb-tut-main { background: #fff8d6; border-color: var(--po-ink); }
-html .vb-tut-menu .vb-tut-big { background: var(--po-ink); color: var(--po-yellow); border: 2px solid var(--po-ink); border-radius: 0; box-shadow: 4px 4px 0 #0005; }
-html .vb-tut-main .vb-tut-big { background: var(--po-yellow); color: var(--po-ink); box-shadow: 4px 4px 0 var(--po-ink); }
-html .vb-tut-menu .vb-tut-chips button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; }
-html .vb-tut-menu .vb-tut-link { color: var(--po-blue); }
-html .vb-tut-panel button, html .vb-tut-menu button:not(.vb-tut-big) { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
-html .vb-tut-panel > strong { color: #555; }
-html .vb-tut-panel kbd { border: 2px solid var(--po-ink); background: #fff; }
-html .vb-tut-panel .vb-hl, html .vb-tut-panel kbd { color: var(--po-ink); background: var(--po-yellow); padding: 0 4px; }
-html .vb-tut-progress { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 4px 4px 0 var(--po-ink); }
-html .vb-tut-progress i { border: 2px solid var(--po-ink); background: #fff; } html .vb-tut-progress i.done { background: var(--po-yellow); border-color: var(--po-ink); }
-html .vb-tut-route { color: var(--po-ink); background: var(--po-yellow); padding: 4px 8px; }
-/* 進球館的載入畫面 */
-html #game-loading { background: var(--po-blue); color: var(--po-ink); }
-html #game-loading .entry-box { background: var(--po-paper); border: 3px solid var(--po-ink); box-shadow: 10px 10px 0 var(--po-ink); padding: 22px 26px; }
-html #game-loading h1 { color: var(--po-ink); font-weight: 900; } html #game-loading small { color: var(--po-blue); font-family: var(--po-display); font-style: italic; font-weight: 900; letter-spacing: 2px; font-size: 16px; }
-html #game-loading progress { accent-color: var(--po-ink); }
+html .room-info { background: rgba(10,38,31,.88) !important; color: var(--pl-text) !important; border: 1px solid var(--pl-line) !important; border-radius: 12px !important; box-shadow: 0 8px 20px rgba(0,0,0,.4) !important; }
+html .room-info strong { color: var(--pl-gold) !important; } html .room-info p, html .room-info summary { color: var(--pl-text-2) !important; }
+html .wk-lock { background: rgba(6,33,26,.9); color: var(--pl-gold-l); border: 1px solid var(--pl-line); border-radius: 999px; }
+
+/* ---------- 練習模式選單（毛玻璃漸層卡）、新手教學面板 ---------- */
+html .vb-tut-menu { box-shadow: 0 0 0 100vmax rgba(0,0,0,.7), 0 24px 60px rgba(0,0,0,.6); }
+html .vb-tut-lead, html .vb-tut-sub { color: var(--pl-text-2) !important; }
+html .vb-tut-card { color: #fff; border: 1px solid rgba(255,255,255,.28); border-top: 2px solid #7DD3FC; border-radius: 18px;
+  background: linear-gradient(125deg, rgba(195,110,105,.35) 0%, rgba(165,115,220,.35) 38%, rgba(56,189,248,.40) 72%, rgba(103,232,249,.45) 100%); background-color: rgba(6,33,26,.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3); }
+html .vb-tut-card:hover { border-color: rgba(245,213,150,.75); transform: translateY(-3px); }
+html .vb-tut-card p { color: rgba(241,245,249,.9); }
+html .vb-tut-main { border-top-color: var(--pl-gold); }
+html .vb-tut-menu .vb-tut-big { background: rgba(2,132,199,.9); color: #fff; border: 1px solid rgba(186,230,253,.5); border-radius: 12px; }
+html .vb-tut-main .vb-tut-big { background: rgba(6,33,26,.9); color: var(--pl-gold-l); border-color: rgba(229,184,105,.6); }
+html .vb-tut-card:last-child .vb-tut-big { background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); color: #051A14; border: 0; }
+html .vb-tut-menu .vb-tut-chips button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 999px; }
+html .vb-tut-menu .vb-tut-link { color: var(--pl-gold); }
+html .vb-tut-menu button:not(.vb-tut-big) { color: var(--pl-text-2); }
+html .vb-tut-panel { background: rgba(10,38,31,.9); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 16px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.55); backdrop-filter: blur(12px); }
+html .vb-tut-panel > strong { color: var(--pl-gold); }
+html .vb-tut-panel button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 10px; }
+html .vb-tut-panel kbd { border: 1px solid rgba(229,184,105,.5); background: var(--pl-well); color: var(--pl-gold-l); }
+html .vb-tut-panel .vb-hl { color: var(--pl-gold); }
+html .vb-tut-progress { background: rgba(6,33,26,.88); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 999px; }
+html .vb-tut-progress i { border: 2px solid var(--pl-gold); background: var(--pl-well); } html .vb-tut-progress i.done { background: var(--pl-green); border-color: #6EE7B7; }
+html .vb-tut-route { color: var(--pl-gold); background: transparent; padding: 8px 0; }
+
+/* ---------- 進球館的載入畫面 ---------- */
+html #game-loading { background-color: var(--pl-deep); background-image: radial-gradient(circle at 18% 0%, rgba(2,132,199,.22) 0%, transparent 48%), radial-gradient(circle at 82% 8%, rgba(229,184,105,.16) 0%, transparent 45%), linear-gradient(160deg, #051A14, #092C23 48%, #071F2E); color: var(--pl-text); }
+html #game-loading .entry-box { background: var(--pl-panel); border: 1px solid var(--pl-line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.6); padding: 22px 26px; }
+html #game-loading h1 { color: #fff; font-weight: 900; } html #game-loading small { color: #051A14; background: var(--pl-gold); padding: 2px 10px; border-radius: 3px; font-weight: 900; letter-spacing: .2em; }
+html #game-loading progress { accent-color: var(--pl-gold); }

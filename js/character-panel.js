@@ -36,7 +36,7 @@ export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝�
     const W = opt.w || 240, H = opt.h || 300;
     renderer.setSize(W, H);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#e9e6dc');   /* Play One 風格：米白底 */
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#0B362B');   /* Play One 風格：深綠底 */
     scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
     const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
     const av = makeToyAvatar(decodeLook(code), opt.jersey === undefined ? readWornJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
@@ -47,7 +47,7 @@ export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝�
 }
 
 // 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
-function livePreview(old, bg = '#e9e6dc') {   // Play One 風格：米白底
+function livePreview(old, bg = '#0B362B') {   // Play One 風格：深綠底
   // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
   const canvas = document.createElement('canvas'); canvas.className = old.className; canvas.setAttribute('aria-label', old.getAttribute('aria-label') || ''); old.replaceWith(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });

@@ -705,44 +705,46 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .two-wheel .sw-opt{width:120px;max-width:32%}
 .two-wheel .sw-center{width:38%;height:38%;font-size:18px}
 
-/* ===== Play One 介面風格（2026-11-16，參考 volleygame/素材 的設計）：只改比賽資訊、輪轉表、按鍵面板「看起來的樣子」，位置和遊戲本身不動 ===== */
-:root { --po-paper: #f4f2ea; --po-ink: #141414; --po-yellow: #ffd21f; --po-blue: #1f46c9; --po-display: 'Barlow Condensed', 'Noto Sans TC', sans-serif; }
-/* 計分板：米白卡片＋黑框＋硬陰影；比分是兩塊大字（我方黃、對方白），中間黑底局數 */
-.vm-sb { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); padding: 4px 6px 4px 10px; gap: 10px; }
-.vm-sb #vm-title { font-weight: 900; }
-.vm-sb span { font-weight: 900; font-size: 14px; }
-.vm-sb span.srv::after { content: ' ●'; color: var(--po-ink); }
-.vm-sb em#vm-sc { display: inline-flex; align-items: stretch; gap: 0; min-width: 0; border: 3px solid var(--po-ink); font: inherit; }
-.vm-sb em#vm-sc i { font-family: var(--po-display); font-style: italic; font-weight: 900; font-size: 34px; line-height: 1; padding: 4px 12px; min-width: 56px; text-align: center; }
-.vm-sb em#vm-sc i.sa { background: var(--po-yellow); } .vm-sb em#vm-sc i.sb { background: #fff; }
-.vm-sb em#vm-sc b { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--po-ink); color: var(--po-yellow); font-family: var(--po-display); font-style: italic; font-size: 22px; padding: 0 8px; line-height: 1; }
-.vm-sb em#vm-sc b small { font-family: 'Noto Sans TC', sans-serif; font-style: normal; font-size: 10px; color: #fff; opacity: 1; }
-.vm-sb small#vm-tc { opacity: 1; background: var(--po-ink); color: #fff; font-weight: 800; padding: 3px 8px; font-size: 12px; }
-.vm-sb button { background: #fff; color: var(--po-ink); border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
-.vm-sb button:hover { background: var(--po-yellow); }
-/* 輪轉表：米白卡片、黑框；我方格子藍、自己黃框 */
-.vm-rot { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); }
-.vm-rot .rt b { color: var(--po-ink); font-weight: 900; opacity: 1; }
-.vm-rot .rt .net { background: repeating-linear-gradient(90deg, #e2372b 0 6px, #fff 6px 10px); height: 4px; border-radius: 0; }
-.vm-rot .rt i { background: #fff; border: 2px solid var(--po-ink); border-radius: 0; color: var(--po-ink); }
-.vm-rot .rt i.fr { background: #dbe4ff; }
-.vm-rot .rt i.me { outline: 3px solid var(--po-yellow); outline-offset: -3px; background: var(--po-yellow); }
-.vm-rot .rt i em { font-family: var(--po-display); font-style: italic; font-weight: 900; font-size: 13px; }
+/* ===== Play One 介面風格（職業聯賽轉播風，照 volleygame/play_one.html）：只改比賽資訊、輪轉表、按鍵面板、面板顏色「看起來的樣子」；位置和遊戲本身不動 ===== */
+:root { --pl-deep: #06211A; --pl-main: #0B362B; --pl-row: #07261E; --pl-well: #061D17; --pl-gold: #E5B869; --pl-gold-l: #F5D596; --pl-gold-d: #D49B42; --pl-blue: #0284C7; --pl-cyan: #38BDF8;
+  --pl-text: #F8FAFC; --pl-text-2: #CBD5E1; --pl-mute: #94A3B8; --pl-line: rgba(229,184,105,.22); --pl-line-2: rgba(255,255,255,.1); --pl-panel: rgba(10,38,31,.86); --pl-sport: 'Oswald', 'Noto Sans TC', sans-serif; }
+/* 計分板：深綠毛玻璃＋細金框；比分兩塊（我方香檳金、對方電光藍），中間深綠底局數 */
+.vm-sb { background: var(--pl-panel); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 14px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.55); backdrop-filter: blur(12px); padding: 5px 6px 5px 12px; gap: 10px; }
+.vm-sb #vm-title { color: var(--pl-gold); font-weight: 900; }
+.vm-sb span { font-weight: 900; font-size: 14px; color: #fff; }
+.vm-sb span.srv::after { content: ' 🏐'; color: inherit; }
+.vm-sb em#vm-sc { display: inline-flex; align-items: stretch; gap: 0; min-width: 0; border-radius: 8px; overflow: hidden; font: inherit; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+.vm-sb em#vm-sc i { font-family: var(--pl-sport); font-style: normal; font-weight: 700; font-size: 30px; line-height: 1; padding: 5px 12px; min-width: 54px; text-align: center; }
+.vm-sb em#vm-sc i.sa { background: linear-gradient(180deg, var(--pl-gold-l), var(--pl-gold)); color: #051A14; } .vm-sb em#vm-sc i.sb { background: linear-gradient(180deg, #0EA5E9, var(--pl-blue)); color: #fff; }
+.vm-sb em#vm-sc b { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--pl-deep); color: var(--pl-gold); font-family: var(--pl-sport); font-size: 20px; padding: 0 9px; line-height: 1; }
+.vm-sb em#vm-sc b small { font-family: 'Noto Sans TC', sans-serif; font-size: 10px; color: var(--pl-text-2); opacity: 1; }
+.vm-sb small#vm-tc { opacity: 1; background: rgba(2,132,199,.25); color: #E0F2FE; border: 1px solid rgba(56,189,248,.35); border-radius: 6px; font-weight: 700; padding: 2px 8px; font-size: 12px; }
+.vm-sb button { background: var(--pl-well); color: var(--pl-text-2); border: 1px solid var(--pl-line-2); border-radius: 8px; font-weight: 700; }
+.vm-sb button:hover { background: #0E3A2F; border-color: rgba(229,184,105,.45); }
+/* 輪轉表 */
+.vm-rot { background: var(--pl-panel); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 14px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.55); backdrop-filter: blur(12px); }
+.vm-rot .rt b { color: var(--pl-gold); font-weight: 900; opacity: 1; }
+.vm-rot .rt .net { background: linear-gradient(90deg, transparent, var(--pl-gold), transparent); height: 2px; }
+.vm-rot .rt i { background: var(--pl-row); border: 1px solid var(--pl-line-2); border-radius: 8px; color: var(--pl-text); }
+.vm-rot .rt i.fr { background: rgba(2,132,199,.28); border-color: rgba(56,189,248,.35); }
+.vm-rot .rt i.me { outline: 2px solid var(--pl-gold); outline-offset: -2px; background: rgba(229,184,105,.22); }
+.vm-rot .rt i em { font-family: var(--pl-sport); font-weight: 700; font-size: 12px; }
 .vm-rot .rt i u { opacity: .75; }
-/* 練習房按鍵面板：每個鍵是白底黑框方塊（像設計稿右下角） */
-.wk-keys { background: var(--po-paper); color: var(--po-ink); border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 5px 5px 0 var(--po-ink); }
-.wk-keys span { background: #fff; border: 2px solid var(--po-ink); border-bottom-width: 3px; border-radius: 0; }
-.wk-keys kbd { color: var(--po-ink); font-weight: 800; }
-.wk-keys small, .wk-keys p { color: var(--po-ink); }
-.wk-keys span.pressed { background: var(--po-yellow); border-color: var(--po-ink); box-shadow: none; }
-/* 遊戲介面（.walk-ui 裡的面板、按鈕、選單）：把顏色變數換成 Play One 的米白／黑／黃；3D 場景不在這裡面，不受影響 */
-.walk-ui { --paper: #f4f2ea; --paper-2: #ffffff; --paper-3: #e9e6dc; --sheet: #f4f2ea; --ink: #141414; --ink-2: #333333; --soft: #5f5f5f; --faint: #9a9a9a;
-  --rule: #141414; --hl: #141414; --accent: #ffd21f; --accent-ink: #141414; --chip: #ffffff; --line: #141414; --muted: #5f5f5f; color-scheme: light; }
-.walk-ui button { border: 2px solid var(--po-ink); border-radius: 0; font-weight: 800; }
-.walk-ui button:hover { background: var(--po-yellow); border-color: var(--po-ink); }
-.walk-ui button.primary { background: var(--po-yellow); color: var(--po-ink); box-shadow: 3px 3px 0 var(--po-ink); }
-.walk-top button { box-shadow: 3px 3px 0 var(--po-ink); }
-/* 體力條：白底黑框、黃色體力（只換樣子） */
-.sta { background: #fff; border: 3px solid var(--po-ink); border-radius: 0; box-shadow: 4px 4px 0 var(--po-ink); }
-.sta i { background: var(--po-yellow); border-radius: 0; }
-.sta b { color: var(--po-ink); background: var(--po-paper); border: 2px solid var(--po-ink); padding: 0 8px; text-shadow: none; }
+/* 練習房按鍵面板 */
+.wk-keys { background: var(--pl-panel); color: var(--pl-text); border: 1px solid var(--pl-line); border-radius: 14px; box-shadow: 0 12px 32px -6px rgba(0,0,0,.55); backdrop-filter: blur(12px); }
+.wk-keys span { background: var(--pl-well); border: 1px solid var(--pl-line-2); border-bottom: 2px solid rgba(229,184,105,.35); border-radius: 8px; }
+.wk-keys kbd { color: var(--pl-gold-l); font-family: var(--pl-sport); font-weight: 600; }
+.wk-keys small, .wk-keys p { color: var(--pl-text-2); }
+.wk-keys span.pressed { background: var(--pl-gold); border-color: var(--pl-gold); box-shadow: 0 0 12px rgba(229,184,105,.5); }
+.wk-keys span.pressed kbd, .wk-keys span.pressed small { color: #051A14; }
+/* 遊戲介面（.walk-ui 裡的面板、按鈕、選單）：顏色變數換成深綠＋香檳金；3D 場景不在這裡面，不受影響 */
+.walk-ui { --paper: #0B362B; --paper-2: #07261E; --paper-3: #0E4235; --sheet: rgba(10,38,31,.9); --ink: #F8FAFC; --ink-2: #CBD5E1; --soft: #94A3B8; --faint: #64748B;
+  --rule: rgba(255,255,255,.1); --hl: rgba(229,184,105,.45); --accent: #E5B869; --accent-ink: #051A14; --chip: #07261E; --line: rgba(255,255,255,.1); --muted: #94A3B8; color-scheme: dark; }
+.walk-ui button { border-radius: 10px; font-weight: 700; }
+.walk-ui button:hover { background: #0E3A2F; border-color: rgba(229,184,105,.45); }
+.walk-ui button.primary { background: linear-gradient(90deg, var(--pl-gold), var(--pl-gold-d)); color: #051A14; border: 0; }
+.walk-top button { background: var(--pl-panel); border: 1px solid var(--pl-line); backdrop-filter: blur(12px); box-shadow: 0 8px 20px rgba(0,0,0,.4); color: var(--pl-text); }
+/* 體力條：深綠底、香檳金→橘的體力 */
+.sta { background: rgba(3,16,12,.85); border: 1px solid var(--pl-line); border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.45); padding: 2px; }
+.sta i { background: linear-gradient(90deg, var(--pl-gold), #FBBF24, #F97316); border-radius: 999px; }
+.sta b { color: var(--pl-gold-l); background: transparent; border: 0; padding: 0; text-shadow: 0 1px 4px rgba(0,0,0,.8); font-family: var(--pl-sport); }

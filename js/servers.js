@@ -32,21 +32,21 @@ export const pingLevel = (ms) => (ms == null ? 'off' : ms < 20 ? 'good' : ms < 6
 // ---------- 選伺服器頁面（開始遊戲後、進大廳前；大廳也可以按「換伺服器」再打開） ----------
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const CSS = `
-#server-select{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px;background-color:#1f46c9;
-  background-image:linear-gradient(115deg,transparent 0 62%,#ffffff14 62% 62.4%,transparent 62.4%),repeating-linear-gradient(90deg,#ffffff0a 0 2px,transparent 2px 14px);background-size:100% 100%,100% 6px;background-repeat:no-repeat,repeat-x;font-family:'Noto Sans TC',sans-serif;color:#141414}
-.ss-box{width:min(860px,96vw);max-height:92vh;overflow:auto;background:#f4f2ea;border:3px solid #141414;box-shadow:10px 10px 0 #141414;padding:22px 26px}
-.ss-kicker{margin:0;color:#1f46c9;font:italic 900 18px 'Barlow Condensed','Noto Sans TC',sans-serif;letter-spacing:2px}
-.ss-box h2{margin:2px 0 4px;font-size:30px;font-weight:900}.ss-note{margin:0 0 16px;color:#555;font-size:14px}
-.ss-list{display:grid;gap:12px}
-.ss-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:18px;padding:14px 18px;background:#fff;border:3px solid #141414;cursor:pointer;text-align:left;font:inherit;color:#141414;box-shadow:4px 4px 0 #141414}
-.ss-row:hover{background:#fffbe6}.ss-row[aria-pressed=true]{background:#ffd21f}.ss-row:disabled{opacity:.55;cursor:default}
-.ss-name b{display:block;font-size:22px;font-weight:900}.ss-name small{color:#555;font-size:13px}.ss-tag{display:inline-block;margin-left:8px;padding:0 8px;background:#141414;color:#ffd21f;font-size:12px;font-weight:800;vertical-align:middle}
-.ss-num{text-align:center;min-width:86px}.ss-num b{display:block;font:italic 900 30px/1 'Barlow Condensed','Noto Sans TC',sans-serif}.ss-num small{color:#555;font-size:12px}
-.ss-ping b{padding:0 8px;border:2px solid #141414}.ss-ping.good b{background:#7be0a5}.ss-ping.ok b{background:#ff9f1c}.ss-ping.bad b{background:#ff9c8a}.ss-ping.off b{background:#ddd;color:#777}
+#server-select{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Noto Sans TC',sans-serif;color:#F8FAFC;background-color:#06211A;
+  background-image:repeating-linear-gradient(-55deg,rgba(255,255,255,.025) 0 2px,transparent 2px 18px),radial-gradient(circle at 18% 0%,rgba(2,132,199,.22) 0%,transparent 48%),radial-gradient(circle at 82% 8%,rgba(229,184,105,.16) 0%,transparent 45%),linear-gradient(160deg,#051A14 0%,#092C23 48%,#071F2E 100%)}
+.ss-box{width:min(860px,96vw);max-height:92vh;overflow:auto;background:rgba(10,38,31,.9);border:1px solid rgba(229,184,105,.4);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.6);backdrop-filter:blur(14px);padding:24px 28px}
+.ss-kicker{display:inline-block;margin:0;padding:2px 10px;border-radius:3px;background:#E5B869;color:#06211A;font:700 12px 'Oswald','Noto Sans TC',sans-serif;letter-spacing:.18em}
+.ss-box h2{margin:8px 0 4px;font-size:28px;font-weight:900;color:#fff}.ss-note{margin:0 0 16px;color:#CBD5E1;font-size:14px}
+.ss-list{display:grid;gap:10px}
+.ss-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:18px;padding:14px 18px;background:#07261E;border:1px solid rgba(255,255,255,.1);border-radius:14px;cursor:pointer;text-align:left;font:inherit;color:#F8FAFC;transition:border-color .15s,transform .15s}
+.ss-row:hover{border-color:rgba(229,184,105,.45);transform:translateY(-1px)}.ss-row[aria-pressed=true]{background:linear-gradient(90deg,rgba(229,184,105,.25),rgba(229,184,105,.06));border-color:rgba(229,184,105,.8)}.ss-row:disabled{opacity:.45;cursor:default;transform:none}
+.ss-name b{display:block;font-size:22px;font-weight:900;color:#fff}.ss-name small{color:#94A3B8;font-size:13px}.ss-tag{display:inline-block;margin-left:8px;padding:0 9px;border-radius:999px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.45);color:#34D399;font-size:12px;font-weight:800;vertical-align:middle}
+.ss-num{text-align:center;min-width:86px}.ss-num b{display:block;font:700 28px/1.1 'Oswald','Noto Sans TC',sans-serif;color:#F5D596}.ss-num small{color:#94A3B8;font-size:12px}
+.ss-ping.good b{color:#34D399}.ss-ping.ok b{color:#FB923C}.ss-ping.bad b{color:#F87171}.ss-ping.off b{color:#64748B;font-size:22px}
 .ss-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
-.ss-foot button{padding:12px 26px;border:2px solid #141414;background:#fff;color:#141414;font:inherit;font-size:16px;font-weight:900;cursor:pointer}
-.ss-foot .ss-go{background:#ffd21f;box-shadow:4px 4px 0 #141414;font-size:18px}.ss-foot button:disabled{opacity:.5;cursor:default}
-.ss-refresh{color:#555;font-size:13px}
+.ss-foot button{padding:11px 24px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:#061D17;color:#CBD5E1;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.ss-foot .ss-go{border:0;background:linear-gradient(90deg,#E5B869,#D49B42);color:#051A14;font-size:17px;font-weight:900;clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);padding:12px 32px;box-shadow:0 6px 16px rgba(0,0,0,.3)}.ss-foot button:disabled{opacity:.45;cursor:default}
+.ss-refresh{color:#64748B;font-size:13px}
 `;
 // 回傳選好的伺服器（使用者按「進入」才結束）；allowCancel＝大廳裡打開的可以取消（回傳 null）
 export async function openServerSelect({ allowCancel = false } = {}) {
