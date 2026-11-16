@@ -37,7 +37,8 @@ function roomRulesChanged(rules) {
       NET.srvDown = round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器沒回應：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot);   /* 只有這一場；下一場還是先請伺服器 */
     }, 4000);
     const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
-    NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, rules: JSON.parse(JSON.stringify(rules)) });
+    const names = {}; for (const id of seats.flat()) if (id) names[id] = id === vmMe() ? NET.name : NET.peers.get(id)?.n || '';   /* 伺服器不知道暱稱：開賽時一起給（播報、結算才不會寫「球友」） */
+    NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, names, rules: JSON.parse(JSON.stringify(rules)) });
     netStatus('比賽由台北伺服器裁判', 'ok');
     return;
   }

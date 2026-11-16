@@ -70,7 +70,7 @@ export function createAi(G) {
         const k = G.VM.team[a.team].indexOf(a.id), mate = G.VM.team[a.team].find((id) => id !== a.id), mp = G.vmPos(mate), ma = G.VM.ai.get(mate);
         const mateFront = (ma && ma.blk) || (!ma && mp && Math.abs(mp.x) < 2.2), th = mateFront ? vmThreat(a.team) : null;
         if (mateFront) { a.tx = sd * 6.2; a.tz = G.clamp(th ? -th.z * 0.35 : 0, -2.2, 2.2); }
-        else { a.tx = sd * (G.vmLv(a).block > 0.8 ? 5.5 : 6); a.tz = k === 0 ? 2 : -2; }
+        else { a.tx = sd * (G.vmLv(a).block > 0.8 ? 5.5 : 6); a.tz = sd * (k === 0 ? 2 : -2); }   /* 面向網子的左右：兩隊都一樣（以前左隊顛倒，AI 會站到真人的位置） */
         a.reactAt = G.VM.t + G.vmLv(a).react;
         if (G.VM.touch.team !== a.team) G.VM.poss[a.team] = null;
       }

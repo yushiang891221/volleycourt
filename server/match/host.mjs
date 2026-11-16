@@ -27,6 +27,9 @@ export class MatchHost {
     if (d.rules) { if (Number.isFinite(d.rules.speed)) g.VB.ts = d.rules.speed; if (g.vmApplyRoomRules) g.vmApplyRoomRules(d.rules); }
     const seats = d.seats.map(t => t.map(id => (typeof id === 'string' && id ? id : null)));
     if (d.six) g.vm6Start(c, d.sg === 1 ? 1 : -1, {}, seats); else g.vmStart(c, d.sg === 1 ? 1 : -1, null, [], seats);
+    // 真人暱稱（房主開賽時給的）：播報（例如「發球超過 8 秒（小明）」）、結算才不會寫「球友」
+    const names = d.names && typeof d.names === 'object' ? d.names : {};
+    for (const id of seats.flat()) if (id && typeof names[id] === 'string' && names[id].trim()) { const n = names[id].trim().slice(0, 24); g.VM.names[id] = n; if (g.VM.startData?.names) g.VM.startData.names[id] = n; }
     this.last = performance.now();
     clearInterval(this.timer); this.timer = setInterval(() => this.tick(), TICK);
     this.log('match start', JSON.stringify({ six: !!d.six, seats }));

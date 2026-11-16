@@ -463,7 +463,8 @@ export function createGameCore(S = {}) {
         NET.srvDown = round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器沒回應：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot);   /* 只有這一場；下一場還是先請伺服器 */
       }, 4000);
       const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
-      NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, rules: JSON.parse(JSON.stringify(rules)) });
+      const names = {}; for (const id of seats.flat()) if (id) names[id] = id === vmMe() ? NET.name : NET.peers.get(id)?.n || '';   /* 伺服器不知道暱稱：開賽時一起給（播報、結算才不會寫「球友」） */
+      NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, names, rules: JSON.parse(JSON.stringify(rules)) });
       netStatus('比賽由台北伺服器裁判', 'ok');
       return;
     }
@@ -1246,7 +1247,7 @@ export function createGameCore(S = {}) {
       for (const t of [0,1]) for (const [k,id] of VM.team[t].entries()) {
         if (/^ai/.test(id)) vmMkAi(id,t,'AI',t===0?'#30A46C':'#E5484D',null);
         else VM.names[id] = id === vmMe() ? NET.name : NET.peers.get(id)?.n || '球友';
-        const a = VM.ai.get(id); if (a) { a.x = sg*(t===0?1:-1)*6; a.z = k===0?2.1:-2.1; }
+        const a = VM.ai.get(id); if (a) { const sd = sg*(t===0?1:-1); a.x = sd*6; a.z = sd*(k===0?2.1:-2.1); }   /* 1 號位＝面向網子的左手邊（跟選位畫面、真人開場站位一樣；以前左隊的 AI 左右顛倒，會跑去站真人的位置） */
       }
     }
     VM.startData = { e: 'start', ts: VB.ts, c: c.id, sg, team: VM.team, names: { ...VM.names, [vmMe()]: NET.name }, chars: VM.chars, to: VM.to, cw: [c.x, c.z, c.rot], stacfg: STA_CFG };
@@ -1280,7 +1281,7 @@ export function createGameCore(S = {}) {
       if (VM.six) { const f = vm6Spot(a.team, a.id, 'serve'); a.tx = f.x; a.tz = f.z; if (Math.hypot(a.x - f.x, a.z - f.z) > 5) { a.x = f.x; a.z = f.z; } continue; }   // 6 對 6：發球隊照號位、接發球隊排接發球陣型
       if (a.id === srv) { a.tx = sd * 9.8; a.tz = -sd * 1.0; }
       else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
-      else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = k === 0 ? 2.1 : -2.1; }
+      else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = sd * (k === 0 ? 2.1 : -2.1); }   /* 面向網子的左右：兩隊都一樣 */
     }
     vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按滑鼠左鍵' : ''}`, 'srv', 3200);
     if (VM.six) vm6PlaceHumans(srv);
