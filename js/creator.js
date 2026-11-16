@@ -10,7 +10,6 @@ const CATS = [
   { k: 'hair', name: '髮型', shot: 'head' },
   { k: 'hairColor', name: '髮色', swatch: true, shot: 'head', names: ['黑', '深棕', '棕', '金', '紅', '灰'] },
   { k: 'eyes', name: '眼睛', shot: 'face' },
-  { k: 'top', name: '球衣', shot: 'torso' },
   { k: 'pants', name: '褲子', shot: 'legs' },
   { k: 'shoe', name: '球鞋', swatch: true, shot: 'shoe', names: ['紅', '白', '黑', '藍'] },
   { k: 'num', name: '背號', shot: 'back' },
@@ -206,7 +205,7 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
   function cell(html, on, onclick, off) { const el = document.createElement('div'); el.className = 'cc-opt' + (on ? ' on' : '') + (off ? ' off' : ''); el.innerHTML = html; el.onclick = onclick; gridEl.appendChild(el); return el; }
   function drawGrid() {
     const c = CATS.find((x) => x.k === cat); gridEl.innerHTML = '';
-    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換表情、動作' : c.k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : c.k === 'top' ? '球衣顏色依開賽時的隊伍自動分配' : ''}</small>`;
+    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換表情、動作' : c.k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : ''}</small>`;
     if (c.k === 'num') {
       const box = document.createElement('div'); box.className = 'cc-num';
       box.innerHTML = `<div class="big">${L.num}</div><div class="cc-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '清除', 0, '⌫'].map((d) => `<b data-d="${d}">${d}</b>`).join('')}</div><div class="cc-sub">背號 0～99，印在球衣前後</div>`;

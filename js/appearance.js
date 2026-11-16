@@ -1,5 +1,5 @@
 import { encodeLook, decodeLook, randomLook, decodeEquip, encodeEquip } from './avatar-toy.js';
-import { decodeJersey } from './jersey.js';
+import { decodeJersey, CUTS, CUT_TOP } from './jersey.js';
 
 export const LOOK_KEY = 'vb.settings.look';
 export const normalizeLook = code => encodeLook(decodeLook(code));
@@ -44,13 +44,24 @@ export function saveMyJerseys(v, fromAccount = false) {
 }
 // 存第 i 件（wear＝true 就順便穿上）
 export function saveMyJersey(i, code, wear = true) {
-  if (!decodeJersey(code) || !(i >= 0 && i < MY_JERSEY_MAX)) return false;
-  const v = readMyJerseys(); v.list[i] = code; if (wear) { v.wear = i; saveTeamJersey(null, false); }
+  const d = decodeJersey(code);
+  if (!d || !(i >= 0 && i < MY_JERSEY_MAX)) return false;
+  const v = readMyJerseys(); v.list[i] = code; if (wear) { v.wear = i; saveTeamJersey(null, false); setLookTop(CUT_TOP[d.cut]); }
   saveMyJerseys(v); return true;
 }
 export function wearMyJersey(i) {   // i＝-1 脫掉自己的
-  const v = readMyJerseys(); v.wear = i >= 0 && v.list[i] ? i : -1; if (v.wear >= 0) saveTeamJersey(null, false); saveMyJerseys(v);
+  const v = readMyJerseys(); v.wear = i >= 0 && v.list[i] ? i : -1;
+  if (v.wear >= 0) { saveTeamJersey(null, false); setLookTop(CUT_TOP[decodeJersey(v.list[v.wear]).cut]); }
+  saveMyJerseys(v);
 }
+// 基本球衣（短袖、長袖、短版、無袖；照預設隊服顏色）：脫掉球隊球衣和自己的，角色換成這種袖子
+export const BASIC_JERSEYS = CUTS.map((name, i) => ({ name: `基本球衣・${name}`, top: CUT_TOP[i] }));
+export function wearBasicJersey(i) {
+  saveTeamJersey(null, false); setLookTop(BASIC_JERSEYS[i].top);
+  const v = readMyJerseys(); if (v.wear >= 0) { v.wear = -1; saveMyJerseys(v); } else try { dispatchEvent(new Event('vb-look-change')); } catch {}
+}
+// 袖型存在外觀裡（比賽穿隊服時也用這種袖子；外觀會同步到帳號）
+function setLookTop(top) { const L = decodeLook(readLook()); if (L.top !== top) { L.top = top; saveLook(L); } }
 // 比賽以外穿什麼：自己的球衣 { design: 代碼 } ＞ 球隊球衣 ＞ null（照預設隊服）
 export function readWornJersey() {
   const v = readMyJerseys();

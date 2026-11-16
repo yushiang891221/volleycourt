@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { decodeJersey, normalizeJersey, encodeJersey, jerseyColors, drawJerseyTorso, ensureJerseyFonts, jerseyFontsReady } from './jersey.js';
+import { decodeJersey, normalizeJersey, encodeJersey, jerseyColors, drawJerseyTorso, ensureJerseyFonts, jerseyFontsReady, CUT_TOP } from './jersey.js';
 
 export const OPTIONS = {
   sex: ['男', '女'],
@@ -224,6 +224,7 @@ const SPINE_Y = 0.66, SH_Y = 0.34, UA = 0.22, FA = 0.19;
 
 export function makeToyAvatar(look, team = 'orange') {
   const L = normLook(look); if (look && look.eq) L.eq = look.eq;   // 裝備跟著帶進去
+  if (team && typeof team === 'object' && team.design) { const d = typeof team.design === 'string' ? decodeJersey(team.design) : normalizeJersey(team.design); if (d) L.top = CUT_TOP[d.cut]; }   // 個人球衣自己帶袖型
   if (AVATAR_ASSETS[L.sex]) return makeGLBAvatar(L, team, AVATAR_ASSETS[L.sex]);
   return makeProceduralAvatar(L, team);
 }

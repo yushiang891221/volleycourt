@@ -11,7 +11,7 @@ const context = vm.createContext({ localStorage: {
   setItem: (key, value) => storage.set(key, value)
 } });
 const codec = read('js/avatar-toy.js').split('// ---------- 材質')[0].replace(/^import .*;$/gm, '').replace(/export /g, '');
-vm.runInContext(codec + read('js/appearance.js').replace(/^import .*;$/gm, '').replace(/export /g, ''), context);
+vm.runInContext(codec + read('js/jersey.js').replace(/^import .*;$/gm, '').replace(/export /g, '') + read('js/appearance.js').replace(/^import .*;$/gm, '').replace(/export /g, ''), context);
 const run = source => vm.runInContext(source, context);
 assert.equal(run('needsCreator()'), true);
 const code = run('saveLook({...DEFAULT_LOOK, hair: 3, num: 87})');

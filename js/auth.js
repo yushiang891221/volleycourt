@@ -143,7 +143,7 @@ export function createAccountService(client) {
     async setMyJerseys(list, wear) {
       await userId();
       const { error } = await client.rpc('set_my_jerseys', { p_list: list, p_wear: wear });
-      if (error) { const m = error.message || ''; throw Object.assign(new Error(error.code === 'PGRST202' ? '球衣存帳號功能還沒開通' : m.includes('bad jersey') ? '球衣上的字不適合，沒有存進帳號' : '球衣存進帳號失敗，稍後會再試'), { notReady: error.code === 'PGRST202' }); }
+      if (error) { const m = error.message || ''; throw Object.assign(new Error(error.code === 'PGRST202' ? '球衣存帳號功能還沒開通' : m.includes('bad jersey') ? '球衣的款式或文字不符合規定，沒有存進帳號' : '球衣存進帳號失敗，稍後會再試'), { notReady: error.code === 'PGRST202' }); }
     },
     async setWheel(w) { await userId(); const { error } = await client.rpc('set_wheel', { p_wheel: w }); if (error) throw new Error('T 輪盤儲存失敗'); },
     async team(op, arg) {

@@ -1,15 +1,16 @@
-// 個人球衣設計器（J2）：左＝角色即時預覽（拖曳轉、正面／背面），右＝版型、樣式、顏色、設計、球褲五個分頁。
+// 個人球衣設計器：左＝角色即時預覽（拖曳轉、正面／背面），右＝款式、花紋、配色、字與號碼四個分頁。
 // openJerseyDesigner({ code, slot }) → Promise<代碼或 null>（null＝取消）。存檔由呼叫的人處理。
 import * as THREE from 'three';
 import { makeToyAvatar, decodeLook, preloadAvatars } from './avatar-toy.js';
 import { myLookCode } from './appearance.js';
 import { PALETTE, STYLES, PRESETS, CUTS, NECKS, LAYOUTS, FONTS, TEXT_MAX, DEFAULT_DESIGN, applyPreset, normalizeJersey, encodeJersey, decodeJersey, drawJerseyTorso, jerseyColors, ensureJerseyFonts, jerseyProblem } from './jersey.js';
 
-const TABS = [['cut', '版型'], ['style', '樣式'], ['color', '顏色'], ['design', '設計'], ['shorts', '球褲']];
-const COLOR_PARTS = [['body', '主色'], ['accent', '花紋色'], ['trim', '領口／袖口邊'], ['ink', '字與號碼']];
+const TABS = [['cut', '👕 款式'], ['style', '🎨 花紋'], ['color', '🖌️ 配色'], ['design', '🔤 字與號碼']];
+const COLOR_PARTS = [['body', '主色'], ['accent', '花紋色'], ['trim', '領口／袖口邊'], ['ink', '字與號碼'], ['shorts', '球褲']];
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const CSS = `
+#jersey-designer *{box-sizing:border-box}
 #jersey-designer{width:min(1180px,96vw);height:min(760px,94vh);max-width:none;max-height:none;padding:0;border:1px solid #3b5368;border-radius:14px;background:#101a2a;color:#eef3f8;overflow:hidden}
 #jersey-designer::backdrop{background:#000a}
 #jersey-designer form{display:grid;grid-template-rows:auto 1fr auto;height:100%;margin:0}
@@ -28,9 +29,10 @@ const CSS = `
 .jd-pane h4{margin:14px 0 8px;font-size:14px;color:#b9c8d6}.jd-pane h4:first-child{margin-top:0}
 .jd-row{display:flex;flex-wrap:wrap;gap:8px}
 .jd-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
-.jd-card{padding:6px;border:2px solid #2a3d52;border-radius:10px;background:#16233a;color:#dfe8f1;cursor:pointer;font:inherit;font-size:13px;text-align:center}
-.jd-card[aria-pressed=true]{border-color:#f2b705;background:#24324a}
-.jd-card canvas{width:100%;display:block;margin-bottom:4px}
+#jersey-designer .jd-card{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;width:auto;height:auto!important;min-width:0;min-height:0;margin:0;padding:6px;border:2px solid #2a3d52;border-radius:10px;background:#16233a;color:#dfe8f1;cursor:pointer;font:inherit;font-size:13px;line-height:1.3;text-align:center;white-space:normal;overflow:hidden;box-shadow:none;transform:none}
+#jersey-designer .jd-card[aria-pressed=true]{border-color:#f2b705;background:#24324a}
+#jersey-designer .jd-card canvas{display:block;width:100%!important;height:auto!important;max-width:100%;aspect-ratio:7/6;margin:0;border-radius:6px}
+#jersey-designer .jd-card span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .jd-sw{display:grid;grid-template-columns:repeat(7,36px);gap:6px}
 .jd-sw button{width:36px;height:36px;border-radius:6px;border:2px solid #ffffff30;cursor:pointer;padding:0}
 .jd-sw button[aria-pressed=true]{outline:3px solid #f2b705;outline-offset:2px}
@@ -41,13 +43,17 @@ const CSS = `
 .jd-foot button{padding:9px 20px;border-radius:10px;border:1px solid #4b647c;background:#1d2c3e;color:#fff;font:inherit;font-size:15px;cursor:pointer}.jd-foot .orange{background:#f07c24;border-color:#f07c24;font-weight:700}
 `;
 
-// 縮圖：球衣剪影裡畫正面（樣式、配色、版位、字體卡片都用這個）
+// 縮圖：照袖型畫球衣剪影，裡面畫正面（花紋、配色、版位卡片都用這個）
+const SILHOUETTE = [
+  [[.36, .08], [.44, .14], [.56, .14], [.64, .08], [.92, .24], [.84, .42], [.76, .36], [.76, .94], [.24, .94], [.24, .36], [.16, .42], [.08, .24]],   // 短袖
+  [[.36, .08], [.44, .14], [.56, .14], [.64, .08], [.86, .2], [.97, .76], [.88, .78], [.77, .38], [.76, .94], [.24, .94], [.23, .38], [.12, .78], [.03, .76], [.14, .2]],   // 長袖
+  [[.36, .08], [.44, .14], [.56, .14], [.64, .08], [.92, .24], [.84, .42], [.76, .36], [.76, .66], [.24, .66], [.24, .36], [.16, .42], [.08, .24]],   // 短版
+  [[.38, .08], [.44, .14], [.56, .14], [.62, .08], [.72, .1], [.74, .3], [.76, .94], [.24, .94], [.26, .3], [.28, .1]],   // 無袖
+];
 function shirtThumb(d, w = 112, h = 96, side = 'front') {
   const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const x = c.getContext('2d'), W = c.width, H = c.height;
-  const col = jerseyColors(d);
-  const shirt = new Path2D(); const P = (a, b) => [a * W, b * H];
-  const pts = [P(.36, .08), P(.44, .14), P(.56, .14), P(.64, .08), P(.92, .24), P(.84, .42), P(.76, .36), P(.76, .94), P(.24, .94), P(.24, .36), P(.16, .42), P(.08, .24)];
-  shirt.moveTo(...pts[0]); for (const p of pts.slice(1)) shirt.lineTo(...p); shirt.closePath();
+  const col = jerseyColors(d), P = (a, b) => [a * W, b * H], pts = SILHOUETTE[normalizeJersey(d).cut].map(([a, b]) => P(a, b));
+  const shirt = new Path2D(); shirt.moveTo(...pts[0]); for (const p of pts.slice(1)) shirt.lineTo(...p); shirt.closePath();
   x.save(); x.clip(shirt);
   x.fillStyle = col.sleeve; x.fillRect(0, 0, W, H);
   // 身體：畫整圈再取正面（或背面）那一片
@@ -104,35 +110,36 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
 
   // ---------- 右邊：分頁 ----------
   const pressed = (on) => `aria-pressed="${!!on}"`;
-  const cards = (list, cur, attr, thumb) => `<div class="jd-cards">${list.map((name, i) => `<button type="button" class="jd-card" data-${attr}="${i}" ${pressed(cur === i)}><canvas data-thumb="${attr}:${i}"></canvas>${esc(name)}</button>`).join('')}</div>`;
+  const cards = (list, cur, attr) => `<div class="jd-cards">${list.map((name, i) => `<button type="button" class="jd-card" data-${attr}="${i}" ${pressed(cur === i)}><canvas data-thumb="${attr}:${i}"></canvas><span>${esc(name)}</span></button>`).join('')}</div>`;
+  const myNum = () => decodeLook(myLookCode()).num;
+  const sample = () => ({ front: d.front || '我的球隊', back: d.back || '球員' });   // 字型樣字：用你自己的字
   const swatches = (key) => `<div class="jd-sw">${PALETTE.map((c, i) => `<button type="button" data-color="${key}:${i}" style="background:${c}" ${pressed(d[key] === i)} aria-label="顏色 ${i + 1}"></button>`).join('')}</div>`;
   const chips = (list, cur, attr) => `<div class="jd-row">${list.map(([k, name]) => `<button type="button" class="jd-chip" data-${attr}="${k}" ${pressed(cur === k)}>${esc(name)}</button>`).join('')}</div>`;
   const panes = {
-    cut: () => `<h4>衣服</h4>${chips(CUTS.map((n, i) => [i, n]), d.cut, 'cut')}<p class="jd-note">練習 T：素面（不能選樣式），只能放字和號碼。</p>
+    cut: () => `<h4>袖型</h4>${cards(CUTS, d.cut, 'cut')}<p class="jd-note">穿上這件時角色換成這種袖子；比賽換隊服時也照這種袖子。</p>
       <h4>領口</h4>${chips(NECKS.map((n, i) => [i, n]), d.neck, 'neck')}`,
-    style: () => d.cut === 1 ? '<p class="jd-note">練習 T 只有素面；要花紋請到「版型」換成運動球衣。</p>' : `<h4>選一款花紋（${STYLES.length} 款）</h4>${cards(STYLES.map((s) => s.name), d.style, 'style')}`,
-    color: () => `<h4>現成配色（點一下整件換好）</h4>${cards(PRESETS.map((p) => p.name), PRESETS.findIndex((p) => ['body', 'accent', 'trim', 'ink', 'shorts'].every((k) => p[k] === d[k])), 'preset')}
-      <h4>自己調</h4>${chips(COLOR_PARTS, part, 'part')}<div style="height:10px"></div>${swatches(part)}`,
-    design: () => `${chips([['front', '正面'], ['back', '背面'], ['font', '字體']], sub, 'sub')}<div style="height:12px"></div>` + (
-      sub === 'front' ? `<div class="jd-field"><label for="jd-front">正面字</label><input type="text" id="jd-front" maxlength="${TEXT_MAX}" value="${esc(d.front)}" placeholder="例如隊名（最多 ${TEXT_MAX} 字）"></div>
-          <h4>版位</h4>${cards(LAYOUTS, d.layout, 'layout')}<p class="jd-note">沒有填正面字時，只放胸前號碼。</p>`
-      : sub === 'back' ? `<div class="jd-field"><label for="jd-back">背面名字</label><input type="text" id="jd-back" maxlength="${TEXT_MAX}" value="${esc(d.back)}" placeholder="可以不填（最多 ${TEXT_MAX} 字）"></div>
-          <label class="jd-field"><input type="checkbox" id="jd-icon" ${d.backIcon ? 'checked' : ''}> 領口下方放小排球記號</label><p class="jd-note">背後大號碼用捏臉時選的號碼。</p>`
-      : `<h4>字體（正面字、背面名字、號碼一起換）</h4><div class="jd-cards">${FONTS.map((f, i) => `<button type="button" class="jd-card" data-font="${i}" ${pressed(d.font === i)}><canvas data-thumb="font:${i}"></canvas>${esc(f.name)}</button>`).join('')}</div>`),
-    shorts: () => `<h4>球褲顏色</h4>${swatches('shorts')}
-      <label class="jd-field"><input type="checkbox" id="jd-snum" ${d.shortsNum ? 'checked' : ''}> 球褲左下角放號碼</label><p class="jd-note">球褲號碼之後會加到角色模型上（目前先記住這個選項）。</p>`,
+    style: () => `<h4>花紋（${STYLES.length} 款，顏色到「配色」調）</h4>${cards(STYLES.map((s) => s.name), d.style, 'style')}`,
+    color: () => `<h4>一鍵配色</h4>${cards(PRESETS.map((p) => p.name), PRESETS.findIndex((p) => ['body', 'accent', 'trim', 'ink', 'shorts'].every((k) => p[k] === d[k])), 'preset')}
+      <h4>每個部位自己挑</h4>${chips(COLOR_PARTS, part, 'part')}<div style="height:10px"></div>${swatches(part)}`,
+    design: () => `${chips([['front', '胸前'], ['back', '背後'], ['font', '字型']], sub, 'sub')}<div style="height:12px"></div>` + (
+      sub === 'front' ? `<div class="jd-field"><label for="jd-front">胸前的字</label><input type="text" id="jd-front" maxlength="${TEXT_MAX}" value="${esc(d.front)}" placeholder="隊名、口號都可以（最多 ${TEXT_MAX} 字）"></div>
+          <h4>放在哪裡</h4>${cards(LAYOUTS, d.layout, 'layout')}<p class="jd-note">沒有填字時只放胸前號碼。</p>`
+      : sub === 'back' ? `<div class="jd-field"><label for="jd-back">背後的名字</label><input type="text" id="jd-back" maxlength="${TEXT_MAX}" value="${esc(d.back)}" placeholder="可以不填（最多 ${TEXT_MAX} 字）"></div>
+          <label class="jd-field"><input type="checkbox" id="jd-icon" ${d.backIcon ? 'checked' : ''}> 領口下方放小排球記號</label><p class="jd-note">號碼用捏臉「背號」選的那個（${myNum()} 號）。</p>`
+      : `<h4>字型（胸前的字、背後名字、號碼一起換）</h4>${cards(FONTS.map((f) => f.name), d.font, 'font')}`),
   };
   const drawThumbs = () => {
     for (const cv of dlg.querySelectorAll('canvas[data-thumb]')) {
       const [k, iS] = cv.dataset.thumb.split(':'), i = +iS;
       let t, img;
-      if (k === 'style') t = { ...d, style: i, layout: 0, front: '' };
+      if (k === 'cut') t = { ...d, cut: i };
+      else if (k === 'style') t = { ...d, style: i, layout: 0, front: '' };
       else if (k === 'preset') t = applyPreset(d, i);
       else if (k === 'layout') t = { ...d, layout: i, front: d.front || '隊名' };
-      if (k === 'font') {   // 字體：樣字「隊伍名稱 / NAME / 20」
-        const c = document.createElement('canvas'); c.width = 224; c.height = 150; const x = c.getContext('2d'), f = FONTS[i];
-        x.fillStyle = '#eef2f6'; x.fillRect(0, 0, 224, 150); x.fillStyle = '#16202e'; x.textAlign = 'center'; x.textBaseline = 'middle';
-        [['隊伍名稱', 30, 34], ['NAME', 34, 78], ['20', 38, 122]].forEach(([s, size, y]) => { x.save(); x.font = `${f.w} ${size}px "${f.latin}", "${f.cjk}", sans-serif`; x.translate(112, y); if (f.skew) x.transform(1, 0, f.skew, 1, 0, 0); x.fillText(s, 0, 0); x.restore(); });
+      if (k === 'font') {   // 字型：用你自己的字和號碼，畫在你的球衣顏色上
+        const c = document.createElement('canvas'); c.width = 224; c.height = 192; const x = c.getContext('2d'), f = FONTS[i], col = jerseyColors(d), sm = sample();
+        x.fillStyle = col.body; x.fillRect(0, 0, 224, 192); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+        [[sm.front, 30, 40, 200], [String(myNum()), 70, 112, 200], [sm.back, 26, 168, 200]].forEach(([s, size, y, maxW]) => { x.save(); x.font = `${f.w} ${size}px "${f.latin}", "${f.cjk}", sans-serif`; const k2 = Math.min(1, maxW / (x.measureText(s).width || 1)); x.translate(112, y); if (f.skew) x.transform(1, 0, f.skew, 1, 0, 0); x.scale(k2, 1); x.lineWidth = size * 0.1; x.strokeStyle = col.inkEdge; x.strokeText(s, 0, 0); x.fillStyle = col.ink; x.fillText(s, 0, 0); x.restore(); });
         img = c;
       } else img = shirtThumb(t);
       cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0);
@@ -142,7 +149,7 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
     $q('.jd-tabs').innerHTML = TABS.map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('');
     $q('.jd-pane').innerHTML = panes[tab]();
     drawThumbs();
-    if (tab === 'design' && sub === 'font') Promise.all(FONTS.map((_, i) => ensureJerseyFonts({ font: i, front: '隊伍名稱', back: 'NAME' }))).then(() => { if (open && tab === 'design' && sub === 'font') drawThumbs(); });
+    if (tab === 'design' && sub === 'font') Promise.all(FONTS.map((_, i) => ensureJerseyFonts({ font: i, ...sample() }))).then(() => { if (open && tab === 'design' && sub === 'font') drawThumbs(); });
     if (tab === 'design' && sub !== 'font') ensureJerseyFonts(d).then(() => { if (open) drawThumbs(); });
   };
   const change = (patch, again = true) => { d = normalizeJersey({ ...d, ...patch }); rebuild(); if (again) render(); else drawThumbs(); };
@@ -170,7 +177,6 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
   });
   dlg.addEventListener('change', (e) => {
     if (e.target.id === 'jd-icon') change({ backIcon: e.target.checked }, false);
-    if (e.target.id === 'jd-snum') change({ shortsNum: e.target.checked }, false);
     if (e.target.id === 'jd-front' || e.target.id === 'jd-back') { e.target.value = e.target.id === 'jd-front' ? d.front : d.back; }
   });
   let resolveFn;

@@ -34,7 +34,9 @@ export const STYLES = [
   { name: '迷彩點', cat: '紋理' },
   { name: '碎紋', cat: '紋理' },
 ];
-export const CUTS = ['運動球衣', '練習 T'];          // 練習 T：素面，只能放字（樣式固定為素面）
+// 袖型（球衣自己帶，穿上時角色換成這種袖子）；CUT_TOP＝對應到角色外觀 OPTIONS.top 的位置（無袖 0、短袖 1、長袖 2、短版 3）
+export const CUTS = ['短袖', '長袖', '短版', '無袖'];
+export const CUT_TOP = [1, 2, 3, 0];
 export const NECKS = ['圓領', '交叉領'];
 export const LAYOUTS = ['胸前號碼', '大字＋號碼', '左胸小字＋號碼', '直排字＋號碼'];
 
@@ -106,7 +108,6 @@ export function normalizeJersey(d) {
   if (d && typeof d.backIcon === 'boolean') v.backIcon = d.backIcon;
   if (d && typeof d.shortsNum === 'boolean') v.shortsNum = d.shortsNum;
   v.front = sanitizeText(d?.front); v.back = sanitizeText(d?.back);
-  if (v.cut === 1) v.style = 0;   // 練習 T 只有素面
   return v;
 }
 // 實際顏色（號碼外框自動挑對比色）

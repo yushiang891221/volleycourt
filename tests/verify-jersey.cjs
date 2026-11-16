@@ -16,9 +16,9 @@ const { pathToFileURL } = require('node:url');
   const all = [];
   for (let style = 0; style < J.STYLES.length; style++) for (let p = 0; p < J.PRESETS.length; p++)
     all.push(J.applyPreset({ style, neck: style % 2, layout: style % 4, font: style % 8, backIcon: !!(style % 2), shortsNum: !(p % 2), front: '台北排球', back: 'KEVIN' }, p));
-  all.push({ cut: 1, style: 9, front: '', back: '' });
+  for (let cut = 0; cut < J.CUTS.length; cut++) all.push({ cut, style: 9, front: '', back: '' });
   for (const d of all) { const code = J.encodeJersey(d), back = J.decodeJersey(code); assert.deepEqual(back, J.normalizeJersey(d), code); assert.equal(J.encodeJersey(back), code); }
-  assert.equal(J.normalizeJersey({ cut: 1, style: 9 }).style, 0, '練習 T 只能素面');
+  assert.deepEqual(J.CUTS, ['短袖', '長袖', '短版', '無袖']); assert.deepEqual(J.CUT_TOP, [1, 2, 3, 0]);
   ok(`代碼來回一致（${all.length} 種）`);
 
   // 壞代碼一律不收
@@ -39,14 +39,16 @@ const { pathToFileURL } = require('node:url');
   ok('號碼外框對比色、撞色袖子');
 
   // 不雅字：網頁與資料庫（supabase/017_my_jerseys.sql）清單一樣；去掉空白、標點、大小寫也擋得到
-  const fs = require('node:fs'), sql = fs.readFileSync(path.join(__dirname, '../supabase/017_my_jerseys.sql'), 'utf8');
+  const fs = require('node:fs'), sqlDir = path.join(__dirname, '../supabase'), read = (f) => fs.readFileSync(path.join(sqlDir, f), 'utf8');
+  const sqlFiles = fs.readdirSync(sqlDir).filter((f) => /^\d+_.*\.sql$/.test(f)).sort(), sql = read('017_my_jerseys.sql');
+  const latest = read(sqlFiles.filter((f) => /jersey_code_ok/.test(read(f))).pop());
   const sqlWords = [...sql.match(/unnest\(array\[([\s\S]*?)\]\) w/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   assert.deepEqual(sqlWords, J.BAD_WORDS, '網頁和資料庫的不雅字清單要一樣');
   for (const t of ['F u c k', '靠.北', 'SHIT', '幹你!']) assert(J.badWord(t), t);
   for (const t of ['台北排球', 'KEVIN', '幹部', '操場', '']) assert.equal(J.badWord(t), null, t);
   assert.equal(J.jerseyProblem({ back: 'shit' }), '背面名字有不適合的字，請換一個'); assert.equal(J.jerseyProblem({ front: '台北' }), '');
   // 網頁做得出來的每一件，資料庫的格式檢查都要收（照 SQL 的正規式）
-  const sqlRe = new RegExp(sql.match(/select c ~ '([^']+)'/)[1]);
+  const sqlRe = new RegExp(latest.match(/select c ~ '([^']+)'/)[1]);   // 最新的那版格式檢查
   for (const d of all) assert.match(J.encodeJersey(d), sqlRe);
   assert(!sqlRe.test('j1zzzzzzzzzzz~~') && !sqlRe.test('j100c9h707003~一二三四五六七八九~'));
   ok('不雅字清單網頁＝資料庫、網頁做得出來的球衣資料庫都收');

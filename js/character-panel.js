@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { makeToyAvatar, decodeLook, preloadAvatars, EQUIP, OPTIONS } from './avatar-toy.js';
 import { openCreator } from './creator.js';
-import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, readMyJerseys, saveMyJersey, wearMyJersey } from './appearance.js';
-import { decodeJersey, PALETTE } from './jersey.js';
+import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, readMyJerseys, saveMyJersey, wearMyJersey, BASIC_JERSEYS, wearBasicJersey } from './appearance.js';
+import { decodeJersey, PALETTE, CUTS } from './jersey.js';
 
 let editing = false;
 export function editAppearance(mode = 'edit') {
@@ -80,6 +80,8 @@ function livePreview(old, bg = '#101a2a') {
 const EQ_TABS = [['jersey', '球衣', '👕'], ['knee', '護膝', '🦵'], ['hat', '帽子', '🧢'], ['glasses', '眼鏡', '🕶️'], ['neck', '項鍊', '📿'], ['wrist', '護腕', '🎽']];
 const ITEM_ICON = { knee: ['⬛', '⬜', '🚫'], hat: ['🚫', '🧢', '🧢'], glasses: ['🚫', '👓', '👓', '🕶️'], neck: ['🚫', '⚪', '🟡'], wrist: ['🚫', '⬜', '⬛'] };
 const ITEM_TINT = { knee: ['#1c1c21', '#f2f2ee', ''], hat: ['', '#22252b', '#f2f2ee'], glasses: ['', '#1c1e24', '#d4af5a', '#14171c'], neck: ['', '#d9dde3', '#e8b94a'], wrist: ['', '#f4f4f0', '#22252b'] };
+const SLEEVE_ICON = ['👕', '🥋', '🩱', '🎽'];   // 短袖、長袖、短版、無袖
+const syncLook = async () => { try { const { syncAppearance } = await import('./account-flow.js'); await syncAppearance(); } catch {} };
 const ROLE_NAME = { S: '舉球', OPP: '舉對', OH: '大砲（主攻）', MB: '中間手' };
 export async function openEquipPanel() {
   if (!document.getElementById('lobby-shell') || editing) return;
@@ -112,8 +114,11 @@ export async function openEquipPanel() {
   const itemsOf = (k) => {
     if (k === 'jersey') {
       const tj = readTeamJersey(), my = readMyJerseys();
-      const mine = my.list.map((c, n) => { const d = c && decodeJersey(c); return d ? { i: 2 + n, name: `我的球衣 ${n + 1}`, icon: '👕', tint: PALETTE[d.body], on: my.wear === n } : { i: 2 + n, name: `＋ 設計第 ${n + 1} 件`, icon: '✏️', tint: '#1d2a3d', on: false }; });
-      return [{ i: 0, name: '比賽隊服（橘黑）', icon: '👕', tint: '#F07C24', on: !tj && my.wear < 0 }, { i: 1, name: team ? `球隊球衣「${team.jersey?.name || ''}」` : '球隊球衣', icon: '🎽', tint: team?.jersey?.body || '#2B6CB0', on: !!tj && my.wear < 0, lock: !team ? '加入球隊後解鎖' : '' }, ...mine];
+      // 0～3 基本球衣（短袖、長袖、短版、無袖）、4 球隊球衣、5～7 我的球衣
+      const top = decodeLook(readLook()).top, B = BASIC_JERSEYS.length;
+      const basic = BASIC_JERSEYS.map((b, n) => ({ i: n, name: b.name, icon: SLEEVE_ICON[n], tint: '#F07C24', on: !tj && my.wear < 0 && top === b.top }));
+      const mine = my.list.map((c, n) => { const d = c && decodeJersey(c); return d ? { i: B + 1 + n, name: `我的球衣 ${n + 1}・${CUTS[d.cut]}`, icon: SLEEVE_ICON[d.cut], tint: PALETTE[d.body], on: my.wear === n } : { i: B + 1 + n, name: `＋ 設計第 ${n + 1} 件`, icon: '✏️', tint: '#1d2a3d', on: false }; });
+      return [...basic, { i: B, name: team ? `球隊球衣「${team.jersey?.name || ''}」` : '球隊球衣', icon: '🎽', tint: team?.jersey?.body || '#2B6CB0', on: !!tj && my.wear < 0, lock: !team ? '加入球隊後解鎖' : '' }, ...mine];
     }
     const L = decodeLook(readLook()), eq = readEquip(), list = k === 'knee' ? OPTIONS.knee : EQUIP[k].items, cur = k === 'knee' ? L.knee : eq[k] | 0;
     return list.map((name, i) => ({ i, name, icon: ITEM_ICON[k][i], tint: ITEM_TINT[k][i], on: cur === i, lock: k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : '' }));
@@ -150,7 +155,7 @@ export async function openEquipPanel() {
     const { openJerseyDesigner } = await import('./jersey-designer.js');
     const code = await openJerseyDesigner({ code: readMyJerseys().list[n], slot: n });
     if (!code) return;
-    saveMyJersey(n, code, true); setErr('✓ 球衣已存檔並穿上');
+    saveMyJersey(n, code, true); syncLook(); setErr('✓ 球衣已存檔並穿上');
     try { const A = await import('./account-flow.js'); if (await A.uploadJerseys()) setErr('✓ 球衣已存檔並穿上（已存進帳號）'); } catch (x) { setErr(`球衣已存在這台電腦；${(x && x.message) || '存進帳號失敗'}`); }
   };
   d.onclick = async (e) => {
@@ -159,9 +164,11 @@ export async function openEquipPanel() {
     if (b.dataset.k) {
       const k = b.dataset.k, i = +b.dataset.i; setErr('');
       if (k === 'jersey') {
-        if (i === 0) { saveTeamJersey(null); wearMyJersey(-1); }
-        else if (i === 1) { if (team) saveTeamJersey(team.jersey); }
-        else { const n = i - 2; if (readMyJerseys().list[n]) wearMyJersey(n); else await designMine(n); }
+        const B = BASIC_JERSEYS.length;
+        if (i < B) wearBasicJersey(i);
+        else if (i === B) { if (team) saveTeamJersey(team.jersey); }
+        else { const n = i - B - 1; if (readMyJerseys().list[n]) wearMyJersey(n); else await designMine(n); }
+        syncLook();   // 袖型存在外觀裡，同步到帳號
       }
       else if (k === 'knee') { const L = decodeLook(readLook()); L.knee = i; saveLook(L); try { const { syncAppearance } = await import('./account-flow.js'); await syncAppearance(); } catch (x) { setErr((x && x.message) || '護膝存到帳號失敗，稍後會再同步。'); } }
       else { const eq = readEquip(); eq[k] = i; saveEquip(eq); }
