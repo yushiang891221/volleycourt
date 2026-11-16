@@ -53,6 +53,7 @@ async function submit(event) {
     if(!result.submitted && !result.alreadySubmitted)throw new Error('無法確認結果，請重新開啟面板查詢。');
     accepted=true;
     status.textContent=result.alreadySubmitted ? '本週已送出並領取過獎勵，不會重複扣除資格或發獎。' : '謝謝你的建議！已成功收件，500 金幣已入帳。';
+    if (result.mailQueued) status.textContent+=' 通知信暫時待寄，建議已保存，不必重新送出。';
     input.value='';dialog.querySelector('[data-count]').textContent='0 / 2000 字';
     await loadProgress();
   } catch(error) { status.textContent=error.name==='TimeoutError' ? '連線逾時，請重新開啟面板確認本週是否已送出。重試不會重複發獎。' : error.message; }

@@ -25,10 +25,15 @@ module.exports = async (req, res) => {
     let mailQueued = false;
     if (data.submitted) {
       try { await deliverFeedback({url:SUPABASE_URL,id:data.id}); }
-      catch { mailQueued = true; console.warn('feedback mail pending'); }
+      catch (error) {
+        mailQueued = true;
+        // 僅記錯誤階段與狀態，不記金鑰、建議內容或玩家資料。
+        console.warn('feedback mail pending', JSON.stringify({stage:error.stage || 'mail_unknown',status:error.status,code:error.code}));
+      }
     }
     return reply(200,{submitted:data.submitted,alreadySubmitted:!!data.alreadySubmitted,reward:data.reward,mailQueued});
-  } catch {
+  } catch (error) {
+    console.warn('feedback request failed', JSON.stringify({stage:error.stage || 'request_unknown',status:error.status,code:error.code}));
     return reply(503,{error:'暫時無法確認送出結果，請稍後重新開啟建議面板查詢。'});
   }
 };
