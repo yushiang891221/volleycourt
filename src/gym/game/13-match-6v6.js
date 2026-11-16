@@ -453,7 +453,9 @@ function tutAutoOpen() {   // 進練習模式：等「進入球館中…」載�
   if (tutAutoOpen.done || !new URLSearchParams(location.search).has('practice')) return;
   const cover = $('game-loading');
   if (!window.VBTutorial || !walk.on || (cover && !cover.hidden)) { clearTimeout(tutAutoOpen.t); tutAutoOpen.t = setTimeout(tutAutoOpen, 300); return; }
-  tutAutoOpen.done = true; window.VBTutorial.open();
+  tutAutoOpen.done = true;
+  if (new URLSearchParams(location.search).get('tutorial') === '1') window.VBTutorial.startFull();
+  else window.VBTutorial.open();
 }
 function tutEv(name, data, ball) {
   const tutorial = window.VBTutorial;

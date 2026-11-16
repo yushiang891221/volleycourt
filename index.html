@@ -96,6 +96,13 @@
 <div id="toast" role="status" hidden></div>
 </div>
 <script type="module" src="js/player-menu.js"></script>
+<dialog id="tutorial-welcome" aria-labelledby="tutorial-welcome-title" aria-describedby="tutorial-welcome-description">
+  <span class="eyebrow">WELCOME TO PLAY ONE</span>
+  <h2 id="tutorial-welcome-title">第一次上場？先來新手教學！</h2>
+  <p id="tutorial-welcome-description">建議先跟著教學熟悉移動、接球、舉球、攻擊、發球與攔網，一步一步練習基本操作。</p>
+  <p class="muted">也可以先略過，之後隨時從大廳的「練習模式」進入新手教學。</p>
+  <div class="buttons"><button type="button" id="tutorial-dismiss">略過，進入大廳</button><button type="button" class="orange" id="tutorial-start" autofocus>進入新手教學 →</button></div>
+</dialog>
 <dialog id="lobby-news" aria-labelledby="lobby-news-title">
   <h2 id="lobby-news-title"><span aria-hidden="true">📣</span> 大廳公告</h2>
   <p class="news-date">版本更新日期　<time datetime="2026-11-14">2026 年 11 月 14 日</time></p>
