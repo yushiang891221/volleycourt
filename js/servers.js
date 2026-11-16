@@ -17,15 +17,17 @@ export function pickServer(list, search = (typeof location !== 'undefined' ? loc
   return list.find((s) => s.id === want) || list[0] || null;
 }
 const httpOf = (url) => url.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
-// 量一台：先暖身一次（建立連線），再量 3 次取最快的
+// 量一台：先暖身一次（建立連線），再量 3 次取最快的；某一次卡住就跳過（有的網路會擋 HTTP/3，之後幾次可能超時），有一次成功就算在線
 export async function probeServer(s, tries = 3) {
   const url = httpOf(s.url) + '/status';
-  const once = async () => { const t = performance.now(); const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(4000) }); const j = await r.json(); return { ms: performance.now() - t, j }; };
-  try {
-    let best = await once();
-    for (let i = 0; i < tries; i++) { const x = await once(); if (x.ms < best.ms) best = x; }
-    return { online: true, ping: Math.round(best.ms), players: best.j.players | 0, rooms: best.j.rooms | 0 };
-  } catch { return { online: false, ping: null, players: null, rooms: null }; }
+  const once = async (ms) => { const t = performance.now(); const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(ms) }); const j = await r.json(); return { ms: performance.now() - t, j }; };
+  const ok = []; let fail = 0;
+  for (let i = 0; i < tries + 2 && ok.length < tries; i++) {   // 最多試 5 次、成功 3 次就停；前兩次都失敗＝離線
+    try { ok.push(await once(3000)); } catch { fail++; if (!ok.length && fail >= 2) break; }
+  }
+  if (!ok.length) return { online: false, ping: null, players: null, rooms: null };
+  const best = ok.slice(ok.length > 1 ? 1 : 0).reduce((a, b) => (b.ms < a.ms ? b : a));   // 第一次含建立連線的時間，有其他次就不算它
+  return { online: true, ping: Math.round(best.ms), players: best.j.players | 0, rooms: best.j.rooms | 0 };
 }
 export const pingLevel = (ms) => (ms == null ? 'off' : ms < 20 ? 'good' : ms < 60 ? 'ok' : 'bad');   // 綠：20 毫秒內（台北實測約 5 ms）、橘：20～60、紅：超過 60（使用者 2026-11-16 定的）
 
@@ -60,12 +62,12 @@ export async function openServerSelect({ allowCancel = false } = {}) {
     const rec = best(), anyOn = list.some((s) => info.get(s.id)?.online);   // 全部量不到（例如伺服器還沒更新）時不鎖，照樣可以進入
     el.innerHTML = `<div class="ss-box"><p class="ss-kicker">SELECT SERVER</p><h2 id="ss-title">選擇伺服器</h2><p class="ss-note">選一台延遲（ping）低的伺服器，打起來比較順。之後可以在大廳上方換。</p>
       <div class="ss-list">${list.length ? list.map((s) => { const i = info.get(s.id), lv = pingLevel(i?.ping);
-        return `<button type="button" class="ss-row" data-id="${esc(s.id)}" aria-pressed="${chosen && chosen.id === s.id}" ${i && !i.online && anyOn ? 'disabled' : ''}>
+        return `<button type="button" class="ss-row" data-id="${esc(s.id)}" aria-pressed="${chosen && chosen.id === s.id}" ${i && !i.online ? 'disabled' : ''}>
           <span class="ss-name"><b>${esc(s.name)}${rec && rec.id === s.id && list.length > 1 ? '<span class="ss-tag">推薦</span>' : ''}</b><small>${esc(s.region || '')}</small></span>
           <span class="ss-num"><b>${i ? (i.online ? i.players : '—') : '…'}</b><small>目前人數</small></span>
           <span class="ss-num"><b>${i ? (i.online ? i.rooms : '—') : '…'}</b><small>房間</small></span>
           <span class="ss-num ss-ping ${lv}"><b>${i ? (i.online ? i.ping : '離線') : '…'}</b><small>${i && i.online ? 'ping（毫秒）' : i ? '連不上' : '量測中'}</small></span></button>`; }).join('') : '<p class="ss-note">找不到伺服器清單，請稍後再試。</p>'}</div>
-      <div class="ss-foot"><span class="ss-refresh">每 5 秒更新一次</span><span>${allowCancel ? '<button type="button" data-act="cancel">取消</button> ' : ''}<button type="button" class="ss-go" data-act="go" ${chosen && (info.get(chosen.id)?.online !== false || !anyOn) ? '' : 'disabled'}>進入${chosen ? `「${esc(chosen.name)}」` : ''}</button></span></div></div>`;
+      <div class="ss-foot"><span class="ss-refresh">${!anyOn && info.size ? '⚠️ 伺服器都連不上，每 5 秒自動重試' : '每 5 秒更新一次'}</span><span>${allowCancel ? '<button type="button" data-act="cancel">取消</button> ' : ''}<button type="button" class="ss-go" data-act="go" ${chosen && info.get(chosen.id)?.online ? '' : 'disabled'}>進入${chosen ? `「${esc(chosen.name)}」` : ''}</button></span></div></div>`;
   };
   const refresh = async () => {
     await Promise.all(list.map(async (s) => { const r = await probeServer(s); if (alive) info.set(s.id, r); }));

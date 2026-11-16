@@ -200,3 +200,9 @@ html #game-loading { background-color: var(--pl-deep); background-image: radial-
 html #game-loading .entry-box { background: var(--pl-panel); border: 1px solid var(--pl-line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.6); padding: 22px 26px; }
 html #game-loading h1 { color: #fff; font-weight: 900; } html #game-loading small { color: #051A14; background: var(--pl-gold); padding: 2px 10px; border-radius: 3px; font-weight: 900; letter-spacing: .2em; }
 html #game-loading progress { accent-color: var(--pl-gold); }
+/* 置物櫃格子：真的角色縮圖（有縮圖就不顯示圖示） */
+html #equip-panel .eqx-grid { grid-auto-rows: 176px; }
+html #equip-panel .eqx-item .eqx-shot { width: 118px; height: 118px; border-radius: 12px; border: 1px solid var(--pl-line-2); object-fit: cover; }
+html #equip-panel .eqx-item.has-shot .eqx-ii { display: none; }
+html #equip-panel .eqx-item.on .eqx-shot { border-color: rgba(229,184,105,.8); }
+html #equip-panel .eqx-item.lock .eqx-shot { filter: grayscale(.6); }

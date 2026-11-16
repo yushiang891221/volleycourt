@@ -1,3 +1,11 @@
+# 只用 HTTP/1.1、HTTP/2：不開 HTTP/3（QUIC/UDP）。機房那一層會擋 UDP 443，瀏覽器改走 HTTP/3 後會一直卡到超時
+# （選伺服器頁面量人數、ping 時第二次以後都超時，2026-11-16）
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
 130-94-37-34.sslip.io {
 	reverse_proxy 127.0.0.1:8787
 }

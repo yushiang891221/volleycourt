@@ -46,6 +46,37 @@ export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝�
   } finally { renderer.dispose(); renderer.forceContextLoss(); }
 }
 
+// 置物櫃格子的縮圖：用自己的角色實際穿戴那件東西拍一張（不是圖示）。共用一個畫布，一張一張畫，畫過的記起來。
+// shot：{ at: 'torso'|'hat'|'glasses'|'neck'|'wrist'|'knee', top?, design?, item?, value? }
+const SHOT_CAM = {   // [相機位置, 看的點]（角色站在原點、面向 +z）
+  torso: [[0.25, 1.0, 1.55], [0, 0.9, 0]], hat: [[0.3, 1.62, 1.25], [0, 1.5, 0]], glasses: [[0.18, 1.36, 0.9], [0, 1.32, 0]],
+  neck: [[0.2, 1.2, 1.0], [0, 1.1, 0]], wrist: [[0.85, 0.72, 0.95], [0.3, 0.6, 0]], knee: [[0.3, 0.45, 1.2], [0, 0.38, 0]],
+};
+const SHOT_CACHE = new Map(); let shotR = null;
+function renderShot(shot) {
+  const look = decodeLook(myLookCode()); let kit = readWornJersey() || 'orange';
+  if (shot.at === 'torso') { if (shot.design) kit = { design: shot.design }; else { kit = 'orange'; look.top = shot.top; } }
+  else if (shot.item === 'knee') look.knee = shot.value;
+  else look.eq = { ...(look.eq || {}), [shot.item]: shot.value };
+  const key = JSON.stringify([shot, look, kit]); if (SHOT_CACHE.has(key)) return SHOT_CACHE.get(key);
+  if (!shotR) { shotR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); shotR.setSize(200, 200); shotR.outputColorSpace = THREE.SRGBColorSpace; }
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#0B2E25');
+  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.6); sun.position.set(2, 4, 4); scene.add(sun);
+  const av = makeToyAvatar(look, kit); scene.add(av.g);
+  const [p, t] = SHOT_CAM[shot.at] || SHOT_CAM.torso, cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); cam.position.set(...p); cam.lookAt(...t);
+  shotR.render(scene, cam); const url = shotR.domElement.toDataURL('image/png');
+  SHOT_CACHE.set(key, url); return url;
+}
+async function fillShots(d, items) {
+  try { await preloadAvatars(); } catch {}
+  for (const it of items) {
+    if (!it.shot || !d.open) continue;
+    const img = d.querySelector(`.eqx-item[data-i="${it.i}"] .eqx-shot`); if (!img) continue;
+    try { img.src = renderShot(it.shot); img.hidden = false; img.closest('.eqx-item').classList.add('has-shot'); } catch (e) { console.warn('[置物櫃] 縮圖畫不出來', e); }
+    await new Promise((r) => setTimeout(r, 0));   // 一張一張畫，畫面不卡
+  }
+}
+
 // 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
 function livePreview(old, bg = '#0B362B') {   // Play One 風格：深綠底
   // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
@@ -116,21 +147,23 @@ export async function openEquipPanel() {
     if (k === 'jersey') {
       // 0～3 基本球衣（短袖、長袖、短版、無袖）、10＋n 目前球隊的第 n 件（可以穿）、100＋k 紀念球衣（待過的球隊，不能穿）
       const worn = readTeamWear(), top = decodeLook(readLook()).top;
-      const basic = BASIC_JERSEYS.map((b, n) => ({ i: n, name: b.name, icon: SLEEVE_ICON[n], tint: '#F07C24', on: !worn && top === b.top }));
-      const mine = ((team && team.jerseys) || []).map((c, n) => { const dd = decodeJersey(c); return dd && { i: 10 + n, name: `${team.name}・球衣 ${n + 1}（${CUTS[dd.cut]}）`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: !!worn && worn.idx === n && worn.code === c }; }).filter(Boolean);
+      const basic = BASIC_JERSEYS.map((b, n) => ({ i: n, name: b.name, icon: SLEEVE_ICON[n], tint: '#F07C24', on: !worn && top === b.top, shot: { at: 'torso', top: b.top } }));
+      const mine = ((team && team.jerseys) || []).map((c, n) => { const dd = decodeJersey(c); return dd && { i: 10 + n, shot: { at: 'torso', design: c }, name: `${team.name}・球衣 ${n + 1}（${CUTS[dd.cut]}）`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: !!worn && worn.idx === n && worn.code === c }; }).filter(Boolean);
       const keep = [];
-      history.forEach((h, k) => (h.jerseys || []).forEach((c, n) => { const dd = decodeJersey(c); if (dd) keep.push({ i: 100 + keep.length, name: `紀念｜${h.team}・球衣 ${n + 1}`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: false, lock: `${dayText(h.joined)}～${dayText(h.left)} 待在這隊` }); }));
+      history.forEach((h, k) => (h.jerseys || []).forEach((c, n) => { const dd = decodeJersey(c); if (dd) keep.push({ i: 100 + keep.length, shot: { at: 'torso', design: c }, name: `紀念｜${h.team}・球衣 ${n + 1}`, icon: SLEEVE_ICON[dd.cut], tint: PALETTE[dd.body], on: false, lock: `${dayText(h.joined)}～${dayText(h.left)} 待在這隊` }); }));
       return [...basic, ...mine, ...keep];
     }
     const L = decodeLook(readLook()), eq = readEquip(), list = k === 'knee' ? OPTIONS.knee : EQUIP[k].items, cur = k === 'knee' ? L.knee : eq[k] | 0;
-    return list.map((name, i) => ({ i, name, icon: ITEM_ICON[k][i], tint: ITEM_TINT[k][i], on: cur === i, lock: k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : '' }));
+    return list.map((name, i) => ({ i, name, icon: ITEM_ICON[k][i], tint: ITEM_TINT[k][i], on: cur === i, lock: k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : '', shot: { at: k, item: k, value: i } }));
   };
   const drawWorn = () => {
     $q('.eqx-worn ul').innerHTML = EQ_TABS.map(([k, name, icon]) => { const it = itemsOf(k).find((x) => x.on); const none = !it || /不戴|不穿/.test(it.name); return `<li${none ? ' class="off"' : ''}><span class="eqx-wi" style="--t:${it?.tint || '#2a3a52'}">${it && !none ? it.icon : icon}</span><span><small>${name}</small><b>${none ? '未裝備' : esc(it.name)}</b></span></li>`; }).join('');
   };
   const drawMid = () => {
     $q('.eqx-tabs').innerHTML = EQ_TABS.map(([k, name, icon]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${tab === k}">${icon} ${name}</button>`).join('');
-    $q('.eqx-grid').innerHTML = itemsOf(tab).map((it) => `<button type="button" class="eqx-item${it.on ? ' on' : ''}${it.lock ? ' lock' : ''}" data-k="${tab}" data-i="${it.i}"${it.lock ? ' disabled' : ''}><span class="eqx-ii" style="--t:${it.tint || '#1d2a3d'}">${it.lock ? '🔒' : it.icon}</span><b>${esc(it.name)}</b>${it.on ? '<i class="eqx-check">✓</i>' : ''}${it.lock ? `<small>${esc(it.lock)}</small>` : ''}</button>`).join('');
+    const items = itemsOf(tab);
+    setTimeout(() => fillShots(d, items), 0);
+    $q('.eqx-grid').innerHTML = items.map((it) => `<button type="button" class="eqx-item${it.on ? ' on' : ''}${it.lock ? ' lock' : ''}" data-k="${tab}" data-i="${it.i}"${it.lock ? ' disabled' : ''}><img class="eqx-shot" alt="" hidden><span class="eqx-ii" style="--t:${it.tint || '#1d2a3d'}">${it.lock ? '🔒' : it.icon}</span><b>${esc(it.name)}</b>${it.on ? '<i class="eqx-check">✓</i>' : ''}${it.lock ? `<small>${esc(it.lock)}</small>` : ''}</button>`).join('');
     $q('.eqx-hint').innerHTML = tab === 'jersey' ? `比賽中照兩隊隊服；球隊球衣在大廳、練習、走動時穿。球衣由球隊的隊長、副隊長在「球隊 → 球衣」設計。${team ? '' : '加入球隊後，球隊的球衣會出現在這裡。'}退出球隊後，球衣會留下當紀念（不能穿）。` : tab === 'knee' ? '護膝會存在帳號裡。' : '之後商店買到的配件也會出現在這裡。';
   };
   const unlockedTitles = () => [null, ...Object.keys(P.ACHIEVEMENTS).filter((k) => (prog.achievements || []).includes(k))];
