@@ -1,7 +1,8 @@
 // 登入閘門與帳號同步。
 // 流程：開始遊戲 → 沒登入顯示 Google 登入 → 登入後把本機暱稱／外觀帶進帳號 → 沒暱稱先取暱稱 → 沒外觀進捏臉 → 大廳
 import { getAccountService, authMode, cleanNickname } from './auth.js';
-import { readLook, saveLook, normalizeLook } from './appearance.js';
+import { readLook, saveLook, normalizeLook, readMyJerseys, saveMyJerseys, MY_JERSEYS_KEY, MY_JERSEY_MAX } from './appearance.js';
+import { decodeJersey } from './jersey.js';
 import { decodeLook } from './avatar-toy.js';
 
 const OWNER_KEY = 'vb.account.owner';
@@ -92,6 +93,7 @@ export async function accountGate() {
       if (profile.appearance) saveLook(decodeLook(profile.appearance));
       else if (owner && owner !== uid) store.del('vb.settings.look');
       watchNickname();
+      await loadJerseys(owner, uid);   // 個人球衣 J3：帳號有就用帳號的，沒有就把這台電腦的傳上去
       try { const g = await import('./session-guard.js'); await g.claim(); } catch {}   // WEB-007：登記「現在是這台裝置」，別處登入的會被踢掉
       return 'account';
     } catch (e) {
@@ -105,6 +107,30 @@ export async function syncAppearance() {
   if (!accountEnabled() || !service) return;
   const code = normalizeLook(readLook());
   profile = await service.save({ appearance: code });
+}
+
+// ---- 個人球衣 J3：存進帳號（supabase/017_my_jerseys.sql 還沒執行時，就只存在這台電腦，不會出錯） ----
+let jerseyReady = false, jerseyTimer = 0, jerseyWatching = false;
+export let jerseySyncError = '';
+export async function loadJerseys(owner, uid, svc = service) {   // svc 可以換成假的（檢查用）
+  try {
+    const r = await svc.myJerseys(), list = Array.isArray(r?.list) ? r.list : [];
+    if (list.some(Boolean)) {   // 帳號裡有：用帳號的（覆蓋這台電腦）
+      const fixed = Array.from({ length: MY_JERSEY_MAX }, (_, i) => (list[i] && decodeJersey(list[i]) ? list[i] : null));
+      saveMyJerseys({ list: fixed, wear: Number.isInteger(r.wear) && fixed[r.wear] ? r.wear : -1 }, true);
+    } else if (owner && owner !== uid) {   // 這台電腦的球衣是別的帳號的：不要帶進來
+      try { localStorage.removeItem(MY_JERSEYS_KEY); } catch {}
+    } else if (readMyJerseys().list.some(Boolean)) { jerseyReady = true; await uploadJerseys(svc); }   // 帳號還沒有：把這台電腦的傳上去
+    jerseyReady = true;
+  } catch (e) { jerseyReady = !e?.notReady; console.warn('[球衣] 讀取帳號裡的球衣失敗', e?.message); }
+  if (!jerseyWatching) { jerseyWatching = true; addEventListener('vb-jersey-change', () => { clearTimeout(jerseyTimer); jerseyTimer = setTimeout(() => uploadJerseys(svc).catch(() => {}), 400); }); }
+}
+// 把這台電腦的「我的球衣」存進帳號；失敗會丟錯（設計器存檔時可以提示），下次改動會再試
+export async function uploadJerseys(svc = service) {
+  if (!svc || !jerseyReady) return false;
+  const v = readMyJerseys();
+  try { await svc.setMyJerseys(v.list, v.wear); jerseySyncError = ''; return true; }
+  catch (e) { if (e?.notReady) { jerseyReady = false; return false; } jerseySyncError = e?.message || '球衣存進帳號失敗'; throw e; }
 }
 
 let watching = false;

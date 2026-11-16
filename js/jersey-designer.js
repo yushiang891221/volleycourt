@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { makeToyAvatar, decodeLook, preloadAvatars } from './avatar-toy.js';
 import { myLookCode } from './appearance.js';
-import { PALETTE, STYLES, PRESETS, CUTS, NECKS, LAYOUTS, FONTS, TEXT_MAX, DEFAULT_DESIGN, applyPreset, normalizeJersey, encodeJersey, decodeJersey, drawJerseyTorso, jerseyColors, ensureJerseyFonts } from './jersey.js';
+import { PALETTE, STYLES, PRESETS, CUTS, NECKS, LAYOUTS, FONTS, TEXT_MAX, DEFAULT_DESIGN, applyPreset, normalizeJersey, encodeJersey, decodeJersey, drawJerseyTorso, jerseyColors, ensureJerseyFonts, jerseyProblem } from './jersey.js';
 
 const TABS = [['cut', '版型'], ['style', '樣式'], ['color', '顏色'], ['design', '設計'], ['shorts', '球褲']];
 const COLOR_PARTS = [['body', '主色'], ['accent', '花紋色'], ['trim', '領口／袖口邊'], ['ink', '字與號碼']];
@@ -36,6 +36,7 @@ const CSS = `
 .jd-sw button[aria-pressed=true]{outline:3px solid #f2b705;outline-offset:2px}
 .jd-field{display:flex;align-items:center;gap:8px;margin:6px 0}.jd-field input[type=text]{flex:1;max-width:260px;padding:8px 10px;border-radius:8px;border:1px solid #4b647c;background:#0c1522;color:#fff;font:inherit;font-size:16px}
 .jd-note{color:#8fa6ba;font-size:12px;margin:6px 0}
+.jd-err{margin-right:auto;align-self:center;color:#ff9c8a;font-size:14px}
 .jd-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid #26384c}
 .jd-foot button{padding:9px 20px;border-radius:10px;border:1px solid #4b647c;background:#1d2c3e;color:#fff;font:inherit;font-size:15px;cursor:pointer}.jd-foot .orange{background:#f07c24;border-color:#f07c24;font-weight:700}
 `;
@@ -74,7 +75,7 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
         <div class="jd-face"><button type="button" data-face="front">正面</button><button type="button" data-face="back">背面</button></div></section>
       <section class="jd-right"><nav class="jd-tabs" role="tablist"></nav><div class="jd-pane"></div></section>
     </div>
-    <footer class="jd-foot"><button type="button" data-act="cancel">取消</button><button type="button" class="orange" data-act="save">存檔並穿上</button></footer>
+    <footer class="jd-foot"><span class="jd-err" role="status"></span><button type="button" data-act="cancel">取消</button><button type="button" class="orange" data-act="save">存檔並穿上</button></footer>
   </form>`;
   document.body.append(dlg);
   const $q = (s) => dlg.querySelector(s);
@@ -160,6 +161,7 @@ export function openJerseyDesigner({ code, slot = 0 } = {}) {
     if (ds.sub) { sub = ds.sub; if (sub === 'back') setFace('back'); else setFace('front'); render(); return; }
     if (ds.layout) return change({ layout: +ds.layout });
     if (ds.font) return change({ font: +ds.font });
+    if (ds.act === 'save') { const bad = jerseyProblem(d); $q('.jd-err').textContent = bad; if (bad) { tab = 'design'; sub = /背面/.test(bad) ? 'back' : 'front'; setFace(sub); render(); return; } }
     if (ds.act) finish(ds.act === 'save' ? encodeJersey(d) : null);
   });
   dlg.addEventListener('input', (e) => {

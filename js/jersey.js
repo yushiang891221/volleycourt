@@ -68,6 +68,19 @@ export const DEFAULT_DESIGN = Object.freeze({ cut: 0, neck: 0, style: 4, ...PRES
 export function sanitizeText(s) {
   return [...String(s ?? '').normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029~]/g, '').trim()].slice(0, TEXT_MAX).join('');
 }
+// 不雅字（球衣上的字會給別人看）：網頁先擋、資料庫 supabase/017_my_jerseys.sql 再擋一次（兩邊清單要一樣，tests/verify-jersey.cjs 會比對）
+// 比對前去掉空白、標點、大小寫，所以「F u c k」「幹.」也擋得到
+export const BAD_WORDS = ['幹你', '幹妳', '幹您', '操你', '操妳', '靠北', '靠杯', '機掰', '雞掰', '機八', '雞巴', '屌', '屄', '肏', '婊', '賤人', '王八', '白痴', '白癡', '智障', '去死', '他媽', '你媽', '妳媽', '三小', '淫', '援交', '尻槍',
+  'fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'nigger', 'nigga', 'asshole', 'porn', 'wtf', 'stfu'];
+const squash = (t) => String(t ?? '').toLowerCase().replace(/[\s\p{P}\p{S}_]/gu, '');
+export function badWord(t) { const s = squash(t); return BAD_WORDS.find((w) => s.includes(w)) || null; }
+// 這件球衣能不能存：回傳要給玩家看的原因，沒問題回傳空字串
+export function jerseyProblem(d) {
+  const v = normalizeJersey(d);
+  if (badWord(v.front)) return '正面字有不適合的字，請換一個';
+  if (badWord(v.back)) return '背面名字有不適合的字，請換一個';
+  return '';
+}
 export function applyPreset(d, i) { const p = PRESETS[i]; if (!p) return { ...d }; const { name, ...c } = p; return { ...d, ...c }; }
 
 // ---------- 代碼：j1 ＋ 11 個 36 進位字（版型、領口、樣式、5 個顏色、版位、字體、旗標）＋ ~正面字 ~背面名字 ----------

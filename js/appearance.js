@@ -24,7 +24,7 @@ export function saveEquip(eq) {
 export const TEAM_JERSEY_KEY = 'vb.teamJersey';
 export function readTeamJersey() { try { const j = JSON.parse(localStorage.getItem(TEAM_JERSEY_KEY) || 'null'); return j && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? j : null; } catch { return null; } }
 export function saveTeamJersey(j, takeOffMine = true) { try { if (j) localStorage.setItem(TEAM_JERSEY_KEY, JSON.stringify({ name: j.name, body: j.body, trim: j.trim, num: j.num })); else localStorage.removeItem(TEAM_JERSEY_KEY); } catch {}
-  if (j && takeOffMine) { try { const v = JSON.parse(localStorage.getItem(MY_JERSEYS_KEY) || 'null'); if (v && v.wear >= 0) { v.wear = -1; localStorage.setItem(MY_JERSEYS_KEY, JSON.stringify(v)); } } catch {} } try { dispatchEvent(new Event('vb-look-change')); } catch {} }
+  if (j && takeOffMine) { try { const v = JSON.parse(localStorage.getItem(MY_JERSEYS_KEY) || 'null'); if (v && v.wear >= 0) { v.wear = -1; localStorage.setItem(MY_JERSEYS_KEY, JSON.stringify(v)); dispatchEvent(new Event('vb-jersey-change')); } } catch {} } try { dispatchEvent(new Event('vb-look-change')); } catch {} }
 // 個人球衣（J2）：最多存 3 件（代碼見 js/jersey.js），wear＝穿第幾件（-1＝沒穿自己的）。存在這台電腦，J3 再存進帳號。
 // 跟球隊球衣二選一：穿自己的就脫掉球隊球衣，反過來也一樣。比賽中一律照兩隊隊服。
 export const MY_JERSEYS_KEY = 'vb.myJerseys', MY_JERSEY_MAX = 3;
@@ -37,9 +37,10 @@ export function readMyJerseys() {
     return { list, wear };
   } catch { return { list: Array(MY_JERSEY_MAX).fill(null), wear: -1 }; }
 }
-export function saveMyJerseys(v) {
+// fromAccount＝從帳號讀回來的（不用再傳上去）；其他改動會發 vb-jersey-change，帳號同步（account-flow.js）聽到就存進帳號
+export function saveMyJerseys(v, fromAccount = false) {
   try { localStorage.setItem(MY_JERSEYS_KEY, JSON.stringify({ list: v.list.slice(0, MY_JERSEY_MAX), wear: v.wear })); } catch {}
-  try { dispatchEvent(new Event('vb-look-change')); } catch {}
+  try { dispatchEvent(new Event('vb-look-change')); if (!fromAccount) dispatchEvent(new Event('vb-jersey-change')); } catch {}
 }
 // 存第 i 件（wear＝true 就順便穿上）
 export function saveMyJersey(i, code, wear = true) {

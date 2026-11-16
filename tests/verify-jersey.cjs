@@ -38,6 +38,19 @@ const { pathToFileURL } = require('node:url');
   assert.equal(J.jerseyColors({ ...J.applyPreset({}, 0), style: 11 }).sleeve, J.PALETTE[J.PRESETS[0].accent]);
   ok('號碼外框對比色、撞色袖子');
 
+  // 不雅字：網頁與資料庫（supabase/017_my_jerseys.sql）清單一樣；去掉空白、標點、大小寫也擋得到
+  const fs = require('node:fs'), sql = fs.readFileSync(path.join(__dirname, '../supabase/017_my_jerseys.sql'), 'utf8');
+  const sqlWords = [...sql.match(/unnest\(array\[([\s\S]*?)\]\) w/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  assert.deepEqual(sqlWords, J.BAD_WORDS, '網頁和資料庫的不雅字清單要一樣');
+  for (const t of ['F u c k', '靠.北', 'SHIT', '幹你!']) assert(J.badWord(t), t);
+  for (const t of ['台北排球', 'KEVIN', '幹部', '操場', '']) assert.equal(J.badWord(t), null, t);
+  assert.equal(J.jerseyProblem({ back: 'shit' }), '背面名字有不適合的字，請換一個'); assert.equal(J.jerseyProblem({ front: '台北' }), '');
+  // 網頁做得出來的每一件，資料庫的格式檢查都要收（照 SQL 的正規式）
+  const sqlRe = new RegExp(sql.match(/select c ~ '([^']+)'/)[1]);
+  for (const d of all) assert.match(J.encodeJersey(d), sqlRe);
+  assert(!sqlRe.test('j1zzzzzzzzzzz~~') && !sqlRe.test('j100c9h707003~一二三四五六七八九~'));
+  ok('不雅字清單網頁＝資料庫、網頁做得出來的球衣資料庫都收');
+
   // 假畫布：記錄畫了什麼，確定每一款都有畫、不會出錯、不會畫到畫布外太遠
   function fakeCtx(w, h) {
     const log = { calls: 0, texts: [], fills: 0, out: 0 };

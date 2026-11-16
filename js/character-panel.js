@@ -149,7 +149,9 @@ export async function openEquipPanel() {
   const designMine = async (n) => {
     const { openJerseyDesigner } = await import('./jersey-designer.js');
     const code = await openJerseyDesigner({ code: readMyJerseys().list[n], slot: n });
-    if (code) { saveMyJersey(n, code, true); setErr('✓ 球衣已存檔並穿上'); }
+    if (!code) return;
+    saveMyJersey(n, code, true); setErr('✓ 球衣已存檔並穿上');
+    try { const A = await import('./account-flow.js'); if (await A.uploadJerseys()) setErr('✓ 球衣已存檔並穿上（已存進帳號）'); } catch (x) { setErr(`球衣已存在這台電腦；${(x && x.message) || '存進帳號失敗'}`); }
   };
   d.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
