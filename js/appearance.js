@@ -1,4 +1,5 @@
 import { encodeLook, decodeLook, randomLook, decodeEquip, encodeEquip } from './avatar-toy.js';
+import { decodeJersey } from './jersey.js';
 
 export const LOOK_KEY = 'vb.settings.look';
 export const normalizeLook = code => encodeLook(decodeLook(code));
@@ -22,7 +23,39 @@ export function saveEquip(eq) {
 // WEB-010 球隊球衣：穿上時存在這台電腦（{ name, body, trim, num }），比賽以外的時間穿（比賽照兩隊隊服）
 export const TEAM_JERSEY_KEY = 'vb.teamJersey';
 export function readTeamJersey() { try { const j = JSON.parse(localStorage.getItem(TEAM_JERSEY_KEY) || 'null'); return j && /^#[0-9a-fA-F]{6}$/.test(j.body || '') ? j : null; } catch { return null; } }
-export function saveTeamJersey(j) { try { if (j) localStorage.setItem(TEAM_JERSEY_KEY, JSON.stringify({ name: j.name, body: j.body, trim: j.trim, num: j.num })); else localStorage.removeItem(TEAM_JERSEY_KEY); } catch {} try { dispatchEvent(new Event('vb-look-change')); } catch {} }
+export function saveTeamJersey(j, takeOffMine = true) { try { if (j) localStorage.setItem(TEAM_JERSEY_KEY, JSON.stringify({ name: j.name, body: j.body, trim: j.trim, num: j.num })); else localStorage.removeItem(TEAM_JERSEY_KEY); } catch {}
+  if (j && takeOffMine) { try { const v = JSON.parse(localStorage.getItem(MY_JERSEYS_KEY) || 'null'); if (v && v.wear >= 0) { v.wear = -1; localStorage.setItem(MY_JERSEYS_KEY, JSON.stringify(v)); } } catch {} } try { dispatchEvent(new Event('vb-look-change')); } catch {} }
+// 個人球衣（J2）：最多存 3 件（代碼見 js/jersey.js），wear＝穿第幾件（-1＝沒穿自己的）。存在這台電腦，J3 再存進帳號。
+// 跟球隊球衣二選一：穿自己的就脫掉球隊球衣，反過來也一樣。比賽中一律照兩隊隊服。
+export const MY_JERSEYS_KEY = 'vb.myJerseys', MY_JERSEY_MAX = 3;
+export function readMyJerseys() {
+  try {
+    const v = JSON.parse(localStorage.getItem(MY_JERSEYS_KEY) || 'null') || {};
+    const list = (Array.isArray(v.list) ? v.list : []).slice(0, MY_JERSEY_MAX).map((c) => (decodeJersey(c) ? c : null));
+    while (list.length < MY_JERSEY_MAX) list.push(null);
+    const wear = Number.isInteger(v.wear) && list[v.wear] ? v.wear : -1;
+    return { list, wear };
+  } catch { return { list: Array(MY_JERSEY_MAX).fill(null), wear: -1 }; }
+}
+export function saveMyJerseys(v) {
+  try { localStorage.setItem(MY_JERSEYS_KEY, JSON.stringify({ list: v.list.slice(0, MY_JERSEY_MAX), wear: v.wear })); } catch {}
+  try { dispatchEvent(new Event('vb-look-change')); } catch {}
+}
+// 存第 i 件（wear＝true 就順便穿上）
+export function saveMyJersey(i, code, wear = true) {
+  if (!decodeJersey(code) || !(i >= 0 && i < MY_JERSEY_MAX)) return false;
+  const v = readMyJerseys(); v.list[i] = code; if (wear) { v.wear = i; saveTeamJersey(null, false); }
+  saveMyJerseys(v); return true;
+}
+export function wearMyJersey(i) {   // i＝-1 脫掉自己的
+  const v = readMyJerseys(); v.wear = i >= 0 && v.list[i] ? i : -1; if (v.wear >= 0) saveTeamJersey(null, false); saveMyJerseys(v);
+}
+// 比賽以外穿什麼：自己的球衣 { design: 代碼 } ＞ 球隊球衣 ＞ null（照預設隊服）
+export function readWornJersey() {
+  const v = readMyJerseys();
+  if (v.wear >= 0) return { design: v.list[v.wear] };
+  return readTeamJersey();
+}
 // 自己的外觀＋裝備（連線送給別人、遊戲裡的角色用這個）
 export const myLookCode = () => encodeLook({ ...decodeLook(readLook()), eq: readEquip() });
 export const teamKit = team => team === 1 ? 'blue' : 'orange';

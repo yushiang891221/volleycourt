@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook } from './js/avatar-toy.js';
-import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey } from './js/appearance.js';
+import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey, readWornJersey } from './js/appearance.js';
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
 import { getAccountService } from './js/auth.js';
 import { ballSubstep, ballSubsteps } from './engine/ball.js';   // B1：球的物理（伺服器共用）

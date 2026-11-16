@@ -1453,7 +1453,7 @@ function tpBegin(dt) {
   if (!on) { if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } return false; }
   const kit = teamKit(VM.on ? vmTeamOf(vmMe()) : -1);
   if (TP.av && (TP.avCh !== myChar() || TP.av.gameKit !== kit)) { scene.remove(TP.av.g); TP.av = null; }   // 換了角色就重做
-  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readTeamJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
+  if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readWornJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
   av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
