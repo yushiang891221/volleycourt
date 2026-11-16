@@ -122,3 +122,10 @@ for(const delay of [40,100,200]) {
   }
   console.log('PASS 30/60/144 FPS: identical accelerated trajectory and rotation phase');
 }
+{
+  // 加入者推算球路：碰到地板那一刻就停，左右前後不能繼續往前跑（不然快的扣球落點會多跑一公尺以上，看起來在界外）
+  const ball={p:[0,1,0],v:[20,-8,0]}, A=-4.9, tHit=(-(-8)-Math.sqrt(64-4*A*(1-.105)))/(2*A), xHit=20*tHit;
+  for(const t of [.2,.35,.5]){const f=sync.sample(ball,t,.105,t);assert(Math.abs(f.p[0]-xHit)<1e-6,`停在落點 ${f.p[0]} vs ${xHit}`);assert.equal(f.p[1],.105);}
+  const fl=sync.sample({p:[0,1,0],v:[12,-6,0],f:[0,3,0,4]},.5,.105,.5);assert(fl.p[0]<12*.2,'飄球也停在落點');
+  console.log('PASS 推算球路停在碰地那一點');
+}

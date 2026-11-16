@@ -16,9 +16,18 @@
     const t = clamp(seconds, 0, .5), p = ball.p.slice(), v = ball.v.slice();
     const a = ball.a || [0, 0, 0], acceleration = [a[0], a[1] - 9.8, a[2]];
     if (!ball.f) {
+      // 推算到碰地板那一刻就停（不能讓左右前後繼續往前跑：快的扣球會多跑一公尺以上，加入者看到的落點跑到界外）
+      const A = .5 * acceleration[1], B = v[1], C = p[1] - radius;
+      let end = t;
+      if (C <= 0 && B <= 0) end = 0;
+      else if (C + B * t + A * t * t < 0) {
+        const disc = B * B - 4 * A * C;
+        end = Math.abs(A) < 1e-9 ? -C / B : (-B - Math.sqrt(Math.max(0, disc))) / (2 * A);
+        if (!(end >= 0 && end <= t)) end = clamp(Number.isFinite(end) ? end : t, 0, t);
+      }
       for (let axis = 0; axis < 3; axis++) {
-        p[axis] += v[axis] * t + .5 * acceleration[axis] * t * t;
-        v[axis] += acceleration[axis] * t;
+        p[axis] += v[axis] * end + .5 * acceleration[axis] * end * end;
+        v[axis] += acceleration[axis] * end;
       }
     } else {
       // Float serves use the same deterministic force as the match simulation.
@@ -31,14 +40,20 @@
         const ax = acceleration[0] + v[2] / hv * side * force;
         const az = acceleration[2] - v[0] / hv * side * force;
         const ay = acceleration[1] + up * force * .15;
+        const before = p.slice();
         for (const [axis, value] of [[0, ax], [1, ay], [2, az]]) {
           p[axis] += v[axis] * h + .5 * value * h * h;
           v[axis] += value * h;
         }
+        if (p[1] < radius) {   // 這一小步穿過地板：退回到碰地那一點
+          const k = before[1] > radius ? (before[1] - radius) / (before[1] - p[1]) : 0;
+          for (let axis = 0; axis < 3; axis++) p[axis] = before[axis] + (p[axis] - before[axis]) * k;
+          break;
+        }
       }
     }
     // Receivers never invent a floor bounce before the authority reports it.
-    if (p[1] < radius) { p[1] = radius; v.fill(0); }
+    if (p[1] < radius + 1e-6) { p[1] = radius; v.fill(0); }
     let q = (ball.q || [0, 0, 0, 1]).slice();
     if (ball.s && !ball.f) {
       const speed = Math.hypot(...ball.s), angle = speed * clamp(spinSeconds, 0, .5) / 2;

@@ -658,7 +658,6 @@ export function createGameCore(S = {}) {
     }
   }
   function vmWireRemoteStep(b, dt) {
-    const prevV = b.v.clone();   /* 落地前一刻的速度：落地後拿來彈跳 */
     const w = VM.wire, now = performance.now(), prediction = w.pending && b.wirePrediction;
     const frame = b.wireFrame || w.latest;
     if (!prediction && !frame?.ball) return;
@@ -667,7 +666,10 @@ export function createGameCore(S = {}) {
     const flight = VBMatchSync.sample(ball, age * VB.ts, BALL_R, age);
     b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
     if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
-    if (ball.floor) { b.m.position.set(ball.floor[0], BALL_R, ball.floor[1]); b.v.copy(prevV); if (b.v.y > -0.5) b.v.y = -0.5; b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; }   /* 落地後交給本機物理彈跳滾動，不再釘在落點 */
+    if (ball.floor && !prediction) {   /* 落地後：直接用房主回報的位置和速度（已經彈起來了），交給本機物理接著彈跳滾動，不再釘在落點 */
+      b.m.position.set(ball.p[0], Math.max(BALL_R, ball.p[1]), ball.p[2]); b.v.set(...ball.v); b.acc = null; b.float = null;
+      b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
+    }
     if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
     if (b === VM.ball) vmTrailPush(b.m.position);
   }
