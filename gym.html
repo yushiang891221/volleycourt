@@ -10396,13 +10396,13 @@ document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockEleme
 const practicePressed=new Map();
 function practiceKeysRender() {
   const el=$('wk-keys'); if(!el)return;
-  el.hidden=!new URLSearchParams(location.search).has('practice');
+  el.hidden=!new URLSearchParams(location.search).has('practice') || VBSettings.values.keyPanel===false;
   for(const cap of el.querySelectorAll('kbd[data-key]'))cap.parentElement.classList.toggle('pressed',[...practicePressed.values()].includes(cap.dataset.key));
 }
 addEventListener('keydown',e=>{if(!walk.on || VBSettings.isOpen || /INPUT|TEXTAREA|SELECT/.test(e.target?.tagName))return;practicePressed.set(e.code,VBSettings.key(e));practiceKeysRender();});
 addEventListener('keyup',e=>{practicePressed.delete(e.code);practiceKeysRender();});
 function practiceKeysClear(){practicePressed.clear();practiceKeysRender();}
-addEventListener('blur',practiceKeysClear); addEventListener('vb-settings-open',practiceKeysClear);
+addEventListener('blur',practiceKeysClear); addEventListener('vb-settings-open',practiceKeysClear); addEventListener('vb-settings-change',practiceKeysRender);
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)practiceKeysClear();});
 practiceKeysRender();
 // 轉盤：第 i 個選項放在 180°−i×(360°／選項數)（兩個選項＝左、右）；扇形之間畫分隔線

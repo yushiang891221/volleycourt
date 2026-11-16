@@ -12,7 +12,7 @@
     ,['ready','準備／取消準備','KeyH'],['start','房主開始遊戲','KeyG']
   ];
   const defaultKeys = () => Object.fromEntries(bindings.map(([a,,k]) => [a,k]));
-  const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true, showFps:false, nameTags:true, bloom:true,
+  const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true, showFps:false, nameTags:true, keyPanel:true, bloom:true,
     quality: matchMedia('(pointer: coarse)').matches || innerWidth < 900 ? 'low' : 'high', fov:85,
     sensitivity:1, swap:[false,false,false], volume:100, mute:false, nickname:'', controlVersion:3, setFast:11, setSlow:5.5, setCharge:.9, keys:defaultKeys() });
   const read = key => { try { return localStorage.getItem(key); } catch (_) { return null; } };
@@ -24,7 +24,7 @@
       for(const [action,oldCode,newCode] of [['q','KeyQ','KeyC'],['b','KeyR','KeyB']]) if(keys[action]===oldCode && !Object.values(keys).includes(newCode))keys[action]=newCode;
       raw={...raw,keys};
     }
-    for (const k of ['assist','cameraAssist','landing','cues','third','rings','mute','showFps','nameTags','bloom']) if (typeof raw[k]==='boolean') v[k]=raw[k];
+    for (const k of ['assist','cameraAssist','landing','cues','third','rings','mute','showFps','nameTags','keyPanel','bloom']) if (typeof raw[k]==='boolean') v[k]=raw[k];
     for (const [k,min,max] of [['sensitivity',.1,5],['volume',0,100]]) if (Number.isFinite(raw[k])) v[k]=Math.max(min,Math.min(max,raw[k]));
     for (const [k,min,max] of [['setFast',8,14],['setSlow',4,7],['setCharge',.4,1.6]]) if (Number.isFinite(raw[k])) v[k]=Math.max(min,Math.min(max,raw[k]));
     if (['high','low'].includes(raw.quality)) v.quality=raw.quality;
@@ -93,7 +93,7 @@
     const num=[['NumLock','Num'],['NumpadDivide','/'],['NumpadMultiply','×'],['NumpadSubtract','−'],['Numpad7','7'],['Numpad8','8'],['Numpad9','9'],['NumpadAdd','+'],['Numpad4','4'],['Numpad5','5'],['Numpad6','6'],['Numpad1','1'],['Numpad2','2'],['Numpad3','3'],['NumpadEnter','Enter'],['Numpad0','0'],['NumpadDecimal','.']];
     const keyboard='<div class="control-keyboard" aria-label="完整鍵盤配置"><div class="keyboard-full"><div class="keyboard-main">'+main.map(row).join('')+'</div><div class="keyboard-nav">'+nav.map(k=>cap(...k)).join('')+'</div><div class="keyboard-num">'+num.map(k=>cap(...k)).join('')+'</div></div><p>亮色鍵顯示目前配置，其他鍵保留完整鍵盤位置。<br>左鍵：空手拿球／攻擊來球；持球扣出；發球區發球。<br>按住 C 開輪盤，移動滑鼠選球路，放開舉球；滾輪切換前／後排，輕點沿用上次球路。</p></div>';
     const pages=[
-      ['遊戲',check('assist','接球輔助：身體輕輕帶向落點')+check('cameraAssist','視角輔助')+check('landing','落點圈')+check('cues','按鍵提示')+check('third','比賽／陪練預設第三人稱')+check('rings','顯示隊友耐力圈')+check('nameTags','顯示球員名牌')],
+      ['遊戲',check('assist','接球輔助：身體輕輕帶向落點')+check('cameraAssist','視角輔助')+check('landing','落點圈')+check('cues','按鍵提示')+check('third','比賽／陪練預設第三人稱')+check('rings','顯示隊友耐力圈')+check('nameTags','顯示球員名牌')+check('keyPanel','顯示按鍵面板（練習房左下角）')],
       ['畫面','<div class="settings-row"><span>顯示模式</span><button data-fullscreen>進入全螢幕</button></div><label class="settings-row"><span>畫質</span><select data-pref="quality"><option value="high">高</option><option value="low">省電</option></select></label>'+check('showFps','顯示 FPS（畫面右上角）')+check('bloom','泛光效果（亮的地方會暈開；關掉畫面比較清楚、不霧）')+'<p>視野固定 85°；蹲下時平滑擴大到 100°。</p>'],
       ['控制',keyboard+'<div class="hotkey-editor"><strong>熱鍵設置</strong><p>點已配置的鍵後，直接按新鍵；或點鍵盤上的按鍵，選擇動作後套用。重複鍵位會互換。</p><span data-hotkey-target>尚未選擇按鍵</span> <select data-hotkey-action>'+bindings.filter(([a])=>a!=='e').map(([a,label])=>'<option value="'+a+'">'+label+'</option>').join('')+'</select> <button type="button" data-hotkey-apply>套用到選取鍵</button></div>'+slider('sensitivity','滑鼠靈敏度',.1,5,.05)+'<details><summary>進階改鍵與原有球路快捷鍵</summary><p>點按鍵，再按新鍵；重複時互換。Esc 取消。數字鍵仍可使用原有配置球路。</p><div class="settings-bindings">'+bindings.filter(([a])=>!['j','k','l'].includes(a)).map(([a,t])=>`<div class="settings-row"><span>${t}</span><button data-bind="${a}"></button></div>`).join('')+'<div class="settings-row"><span>聊天（房間中，固定按鍵）</span><span>Enter</span></div></div><h3>原有舉球面板左右</h3>'+['4 號位','快攻','2 號位'].map((t,i)=>`<div class="settings-row"><span>${t}</span><button data-swap="${i}"></button></div>`).join('')+'</details><button data-reset-keys>全部還原預設按鍵</button>'],
       ['音效',slider('volume','主音量',0,100,1)+check('mute','靜音')],
