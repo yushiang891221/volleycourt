@@ -436,7 +436,6 @@ export function createGameCore(S = {}) {
       if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * flightDt); }   // 空中：照擊球時的旋轉
       else if (!(VM.on && VM.wire && b.room) || b.m.position.y <= BALL_R + 0.03) { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 新同步空中零旋轉／飄球不能套用地面滾動。
       b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
-      if (VM.on && b === VM.ball) vmTrailPush(b.m.position);
       if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
     }
   }
@@ -723,7 +722,6 @@ export function createGameCore(S = {}) {
       b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
     }
     if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
-    if (b === VM.ball) vmTrailPush(b.m.position);
   }
   function vmWireTick() {
     if (!VM.on || !VM.wire || !NET.on) return;
@@ -988,6 +986,12 @@ export function createGameCore(S = {}) {
   }
   function vbNetRoll(k) { if (!NET.on) return gameRandom(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
   function vbImpact(...a) { return S.vbImpact ? S.vbImpact(...a) : undefined; }
+  const TRAIL = { list: [], max: 160, step: 0.12, tex: null };
+  function vbTrailDrop(T) {
+    for (const m of [T.glow, T.core]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+    const i = TRAIL.list.indexOf(T); if (i >= 0) TRAIL.list.splice(i, 1);
+  }
+  function vbTrailClear() { while (TRAIL.list.length) vbTrailDrop(TRAIL.list[0]); }
   const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
   function netBallSound(...a) { return S.netBallSound ? S.netBallSound(...a) : undefined; }
   function sfx(...a) { return S.sfx ? S.sfx(...a) : undefined; }
@@ -1059,10 +1063,10 @@ export function createGameCore(S = {}) {
     const kind = vbBlockOutcome(off * 1.2, low, pow, 0.8);   // 你的手寬 0.62 m：換算成 0.75 m 的比例
     const word = vbBlockApply(b, kind, lx, lz, hz, plane, sg, Math.sin(r), Math.cos(r), Math.cos(r), -Math.sin(r), pow);
     tutEv('block', { kind, aim: walk.blkAim || 0, mate: TUT_COACH.together() }, b);
-    vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', kind === 'stuff' ? 1 : 0.7); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
+    vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
     toast({ stuff: '攔網成功！🧱', soft: '撐到球了（球留在你這邊，快接起來）', through: '被打穿了', top: '球擦過指尖彈大了' }[kind] || (word === '打手出界！' ? '被打手出界了' : '碰到手了（球留在你這邊）'), 1500);
     b.spike = null; vbMine(b);
-    if (NET.on) netBallHit(b, 'block');
+    if (NET.on) netBallHit(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7));
     vmOnTouch(b, vmMe(), 'block');
     recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'block' });
   }
@@ -1273,7 +1277,7 @@ export function createGameCore(S = {}) {
   function vmSetupServe() {
     VM.phase = 'serve'; VM.ball = null; VM.touch = { team: -1, n: 0, last: null }; VM.poss = [null, null]; VM.srvSeq++;
     if (VM.wire) { VM.wire.order.reset(VM.srvSeq); VM.wire.history = []; VM.wire.event = null; VM.wire.dirty = true; }
-    vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); if (VM.trailPts) VM.trailPts.length = 0; if (VM.trail) VM.trail.visible = false; VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
+    vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); vbTrailClear(); VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
     const srv = vmServer(), s = vmSide(VM.srvTeam);
     VM.serveAt = VM.t + 3.0 + gameRandom() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
     // AI 先站位：發球的人在底線後，其他人在自己半場
@@ -1424,7 +1428,6 @@ export function createGameCore(S = {}) {
     if (L.inside) vmPoint(L.winner, '落地得分');
     else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
   }
-  function vmTrailPush(...a) { return S.vmTrailPush ? S.vmTrailPush(...a) : undefined; }
   function vbBlockFx(...a) { return S.vbBlockFx ? S.vbBlockFx(...a) : undefined; }
   function vbWallFx(...a) { return S.vbWallFx ? S.vbWallFx(...a) : undefined; }
   function vmMark(...a) { return S.vmMark ? S.vmMark(...a) : undefined; }
@@ -1466,9 +1469,9 @@ export function createGameCore(S = {}) {
       const rr = (VM.c.rot * Math.PI) / 180, kind = vbBlockOutcome(off, low, pow, L.blockSkill);
       const word = vbBlockApply(b, kind, lx, lz, a.z + (a.bs || 0), plane, sd, Math.sin(rr), Math.cos(rr), Math.cos(rr), -Math.sin(rr), pow);
       b.blkDone = true;
-      vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
+      vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
       vmOnTouch(b, a.id, 'block');
-      if (NET.on) netBallHit(b, 'block');
+      if (NET.on) netBallHit(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7));
       const mine = a.team !== 0; vmSay(word, kind === 'soft' ? '' : (mine ? kind !== 'stuff' : kind === 'stuff') ? 'gold' : 'warn', 1400);
       recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'block' });
       return;

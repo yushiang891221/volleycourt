@@ -1326,7 +1326,6 @@ function vmWireRemoteStep(b, dt) {
     b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
   }
   if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
-  if (b === VM.ball) vmTrailPush(b.m.position);
 }
 function vmWireRender(begin) {
   const b = VM.on && VM.wire && !VM.host && VM.ball;

@@ -87,10 +87,85 @@ function vbSpinFor(b, v, kind, q) {
 function vbNetRoll(k) { if (!NET.on) return gameRandom(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
 // 碰到的那一刻：粒子、球壓扁一下、擊球聲；扣球、攔網鏡頭震一下
 function vbImpact(b, kind, q = 1) {
+  vbTrailStart(b, q);
   vbBurst(b.m.position, q >= 0.88 ? '#F2B705' : '#FFFFFF', kind === 'spike' ? 22 : 13, kind === 'spike' ? 3.4 : 2);
   b.squash = 0.12; sfx(kind, q, b.m.position);
   if ((kind === 'spike' || kind === 'block') && b.m.position.distanceTo(camera.position) < 7) VB.shake = kind === 'spike' ? 0.16 : 0.22;
   if (navigator.vibrate && coarse() && b.m.position.distanceTo(camera.position) < 4) try { navigator.vibrate(kind === 'spike' ? 25 : 12); } catch (e) { /* ignore */ }
+}
+// ---- 球的軌跡光帶（每一顆球、每種模式都一樣，取代原本那條 1 像素的細線）----
+// 每次碰球都從碰球點長出一條新光帶：面向鏡頭的彩帶＝外層柔光＋內層亮芯，越靠近球越寬越亮、尾巴細而淡，走過的路過一下子自己淡掉。
+// 顏色＝這一下打得好不好：金＝PERFECT（扣得重、舉好、接好、攔死）、綠＝普通（GOOD、TOUCH OUT、碰手撐起）、紅＝沒做好（BAD、被打穿）。攔網的品質：攔死 1、打穿 0.3、其他碰到 0.7。
+// 球落地、停住、被拿起來或收走、再被碰到，舊光帶就淡出並釋放，不會殘留在場上。
+const TRAIL = { list: [], max: 160, step: 0.12, tex: null };
+const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3();
+function vbTrailColor(q) { return new THREE.Color(q >= 0.88 ? '#FFC53D' : q >= 0.6 ? '#3EE58F' : '#FF4B55'); }
+function vbTrailTex() {   // 橫切面的柔邊：中間不透明、兩邊漸漸透明
+  if (TRAIL.tex) return TRAIL.tex;
+  const c = document.createElement('canvas'); c.width = 2; c.height = 64;
+  const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 64);
+  for (const [s, v] of [[0, 0], [0.2, 45], [0.38, 170], [0.5, 255], [0.62, 170], [0.8, 45], [1, 0]]) g.addColorStop(s, `rgb(${v},${v},${v})`);
+  x.fillStyle = g; x.fillRect(0, 0, 2, 64); TRAIL.tex = new THREE.CanvasTexture(c); return TRAIL.tex;
+}
+function vbTrailMesh() {
+  const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
+  for (let i = 0; i < n - 1; i++) I.set([2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2], i * 6);
+  for (let i = 0; i < n; i++) uv.set([i / (n - 1), 0, i / (n - 1), 1], i * 4);
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 8), 4).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.setDrawRange(0, 0);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, alphaMap: vbTrailTex(), depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+  m.frustumCulled = false; m.renderOrder = 12; m.visible = false; m.userData.noPick = true; scene.add(m); return m;
+}
+function vbTrailStart(b, q) {
+  if (!b || !b.m) return;
+  const now = performance.now();
+  for (const T of TRAIL.list) if (T.b === b) vbTrailEnd(T, 3.5);   // 同一顆球再被碰到：舊的快速淡掉
+  TRAIL.list.push({ b, col: vbTrailColor(q), pts: [{ p: b.m.position.clone(), t: now }], live: true, fade: 1, rate: 2, t0: now, glow: vbTrailMesh(), core: vbTrailMesh() });
+  while (TRAIL.list.length > 12) vbTrailDrop(TRAIL.list[0]);
+}
+function vbTrailEnd(T, rate) { if (T.live) { T.live = false; T.rate = rate; } }
+function vbTrailDrop(T) {
+  for (const m of [T.glow, T.core]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  const i = TRAIL.list.indexOf(T); if (i >= 0) TRAIL.list.splice(i, 1);
+}
+function vbTrailClear() { while (TRAIL.list.length) vbTrailDrop(TRAIL.list[0]); }
+// 每一幀：跟著球加點、判斷該不該收尾、重算面向鏡頭的彩帶
+function vbTrailStep(dt) {
+  if (!TRAIL.list.length) return;
+  const now = performance.now();
+  for (const T of TRAIL.list.slice()) {
+    const b = T.b, p = b.m.position, P = T.pts;
+    if (T.live) {
+      if (!b.m.parent || !balls.includes(b)) vbTrailEnd(T, 6);
+      else {
+        const last = P[P.length - 1];
+        if (P.length < 2 || last.p.distanceTo(P[P.length - 2].p) >= TRAIL.step) P.push({ p: p.clone(), t: now }); else { last.p.copy(p); last.t = now; }
+        if (P.length > TRAIL.max) P.shift();
+        if ((p.y <= BALL_R + 0.03 && now - T.t0 > 150) || b.rest > 0.05 || now - T.t0 > 7000) vbTrailEnd(T, 2.2);   // 落地／停住／飛太久
+      }
+    }
+    if (!T.live) { T.fade -= (dt || 0.016) * T.rate; if (T.fade <= 0) { vbTrailDrop(T); continue; } }
+    vbTrailBuild(T, T.glow, 0.3, 0.55, 0.05, now);
+    vbTrailBuild(T, T.core, 0.085, 0.9, 0.4, now);
+  }
+}
+function vbTrailBuild(T, m, W, A, white, now) {
+  const P = T.pts, n = P.length, geo = m.geometry, cam = camera.position;
+  m.visible = !RP.on && n >= 2; if (!m.visible) return;
+  const pa = geo.attributes.position.array, ca = geo.attributes.color.array, c = T.col;
+  const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;
+  for (let i = 0; i < n; i++) {
+    const q = P[i].p; TR_D.subVectors(P[Math.min(n - 1, i + 1)].p, P[Math.max(0, i - 1)].p); TR_V.subVectors(cam, q); TR_S.crossVectors(TR_D, TR_V);
+    const L = TR_S.length(); if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
+    const u = i / (n - 1), age = (now - P[i].t) / 1000, w = W * (0.2 + 0.8 * Math.pow(u, 0.7)) * (0.7 + 0.3 * T.fade);
+    const near = clamp((TR_V.length() - 0.5) / 1.5, 0, 1);   /* 貼著鏡頭的那一段淡掉，第一人稱碰球時不會整個畫面一片色 */
+    const al = A * (0.12 + 0.88 * Math.pow(u, 1.1)) * clamp(1 - (age - 0.9) / 0.7, 0, 1) * T.fade * near;
+    pa[i * 6] = q.x + TR_S.x * w; pa[i * 6 + 1] = q.y + TR_S.y * w; pa[i * 6 + 2] = q.z + TR_S.z * w;
+    pa[i * 6 + 3] = q.x - TR_S.x * w; pa[i * 6 + 4] = q.y - TR_S.y * w; pa[i * 6 + 5] = q.z - TR_S.z * w;
+    ca[i * 8] = ca[i * 8 + 4] = r; ca[i * 8 + 1] = ca[i * 8 + 5] = g; ca[i * 8 + 2] = ca[i * 8 + 6] = bl; ca[i * 8 + 3] = ca[i * 8 + 7] = al;
+  }
+  geo.attributes.position.needsUpdate = geo.attributes.color.needsUpdate = true; geo.setDrawRange(0, (n - 1) * 6);
 }
 function vbBurst(pos, color, n, speed) {
   const P = new Float32Array(n * 3), V = [];
@@ -971,10 +1046,10 @@ function vbBlockTest(b, h) {
   const kind = vbBlockOutcome(off * 1.2, low, pow, 0.8);   // 你的手寬 0.62 m：換算成 0.75 m 的比例
   const word = vbBlockApply(b, kind, lx, lz, hz, plane, sg, Math.sin(r), Math.cos(r), Math.cos(r), -Math.sin(r), pow);
   tutEv('block', { kind, aim: walk.blkAim || 0, mate: TUT_COACH.together() }, b);
-  vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', kind === 'stuff' ? 1 : 0.7); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
+  vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
   toast({ stuff: '攔網成功！🧱', soft: '撐到球了（球留在你這邊，快接起來）', through: '被打穿了', top: '球擦過指尖彈大了' }[kind] || (word === '打手出界！' ? '被打手出界了' : '碰到手了（球留在你這邊）'), 1500);
   b.spike = null; vbMine(b);
-  if (NET.on) netBallHit(b, 'block');
+  if (NET.on) netBallHit(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7));
   vmOnTouch(b, vmMe(), 'block');
   recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'block' });
 }

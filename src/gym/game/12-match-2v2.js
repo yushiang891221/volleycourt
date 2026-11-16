@@ -107,7 +107,7 @@ function vmStop(silent) {
   if (VM.watchBall) { VM.watchBall.m.removeFromParent(); const i = balls.indexOf(VM.watchBall); if (i >= 0) balls.splice(i, 1); }
   VM.wire = null;
   VM.watchFrames = null; VM.watchBall = null; VM.watchOffset = null;
-  if (VM.trail) { scene.remove(VM.trail); VM.trail = null; }
+  vbTrailClear();
   if (VM.host && NET.on && !silent) NET.tx.publish('vm', { e: 'end' });
   for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); }
   VM.ai.clear(); VM.on = false; VM.host = false; VM.phase = 'idle'; VM.six = false; peerTagsAll();
@@ -120,7 +120,7 @@ function vmServer() { const t = VM.srvTeam; return VM.six ? VM.rot[t][0] : VM.te
 function vmSetupServe() {
   VM.phase = 'serve'; VM.ball = null; VM.touch = { team: -1, n: 0, last: null }; VM.poss = [null, null]; VM.srvSeq++;
   if (VM.wire) { VM.wire.order.reset(VM.srvSeq); VM.wire.history = []; VM.wire.event = null; VM.wire.dirty = true; }
-  vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); if (VM.trailPts) VM.trailPts.length = 0; if (VM.trail) VM.trail.visible = false; VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
+  vmClearBalls(); if (vmServer() !== vmMe()) vmDropHeld(); vbTrailClear(); VM.whT = performance.now() + 2500; VM.srvDl = VM.whT + 8000; VM.whDone = false; VM.cdN = null;   // 正式規則：裁判吹哨後才能發，8 秒內要發出去
   const srv = vmServer(), s = vmSide(VM.srvTeam);
   VM.serveAt = VM.t + 3.0 + gameRandom() * 1.6;   // AI：吹哨（2.5 秒）後 0.5～2 秒發
   // AI 先站位：發球的人在底線後，其他人在自己半場
@@ -301,14 +301,6 @@ function vmJudge() {
   if (L.inside) vmPoint(L.winner, '落地得分');
   else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
 }
-// 比賽球的軌跡：最近 0.5 秒的路線（越舊越淡），看得出球是從網子上面還是旁邊過去
-function vmTrailPush(q) {
-  if (!VM.trail) { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(30 * 3), 3)); geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(30 * 3), 3)); VM.trail = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 })); VM.trail.frustumCulled = false; VM.trailPts = []; scene.add(VM.trail); }
-  VM.trailPts.push(q.clone()); if (VM.trailPts.length > 30) VM.trailPts.shift();
-  const pa = VM.trail.geometry.attributes.position, ca = VM.trail.geometry.attributes.color, n = VM.trailPts.length;
-  VM.trailPts.forEach((v, i) => { pa.setXYZ(i, v.x, v.y, v.z); const a = i / Math.max(1, n - 1); ca.setXYZ(i, 1, 0.85 * a + 0.15, 0.3 * a); });
-  pa.needsUpdate = ca.needsUpdate = true; VM.trail.geometry.setDrawRange(0, n); VM.trail.visible = !RP.on;
-}
 // 攔網碰到球：手的位置閃一圈白光、跳出 TOUCH（打手出界時特別標出來，裁判也是看這個判）
 function vbTouchFx(pos, word) {
   const out = /出界/.test(word || ''), g = new THREE.Group(); g.position.copy(pos);
@@ -431,9 +423,9 @@ function vmBlockTest(b, h) {
     const rr = (VM.c.rot * Math.PI) / 180, kind = vbBlockOutcome(off, low, pow, L.blockSkill);
     const word = vbBlockApply(b, kind, lx, lz, a.z + (a.bs || 0), plane, sd, Math.sin(rr), Math.cos(rr), Math.cos(rr), -Math.sin(rr), pow);
     b.blkDone = true;
-    vbImpact(b, 'block', 1); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
+    vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
     vmOnTouch(b, a.id, 'block');
-    if (NET.on) netBallHit(b, 'block');
+    if (NET.on) netBallHit(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7));
     const mine = a.team !== 0; vmSay(word, kind === 'soft' ? '' : (mine ? kind !== 'stuff' : kind === 'stuff') ? 'gold' : 'warn', 1400);
     recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'block' });
     return;

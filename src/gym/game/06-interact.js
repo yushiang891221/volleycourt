@@ -1050,7 +1050,6 @@ function updateBalls(dt) {
     if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * flightDt); }   // 空中：照擊球時的旋轉
     else if (!(VM.on && VM.wire && b.room) || b.m.position.y <= BALL_R + 0.03) { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 新同步空中零旋轉／飄球不能套用地面滾動。
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
-    if (VM.on && b === VM.ball) vmTrailPush(b.m.position);
     if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
   }
 }

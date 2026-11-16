@@ -7,7 +7,7 @@ const oldSrc = cp.execFileSync('git', ['-c', `safe.directory=${root.replaceAll('
 const newSrc = fs.readFileSync(path.join(root, 'src/gym/game/12-match-2v2.js'), 'utf8');
 const gym = fs.readFileSync(path.join(root, 'gym.html'), 'utf8');
 const cut = (s, a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i); assert(i >= 0 && j > i, a); return s.slice(i, j); };
-const pieces = s => cut(s, 'function vmOnTouch(', 'function vmGrade(') + cut(s, 'function vmPoint(', 'function vmTeamLabel(') + cut(s, 'function vmJudge(', '// 比賽球的軌跡');
+const pieces = s => cut(s, 'function vmOnTouch(', 'function vmGrade(') + cut(s, 'function vmPoint(', 'function vmTeamLabel(') + cut(s, 'function vmJudge(', '// 攔網碰到球：手的位置');
 
 function context(code, seed) {
   const log = [];
