@@ -18,7 +18,7 @@ const STUB = `toast sfx vmSay vbImpact vbBurst vbFloorImpact vbShake vbScreenFla
 vmRenderAi vbWallFx vmTrailPush vmMark vmOut netBallSound netFxHit netFxStep ballShadowSync updateTweens updateDoors updateWind vbBlockFx
 vmGradeShow vmShout labelSprite vmServeHint renderRoomRules vm6RotToast recHit recEvent vbFx tutEv
 makeAvatar avDrive renderUseBar setMenuClose setMenuPick vbManualSetCancel vbNpcToggle
-netPeerPlayback rkOnNet refreshPeerAppearance emoOnNet avPoseOf langziReceive renderMpList rkPeerAi makeRacket sqFromMotion myPoseCode rkAiState hlOnPoint hlReset`.split(/\s+/);
+netPeerPlayback rkOnNet refreshPeerAppearance emoOnNet avPoseOf langziReceive renderMpList rkPeerAi makeRacket sqFromMotion myPoseCode rkAiState hlOnPoint hlReset hlPanelBtn vmResultHlBtn`.split(/\s+/);
 // 一開始就碰到畫面的頂層變數：換成伺服器版本（S.名字 或下面的預設值）
 const REPLACE = {
   renderer: '{ domElement: {}, setSize() {}, render() {} }',

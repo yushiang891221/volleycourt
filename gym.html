@@ -8920,15 +8920,15 @@ function rpDownload() {
 }
 // ---- 得分精華（WEB-025）：比賽中每台電腦自己記最近 10 秒（不多傳任何訊息）；有人打出得分（不含對手失誤送分）
 //      就用 Play One 球斜拉轉場、從第三人稱重播那一球；自己得的分另外收起來，比賽結束可以下載成一支影片（在自己電腦上產生，伺服器不存）
-const HL = { buf: [], ids: new Map(), nid: 0, last: 0, mine: [], wasOn: false, pendT: 0, btn: null, tag: null, tr: null, css: false };
+const HL = { buf: [], ids: new Map(), nid: 0, last: 0, mine: [], wasOn: false, pendT: 0, btn: null, tag: null, tr: null, css: false, after: null, pt: null };
 const HL_KIND = { spike: '扣球', tip: '吊球', hit: '攻擊', serve: '發球', block: '攔網' };
-// 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起改 12-match-2v2.js 的 HL_GAP：落地後 + 轉場×2 + 片段最長 + 慢動作多出來的）
+// 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起看 12-match-2v2.js 的 HL_GAP：重播播完回到現場後約 2～3 秒吹哨）
 const HL_PRE = 2.5, HL_POST = 1.2, HL_MAX = 5.2, HL_TR = 1.2;
 function hlId(o) { if (!HL.ids.has(o.uuid)) HL.ids.set(o.uuid, ++HL.nid); return HL.ids.get(o.uuid); }
 function hlReset() { HL.buf = []; HL.mine = []; HL.ids.clear(); HL.nid = 0; clearTimeout(HL.pendT); hlButton(false); }
 function hlTick(now) {
   if (VM.on && !HL.wasOn) { HL.wasOn = true; hlReset(); }
-  else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，按 Esc 放開滑鼠，點右下角就能下載`, 4500); } }
+  else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，結算畫面上有下載按鈕（關掉後在右下角）`, 4500); } }
   if (!VM.on || RP.on || now - HL.last < 33) return;
   HL.last = now; HL.buf.push(recFrame(now / 1000, hlId));
   while (HL.buf.length && HL.buf[0].t < now / 1000 - 10) HL.buf.shift();
@@ -8938,13 +8938,13 @@ function hlOnPoint(win, why, by, kind) {
   if (!walk.on) return;
   if (by === undefined) { if (!/落地得分/.test(why || '')) return; by = null; }
   else if (!by) return;
-  clearTimeout(HL.pendT);
-  HL.pendT = setTimeout(() => { try { hlCut(by, kind); } catch (e) { console.error('[得分精華] 剪片段失敗', e); hlAbort(); } }, HL_POST * 1000);   // 先在現場看球落地，順便把落地後的畫面錄進來
+  clearTimeout(HL.pendT); hlHold();
+  HL.pendT = setTimeout(() => { try { if (!hlCut(by, kind)) hlFree(); } catch (e) { console.error('[得分精華] 剪片段失敗', e); hlAbort(); } }, HL_POST * 1000);   // 先在現場看球落地，順便把落地後的畫面錄進來
 }
-function hlCut(by, kind) {
-  if (!HL.buf.length || RP.on || HL.tr || !VM.on) return;
+function hlCut(by, kind) {   // 回傳 true＝開始播重播
+  if (!HL.buf.length || RP.on || HL.tr || !VM.on) return false;
   const end = HL.buf[HL.buf.length - 1].t, fr = HL.buf.filter((f) => f.t >= end - 9.5);
-  if (fr.length < 30) return;
+  if (fr.length < 30) return false;
   const t0 = fr[0].t, frames = fr.map((f) => ({ t: f.t - t0, b: f.b, p: f.p })), d = frames[frames.length - 1].t, land = d - HL_POST;
   const hit = recAnalyze(frames, []).hits.filter((h) => h.t < land - 0.05).pop();   // 最後一下擊球（扣、吊、發、攔）
   const start = Math.max(0, (hit ? hit.t : land - 0.8) - HL_PRE, d - HL_MAX);
@@ -8952,7 +8952,8 @@ function hlCut(by, kind) {
   const me = !!by && by === vmMe(), name = by ? (me ? '你' : vmName(by)) : '';
   const c = { frames: clip, by: me ? 'me' : by, hit: hit ? hit.t - start : null, title: by ? `${name} ${HL_KIND[kind] || ''}得分` : '得分', kind, court: VM.c ? { x: VM.c.x, z: VM.c.z, rot: VM.c.rot || 0 } : null };
   if (me) HL.mine.push(c);
-  hlWipe(() => hlOpen([c], false));
+  hlWipe(() => { if (!hlOpen([c], false)) hlFree(); });
+  return true;
 }
 // 播一段或好幾段（下載時把自己的得分接成一支）；rec＝同時錄成影片
 function hlOpen(clips, rec) {
@@ -8960,7 +8961,7 @@ function hlOpen(clips, rec) {
   try { return hlOpen0(clips, rec); } catch (e) { console.error('[得分精華] 開重播失敗', e); hlAbort(); return false; }
 }
 // 重播出錯：直接收掉回到現場，不能讓比賽卡在重播畫面
-function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾淨也要放開 */ } if (RP.hl) walk.paused = RP.hl.paused; RP.on = false; RP.hl = null; RP.F = null; if (HL.tag) HL.tag.hidden = true; if (HL.tr) { HL.tr.el.remove(); HL.tr = null; } }
+function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾淨也要放開 */ } if (RP.hl) walk.paused = RP.hl.paused; RP.on = false; RP.hl = null; RP.F = null; if (HL.tag) HL.tag.hidden = true; if (HL.tr) { HL.tr.el.remove(); HL.tr = null; } hlFree(); }
 function hlOpen0(clips, rec) {
   const F = [], segs = []; let t = 0;
   for (const c of clips) {
@@ -8983,10 +8984,11 @@ function hlOpen0(clips, rec) {
     RP.recorder.ondataavailable = (e) => { if (e.data.size) RP.chunks.push(e.data); };
     const hl = RP.hl;
     RP.recorder.onstop = () => {
-      if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); hlButton(true); return; }
+      const after = HL.after; HL.after = null;
+      if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); if (after) after(); else hlButton(true); return; }
       const blob = new Blob(RP.chunks, { type: 'video/webm' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `我的得分精華-${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.webm`; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); hlButton(true);
+      setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); if (after) after(); else hlButton(true);
     };
     RP.recorder.start(200);
   }
@@ -9010,7 +9012,13 @@ function hlEnd() {
   closeReplay();
   walk.paused = H.paused; RP.hl = null; RP.F = null;
   if (HL.tag) HL.tag.hidden = true;
+  if (!H.rec) hlFree(HL_TR);   // 收尾轉場（1.2 秒）跑完、回到現場才開始算
 }
+// 自己當主機（練習、自己開的房）：得分時先把下一球延到最慢的重播也播得完（HL_HOLD），重播一收掉（或沒播成）就擺發球位置、2.5 秒後吹哨
+//   ＝播完約 2～3 秒就發球，電腦快慢都一樣；至少跟沒重播的球一樣等 3.2 秒。伺服器裁判沒有重播，照 HL_GAP
+const HL_HOLD = 9.6;
+function hlHold() { if (VM.on && VM.host && VM.next) { HL.pt = VM.t; VM.next.at = Math.max(VM.next.at, VM.t + HL_HOLD); } }
+function hlFree(wait = 0) { if (VM.on && VM.host && VM.next && HL.pt != null && VM.phase !== 'serve') VM.next.at = Math.min(VM.next.at, Math.max(VM.t + wait, HL.pt + 3.2)); HL.pt = null; }
 function hlSkip(cancelRec) { if (!RP.hl) return false; if (RP.hl.rec) { if (cancelRec) { RP.hl.cancel = true; hlEnd(); } return true; } if (performance.now() - RP.hl.at < 300) return true; hlLeave(); return true; }
 // ---- 轉場（使用者畫的樣子）：一條接近垂直、上端偏右的粗分界線從右往左掃，分界線左邊是原本的畫面（先凍結成一張圖）、右邊是新的畫面；
 //      Play One 球在分界線前面一點、從右往左下橫著飛，後面拖著一條飄動的 PLAY ONE 旗帶（往右上飄、會跨過分界線）
@@ -9151,10 +9159,23 @@ function hlButton(show) {
   HL.btn.querySelector('[data-hl="dl"]').textContent = `🎬 下載我的得分精華（${HL.mine.length} 球）`;
   HL.btn.hidden = false;
 }
-function hlDownload() {
-  if (!renderer.domElement.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return; }
-  if (RP.on || VM.on) { toast('比賽中不能做精華，打完再按'); return; }
-  if (hlOpen(HL.mine, true)) hlButton(false);
+// after：做完（或取消）之後要做的事（結算面板：把面板叫回來）；回傳 true＝開始做了
+function hlDownload(after) {
+  if (!renderer.domElement.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return false; }
+  if (RP.on || (VM.on && VM.phase !== 'over')) { toast('比賽中不能做精華，打完再按'); return false; }   // 打完了（結算中）就可以做
+  HL.after = typeof after === 'function' ? after : null;
+  if (hlOpen(HL.mine, true)) { hlButton(false); return true; }
+  HL.after = null; return false;
+}
+// 結算面板（開房的評分面板、練習的比分框）上的下載按鈕：按了先把面板收起來，看著影片做完，再把面板叫回來；面板關掉後改用右下角的按鈕
+function hlPanelBtn(box, panel) {
+  if (!box || !panel || !HL.mine.length || box.querySelector('[data-hldl]')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.hldl = '1';
+  b.style.cssText = 'background:#0c3324;color:#fff;border:2px solid #D9B76A;font-weight:700;margin-right:auto';
+  b.textContent = `🎬 下載我的得分精華（${HL.mine.length} 球）`;
+  b.addEventListener('click', () => { if (hlDownload(() => { panel.hidden = false; })) panel.hidden = true; });
+  box.prepend(b);
+  hlButton(false);
 }
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
 const zoneDoors = [], mainDoors = [], zoneRoofs = [];
@@ -11445,7 +11466,7 @@ async function vmGotResult(d) {
   if (d.six && d.team.every(ids => ids.length === 6) && ['OH', 'S', 'MB', 'OPP'].includes(d.roles?.[me])) perf.role = d.roles[me];
   MREC.local = { p: 0, sets: {} };
   const MR = my ? await import('./js/match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
-  if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); } catch (x) { console.warn('結算面板', x); } }
+  if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
   try {
     const { recordMatch, ACHIEVEMENTS, cachedProgress, EXP_PER_LEVEL } = await import('./js/progress.js');
     const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
@@ -11454,6 +11475,12 @@ async function vmGotResult(d) {
     if (!MR) toast(`${won ? '🏆 贏了！' : '比賽結束'}${my ? `　評分 ${my.gr}・${my.rt}` : ''}${mvp ? '　⭐MVP' : ''}　+${r.exp} 經驗　+${r.coins} 金幣${r.levelUp ? `　⬆ 升到 Lv${r.level}！` : ''}`, 5200);
     (r.new || []).forEach((k, i) => setTimeout(() => toast(`🎖 解鎖成就「${ACHIEVEMENTS[k]?.name || k}」・可以套用稱號「${ACHIEVEMENTS[k]?.title || ''}」`, 3600), 4400 + i * 3800));
   } catch (e) { if (MR) MR.setMatchRewardError((e && e.message) || '戰績記錄失敗'); toast((e && e.message) || '戰績記錄失敗', 2600); }
+}
+// 結算面板放「下載我的得分精華」；按「確定」關掉面板後，右下角的按鈕再出來
+function vmResultHlBtn() {
+  const d = $('mr-panel'); if (!d || typeof hlPanelBtn !== 'function') return;
+  hlPanelBtn(d.querySelector('.mr-btns'), d);
+  d.querySelector('[data-close]')?.addEventListener('click', () => { if (!RP.on) hlButton(true); });
 }
 // 我是不是這一波的舉球員（比賽：這一波指定的舉球員，或六人制專職舉球；練習：都算）
 function vbIsSetter() {
@@ -11761,7 +11788,7 @@ function vmSetupServe() {
     const sd = vmSide(a.team); a.blk = null;
     if (VM.six) { const f = vm6Spot(a.team, a.id, 'serve'); a.tx = f.x; a.tz = f.z; if (Math.hypot(a.x - f.x, a.z - f.z) > 5) { a.x = f.x; a.z = f.z; } continue; }   // 6 對 6：發球隊照號位、接發球隊排接發球陣型
     if (a.id === srv) { a.tx = sd * 9.8; a.tz = -sd * 1.0; }
-    else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
+    else if (a.team === VM.srvTeam) { a.tx = sd * 1.5; a.tz = 0; }   // 發球員的隊友：站網前準備攔網（2 對 2 分工）
     else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = sd * (k === 0 ? 2.1 : -2.1); }   /* 面向網子的左右：兩隊都一樣 */
   }
   vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按滑鼠左鍵' : ''}`, 'srv', 3200);
@@ -11896,8 +11923,9 @@ function vmGradeShow(G) {
 }
 // 不到位的球：AI 舉球員追得到就跑過去修正；追不到就換最近、追得到的 AI 隊友（接第一球的人不行）用下手舉高球（真人舉球員自己跑）
 function vmFixSetter(...a) { return aiEngine().vmFixSetter(...a); }   /* B3：AI 在 engine/ai.js */
-// 得分精華（WEB-025）：有人打出得分時，下一球等這麼久（落地後 1.2＋轉場 1.2×2＋片段最長 5.2＋慢動作多 0.45，再留一點）；伺服器裁判也用同一個數字
-const HL_GAP = 9.6;
+// 得分精華（WEB-025）：有人打出得分時，下一球等這麼久再擺發球位置（之後 2.5 秒吹哨）。重播一般在 6.6～7.9 秒播完回到現場，
+//   所以播完後約 2～3 秒就吹哨；重播太長還沒播完時（只剩落地後的畫面），擺發球位置會直接把它收掉。伺服器裁判也用同一個數字
+const HL_GAP = 7.0;
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
   const L = VM.hlLast; VM.hlLast = null;   // 得分精華：最後碰球的是得分這一隊＝他打出這一分；對手失誤送分＝null（不重播）
@@ -11925,6 +11953,7 @@ function vmOver() {
   const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
   m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${VM.six ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${VM.six ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
   m.hidden = false; unlockMouse();
+  if (typeof hlPanelBtn === 'function') hlPanelBtn(m.querySelector('.rk-btns'), m);   // 得分精華下載
 }
 function vmJudge() {
   const b = VM.ball; if (!b || !balls.includes(b) || !b.floorHit) return;
@@ -13155,7 +13184,7 @@ function start(hot) {
 
 
 // 除錯用：網址加 ?debug 才會開放（截圖檢查鏡頭）
-if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, setMenuOpen: n => setMenuOpen(n), setMenuMove: (x, y) => setMenuMove(x, y), setMenuClose: p => setMenuClose(p), scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, vmStart: (c, sg, m, o, seats) => vmStart(c, sg, m, o, seats), vm6Start: (c, sg, asg, seats) => vm6Start(c, sg, asg, seats), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), emo: (k) => emoDo(k), get netq() { return NETQ; }, rng: GAME_RNG, get room() { return ROOM; }, roomReady: () => roomReady(), roomStart: () => roomStart(), roomCourtOf: (id) => roomCourtOf(id), vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
+if (new URLSearchParams(location.search).has('debug')) window.__gym = { THREE, setMenuOpen: n => setMenuOpen(n), setMenuMove: (x, y) => setMenuMove(x, y), setMenuClose: p => setMenuClose(p), scene, camera, controls, renderer, walk, get state() { return state; }, setMode, frameView, get skill() { return skill; }, get net() { return NET; }, get balls() { return balls; }, hitWorldBall: (b, k) => hitWorldBall(b, k), openCamView: (it) => openCamView(it), get rec() { return REC; }, get co() { return CO; }, openPC: () => openPC(), get rk() { return RK; }, get vb() { return VB; }, get vm() { return VM; }, get hl() { return HL; }, vmOver: () => vmOver(), hlResultBtn: () => vmResultHlBtn(), vmStart: (c, sg, m, o, seats) => vmStart(c, sg, m, o, seats), vm6Start: (c, sg, asg, seats) => vm6Start(c, sg, asg, seats), mkAi: (...q) => vmMkAi(...q), v6form: (t) => vm6RecvForm(t), staCost: (k, id) => staCost(k, id), v6overlap: () => vm6Overlap(), vmTouch: (b, id, k) => vmOnTouch(b, id, k), rkCourts: () => rkCourts(), rkStart: (c, o) => rkStart(c, o), rkPress: (s) => rkPress(s), sfxPlay: (...a) => sfxPlay(...a), makeAvatar: (c, ch) => makeAvatar(c, ch), vbAttack: (t, c) => vbAttack(t, c), chgOf: (c) => vbChargeOf(c), setMove: (dx, dy) => setMenuMove(dx, dy), chgStart: (k) => vbChargeStart(k), chgRelease: () => vbChargeRelease(), doSet: (b, n, q, hy, v) => vbDoSet(b, n, q, hy, v), get fov() { return camera.fov; }, npc: (m) => vbNpcToggle(m), get npcS() { return VB.npc; }, get tut() { return TUT_COACH; }, pass: () => passToFacing(), recv: () => vbReceive(), set: (n) => vbSet(n), grab: () => grabBall(), freeBall: () => vmFreeBall(), serveAim: () => vbServeAim(), netJoin: (r) => netJoin(r), emo: (k) => emoDo(k), get netq() { return NETQ; }, rng: GAME_RNG, get room() { return ROOM; }, roomReady: () => roomReady(), roomStart: () => roomStart(), roomCourtOf: (id) => roomCourtOf(id), vmOpenMenu: (c) => vmOpenMenu(c), AVP, avDrive: (...a) => avDrive(...a), avMix: (...a) => avMix(...a), step: (dt) => { lastT = performance.now() - dt * 1000; drawFrame(true); }, rebuild: () => planChanged(), fixtures: (z) => zoneFixtures(z), layout: (z) => zoneLayout(z), wake: () => window.wakeRender(2000), frame: () => { controls.update(); drawFrame(true); }, KIT };
 // ---------------------------------------------------------------- existing Hsinchu venues (assets/data/venues.json): a reference model you can walk through
 // 自由規劃：大家共用一份放在網路上；網路上比較新就換上，這台比較新就傳上去
 async function syncFreePlan() {

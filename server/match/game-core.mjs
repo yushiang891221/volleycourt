@@ -9,7 +9,7 @@ import fs from 'node:fs';
 if (!globalThis.VBMatchSync) { const mod = { exports: {} }; new Function('module', fs.readFileSync(new URL('../../js/match-sync.js', import.meta.url), 'utf8'))(mod); globalThis.VBMatchSync = mod.exports; }
 // 3～5 人制的站位（網頁是另外載入的 js/court-formations.js，會掛在 globalThis.CourtFormations）
 if (!globalThis.CourtFormations) new Function(fs.readFileSync(new URL('../../js/court-formations.js', import.meta.url), 'utf8'))();
-export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","vbFloorImpact","vbShake","vbScreenFlash","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState","hlOnPoint","hlReset"];
+export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","vbFloorImpact","vbShake","vbScreenFlash","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState","hlOnPoint","hlReset","hlPanelBtn","vmResultHlBtn"];
 // 伺服器上沒有網頁：DOM／畫布一律給「什麼都不做、怎麼用都不會壞」的假物件（three.js 建貼圖時也會用到 document）
 const dummy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : k === 'then' ? undefined : dummy, apply: () => dummy, construct: () => dummy, set: () => true });
 if (!globalThis.document) globalThis.document = { createElementNS: () => dummy, createElement: () => dummy };
@@ -940,6 +940,7 @@ export function createGameCore(S = {}) {
   const RP = { on: false, t: 0, playing: true, speed: 1, view: 'cam', A: null, g: null, actors: new Map(), ballsM: new Map(), trails: new Map(), marks: [], hud: null, hudT: 0, recorder: null, chunks: [] };
   function hlReset(...a) { return S.hlReset ? S.hlReset(...a) : undefined; }
   function hlOnPoint(...a) { return S.hlOnPoint ? S.hlOnPoint(...a) : undefined; }
+  function hlPanelBtn(...a) { return S.hlPanelBtn ? S.hlPanelBtn(...a) : undefined; }
   const zoneDoors = [], mainDoors = [];
   const coarse = () => matchMedia('(pointer: coarse)').matches;
   const locked = () => document.pointerLockElement === renderer.domElement;
@@ -1205,7 +1206,7 @@ export function createGameCore(S = {}) {
     if (d.six && d.team.every(ids => ids.length === 6) && ['OH', 'S', 'MB', 'OPP'].includes(d.roles?.[me])) perf.role = d.roles[me];
     MREC.local = { p: 0, sets: {} };
     const MR = my ? await import('./js/match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
-    if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); } catch (x) { console.warn('結算面板', x); } }
+    if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
     try {
       const { recordMatch, ACHIEVEMENTS, cachedProgress, EXP_PER_LEVEL } = await import('./js/progress.js');
       const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
@@ -1215,6 +1216,7 @@ export function createGameCore(S = {}) {
       (r.new || []).forEach((k, i) => setTimeout(() => toast(`🎖 解鎖成就「${ACHIEVEMENTS[k]?.name || k}」・可以套用稱號「${ACHIEVEMENTS[k]?.title || ''}」`, 3600), 4400 + i * 3800));
     } catch (e) { if (MR) MR.setMatchRewardError((e && e.message) || '戰績記錄失敗'); toast((e && e.message) || '戰績記錄失敗', 2600); }
   }
+  function vmResultHlBtn(...a) { return S.vmResultHlBtn ? S.vmResultHlBtn(...a) : undefined; }
   function vbFx(...a) { return S.vbFx ? S.vbFx(...a) : undefined; }
   function rkAiState(...a) { return S.rkAiState ? S.rkAiState(...a) : undefined; }
   function rkPeerAi(...a) { return S.rkPeerAi ? S.rkPeerAi(...a) : undefined; }
@@ -1302,7 +1304,7 @@ export function createGameCore(S = {}) {
       const sd = vmSide(a.team); a.blk = null;
       if (VM.six) { const f = vm6Spot(a.team, a.id, 'serve'); a.tx = f.x; a.tz = f.z; if (Math.hypot(a.x - f.x, a.z - f.z) > 5) { a.x = f.x; a.z = f.z; } continue; }   // 6 對 6：發球隊照號位、接發球隊排接發球陣型
       if (a.id === srv) { a.tx = sd * 9.8; a.tz = -sd * 1.0; }
-      else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
+      else if (a.team === VM.srvTeam) { a.tx = sd * 1.5; a.tz = 0; }   // 發球員的隊友：站網前準備攔網（2 對 2 分工）
       else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = sd * (k === 0 ? 2.1 : -2.1); }   /* 面向網子的左右：兩隊都一樣 */
     }
     vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按滑鼠左鍵' : ''}`, 'srv', 3200);
@@ -1407,7 +1409,7 @@ export function createGameCore(S = {}) {
   }
   function vmGradeShow(...a) { return S.vmGradeShow ? S.vmGradeShow(...a) : undefined; }
   function vmFixSetter(...a) { return aiEngine().vmFixSetter(...a); }
-  const HL_GAP = 9.6;
+  const HL_GAP = 7.0;
   function vmPoint(win, why) {
     if (VM.phase !== 'rally') return;
     const L = VM.hlLast; VM.hlLast = null;   // 得分精華：最後碰球的是得分這一隊＝他打出這一分；對手失誤送分＝null（不重播）
@@ -1435,6 +1437,7 @@ export function createGameCore(S = {}) {
     const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
     m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${VM.six ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${VM.six ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
     m.hidden = false; unlockMouse();
+    if (typeof hlPanelBtn === 'function') hlPanelBtn(m.querySelector('.rk-btns'), m);   // 得分精華下載
   }
   function vmJudge() {
     const b = VM.ball; if (!b || !balls.includes(b) || !b.floorHit) return;

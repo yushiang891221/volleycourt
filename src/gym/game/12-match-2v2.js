@@ -128,7 +128,7 @@ function vmSetupServe() {
     const sd = vmSide(a.team); a.blk = null;
     if (VM.six) { const f = vm6Spot(a.team, a.id, 'serve'); a.tx = f.x; a.tz = f.z; if (Math.hypot(a.x - f.x, a.z - f.z) > 5) { a.x = f.x; a.z = f.z; } continue; }   // 6 對 6：發球隊照號位、接發球隊排接發球陣型
     if (a.id === srv) { a.tx = sd * 9.8; a.tz = -sd * 1.0; }
-    else if (a.team === VM.srvTeam) { a.tx = sd * 3.5; a.tz = 0; }
+    else if (a.team === VM.srvTeam) { a.tx = sd * 1.5; a.tz = 0; }   // 發球員的隊友：站網前準備攔網（2 對 2 分工）
     else { const k = VM.team[a.team].indexOf(a.id); a.tx = sd * 6.2; a.tz = sd * (k === 0 ? 2.1 : -2.1); }   /* 面向網子的左右：兩隊都一樣 */
   }
   vmSay(`輪到 ${vmName(srv)} 發球${VM.ai.has(srv) ? '' : srv === vmMe() ? '：拿著球按滑鼠左鍵' : ''}`, 'srv', 3200);
@@ -263,8 +263,9 @@ function vmGradeShow(G) {
 }
 // 不到位的球：AI 舉球員追得到就跑過去修正；追不到就換最近、追得到的 AI 隊友（接第一球的人不行）用下手舉高球（真人舉球員自己跑）
 function vmFixSetter(...a) { return aiEngine().vmFixSetter(...a); }   /* B3：AI 在 engine/ai.js */
-// 得分精華（WEB-025）：有人打出得分時，下一球等這麼久（落地後 1.2＋轉場 1.2×2＋片段最長 5.2＋慢動作多 0.45，再留一點）；伺服器裁判也用同一個數字
-const HL_GAP = 9.6;
+// 得分精華（WEB-025）：有人打出得分時，下一球等這麼久再擺發球位置（之後 2.5 秒吹哨）。重播一般在 6.6～7.9 秒播完回到現場，
+//   所以播完後約 2～3 秒就吹哨；重播太長還沒播完時（只剩落地後的畫面），擺發球位置會直接把它收掉。伺服器裁判也用同一個數字
+const HL_GAP = 7.0;
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
   const L = VM.hlLast; VM.hlLast = null;   // 得分精華：最後碰球的是得分這一隊＝他打出這一分；對手失誤送分＝null（不重播）
@@ -292,6 +293,7 @@ function vmOver() {
   const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
   m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${VM.six ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${VM.six ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
   m.hidden = false; unlockMouse();
+  if (typeof hlPanelBtn === 'function') hlPanelBtn(m.querySelector('.rk-btns'), m);   // 得分精華下載
 }
 function vmJudge() {
   const b = VM.ball; if (!b || !balls.includes(b) || !b.floorHit) return;

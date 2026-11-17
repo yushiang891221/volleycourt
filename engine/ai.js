@@ -59,7 +59,8 @@ export function createAi(G) {
     else if (live) {
       // 自己隊友剛打向對面、還在我這邊飛的球（扣球、推過去）不要去碰
       const B = G.vmBallL(b), onMine = Math.sign(B.x) === sd, land = G.vmPredL(B, G.BALL_R), outgoing = G.VM.touch.team === a.team && G.VM.touch.last !== a.id && (G.VM.touch.n >= 3 || ['spike', 'tip', 'hit'].includes(b.lk)) && Math.sign(B.vx) === -sd && land && Math.sign(land.x) === -sd;   // 隊友打出去、會落在對面的球才不碰（傳給我的球要接）
-      const coming = !outgoing && (Math.sign(B.vx) === sd || onMine) && !vmLetGo(a.team, b);   // 會出界的球放掉
+      // 球要過來＝已經在我這邊，或往我這邊飛而且會落在我這邊（對方還在自己場內接、舉的球不算：以前舉球的人會先衝到網前，兩個人都擠在網前）
+      const coming = !outgoing && (onMine || (Math.sign(B.vx) === sd && land && Math.sign(land.x) === sd)) && !vmLetGo(a.team, b);   // 會出界的球放掉
       const myTurn = G.VM.touch.team !== a.team || G.VM.touch.n < 3;
       if (coming && myTurn && !(G.VM.touch.team === a.team && G.VM.touch.n >= 3)) {
         if (G.VM.touch.team !== a.team && G.VM.poss[a.team] && G.VM.poss[a.team].stage > 0) G.VM.poss[a.team] = null;   // 球剛從對面過來：重新分工
@@ -67,9 +68,14 @@ export function createAi(G) {
         if (P && G.VM.t >= a.reactAt) vmAiRole(a, P, B, sd);
       } else {
         // 球在對面：回防守位置；隊友在網前（AI 在攔網、或真人站在網前 2.2 m 內）→ 我退到後排中間補位，偏向攔網擋不到的斜線
-        const k = G.VM.team[a.team].indexOf(a.id), mate = G.VM.team[a.team].find((id) => id !== a.id), mp = G.vmPos(mate), ma = G.VM.ai.get(mate);
-        const mateFront = (ma && ma.blk) || (!ma && mp && Math.abs(mp.x) < 2.2), th = mateFront ? vmThreat(a.team) : null;
-        if (mateFront) { a.tx = sd * 6.2; a.tz = G.clamp(th ? -th.z * 0.35 : 0, -2.2, 2.2); }
+        //   2 對 2 分工：一個站網前準備攔網（vmFront2），另一個在後排中間防守
+        const k = G.VM.team[a.team].indexOf(a.id), mate = G.VM.team[a.team].find((id) => id !== a.id), mp = G.vmPos(mate), ma = G.VM.ai.get(mate), fid = vmFront2(a.team);
+        const mateFront = (fid && fid !== a.id) || (ma && ma.blk) || (!ma && mp && Math.abs(mp.x) < 2.2), th = mateFront || fid === a.id ? vmThreat(a.team) : null;
+        if (fid === a.id) {   // 我在網前：跟著對面的球左右移；對方要攻擊了、但這球我決定不跳（程度低比較常這樣）→ 退到 3 m 防吊球
+          const pull = th && a.blkRoll === vmBlkKey() && !a.blkGo, bz = b ? G.vmBallL(b).z : 0;
+          a.tx = sd * (pull ? 3.0 : 1.5); a.tz = G.clamp(th ? th.z * (pull ? 0.6 : 1) : bz * 0.6, -3.2, 3.2);
+        }
+        else if (mateFront) { a.tx = sd * 6.5; a.tz = G.clamp(th ? -th.z * 0.35 : 0, -2.2, 2.2); }
         else { a.tx = sd * (G.vmLv(a).block > 0.8 ? 5.5 : 6); a.tz = sd * (k === 0 ? 2 : -2); }   /* 面向網子的左右：兩隊都一樣（以前左隊顛倒，AI 會站到真人的位置） */
         a.reactAt = G.VM.t + G.vmLv(a).react;
         if (G.VM.touch.team !== a.team) G.VM.poss[a.team] = null;
@@ -94,6 +100,20 @@ export function createAi(G) {
     if (a.y > 0 || a.vy > 0) { a.vy -= G.JUMP_G * (a.vy < 0 && G.VM.six && G.VM.role[a.id] === 'MB' && G.vmPro(a) ? 0.6 : 1) * dt; a.y += a.vy * dt;   /* 企聯中間手：下降比較慢＝滯空久 */ if (a.y <= 0) { a.y = 0; a.vy = 0; a.tdFake = false; } }
     { const want = a.blk && a.y > 0.05 ? a.blk.bsZ || 0 : 0, d = want - (a.bs || 0); a.bs = (a.bs || 0) + G.clamp(d, -1.6 * dt, 1.6 * dt); }   // 攔網雙手往左右移（跟你一樣有速度上限）
   }
+  // 2 對 2：球在對面時誰站網前（另一個後排防守）。兩個 AI：比較靠網的那個，換人要另一個近 1.5 m 以上（不會一直交換）；
+  //   真人隊友在後排（離網 4.5 m 以上）→ AI 上網前；真人在網前或中間 → 沒有指定（AI 照舊在後排、真人自己攔）
+  function vmFront2(team) {
+    const V = G.VM; if (V.six) return null;
+    const ids = V.team[team] || [], ais = ids.filter((id) => V.ai.has(id)); if (!ais.length) return null;
+    const hum = ids.find((id) => !V.ai.has(id));
+    if (hum) { const q = G.vmPos(hum); return q && Math.abs(q.x) > 4.5 ? ais[0] : null; }
+    if (ais.length < 2) return ais[0];
+    const f = V.f2 || (V.f2 = [null, null]), [p, q] = ais.map((id) => V.ai.get(id)), near = Math.abs(p.x) <= Math.abs(q.x) ? p : q;
+    let cur = ais.includes(f[team]) ? f[team] : null;
+    if (!cur || (cur !== near.id && Math.abs(V.ai.get(cur).x) - Math.abs(near.x) > 1.5)) cur = near.id;
+    f[team] = cur; return cur;
+  }
+  function vmBlkKey() { return G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10; }   // 每一波攻擊重新決定要不要跳
   function vmThreat(team) {
     const opp = 1 - team, B = G.VM.ball && G.vmBallL(G.VM.ball); if (!B) return null;
     const sdO = G.vmSide(opp); if (Math.sign(B.x) !== sdO && !(Math.abs(B.x) < 1.5 && Math.sign(B.vx) === sdO)) return null;   // 球要在對面（或剛要過網過去）
@@ -113,6 +133,7 @@ export function createAi(G) {
     // 一隊只派一個人攔：離攻擊手左右比較近、而且這一球還沒碰的人
     let lane = 0;
     if (G.VM.six) { if (!vm6BlockPick(a, th)) return false; lane = vmBlockLane(a, th); }   // 攔中固定在內側，邊翼固定在外側，不依當下誰站哪一邊交換
+    else if (vmFront2(a.team)) { if (vmFront2(a.team) !== a.id) return false; }   // 2 對 2：固定由網前那位攔
     else {
       if (G.VM.team[a.team].some((id) => !G.VM.ai.has(id) && (() => { const q = G.vmPos(id); return q && Math.abs(q.x) < 1.8; })())) return false;   // 真人隊友在網前：他攔，我退後防守
       const mates = G.VM.team[a.team].filter((id) => G.VM.ai.has(id)).map((id) => G.VM.ai.get(id));
@@ -120,7 +141,7 @@ export function createAi(G) {
       if (pick !== a) return false;
     }
     const L = G.vmLv(a);
-    if (a.blkRoll !== G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10) { a.blkRoll = G.VM.srvSeq * 100 + G.VM.touch.n + G.VM.touch.team * 10; a.blkGo = G.gameRandom() < L.block; }
+    if (a.blkRoll !== vmBlkKey()) { a.blkRoll = vmBlkKey(); a.blkGo = G.gameRandom() < L.block; }
     if (!a.blkGo) return false;
     if (!a.blk) a.blk = { until: G.VM.t + 3 };
     a.tx = sd * 0.45; a.tz = G.clamp(th.z + lane + (G.gameRandom() - 0.5) * 0.1, -4.2, 4.2);

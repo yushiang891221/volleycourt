@@ -225,15 +225,15 @@ function rpDownload() {
 }
 // ---- 得分精華（WEB-025）：比賽中每台電腦自己記最近 10 秒（不多傳任何訊息）；有人打出得分（不含對手失誤送分）
 //      就用 Play One 球斜拉轉場、從第三人稱重播那一球；自己得的分另外收起來，比賽結束可以下載成一支影片（在自己電腦上產生，伺服器不存）
-const HL = { buf: [], ids: new Map(), nid: 0, last: 0, mine: [], wasOn: false, pendT: 0, btn: null, tag: null, tr: null, css: false };
+const HL = { buf: [], ids: new Map(), nid: 0, last: 0, mine: [], wasOn: false, pendT: 0, btn: null, tag: null, tr: null, css: false, after: null, pt: null };
 const HL_KIND = { spike: '扣球', tip: '吊球', hit: '攻擊', serve: '發球', block: '攔網' };
-// 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起改 12-match-2v2.js 的 HL_GAP：落地後 + 轉場×2 + 片段最長 + 慢動作多出來的）
+// 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起看 12-match-2v2.js 的 HL_GAP：重播播完回到現場後約 2～3 秒吹哨）
 const HL_PRE = 2.5, HL_POST = 1.2, HL_MAX = 5.2, HL_TR = 1.2;
 function hlId(o) { if (!HL.ids.has(o.uuid)) HL.ids.set(o.uuid, ++HL.nid); return HL.ids.get(o.uuid); }
 function hlReset() { HL.buf = []; HL.mine = []; HL.ids.clear(); HL.nid = 0; clearTimeout(HL.pendT); hlButton(false); }
 function hlTick(now) {
   if (VM.on && !HL.wasOn) { HL.wasOn = true; hlReset(); }
-  else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，按 Esc 放開滑鼠，點右下角就能下載`, 4500); } }
+  else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，結算畫面上有下載按鈕（關掉後在右下角）`, 4500); } }
   if (!VM.on || RP.on || now - HL.last < 33) return;
   HL.last = now; HL.buf.push(recFrame(now / 1000, hlId));
   while (HL.buf.length && HL.buf[0].t < now / 1000 - 10) HL.buf.shift();
@@ -243,13 +243,13 @@ function hlOnPoint(win, why, by, kind) {
   if (!walk.on) return;
   if (by === undefined) { if (!/落地得分/.test(why || '')) return; by = null; }
   else if (!by) return;
-  clearTimeout(HL.pendT);
-  HL.pendT = setTimeout(() => { try { hlCut(by, kind); } catch (e) { console.error('[得分精華] 剪片段失敗', e); hlAbort(); } }, HL_POST * 1000);   // 先在現場看球落地，順便把落地後的畫面錄進來
+  clearTimeout(HL.pendT); hlHold();
+  HL.pendT = setTimeout(() => { try { if (!hlCut(by, kind)) hlFree(); } catch (e) { console.error('[得分精華] 剪片段失敗', e); hlAbort(); } }, HL_POST * 1000);   // 先在現場看球落地，順便把落地後的畫面錄進來
 }
-function hlCut(by, kind) {
-  if (!HL.buf.length || RP.on || HL.tr || !VM.on) return;
+function hlCut(by, kind) {   // 回傳 true＝開始播重播
+  if (!HL.buf.length || RP.on || HL.tr || !VM.on) return false;
   const end = HL.buf[HL.buf.length - 1].t, fr = HL.buf.filter((f) => f.t >= end - 9.5);
-  if (fr.length < 30) return;
+  if (fr.length < 30) return false;
   const t0 = fr[0].t, frames = fr.map((f) => ({ t: f.t - t0, b: f.b, p: f.p })), d = frames[frames.length - 1].t, land = d - HL_POST;
   const hit = recAnalyze(frames, []).hits.filter((h) => h.t < land - 0.05).pop();   // 最後一下擊球（扣、吊、發、攔）
   const start = Math.max(0, (hit ? hit.t : land - 0.8) - HL_PRE, d - HL_MAX);
@@ -257,7 +257,8 @@ function hlCut(by, kind) {
   const me = !!by && by === vmMe(), name = by ? (me ? '你' : vmName(by)) : '';
   const c = { frames: clip, by: me ? 'me' : by, hit: hit ? hit.t - start : null, title: by ? `${name} ${HL_KIND[kind] || ''}得分` : '得分', kind, court: VM.c ? { x: VM.c.x, z: VM.c.z, rot: VM.c.rot || 0 } : null };
   if (me) HL.mine.push(c);
-  hlWipe(() => hlOpen([c], false));
+  hlWipe(() => { if (!hlOpen([c], false)) hlFree(); });
+  return true;
 }
 // 播一段或好幾段（下載時把自己的得分接成一支）；rec＝同時錄成影片
 function hlOpen(clips, rec) {
@@ -265,7 +266,7 @@ function hlOpen(clips, rec) {
   try { return hlOpen0(clips, rec); } catch (e) { console.error('[得分精華] 開重播失敗', e); hlAbort(); return false; }
 }
 // 重播出錯：直接收掉回到現場，不能讓比賽卡在重播畫面
-function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾淨也要放開 */ } if (RP.hl) walk.paused = RP.hl.paused; RP.on = false; RP.hl = null; RP.F = null; if (HL.tag) HL.tag.hidden = true; if (HL.tr) { HL.tr.el.remove(); HL.tr = null; } }
+function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾淨也要放開 */ } if (RP.hl) walk.paused = RP.hl.paused; RP.on = false; RP.hl = null; RP.F = null; if (HL.tag) HL.tag.hidden = true; if (HL.tr) { HL.tr.el.remove(); HL.tr = null; } hlFree(); }
 function hlOpen0(clips, rec) {
   const F = [], segs = []; let t = 0;
   for (const c of clips) {
@@ -288,10 +289,11 @@ function hlOpen0(clips, rec) {
     RP.recorder.ondataavailable = (e) => { if (e.data.size) RP.chunks.push(e.data); };
     const hl = RP.hl;
     RP.recorder.onstop = () => {
-      if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); hlButton(true); return; }
+      const after = HL.after; HL.after = null;
+      if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); if (after) after(); else hlButton(true); return; }
       const blob = new Blob(RP.chunks, { type: 'video/webm' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `我的得分精華-${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.webm`; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); hlButton(true);
+      setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); if (after) after(); else hlButton(true);
     };
     RP.recorder.start(200);
   }
@@ -315,7 +317,13 @@ function hlEnd() {
   closeReplay();
   walk.paused = H.paused; RP.hl = null; RP.F = null;
   if (HL.tag) HL.tag.hidden = true;
+  if (!H.rec) hlFree(HL_TR);   // 收尾轉場（1.2 秒）跑完、回到現場才開始算
 }
+// 自己當主機（練習、自己開的房）：得分時先把下一球延到最慢的重播也播得完（HL_HOLD），重播一收掉（或沒播成）就擺發球位置、2.5 秒後吹哨
+//   ＝播完約 2～3 秒就發球，電腦快慢都一樣；至少跟沒重播的球一樣等 3.2 秒。伺服器裁判沒有重播，照 HL_GAP
+const HL_HOLD = 9.6;
+function hlHold() { if (VM.on && VM.host && VM.next) { HL.pt = VM.t; VM.next.at = Math.max(VM.next.at, VM.t + HL_HOLD); } }
+function hlFree(wait = 0) { if (VM.on && VM.host && VM.next && HL.pt != null && VM.phase !== 'serve') VM.next.at = Math.min(VM.next.at, Math.max(VM.t + wait, HL.pt + 3.2)); HL.pt = null; }
 function hlSkip(cancelRec) { if (!RP.hl) return false; if (RP.hl.rec) { if (cancelRec) { RP.hl.cancel = true; hlEnd(); } return true; } if (performance.now() - RP.hl.at < 300) return true; hlLeave(); return true; }
 // ---- 轉場（使用者畫的樣子）：一條接近垂直、上端偏右的粗分界線從右往左掃，分界線左邊是原本的畫面（先凍結成一張圖）、右邊是新的畫面；
 //      Play One 球在分界線前面一點、從右往左下橫著飛，後面拖著一條飄動的 PLAY ONE 旗帶（往右上飄、會跨過分界線）
@@ -456,10 +464,23 @@ function hlButton(show) {
   HL.btn.querySelector('[data-hl="dl"]').textContent = `🎬 下載我的得分精華（${HL.mine.length} 球）`;
   HL.btn.hidden = false;
 }
-function hlDownload() {
-  if (!renderer.domElement.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return; }
-  if (RP.on || VM.on) { toast('比賽中不能做精華，打完再按'); return; }
-  if (hlOpen(HL.mine, true)) hlButton(false);
+// after：做完（或取消）之後要做的事（結算面板：把面板叫回來）；回傳 true＝開始做了
+function hlDownload(after) {
+  if (!renderer.domElement.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return false; }
+  if (RP.on || (VM.on && VM.phase !== 'over')) { toast('比賽中不能做精華，打完再按'); return false; }   // 打完了（結算中）就可以做
+  HL.after = typeof after === 'function' ? after : null;
+  if (hlOpen(HL.mine, true)) { hlButton(false); return true; }
+  HL.after = null; return false;
+}
+// 結算面板（開房的評分面板、練習的比分框）上的下載按鈕：按了先把面板收起來，看著影片做完，再把面板叫回來；面板關掉後改用右下角的按鈕
+function hlPanelBtn(box, panel) {
+  if (!box || !panel || !HL.mine.length || box.querySelector('[data-hldl]')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.hldl = '1';
+  b.style.cssText = 'background:#0c3324;color:#fff;border:2px solid #D9B76A;font-weight:700;margin-right:auto';
+  b.textContent = `🎬 下載我的得分精華（${HL.mine.length} 球）`;
+  b.addEventListener('click', () => { if (hlDownload(() => { panel.hidden = false; })) panel.hidden = true; });
+  box.prepend(b);
+  hlButton(false);
 }
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
 const zoneDoors = [], mainDoors = [], zoneRoofs = [];
