@@ -34,6 +34,8 @@
 html.m-touch, html.m-touch body { overflow: hidden !important; overscroll-behavior: none; -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 html.m-touch { --m-sl: env(safe-area-inset-left, 0px); --m-sr: env(safe-area-inset-right, 0px); --m-sb: env(safe-area-inset-bottom, 0px); }
 html.m-touch body { position: fixed; inset: 0; }
+html.m-touch, html.m-touch body, html.m-touch body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+html.m-touch input, html.m-touch textarea, html.m-touch [contenteditable], html.m-touch [contenteditable] * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html.m-touch.m-fit body { left: 0; right: auto; zoom: var(--m-zoom); width: var(--m-w) !important; min-width: 0 !important; height: var(--m-h) !important; box-sizing: border-box; padding-left: var(--m-pl) !important; padding-right: var(--m-pr) !important; padding-bottom: var(--m-pb) !important; }
 html.m-touch.m-fit body dialog { max-width: calc(100vw - var(--m-sl) - var(--m-sr) - 8px); max-height: calc(100dvh - 8px); overflow: auto; box-sizing: border-box; }
 dialog.m-rotate, dialog.m-gate { max-width: none; max-height: none; width: 100vw; height: 100dvh; margin: 0; border: 0; }
@@ -94,6 +96,8 @@ dialog.m-rotate::backdrop, dialog.m-gate::backdrop { background: transparent; }
   const reflow = () => { unshift(); for (const t of [120, 400, 900]) setTimeout(() => { unshift(); dispatchEvent(new Event('resize')); }, t); };
   addEventListener('orientationchange', reflow); addEventListener('pageshow', reflow);
   if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', reflow);
+  // 手指按久了 iPhone 會把畫面的字選起來（整片反藍＋「拷貝／查詢／翻譯」選單，2026-11-18 iPhone 實測）：上面的 CSS 關掉選取，萬一還是選到就清掉（輸入框除外）
+  document.addEventListener('selectionchange', () => { const a = document.activeElement; if (a && (a.matches('input, textarea') || a.isContentEditable)) return; const sel = getSelection(); if (sel && sel.rangeCount && !sel.isCollapsed) sel.removeAllRanges(); });
   // 雙指縮放（iPhone 不理 user-scalable=no）
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
