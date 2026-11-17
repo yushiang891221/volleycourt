@@ -455,7 +455,8 @@ function ballMaterial(hot) {
   return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, normalMap: BALL_TEX.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: BALL_TEX.rough, roughness: 1, sheen: 0.25, sheenRoughness: 0.6, sheenColor: '#FFF6D0', clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
-const BALL_GEO = new THREE.SphereGeometry(BALL_R, 56, 36);   // 所有球共用一份（輪廓夠圓）
+const BALL_VIS = 1.3;   // 畫面上的球比實際碰撞大 1.3 倍，比較好看清楚（物理、判定仍用 BALL_R）
+const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);   // 所有球共用一份（輪廓夠圓）
 function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); return m; }
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);

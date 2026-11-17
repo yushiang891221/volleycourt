@@ -268,7 +268,8 @@ export function createGameCore(S = {}) {
     return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, normalMap: BALL_TEX.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: BALL_TEX.rough, roughness: 1, sheen: 0.25, sheenRoughness: 0.6, sheenColor: '#FFF6D0', clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
   }
   const ballMat = ballMaterial(false);
-  const BALL_GEO = new THREE.SphereGeometry(BALL_R, 56, 36);
+  const BALL_VIS = 1.3;
+  const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);
   function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); return m; }
   const hands = new THREE.Group();
   const skinM = new THREE.MeshStandardMaterial({ color: '#D9A57E', roughness: 0.6 }), sleeveM = new THREE.MeshStandardMaterial({ color: '#F2B705', roughness: 0.7 });
@@ -986,9 +987,10 @@ export function createGameCore(S = {}) {
   }
   function vbNetRoll(k) { if (!NET.on) return gameRandom(); const x = Math.sin(NET.hitN * 12.9898 + k * 78.233 + (NET.hitBy || '').length * 3.7) * 43758.5453; return x - Math.floor(x); }
   function vbImpact(...a) { return S.vbImpact ? S.vbImpact(...a) : undefined; }
-  const TRAIL = { list: [], max: 160, step: 0.12, tex: null };
+  const TRAIL = { list: [], max: 160, step: 0.12, tex: null, halo: null, haloR: BALL_R * BALL_VIS * 1.55 };
   function vbTrailDrop(T) {
     for (const m of [T.glow, T.core]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+    scene.remove(T.halo); T.halo.material.dispose();
     const i = TRAIL.list.indexOf(T); if (i >= 0) TRAIL.list.splice(i, 1);
   }
   function vbTrailClear() { while (TRAIL.list.length) vbTrailDrop(TRAIL.list[0]); }

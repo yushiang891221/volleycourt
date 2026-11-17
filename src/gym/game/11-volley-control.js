@@ -96,16 +96,28 @@ function vbImpact(b, kind, q = 1) {
 // ---- 球的軌跡光帶（每一顆球、每種模式都一樣，取代原本那條 1 像素的細線）----
 // 每次碰球都從碰球點長出一條新光帶：面向鏡頭的彩帶＝外層柔光＋內層亮芯，越靠近球越寬越亮、尾巴細而淡，走過的路過一下子自己淡掉。
 // 顏色＝這一下打得好不好：金＝PERFECT（扣得重、舉好、接好、攔死）、綠＝普通（GOOD、TOUCH OUT、碰手撐起）、紅＝沒做好（BAD、被打穿）。攔網的品質：攔死 1、打穿 0.3、其他碰到 0.7。
-// 球落地、停住、被拿起來或收走、再被碰到，舊光帶就淡出並釋放，不會殘留在場上。
-const TRAIL = { list: [], max: 160, step: 0.12, tex: null };
+// 球身外面套一圈同色光圈（永遠面向鏡頭），光帶在球那一端跟光圈一樣寬，往後收成尾巴。
+// 球落地、停住、被拿起來或收走、再被碰到，舊光帶和光圈就淡出並釋放，不會殘留在場上。
+const TRAIL = { list: [], max: 160, step: 0.12, tex: null, halo: null, haloR: BALL_R * BALL_VIS * 1.55 };
 const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3();
 function vbTrailColor(q) { return new THREE.Color(q >= 0.88 ? '#FFC53D' : q >= 0.6 ? '#3EE58F' : '#FF4B55'); }
 function vbTrailTex() {   // 橫切面的柔邊：中間不透明、兩邊漸漸透明
   if (TRAIL.tex) return TRAIL.tex;
   const c = document.createElement('canvas'); c.width = 2; c.height = 64;
   const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 64);
-  for (const [s, v] of [[0, 0], [0.2, 45], [0.38, 170], [0.5, 255], [0.62, 170], [0.8, 45], [1, 0]]) g.addColorStop(s, `rgb(${v},${v},${v})`);
+  for (const [s, v] of [[0, 0], [0.1, 80], [0.22, 205], [0.34, 255], [0.66, 255], [0.78, 205], [0.9, 80], [1, 0]]) g.addColorStop(s, `rgb(${v},${v},${v})`);
   x.fillStyle = g; x.fillRect(0, 0, 2, 64); TRAIL.tex = new THREE.CanvasTexture(c); return TRAIL.tex;
+}
+function vbHaloTex() {   // 光圈：一圈實心色環＋外面一點柔光，裡面淡淡一層
+  if (TRAIL.halo) return TRAIL.halo;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  for (const [s, a] of [[0, 0.2], [0.58, 0.3], [0.63, 1], [0.86, 1], [0.92, 0.45], [1, 0]]) g.addColorStop(s, `rgba(255,255,255,${a})`);
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128); TRAIL.halo = new THREE.CanvasTexture(c); return TRAIL.halo;
+}
+function vbHaloSprite(col) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: vbHaloTex(), color: col, transparent: true, depthWrite: false, toneMapped: false }));
+  sp.renderOrder = 13; sp.visible = false; sp.userData.noPick = true; scene.add(sp); return sp;
 }
 function vbTrailMesh() {
   const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
@@ -120,13 +132,15 @@ function vbTrailMesh() {
 function vbTrailStart(b, q) {
   if (!b || !b.m) return;
   const now = performance.now();
-  for (const T of TRAIL.list) if (T.b === b) vbTrailEnd(T, 3.5);   // 同一顆球再被碰到：舊的快速淡掉
-  TRAIL.list.push({ b, col: vbTrailColor(q), pts: [{ p: b.m.position.clone(), t: now }], live: true, fade: 1, rate: 2, t0: now, glow: vbTrailMesh(), core: vbTrailMesh() });
+  for (const T of TRAIL.list) if (T.b === b) { vbTrailEnd(T, 3.5); T.halo.visible = false; T.noHalo = true; }   // 同一顆球再被碰到：舊的快速淡掉，光圈換新的
+  const col = vbTrailColor(q);
+  TRAIL.list.push({ b, col, pts: [{ p: b.m.position.clone(), t: now }], live: true, fade: 1, rate: 2, t0: now, glow: vbTrailMesh(), core: vbTrailMesh(), halo: vbHaloSprite(col) });
   while (TRAIL.list.length > 12) vbTrailDrop(TRAIL.list[0]);
 }
 function vbTrailEnd(T, rate) { if (T.live) { T.live = false; T.rate = rate; } }
 function vbTrailDrop(T) {
   for (const m of [T.glow, T.core]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  scene.remove(T.halo); T.halo.material.dispose();
   const i = TRAIL.list.indexOf(T); if (i >= 0) TRAIL.list.splice(i, 1);
 }
 function vbTrailClear() { while (TRAIL.list.length) vbTrailDrop(TRAIL.list[0]); }
@@ -146,8 +160,10 @@ function vbTrailStep(dt) {
       }
     }
     if (!T.live) { T.fade -= (dt || 0.016) * T.rate; if (T.fade <= 0) { vbTrailDrop(T); continue; } }
-    vbTrailBuild(T, T.glow, 0.3, 0.55, 0.05, now);
-    vbTrailBuild(T, T.core, 0.085, 0.9, 0.4, now);
+    vbTrailBuild(T, T.glow, TRAIL.haloR, 0.78, 0, now);
+    vbTrailBuild(T, T.core, TRAIL.haloR * 0.42, 0.6, 0.22, now);
+    const h = T.halo, hp = T.live ? p : P[P.length - 1].p;   /* 光圈跟著球；碰到的瞬間先放大一點再縮回來 */
+    h.visible = !RP.on && !T.noHalo; if (h.visible) { h.position.copy(hp); h.scale.setScalar(2 * TRAIL.haloR * (1 + 0.4 * Math.max(0, 1 - (now - T.t0) / 180))); h.material.opacity = T.fade * clamp((hp.distanceTo(camera.position) - 0.5) / 1.5, 0, 1); }
   }
 }
 function vbTrailBuild(T, m, W, A, white, now) {
@@ -158,9 +174,9 @@ function vbTrailBuild(T, m, W, A, white, now) {
   for (let i = 0; i < n; i++) {
     const q = P[i].p; TR_D.subVectors(P[Math.min(n - 1, i + 1)].p, P[Math.max(0, i - 1)].p); TR_V.subVectors(cam, q); TR_S.crossVectors(TR_D, TR_V);
     const L = TR_S.length(); if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
-    const u = i / (n - 1), age = (now - P[i].t) / 1000, w = W * (0.2 + 0.8 * Math.pow(u, 0.7)) * (0.7 + 0.3 * T.fade);
+    const u = i / (n - 1), age = (now - P[i].t) / 1000, w = W * (0.12 + 0.88 * Math.pow(u, 0.85)) * (0.7 + 0.3 * T.fade);
     const near = clamp((TR_V.length() - 0.5) / 1.5, 0, 1);   /* 貼著鏡頭的那一段淡掉，第一人稱碰球時不會整個畫面一片色 */
-    const al = A * (0.12 + 0.88 * Math.pow(u, 1.1)) * clamp(1 - (age - 0.9) / 0.7, 0, 1) * T.fade * near;
+    const al = A * (0.12 + 0.88 * Math.pow(u, 1.1)) * clamp(1 - (age - 1.2) / 0.8, 0, 1) * T.fade * near;
     pa[i * 6] = q.x + TR_S.x * w; pa[i * 6 + 1] = q.y + TR_S.y * w; pa[i * 6 + 2] = q.z + TR_S.z * w;
     pa[i * 6 + 3] = q.x - TR_S.x * w; pa[i * 6 + 4] = q.y - TR_S.y * w; pa[i * 6 + 5] = q.z - TR_S.z * w;
     ca[i * 8] = ca[i * 8 + 4] = r; ca[i * 8 + 1] = ca[i * 8 + 5] = g; ca[i * 8 + 2] = ca[i * 8 + 6] = bl; ca[i * 8 + 3] = ca[i * 8 + 7] = al;
