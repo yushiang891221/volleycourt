@@ -1,0 +1,47 @@
+/* 手機大廳（2026-11-17 使用者要求）：只在 html.m-touch（觸控裝置）作用，電腦版不變
+   平常畫面只有房間列表（最大）。拿掉：角色資訊、LIVE TICKER、說明小字
+   收起來、要用再叫出來：
+     - 上方列（Logo、連線、開啟房間、練習模式、快速加入、篩選、重新整理）：收在最左邊，點左邊的把手或往右拉就滑出來
+     - 功能列（系統設定、公告、成就…）：收在最上面，點上方中間的「▼ 功能」或往下拉就滑下來
+     - 在線玩家、留言板：右邊的「在線」「聊天」小把手，點了從右邊滑出來 */
+html.m-touch body { grid-template-rows: minmax(0, 1fr) !important; gap: 0 !important; padding-top: 8px !important; }
+html.m-touch .po-ticker, html.m-touch .me-col, html.m-touch .mode-help, html.m-touch #list-note, html.m-touch footer > .muted, html.m-touch .wordmark { display: none !important; }
+
+/* 房間列表佔滿；左右留位置給把手 */
+html.m-touch main { grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: minmax(0, 1fr) !important; margin: 0 34px 0 30px; }
+html.m-touch .rooms { grid-column: 1 !important; grid-row: 1 !important; }
+
+/* 上方列 → 左邊側拉選單（直的） */
+html.m-touch header.top { position: fixed !important; left: 0; top: 0; bottom: 0; z-index: 45; width: 230px; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 12px;
+  padding: 14px 12px calc(var(--m-pb, 8px) + 8px) calc(var(--m-pl, 8px) + 4px) !important; border-radius: 0 14px 14px 0; overflow-y: auto;
+  transform: translateX(-102%); transition: transform .22s ease; box-shadow: 14px 0 34px rgba(0,0,0,.5); }
+html.m-touch body.m-show-side header.top { transform: none; }
+html.m-touch header.top .brand { flex-wrap: wrap; }
+html.m-touch header.top .logo { width: 38px !important; height: 38px !important; }
+html.m-touch header.top h1 { font-size: 22px !important; }
+html.m-touch header.top .actions { flex-direction: column; align-items: stretch; gap: 8px; }
+html.m-touch header.top .actions > * { width: 100%; min-height: 42px; font-size: 14px; justify-content: center; }
+
+/* 在線玩家、留言板：從右邊滑出的抽屜 */
+html.m-touch .players, html.m-touch .chat { position: fixed !important; top: 8px; bottom: var(--m-pb, 8px); right: var(--m-pr, 8px); width: min(380px, 52%); z-index: 44; grid-column: auto !important; grid-row: auto !important;
+  transform: translateX(calc(100% + 60px)); transition: transform .22s ease; box-shadow: -12px 0 30px rgba(0,0,0,.45); }
+html.m-touch body.m-show-players .players, html.m-touch body.m-show-chat .chat { transform: none; }
+html.m-touch .m-drawer-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; min-height: 0; padding: 0; border-radius: 8px; font-size: 18px; line-height: 1; z-index: 2; }
+html.m-touch .chat .messages { flex: 1; min-height: 0; overflow: auto; }
+
+/* 功能列：收在上面，「▼ 功能」把手拉下來 */
+html.m-touch footer { position: fixed !important; left: 50%; top: 0; z-index: 45; width: min(760px, calc(100% - 80px)); transform: translate(-50%, calc(-100% - 10px)); transition: transform .22s ease; flex-wrap: wrap; justify-content: center; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
+html.m-touch body.m-show-menu footer { transform: translate(-50%, 8px); }
+html.m-touch footer nav { flex-wrap: wrap; justify-content: center; gap: 6px; }
+html.m-touch footer button { min-height: 40px; font-size: 13px; padding: 6px 10px; }
+
+/* 把手 */
+html.m-touch .m-handle { position: fixed; z-index: 46; min-height: 0; padding: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #FFE7A8; background: rgba(17,24,36,.94); border: 1px solid rgba(226,184,101,.55); touch-action: none; }
+html.m-touch .m-pull { left: 50%; top: 0; transform: translateX(-50%); padding: 2px 18px 5px; border-top: 0; border-radius: 0 0 12px 12px; font-size: 12px; }
+html.m-touch .m-side { left: var(--m-pl, 8px); top: 50%; transform: translateY(-50%); margin-left: -8px; width: 26px; height: 92px; border-left: 0; border-radius: 0 12px 12px 0; writing-mode: vertical-rl; font-size: 12px; letter-spacing: .1em; }
+html.m-touch .m-right { right: var(--m-pr, 8px); margin-right: -8px; width: 30px; border-right: 0; border-radius: 12px 0 0 12px; writing-mode: vertical-rl; font-size: 12px; letter-spacing: .08em; padding: 8px 0; }
+html.m-touch .m-right.on { background: #E2B865; color: #1B2638; }
+html.m-touch .m-right i { position: absolute; top: -3px; left: -3px; width: 9px; height: 9px; border-radius: 50%; background: #F2545B; box-shadow: 0 0 0 2px #111824; }
+html.m-touch .m-right i[hidden] { display: none; }
+html.m-touch .m-scrim { position: fixed; inset: 0; z-index: 43; background: rgba(0,0,0,.35); display: none; }
+html.m-touch body.m-show-menu .m-scrim, html.m-touch body.m-show-players .m-scrim, html.m-touch body.m-show-chat .m-scrim, html.m-touch body.m-show-side .m-scrim { display: block; }

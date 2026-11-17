@@ -6,7 +6,7 @@
 //   本機測試：網址加 ?pwa=skip（只在 localhost 有效）跳過第 1 關
 (() => {
   if (!matchMedia('(pointer: coarse)').matches) return;
-  const de = document.documentElement, me = document.currentScript, fitW = +(me && me.dataset.fit) || 0;
+  const de = document.documentElement, me = document.currentScript, fitW = +(me && me.dataset.fit) || 0, fitH = +(me && me.dataset.fitH) || 560;
   de.classList.add('m-touch');
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname), q = new URLSearchParams(location.search);
   try { if (local && q.get('pwa') === 'skip') sessionStorage.setItem('vb.pwa.skip', '1'); } catch (e) { /* ignore */ }
@@ -32,7 +32,7 @@
 html.m-touch, html.m-touch body { overflow: hidden !important; overscroll-behavior: none; -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 html.m-touch { --m-sl: env(safe-area-inset-left, 0px); --m-sr: env(safe-area-inset-right, 0px); --m-sb: env(safe-area-inset-bottom, 0px); }
 html.m-touch body { position: fixed; inset: 0; }
-html.m-touch.m-fit body { left: var(--m-sl); right: auto; zoom: var(--m-zoom); width: var(--m-w) !important; min-width: 0 !important; height: var(--m-h) !important; box-sizing: border-box; }
+html.m-touch.m-fit body { left: 0; right: auto; zoom: var(--m-zoom); width: var(--m-w) !important; min-width: 0 !important; height: var(--m-h) !important; box-sizing: border-box; padding-left: var(--m-pl) !important; padding-right: var(--m-pr) !important; padding-bottom: var(--m-pb) !important; }
 html.m-touch.m-fit body dialog { max-width: calc(100vw - var(--m-sl) - var(--m-sr) - 8px); max-height: calc(100dvh - 8px); overflow: auto; box-sizing: border-box; }
 dialog.m-rotate, dialog.m-gate { max-width: none; max-height: none; width: 100vw; height: 100dvh; margin: 0; border: 0; }
 dialog.m-rotate::backdrop, dialog.m-gate::backdrop { background: transparent; }
@@ -65,9 +65,11 @@ dialog.m-rotate::backdrop, dialog.m-gate::backdrop { background: transparent; }
     const fit = () => {
       if (!probe.isConnected) de.appendChild(probe);
       const ps = getComputedStyle(probe), sl = parseFloat(ps.paddingLeft) || 0, sr = parseFloat(ps.paddingRight) || 0, sb = parseFloat(ps.paddingBottom) || 0;
-      const w = innerWidth - sl - sr, h = innerHeight - sb, k = Math.max(0.4, Math.min(1, w / fitW, h / 560));
+      const w = innerWidth - sl - sr, h = innerHeight - sb, k = Math.max(0.4, Math.min(1, w / fitW, h / fitH));
+      // 底色鋪滿整個螢幕（不留黑邊），瀏海／動態島／底部橫條那幾邊用內距讓開
       de.style.setProperty('--m-zoom', String(k)); de.style.setProperty('--m-unzoom', String(1 / k));
-      de.style.setProperty('--m-w', (w / k).toFixed(1) + 'px'); de.style.setProperty('--m-h', (h / k).toFixed(1) + 'px');
+      de.style.setProperty('--m-w', (innerWidth / k).toFixed(1) + 'px'); de.style.setProperty('--m-h', (innerHeight / k).toFixed(1) + 'px');
+      de.style.setProperty('--m-pl', ((8 + sl) / k).toFixed(1) + 'px'); de.style.setProperty('--m-pr', ((8 + sr) / k).toFixed(1) + 'px'); de.style.setProperty('--m-pb', ((8 + sb) / k).toFixed(1) + 'px');
       // 打開的視窗（開場、取暱稱、建房間…）：先量原本大小，太大就再縮到剛好放進螢幕
       for (const d of document.querySelectorAll('body dialog[open]')) {
         d.style.zoom = String(1 / k); d.style.maxHeight = 'none'; d.style.maxWidth = 'none';
