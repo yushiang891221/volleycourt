@@ -17,7 +17,7 @@ const VM_ROOM_LV = [5, 4, 3];   // 開房只能選企聯、校隊、高手；練
 function vmApplyRoomRules(rules) {
   mrecReset(vmIsPractice() ? '' : `${NET.room || 'room'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);   // WEB-010：房主開賽＝新的比賽代碼
   VM.langziMatch = MREC.id; /* WEB-022 比賽識別。 */
-  VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }
+  VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = VM_OPT.sets2 = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }   // sets2：2 對 2 開房用的局數（沒開房的 2 對 2 只打一局）
 const practiceRoom = new URLSearchParams(location.search).has('practice');
 function vmIsPractice() { return practiceRoom; }
 const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
@@ -68,7 +68,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
@@ -277,21 +277,31 @@ function vmPoint(win, why) {
   let fn = vmSetupServe;
   if (r.setWon) why += `・${vmTeamLabel(win)}拿下第 ${VM.setNo} 局（局數 ${VM.sets[0]}：${VM.sets[1]}）`;
   if (r.next === 'over') fn = () => vmOver();
-  else if (r.next === 'nextSet') fn = vm6NextSet;
+  else if (r.next === 'nextSet') fn = VM.six ? vm6NextSet : vm2NextSet;
   else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
   VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
   vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
   if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
 }
+// 2 對 2 多局：比分歸零，上一局先發球的另一隊先發（決勝局抽籤）；不換場（換場要把真人搬到另一邊，先不做）
+function vm2NextSet() {
+  VM.setNo++; VM.sc = [0, 0];
+  const deciding = VM.sets[0] + VM.sets[1] === VM.bestOf - 1;
+  VM.srvTeam = deciding ? (gameRandom() < 0.5 ? 0 : 1) : 1 - (VM.firstSrv || 0); VM.firstSrv = VM.srvTeam;
+  vmSetupServe();
+  vmSay(`第 ${VM.setNo} 局${deciding ? `（決勝局，先到 ${Math.min(15, VM.to)} 分）` : ''}`, 'srv', 2600);
+}
+// 有沒有局數（6 對 6 一定有；2 對 2 選了三戰兩勝、五戰三勝才有）
+function vmMulti() { return !!VM.six || (VM.bestOf || 1) > 1; }
 function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => !/^ai/.test(id)); return ids.includes(vmMe()) ? '你們' : !hs.length ? 'AI 隊' : hs.map(vmName).join('＋') + (hs.length < ids.length ? '＋AI' : ''); }
 function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
 function vmOver() {
   vmSendResult();   // WEB-010 戰績（開房比賽才送）
   if (ROOM) { if (ROOM.isHost) { toast(`比賽結束 ${VM.sc[0]}：${VM.sc[1]}，請重新準備`,4000); ROOM.end(); } return; }
   VM.phase = 'over'; vmBroadcast(true);
-  const my = Math.max(0, vmTeamOf(vmMe())), A = VM.six ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
-  m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${VM.six ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${VM.six ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
+  const my = Math.max(0, vmTeamOf(vmMe())), A = vmMulti() ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
+  m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${vmMulti() ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${vmMulti() ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
   m.hidden = false; unlockMouse();
   if (typeof hlPanelBtn === 'function') hlPanelBtn(m.querySelector('.rk-btns'), m);   // 得分精華下載
 }

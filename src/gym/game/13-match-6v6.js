@@ -304,7 +304,7 @@ function vmStatePayload() {
   const matchBall = VM.ball && balls.includes(VM.ball) ? VM.ball : balls.find(b => b.room);
   const watch = { t: VM.t, ball: matchBall ? matchBall.m.position.toArray() : null, rally: VM.srvSeq };
   const ai = [...VM.ai.values()].map((a) => { const [x, z] = vmW(a.x, a.z); return [a.id, +x.toFixed(2), +z.toFixed(2), +a.y.toFixed(2), a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, +(a.sta ?? 1).toFixed(2), a.bs ? +a.bs.toFixed(2) : 0, a.jp || null, VM.t]; });
-  return { watch, lz: [VM.langziMatch, VM.srvSeq], sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
+  return { watch, lz: [VM.langziMatch, VM.srvSeq], sc: VM.sc, ph: VM.phase, srv: vmServer(), ai, sg: VM.sg, six: VM.six ? { rot: VM.rot, sets: VM.sets, setNo: VM.setNo, rn: VM.rotN, tactics: VM.tactics } : undefined, s2: !VM.six && VM.bestOf > 1 ? [VM.sets[0], VM.sets[1], VM.setNo, VM.bestOf] : undefined,   /* 2 對 2 多局：局數、第幾局、幾戰幾勝 */ tc: VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : undefined, setter: VM.poss?.map(p=>p?.setter||null), gr: VM.grade ? [VM.grade.s, VM.grade.team, VM.grade.g, VM.grade.why] : undefined };
 }
 function vmWatchSnapshot(frame) {
   if (!VM.watchFrames) {
@@ -380,6 +380,7 @@ function vmOnNet(d, from) {
     if (d.gr && (!VM.grade || VM.grade.s !== d.gr[0])) { const first = !VM.grade; VM.grade = { s: d.gr[0], team: d.gr[1], g: d.gr[2], why: d.gr[3] }; if (!first) vmGradeShow(VM.grade); }   // 到位等級（剛加入時的舊等級不顯示）
     if (d.sg) VM.sg = d.sg;
     if (d.six) vm6Apply(d.six);
+    else if (Array.isArray(d.s2) && d.s2.length === 4 && d.s2.every(Number.isFinite)) { VM.sets = [d.s2[0], d.s2[1]]; VM.setNo = d.s2[2]; VM.bestOf = d.s2[3]; }
     if (d.watch && roomSpectator() && !VM.wire) vmWatchSnapshot(d.watch);
     drawScore();
     const nowS = performance.now();
@@ -401,12 +402,12 @@ function vmHud() {
   vmServeHint();
   if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
-  const t = `${VM.sc[0]}：${VM.sc[1]}`, sk = t + '|' + (VM.six ? VM.setNo : '');   /* Play One 風格：兩塊大比分、中間黑底局數（只是顯示） */
-  if ($('vm-sc').dataset.k !== sk) { $('vm-sc').dataset.k = sk; $('vm-sc').innerHTML = `<i class="sa">${VM.sc[0]}</i><b>${VM.six ? `<small>第</small>${VM.setNo}<small>局</small>` : '：'}</b><i class="sb">${VM.sc[1]}</i>`; $('vm-sc').setAttribute('aria-label', t); }
+  const t = `${VM.sc[0]}：${VM.sc[1]}`, sk = t + '|' + (vmMulti() ? VM.setNo : '');   /* Play One 風格：兩塊大比分、中間黑底局數（只是顯示） */
+  if ($('vm-sc').dataset.k !== sk) { $('vm-sc').dataset.k = sk; $('vm-sc').innerHTML = `<i class="sa">${VM.sc[0]}</i><b>${vmMulti() ? `<small>第</small>${VM.setNo}<small>局</small>` : '：'}</b><i class="sb">${VM.sc[1]}</i>`; $('vm-sc').setAttribute('aria-label', t); }
   drawScore();   // 球館裡的計分板跟著比賽比分
   $('vm-a').classList.toggle('srv', sTeam === 0); $('vm-b').classList.toggle('srv', sTeam === 1);
   const tc = VM.host ? (VM.phase === 'rally' && VM.touch.team >= 0 && !VM.touch.serve ? [VM.touch.team, VM.touch.n] : null) : VM.tc;
-  const tct = VM.phase === 'rally' && !tc ? '觸球 0/3（接發球）' : tc ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : VM.six ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
+  const tct = VM.phase === 'rally' && !tc ? '觸球 0/3（接發球）' : tc ? `${vmTeamLabel(tc[0])}觸球 ${tc[1]}/3` : vmMulti() && VM.sets ? `第 ${VM.setNo} 局・局數 ${VM.sets[0]}：${VM.sets[1]}` : `先到 ${VM.to || 7} 分`; if ($('vm-tc').textContent !== tct) $('vm-tc').textContent = tct;
   const ttl = vmSmallCount() ? `🏐 ${vmSmallCount()} 對 ${vmSmallCount()}` : VM.six ? '🏐 6 對 6' : '🏖️ 2 對 2'; if ($('vm-title').textContent !== ttl) $('vm-title').textContent = ttl;
   vm6Chart();
   const na = vmTeamLabel(0), nb = vmTeamLabel(1); if ($('vm-a').textContent !== na) $('vm-a').textContent = na; if ($('vm-b').textContent !== nb) $('vm-b').textContent = nb;

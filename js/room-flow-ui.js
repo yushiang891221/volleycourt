@@ -34,7 +34,6 @@
       if(!LV.some(([v])=>v===s.lv) && s.isHost && !locked)getRoom()?.setLevel(3);   // 開房不能選的等級：改成高手
       $('room-lv').value=String(s.lv??3);$('room-to').value=String(s.to??25);$('room-best').value=String(s.bestOf??1);
       for(const k of ['room-lv','room-to','room-best'])$(k).disabled=locked||!s.isHost;
-      $('room-best').closest('label').hidden=n===2;   // 2 對 2 只打一局
       $('room-tactics-note').textContent=rotation?'當輪 3 號位舉球；依號位輪轉，不判越位。後排攻擊與攔網限制保留。':'固定 S／OH／OP／MB，發球後跑到專職位置；接發球時判越位。';
       panel.querySelector('header + p').textContent=n===6&&rotation?'依當輪號位分工，3 號位負責舉球；接第一球時由隊友補舉。':'發球時維持正確的前後左右相對位置，發球後依分工行動。';
       $('room-ready').hidden=locked;$('room-ready').textContent=mine?'取消準備':'準備';$('room-ready').setAttribute('aria-pressed',String(mine));

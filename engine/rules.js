@@ -63,7 +63,12 @@ export function scorePoint(M, win) {
     if (deciding && !M.swap8 && hi === 8) { M.swap8 = true; return { sideOut, next: 'swap' }; }
     return { sideOut, next: 'serve' };
   }
-  return { sideOut, next: (hi >= M.to && Math.abs(a - b) >= 2) || hi >= M.to + 2 ? 'over' : 'serve' };
+  // 2 對 2：一局（舊的）或多局（M.bestOf 3／5，決勝局先到 15 分）；打到 to＋2 分直接拿下這局
+  const multi = M.bestOf > 1, deciding2 = multi && M.sets[0] + M.sets[1] === M.bestOf - 1, to2 = deciding2 ? Math.min(15, M.to) : M.to;
+  const won2 = (hi >= to2 && Math.abs(a - b) >= 2) || hi >= to2 + 2;
+  if (!multi) return { sideOut, next: won2 ? 'over' : 'serve' };
+  if (won2) { M.sets[win]++; return { sideOut, setWon: true, next: M.sets[win] >= Math.ceil(M.bestOf / 2) ? 'over' : 'nextSet' }; }
+  return { sideOut, next: 'serve' };
 }
 
 // 球落地：x、z 是落點在球場座標（x 離中線、z 離中心線），sg 是 0 隊在哪一邊（-1／1），touchTeam 最後碰球的隊（沒有人碰過是 -1）

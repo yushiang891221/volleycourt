@@ -1367,7 +1367,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
   const L = MREC.last; MREC.blkR = {}; MREC.last = null;
   if (MREC.save) { if (win === MREC.save.team) mrecPf(MREC.save.id).fs++; MREC.save = null; }   // 救起來後直接得分也算；救起來直接失分不算
   if (MREC.id) {   // 絕處逢生：對方到局末點（例：24）、我方還在 to−5 以下（例：20），最後這局是我方拿下
-    const sc = [VM.sc[0] + (win === 0 ? 1 : 0), VM.sc[1] + (win === 1 ? 1 : 0)], deciding = VM.six && VM.bestOf > 1 && (VM.sets?.[0] || 0) + (VM.sets?.[1] || 0) === VM.bestOf - 1, to = deciding ? 15 : VM.to;
+    const sc = [VM.sc[0] + (win === 0 ? 1 : 0), VM.sc[1] + (win === 1 ? 1 : 0)], deciding = VM.bestOf > 1 && (VM.sets?.[0] || 0) + (VM.sets?.[1] || 0) === VM.bestOf - 1, to = deciding ? (VM.six ? 15 : Math.min(15, VM.to)) : VM.to;
     for (const t of [0, 1]) for (const now of [VM.sc, sc]) if (now[1 - t] >= to - 1 && now[t] <= to - 5) MREC.cbF[t] = true;   /* 得分前、後的比分都看（例：20:24 這一刻） */
     if (Math.max(...sc) >= to && Math.abs(sc[0] - sc[1]) >= 2) { const w = sc[0] > sc[1] ? 0 : 1; if (MREC.cbF[w]) MREC.cb[w]++; MREC.cbF = [false, false]; }
   }
@@ -1390,7 +1390,7 @@ function vmPerfPoint(win) {   // 房主：得分歸給誰（最後碰球的人�
 // 整場評分（0～100）：得分貢獻 35%＋效率 25%＋參與度 20%＋位置表現 20%；等級 S≥90、A≥75、B≥60、C≥40、D；全場最高＝MVP
 function vmRateMatch() {
   const cl = (v) => Math.max(0, Math.min(100, v)), out = {};
-  const score = VM.six ? VM.sets : VM.sc, total = (MREC.tp?.[0] || 0) + (MREC.tp?.[1] || 0);
+  const score = VM.six || VM.bestOf > 1 ? VM.sets : VM.sc, total = (MREC.tp?.[0] || 0) + (MREC.tp?.[1] || 0);
   if (!Array.isArray(score) || score.length !== 2 || !score.every(Number.isFinite) || score.some((v) => v < 0) || score[0] + score[1] <= 0 || total <= 0) return { rate: out, mvp: null, bestLoser: null };
   const winner = score[0] === score[1] ? -1 : score[0] > score[1] ? 0 : 1;
   const average = total / Math.max(1, VM.team.reduce((sum, ids) => sum + ids.filter(Boolean).length, 0));
@@ -1419,16 +1419,16 @@ function vmSendResult() {   // 房主：比賽結束，把結果送給大家（�
   if ((NET.me !== 'srv' && (!ROOM || !ROOM.isHost)) || vmIsPractice() || !MREC.id) return;   /* B5：伺服器當房主時由伺服器送 */
   const RT = vmRateMatch();
   if (!Object.keys(RT.rate).length) return;
-  const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+  const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, bo: VM.bestOf || 1, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
   if (NET.on) NET.tx.publish('vm', d);
   vmGotResult(d); MREC.id = '';
 }
 async function vmGotResult(d) {
   if (!d || typeof d.id !== 'string' || vmIsPractice()) return;
   const me = vmMe(), team = Array.isArray(d.team) ? d.team.findIndex((t) => Array.isArray(t) && t.includes(me)) : -1; if (team < 0) return;   // 觀眾不記
-  const A = d.six ? d.sets : d.sc;
+  const multi = (d.six || d.bo > 1) && Array.isArray(d.sets), A = multi ? d.sets : d.sc;   // 有局數（6 對 6、2 對 2 多局）看局數
   if (!Array.isArray(A) || A.length !== 2 || !A.every(Number.isFinite) || A.some((v) => v < 0) || A[0] + A[1] <= 0) return;
-  const won = A[team] > A[1 - team], sets = d.six && d.sets ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
+  const won = A[team] > A[1 - team], sets = multi ? Math.max(1, d.sets[0] + d.sets[1]) : 1;
   const hp = (d.perf && d.perf[me]) || {}, clean = Object.values(MREC.local.sets).some((x) => x.n >= 10 && !x.f);
   const my = (d.rate && d.rate[me]) || null, mvp = d.mvp === me;
   const perf = { rt: my ? Math.max(0, Math.min(100, my.rt | 0)) : undefined, mvp, k: hp.k | 0, kc: hp.kc | 0, b: hp.b | 0, a: hp.a | 0, e: hp.e | 0, kl: hp.kl | 0, ks: hp.ks | 0, fs: hp.fs | 0, md: hp.md | 0, qk: hp.qk | 0, ss: hp.ss | 0, as: hp.as | 0, wall: !!hp.wall, p: MREC.local.p, clean, cb: Array.isArray(d.cb) ? d.cb[team] | 0 : 0 };
@@ -1436,7 +1436,7 @@ async function vmGotResult(d) {
   if (d.six && d.team.every(ids => ids.length === 6) && ['OH', 'S', 'MB', 'OPP'].includes(d.roles?.[me])) perf.role = d.roles[me];
   MREC.local = { p: 0, sets: {} };
   const MR = my ? await import('./js/match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
-  if (MR) { try { MR.showMatchResult({ won, final: d.six && d.sets ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
+  if (MR) { try { MR.showMatchResult({ won, final: multi ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
   try {
     const { recordMatch, ACHIEVEMENTS, cachedProgress, EXP_PER_LEVEL } = await import('./js/progress.js');
     const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });

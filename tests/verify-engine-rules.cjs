@@ -40,7 +40,8 @@ const KINDS = ['bump', 'set', 'spike', 'tip', 'hit', 'block', 'block', 'serve'];
 let events = 0, points = 0, faults = 0; const ends = { nextSet: 0, swap: 0, over: 0 };
 for (let m = 0; m < 300; m++) {
   const six = m % 3 !== 0, n = six ? 6 : 2, team = [[...Array(n)].map((_, i) => 'a' + i), [...Array(n)].map((_, i) => 'b' + i)];
-  const bestOf = pick([1, 3, 5]), to = pick([7, 11, 15, 25]);   /* 兩邊同一組設定 */
+  let bestOf = pick([1, 3, 5]); const to = pick([7, 11, 15, 25]);   /* 兩邊同一組設定 */
+  if (!six) bestOf = 1;   /* 舊版 2 對 2 只打一局：跟舊版比對時用一局（2 對 2 多局在檔案最後另外檢查） */
   const setup = () => ({ on: true, host: true, six, phase: 'serve', team, rot: six ? team.map(t => t.slice()) : undefined, srvTeam: m % 2, srvIdx: [0, 0], sc: [0, 0], sets: [0, 0], bestOf, to, setNo: 1, swap8: false,
     touch: { team: -1, n: 0, last: null }, poss: [null, null], ai: new Map(), pos: {}, sg: -1, t: 0, ball: null, small: 0, overlapNext: 0 });
   const A = oldC(m), B = newC(m);
@@ -74,3 +75,13 @@ for (let m = 0; m < 300; m++) {
 }
 console.log(`PASS 規則引擎與舊版一致：300 場、${events} 個事件、${points} 分（其中 ${faults} 分是犯規判定）；換局 ${ends.nextSet}、決勝局換場 ${ends.swap}、比賽結束 ${ends.over}`);
 assert(ends.nextSet > 20 && ends.swap > 5 && ends.over > 100, '要涵蓋換局、換場、比賽結束');
+{   // 2 對 2 多局（三戰兩勝、五戰三勝；決勝局先到 15 分）
+  const sp = vm.runInContext('scorePoint', newC(1)), js = JSON.stringify;
+  const M = { six: false, phase: 'rally', sc: [14, 10], sets: [0, 0], bestOf: 3, to: 21, srvTeam: 0 };
+  M.sc = [20, 10]; let r = sp(M, 0); assert.equal(r.next, 'nextSet'); assert(r.setWon); assert.equal(js(M.sets), '[1,0]');
+  M.sc = [14, 10]; M.sets = [1, 1]; r = sp(M, 1); assert.equal(r.next, 'serve');   /* 決勝局 14:11 還沒結束 */
+  M.sc = [14, 11]; r = sp(M, 0); assert.equal(r.next, 'over'); assert.equal(js(M.sets), '[2,1]');   /* 決勝局先到 15 */
+  const one = { six: false, phase: 'rally', sc: [6, 3], to: 7, srvTeam: 0 }; assert.equal(sp(one, 0).next, 'over');   /* 沒設局數＝一局 */
+  const five = { six: false, phase: 'rally', sc: [24, 20], sets: [2, 1], bestOf: 5, to: 25, srvTeam: 0 }; r = sp(five, 0); assert.equal(r.next, 'over'); assert.equal(js(five.sets), '[3,1]');
+  console.log('PASS 2 對 2 多局：換局、決勝局 15 分、三戰兩勝／五戰三勝結束');
+}
