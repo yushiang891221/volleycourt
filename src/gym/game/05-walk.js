@@ -245,7 +245,7 @@ function updateWalk(dt) {
   if (!keyMoving) vbServeZone();
   const bob = !keyMoving && (mag > 0.01 || walk.target) ? Math.sin(performance.now() / 160) * 0.015 : 0;
   camera.position.set(walk.x, EYE + bob - (skill.dip || 0) - (walk.low || 0) + jumpY(dt), walk.z);
-  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shake * 0.3; camera.position.x += (fxRandom() - 0.5) * a; camera.position.y += (fxRandom() - 0.5) * a; camera.position.z += (fxRandom() - 0.5) * a; }
+  if (VB.shake > 0) { VB.shake = Math.max(0, VB.shake - dt); const a = VB.shakeA ? VB.shakeA * 2 * Math.pow(VB.shake / (VB.shakeT || 1), 1.5) : VB.shake * 0.3; camera.position.x += (fxRandom() - 0.5) * a; camera.position.y += (fxRandom() - 0.5) * a; camera.position.z += (fxRandom() - 0.5) * a; }
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }

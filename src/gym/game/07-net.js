@@ -1323,7 +1323,7 @@ function vmWireRemoteStep(b, dt) {
   if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
   if (ball.floor && !prediction) {   /* 落地後：直接用房主回報的位置和速度（已經彈起來了），交給本機物理接著彈跳滾動，不再釘在落點 */
     b.m.position.set(ball.p[0], Math.max(BALL_R, ball.p[1]), ball.p[2]); b.v.set(...ball.v); b.acc = null; b.float = null;
-    b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
+    if (!b.wireLocal && typeof vbFloorImpact === 'function') vbFloorImpact(b, b.m.position, Math.abs(b.v.y) / 0.62); b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
   }
   if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
 }

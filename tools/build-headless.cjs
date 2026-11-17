@@ -14,7 +14,7 @@ const all = files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('');
 const ast = acorn.parse(all, { ecmaVersion: 'latest', sourceType: 'module', allowAwaitOutsideFunction: true });
 
 // 畫面、音效、提示、連線：伺服器不需要，換成空殼（S.名字 有提供就用 S 的）。戰績（vmSendResult、vmPerfTouch、vmPerfPoint）要留：B5 伺服器當裁判時由伺服器送結果
-const STUB = `toast sfx vmSay vbImpact vbBurst netBallHit vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
+const STUB = `toast sfx vmSay vbImpact vbBurst vbFloorImpact vbShake vbScreenFlash netBallHit vmStop vm6Menu vmOpenMenu unlockMouse peerTagsAll
 vmRenderAi vbWallFx vmTrailPush vmMark vmOut netBallSound netFxHit netFxStep ballShadowSync updateTweens updateDoors updateWind vbBlockFx
 vmGradeShow vmShout labelSprite vmServeHint renderRoomRules vm6RotToast recHit recEvent vbFx tutEv
 makeAvatar avDrive renderUseBar setMenuClose setMenuPick vbManualSetCancel vbNpcToggle

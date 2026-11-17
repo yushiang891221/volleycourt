@@ -90,7 +90,9 @@ function vbImpact(b, kind, q = 1) {
   vbTrailStart(b, q);
   vbBurst(b.m.position, q >= 0.88 ? '#F2B705' : '#FFFFFF', kind === 'spike' ? 22 : 13, kind === 'spike' ? 3.4 : 2);
   b.squash = 0.12; sfx(kind, q, b.m.position);
-  if ((kind === 'spike' || kind === 'block') && b.m.position.distanceTo(camera.position) < 7) VB.shake = kind === 'spike' ? 0.16 : 0.22;
+  const d = b.m.position.distanceTo(camera.position), S = VB_HIT_SHAKE[kind];   /* 震動：越近越大（自己打的最有感） */
+  if (S && d < S[2]) vbShake(S[0], S[1] * (0.55 + 0.45 * clamp(q, 0, 1)) * clamp(1.25 - d / S[2], 0.35, 1));
+  if (kind === 'spike') { vbBurst(b.m.position, '#FFFFFF', 14, 4.6, 0.09); if (d < 4) vbScreenFlash(0.22 + 0.18 * clamp(q, 0, 1)); }
   if (navigator.vibrate && coarse() && b.m.position.distanceTo(camera.position) < 4) try { navigator.vibrate(kind === 'spike' ? 25 : 12); } catch (e) { /* ignore */ }
 }
 // ---- 球的軌跡光帶（每一顆球、每種模式都一樣，取代原本那條 1 像素的細線）----
@@ -184,11 +186,30 @@ function vbTrailBuild(T, m, W, A, white, now) {
   }
   geo.attributes.position.needsUpdate = geo.attributes.color.needsUpdate = true; geo.setDrawRange(0, (n - 1) * 6);
 }
-function vbBurst(pos, color, n, speed) {
+// 打擊感：鏡頭震動（秒數、最大幅度 m、多遠以內才震）
+const VB_HIT_SHAKE = { spike: [0.26, 0.085, 8], block: [0.26, 0.075, 8], bump: [0.16, 0.04, 5], dig: [0.16, 0.04, 5], set: [0.09, 0.016, 4], tip: [0.08, 0.014, 4] };
+function vbShake(t, amp) { if ((VB.shake || 0) > 0 && (VB.shakeA || 0) * VB.shake / (VB.shakeT || 1) >= amp) return; VB.shake = t; VB.shakeT = t; VB.shakeA = amp; }
+// 扣球：畫面邊緣白光閃一下
+function vbScreenFlash(o) {
+  let el = VB.flashEl; if (!el) { el = VB.flashEl = document.createElement('div'); el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;opacity:0;background:radial-gradient(ellipse at center,rgba(255,255,255,0) 35%,rgba(255,250,225,.85) 100%)'; document.body.appendChild(el); }
+  el.style.transition = 'none'; el.style.opacity = String(o); void el.offsetWidth; el.style.transition = 'opacity .22s ease-out'; el.style.opacity = '0';
+}
+// 球重重落地：球壓扁（照落下速度）、地板衝擊圈＋揚起的灰、近的話鏡頭震一下
+function vbFloorImpact(b, p, vy) {
+  const k = clamp((vy - 2.5) / 9, 0, 1); if (vy < 2.5) return;
+  b.fsq = { t: 0, dur: 0.1 + 0.08 * k, amt: 0.14 + 0.3 * k };
+  const g = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.16, 40), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.55 + 0.35 * k, depthWrite: false, side: THREE.DoubleSide }));
+  g.rotation.x = -Math.PI / 2; g.position.set(p.x, 0.012, p.z); scene.add(g);
+  const t0 = performance.now(), life = 380 + 260 * k, grow = 3 + 6 * k;
+  (function anim() { const e = (performance.now() - t0) / life; if (e >= 1 || !g.parent) { scene.remove(g); g.geometry.dispose(); g.material.dispose(); return; } const f = 1 - (1 - e) * (1 - e); g.scale.setScalar(1 + f * grow); g.material.opacity = (0.55 + 0.35 * k) * (1 - e); requestAnimationFrame(anim); })();
+  const c = new THREE.Vector3(p.x, 0.05, p.z); vbBurst(c, '#E8DCC4', 8 + Math.round(14 * k), 1 + 1.6 * k, 0.06, true);
+  const d = c.distanceTo(camera.position); if (k > 0.25 && d < 7) vbShake(0.12 + 0.12 * k, 0.05 * k * clamp(1.2 - d / 7, 0.3, 1));
+}
+function vbBurst(pos, color, n, speed, size = 0.05, flat = false) {
   const P = new Float32Array(n * 3), V = [];
-  for (let i = 0; i < n; i++) { P.set([pos.x, pos.y, pos.z], i * 3); const a = fxRandom() * Math.PI * 2, e = fxRandom() * 2 - 1, r = Math.sqrt(1 - e * e), s2 = speed * (0.5 + fxRandom() * 0.7); V.push([Math.cos(a) * r * s2, e * s2, Math.sin(a) * r * s2]); }
+  for (let i = 0; i < n; i++) { P.set([pos.x, pos.y, pos.z], i * 3); const a = fxRandom() * Math.PI * 2, e = flat ? fxRandom() * 0.45 : fxRandom() * 2 - 1, r = Math.sqrt(1 - e * e), s2 = speed * (0.5 + fxRandom() * 0.7); V.push([Math.cos(a) * r * s2, e * s2, Math.sin(a) * r * s2]); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3));
-  const m = new THREE.Points(g, new THREE.PointsMaterial({ color, size: 0.05, transparent: true, opacity: 1, depthWrite: false })); m.frustumCulled = false; scene.add(m);
+  const m = new THREE.Points(g, new THREE.PointsMaterial({ color, size, transparent: true, opacity: 1, depthWrite: false })); m.frustumCulled = false; scene.add(m);
   (VB.parts = VB.parts || []).push({ m, V, t: 0 });
 }
 function vbParts(dt) {

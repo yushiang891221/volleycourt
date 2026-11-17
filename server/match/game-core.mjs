@@ -9,7 +9,7 @@ import fs from 'node:fs';
 if (!globalThis.VBMatchSync) { const mod = { exports: {} }; new Function('module', fs.readFileSync(new URL('../../js/match-sync.js', import.meta.url), 'utf8'))(mod); globalThis.VBMatchSync = mod.exports; }
 // 3～5 人制的站位（網頁是另外載入的 js/court-formations.js，會掛在 globalThis.CourtFormations）
 if (!globalThis.CourtFormations) new Function(fs.readFileSync(new URL('../../js/court-formations.js', import.meta.url), 'utf8'))();
-export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState","hlOnPoint","hlReset"];
+export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","vbFloorImpact","vbShake","vbScreenFlash","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState","hlOnPoint","hlReset"];
 // 伺服器上沒有網頁：DOM／畫布一律給「什麼都不做、怎麼用都不會壞」的假物件（three.js 建貼圖時也會用到 document）
 const dummy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : k === 'then' ? undefined : dummy, apply: () => dummy, construct: () => dummy, set: () => true });
 if (!globalThis.document) globalThis.document = { createElementNS: () => dummy, createElement: () => dummy };
@@ -271,8 +271,13 @@ export function createGameCore(S = {}) {
   const BALL_VIS = 1.5;
   const BALL_LIFT = (BALL_VIS - 1) * BALL_R;
   function ballLift(y) { return BALL_LIFT * clamp(1 - (y - BALL_R) / 0.6, 0, 1); }
-  function ballLiftBefore() { const e = this.matrixWorld.elements, d = ballLift(e[13]); this.userData.lifted = d; e[13] += d; }
-  function ballLiftAfter() { const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+  const BALL_SAVE = new Float32Array(16);
+  function ballLiftBefore() {
+    const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
+    if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
+    e[13] += d;
+  }
+  function ballLiftAfter() { if (this.userData.saved) { this.matrixWorld.elements.set(BALL_SAVE); this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
   const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);
   function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }
   const hands = new THREE.Group();
@@ -401,6 +406,7 @@ export function createGameCore(S = {}) {
     floorLand(b, p) {
       if (b.spike) { const [lx, lz] = toLocalOf(b.spike.c, p.x, p.z), inside = Math.sign(lx) === -b.spike.sg && Math.abs(lx) <= 9 && Math.abs(lz) <= 4.5; toast(b.serve ? (inside ? '發球進了！Ace 🏐' : '發球出界（或沒過網）') : (inside ? '漂亮！扣球得分 🏐' : '可惜，出界了')); b.spike = null; }
       if (b.v.y < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'floor', Math.min(1, -b.v.y / 9), p); }
+      if (b.v.y < -2.5 && typeof vbFloorImpact === 'function') vbFloorImpact(b, p, -b.v.y);
     },
     floorEvent(b) { netFloorHit(b); },
     wall(b, vn, p) { if (vn < -2.5 && performance.now() - SFX.floorT > 120) { SFX.floorT = performance.now(); netBallSound(b, 'wall', Math.min(1, -vn / 9), p); } },
@@ -420,6 +426,7 @@ export function createGameCore(S = {}) {
     if (!balls.length || !dt) return;
     const H = state.building.H, segs = blockers().concat(solidSegs(true)), netCourts = vbNetCourts();
     for (const b of balls) {
+      if (b.fsq) { const F = b.fsq; F.t += dt; const e = F.t / F.dur; if (e >= 1.6) { b.fsq = null; b.m.userData.wsq = null; } else { const s2 = e < 1 ? Math.sin(e * Math.PI) * F.amt : -Math.sin((e - 1) / 0.6 * Math.PI) * F.amt * 0.25; b.m.userData.wsq = [1 + s2 * 0.6, 1 - s2]; } }   /* 落地：先壓扁、再微微拉長彈回 */
       if (VM.on && VM.wire && b.room && !b.langzi) {
         if (!VM.host && !b.wireLocal) { vmWireRemoteStep(b, dt); continue; }   /* 加入者：落地前照主機的球路；落地後（wireLocal）自己算彈跳滾動 */
       }
@@ -724,7 +731,7 @@ export function createGameCore(S = {}) {
     if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
     if (ball.floor && !prediction) {   /* 落地後：直接用房主回報的位置和速度（已經彈起來了），交給本機物理接著彈跳滾動，不再釘在落點 */
       b.m.position.set(ball.p[0], Math.max(BALL_R, ball.p[1]), ball.p[2]); b.v.set(...ball.v); b.acc = null; b.float = null;
-      b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
+      if (!b.wireLocal && typeof vbFloorImpact === 'function') vbFloorImpact(b, b.m.position, Math.abs(b.v.y) / 0.62); b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
     }
     if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
   }
@@ -1000,6 +1007,7 @@ export function createGameCore(S = {}) {
     const i = TRAIL.list.indexOf(T); if (i >= 0) TRAIL.list.splice(i, 1);
   }
   function vbTrailClear() { while (TRAIL.list.length) vbTrailDrop(TRAIL.list[0]); }
+  function vbFloorImpact(...a) { return S.vbFloorImpact ? S.vbFloorImpact(...a) : undefined; }
   const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
   function netBallSound(...a) { return S.netBallSound ? S.netBallSound(...a) : undefined; }
   function sfx(...a) { return S.sfx ? S.sfx(...a) : undefined; }

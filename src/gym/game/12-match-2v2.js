@@ -324,7 +324,7 @@ function vbBlockFx(pos, type) {
   for (const m of [r1, r2, flash]) { m.renderOrder = 22; g.add(m); }
   const sp = labelSprite(txt, col, big); sp.position.y = 0.5; sp.renderOrder = 23; g.add(sp); scene.add(g);
   vbBurst(pos, col, n, type === 'stuff' ? 3.6 : 2.4); if (type === 'stuff' || type === 'out') vbBurst(pos, '#FFFFFF', 10, 1.6);
-  if (type === 'stuff' && pos.distanceTo(camera.position) < 10) VB.shake = Math.max(VB.shake || 0, 0.26);
+  if (type === 'stuff' && pos.distanceTo(camera.position) < 10) vbShake(0.32, 0.11);
   const base = sp.scale.clone(), t0 = performance.now();
   (function anim() {
     const k = (performance.now() - t0) / 1100; if (k >= 1 || !g.parent) { scene.remove(g); return; }
