@@ -46,6 +46,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     const show = on && VBSettings.values.gyroLook !== false && !document.body.classList.contains('touch-more') && (GYRO.perm === 'ask' || (GYRO.perm === 'no' && !GYRO.noHide)) && !gyroLive();
     gbtn.hidden = !show; if (show) gbtn.textContent = GYRO.perm === 'no' ? '陀螺儀被拒絕：關掉 App 重開再按允許' : '📱 開啟陀螺儀';
   };
+  const GYRO_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   addEventListener('devicemotion', (e) => {
     const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
     const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
@@ -53,8 +54,11 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     const free = !GYRO.on && gyroFree();
     if (!GYRO.on && !free) { GYRO.sy = GYRO.sp = 0; return; }
     const ang = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) % 360, a = (ang + 360) % 360;
-    const yawR = a === 90 ? r.beta : a === 270 ? -r.beta : a === 180 ? -r.gamma : r.gamma;   // 繞螢幕直立軸：往左轉為正
-    const pitR = a === 90 ? -r.gamma : a === 270 ? r.gamma : a === 180 ? -r.beta : r.beta;   // 繞螢幕橫軸：上緣往自己傾（往上看）為正
+    // 規格：beta＝繞手機短邊（x 軸）、gamma＝繞手機長邊（y 軸）。iPhone／iPad 的 Safari 放錯位置：alpha＝x 軸、beta＝y 軸
+    //   （2026-11-17 iPhone 實測：橫拿上下轉，遊戲裡變成左右轉）；安卓照規格
+    const rx = GYRO_IOS ? r.alpha : r.beta, ry = GYRO_IOS ? r.beta : r.gamma; if (rx == null || ry == null) return;
+    const yawR = a === 90 ? rx : a === 270 ? -rx : a === 180 ? -ry : ry;   // 繞螢幕直立軸：往左轉為正
+    const pitR = a === 90 ? -ry : a === 270 ? ry : a === 180 ? -rx : rx;   // 繞螢幕橫軸：上緣往自己傾（往上看）為正
     if (GYRO.on) {   // 按住「扣」瞄準：照原本的
       const k = (Math.PI / 180) * 1.3 * dt;   // 1.3 倍：手腕轉小一點就夠
       walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now(); return;
