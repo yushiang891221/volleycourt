@@ -802,6 +802,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .vpad button.tb[hidden] { display: none; }
 .tmenu { position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 12px; font-size: 22px; line-height: 1; background: rgba(15,23,36,.7); color: #fff; border: 1px solid rgba(255,255,255,.35); z-index: 30; }
 .tmenu[hidden] { display: none; }
+.tgyro { position: absolute; top: calc(max(8px, env(safe-area-inset-top, 0px)) + 74px); right: max(10px, env(safe-area-inset-right, 0px)); height: 36px; min-height: 0; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 800; background: rgba(242,183,5,.92); color: #1B2638; border: 0; z-index: 30; }
+.tgyro[hidden] { display: none; }
 .trotate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: rgba(10,16,26,.92); color: #fff; font-size: 22px; font-weight: 800; }
 .trotate[hidden] { display: none; }
 /* 遊戲中只留必要的：設定、回大廳、房間資訊、聊天、說明都收進 ☰ */
@@ -13350,7 +13352,7 @@ async function prepareCreatorShot() {
 //     地板上的落點圈跟著動。手機沒有感應器（或沒允許）時，退回「按住扣拖曳」瞄準。手機預設第三人稱（tpActive）
 //   平常（沒按扣）也能轉手機看四周：左右轉＝轉頭、上下傾＝抬頭低頭，跟右半邊手指拖曳一起用；設定「遊戲」頁可關（gyroLook）
 const TOUCH = { on: false, aim: null, mark: null, press: null };
-const GYRO = { ok: 0, on: false, t: 0, asked: false, sy: 0, sp: 0 };   // sy／sp＝平滑過的轉動速度（平常轉視角用）   // ok＝最後一次收到感應器資料的時間
+const GYRO = { ok: 0, on: false, t: 0, perm: 'ok', noHide: false, sy: 0, sp: 0 };   // ok＝最後一次收到感應器資料的時間；sy／sp＝平滑過的轉動速度（平常轉視角用）
 function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 度）＋視角（決定深淺：沒拖＝中等、往上＝長、往下＝釘）
   const down = clamp(0.3 + dy / 120, 0, 1);
   return { dyaw: clamp(-dx * 0.006, -0.61, 0.61), pitch: -(0.05 + 0.55 * down), down };
@@ -13366,14 +13368,27 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
   // 陀螺儀：只在按住「扣」時把手機的轉動加到視角上（平常不動，避免拿著手機晃來晃去畫面亂轉）
   //   rotationRate（每秒幾度）依螢幕方向換成「左右轉」和「上下傾」：橫拿（90／270 度）時手機的長邊是左右
   const gyroLive = () => performance.now() - GYRO.ok < 1000;
-  const gyroAsk = () => {   // iPhone 要先問一次（要在手指放開那一下問才算使用者操作）
-    if (GYRO.asked) return; GYRO.asked = true;
-    const D = window.DeviceMotionEvent; if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => {});
+  // iPhone 要先問「允許動作感應」才收得到資料。要在「點一下」那一刻問才算數：拖搖桿放開不算，iPhone 會直接拒絕（不跳視窗）
+  //   所以：沒問成功就下次再問；遊戲裡另外放一顆「開啟陀螺儀」小鈕保證點得到（2026-11-17 iPhone 實測沒跳出詢問）
+  const DMe = window.DeviceMotionEvent;
+  GYRO.perm = DMe && typeof DMe.requestPermission === 'function' ? 'ask' : 'ok';   // ask＝還沒問成功、busy＝問題中、ok＝允許、no＝拒絕
+  const gyroAsk = () => {
+    if (GYRO.perm !== 'ask' || VBSettings.values.gyroLook === false) return;
+    GYRO.perm = 'busy'; let pr;
+    try { pr = DMe.requestPermission(); } catch (er) { GYRO.perm = 'ask'; return; }
+    Promise.resolve(pr).then((s) => { GYRO.perm = s === 'granted' ? 'ok' : 'no'; }, () => { GYRO.perm = 'ask'; });   // 失敗（不算使用者操作）＝下次再問
   };
   // 平常也用陀螺儀轉視角的時機：設定有開、在遊戲裡、沒暫停、沒開選單／舉球轉盤／表情選單／重播／排行榜、扣球最後那一下不轉（跟手指拖曳一樣）
   const gyroFree = () => VBSettings.values.gyroLook !== false && walk.on && !walk.paused && !window.__rkOn && !RP.on && !SETM.m && !(typeof EMO !== 'undefined' && EMO.menu)
     && !(walk.spike && walk.spike.t > 0.98) && !document.body.classList.contains('touch-more') && !document.querySelector('dialog[open]');
-  document.addEventListener('touchend', gyroAsk, true);   // iPhone：「允許動作感應」只能在手指放開（touchend）時問，第一次碰螢幕放開就問
+  document.addEventListener('touchend', gyroAsk, true); document.addEventListener('click', gyroAsk, true);
+  const gbtn = document.createElement('button'); gbtn.type = 'button'; gbtn.className = 'tgyro'; gbtn.hidden = true; $('tmenu').after(gbtn);
+  gbtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  gbtn.addEventListener('click', () => { if (GYRO.perm === 'no') GYRO.noHide = true; gyroAsk(); });
+  const gbtnStep = (on) => {   // 還沒允許：顯示「開啟陀螺儀」；被拒絕：提示要關掉 App 重開（iPhone 拒絕後同一次開啟不能再問）
+    const show = on && VBSettings.values.gyroLook !== false && !document.body.classList.contains('touch-more') && (GYRO.perm === 'ask' || (GYRO.perm === 'no' && !GYRO.noHide)) && !gyroLive();
+    gbtn.hidden = !show; if (show) gbtn.textContent = GYRO.perm === 'no' ? '陀螺儀被拒絕：關掉 App 重開再按允許' : '📱 開啟陀螺儀';
+  };
   addEventListener('devicemotion', (e) => {
     const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
     const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
@@ -13525,7 +13540,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
   const tick = () => {
     requestAnimationFrame(tick);
     const on = walk.on && !window.__rkOn;
-    menu.hidden = !on; rot.hidden = true;   /* 直拿改由 js/mobile-gate.js 的「請將手機轉過來」黑畫面處理（全站共用） */
+    menu.hidden = !on; rot.hidden = true; gbtnStep(on);   /* 直拿改由 js/mobile-gate.js 的「請將手機轉過來」黑畫面處理（全站共用） */
     if (!on) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }
     markStep();
     const cue = $('vb-cue'), k = cue.hidden ? '' : cue.dataset.k;

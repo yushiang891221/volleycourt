@@ -763,6 +763,8 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .vpad button.tb[hidden] { display: none; }
 .tmenu { position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 12px; font-size: 22px; line-height: 1; background: rgba(15,23,36,.7); color: #fff; border: 1px solid rgba(255,255,255,.35); z-index: 30; }
 .tmenu[hidden] { display: none; }
+.tgyro { position: absolute; top: calc(max(8px, env(safe-area-inset-top, 0px)) + 74px); right: max(10px, env(safe-area-inset-right, 0px)); height: 36px; min-height: 0; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 800; background: rgba(242,183,5,.92); color: #1B2638; border: 0; z-index: 30; }
+.tgyro[hidden] { display: none; }
 .trotate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: rgba(10,16,26,.92); color: #fff; font-size: 22px; font-weight: 800; }
 .trotate[hidden] { display: none; }
 /* 遊戲中只留必要的：設定、回大廳、房間資訊、聊天、說明都收進 ☰ */
