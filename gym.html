@@ -16,6 +16,7 @@
 <script src="js/lobby-client.js"></script>
 <script src="js/game-lobby.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="js/mobile-gate.js"></script>
 <title>Play One｜球館</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/brand/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/img/brand/favicon-64.png">
@@ -817,6 +818,12 @@ body.touch-ui #room-flow p { margin: 3px 0; }
 body.touch-ui:not(.touch-more) #room-ready-list { display: none; }
 body.touch-ui.touch-more #room-flow { display: none; }
 body.touch-ui .walk-ui .wk-act { font-size: 12px; padding: 4px 10px; max-width: 46vw; }
+/* 浮動搖桿：左半邊（避開上方的計分板、面板）按下去就出現；沒按時搖桿在左下角變淡 */
+.joy-zone { display: none; position: absolute; left: 0; top: 22%; bottom: 0; width: 45%; touch-action: none; }
+body.touch-ui .walk-ui:not([hidden]) .joy-zone { display: block; }
+.walk-ui.rk .joy-zone, .walk-ui:has(.rp:not([hidden])) .joy-zone { display: none !important; }
+body.touch-ui .joy { opacity: .45; pointer-events: auto; transition: opacity .12s; }
+body.touch-ui .joy.live { opacity: 1; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -1000,7 +1007,7 @@ body.touch-ui .walk-ui .wk-act { font-size: 12px; padding: 4px 10px; max-width: 
       <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button><button type="button" class="jump" data-rk="jump">跳<small>空白</small></button></div>
       <div class="rk-menu" id="rk-menu" hidden></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
-      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">推到邊緣＝跑</b><i></i></div>
+      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">左半邊按住＝移動</b><i></i></div>
       <div class="vpad" id="vpad" hidden>
         <button type="button" class="tb tb-spike" data-act="spike">扣<small>發</small></button>
         <button type="button" class="tb tb-jump" data-act="jump">跳</button>
@@ -5708,7 +5715,7 @@ function startWalk() {
   const ent = entryInfo();
   walk.x = ent.x - ent.nx * 1.6; walk.z = ent.z - ent.nz * 1.6;
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
-  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '推到邊緣＝跑';
+  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '左半邊按住＝移動';
   $('walk-ui').hidden = false;
   phoneFull(true);
   updateLockHint();
@@ -13322,6 +13329,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     if (GYRO.asked) return; GYRO.asked = true;
     const D = window.DeviceMotionEvent; if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => {});
   };
+  document.addEventListener('touchend', gyroAsk, true);   // iPhone：「允許動作感應」只能在手指放開（touchend）時問，第一次碰螢幕放開就問
   addEventListener('devicemotion', (e) => {
     const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
     const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
@@ -13334,20 +13342,31 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now();
   });
 
-  // 搖桿：輕推＝走、推到邊緣（八成五以上）＝跑；放開就停（球場上不再鎖定自動跑步）
-  let jid = null;
+  // 搖桿（浮動，使用者 2026-11-17 要求）：螢幕左半邊任何地方按下去，搖桿就出現在手指底下；輕推＝走、推到邊緣（八成五以上）＝跑；
+  //   放開就停、搖桿回到左下角（變淡，當作提示）。右半邊空白處照舊是拖曳轉視角
+  const zone = document.createElement('div'); zone.className = 'joy-zone'; zone.id = 'joy-zone'; joy.parentElement.prepend(zone);   // 放最前面：其他按鈕、面板都疊在它上面
+  let jid = null, jc = null;
   const joySet = (e) => {
-    const r = joy.getBoundingClientRect(), R = r.width / 2;
-    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+    const R = joy.getBoundingClientRect().width / 2;
+    let x = (e.clientX - jc[0]) / R, y = (e.clientY - jc[1]) / R; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
     const run = m >= 0.85; walk.joy = { x, y }; walk.joyRun = run; walk.autoRun = false;
     joy.classList.toggle('run', run); tag.textContent = run ? '跑' : '走';
     knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`;
   };
-  joy.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); jid = e.pointerId; try { joy.setPointerCapture(jid); } catch (er) { /* ignore */ } joySet(e); });
-  joy.addEventListener('pointermove', (e) => { if (e.pointerId === jid) joySet(e); });
-  const joyEnd = (e) => { if (e.pointerId !== jid) return; jid = null; walk.joy = { x: 0, y: 0 }; walk.joyRun = false; joy.classList.remove('run', 'lock'); knob.style.transform = ''; tag.textContent = '推到邊緣＝跑'; };
-  joy.addEventListener('pointerup', joyEnd); joy.addEventListener('pointercancel', joyEnd);
-  tag.textContent = '推到邊緣＝跑';
+  const joyStart = (e) => {
+    if (jid != null || !walk.on || walk.paused) return;
+    e.preventDefault(); e.stopPropagation(); jid = e.pointerId; try { e.currentTarget.setPointerCapture(jid); } catch (er) { /* ignore */ }
+    const box = joy.offsetParent ? joy.offsetParent.getBoundingClientRect() : { left: 0, top: 0 }, R = joy.offsetWidth / 2;
+    joy.style.left = (e.clientX - box.left - R) + 'px'; joy.style.top = (e.clientY - box.top - R) + 'px'; joy.style.bottom = 'auto';
+    jc = [e.clientX, e.clientY]; joy.classList.add('live'); joySet(e);
+  };
+  const joyMove = (e) => { if (e.pointerId === jid) joySet(e); };
+  const joyEnd = (e) => {
+    if (e.pointerId !== jid) return; jid = null; jc = null; walk.joy = { x: 0, y: 0 }; walk.joyRun = false;
+    joy.classList.remove('run', 'lock', 'live'); knob.style.transform = ''; tag.textContent = '左半邊按住＝移動'; joy.style.left = joy.style.top = joy.style.bottom = '';
+  };
+  for (const el of [zone, joy]) { el.addEventListener('pointerdown', joyStart); el.addEventListener('pointermove', joyMove); el.addEventListener('pointerup', joyEnd); el.addEventListener('pointercancel', joyEnd); }
+  tag.textContent = '左半邊按住＝移動';
 
   // 五顆鈕：每顆有 down／move／up
   const ACT = {
@@ -13451,7 +13470,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
   const tick = () => {
     requestAnimationFrame(tick);
     const on = walk.on && !window.__rkOn;
-    menu.hidden = !on; rot.hidden = !(on && portrait.matches);
+    menu.hidden = !on; rot.hidden = true;   /* 直拿改由 js/mobile-gate.js 的「請將手機轉過來」黑畫面處理（全站共用） */
     if (!on) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }
     markStep();
     const cue = $('vb-cue'), k = cue.hidden ? '' : cue.dataset.k;

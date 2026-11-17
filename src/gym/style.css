@@ -779,3 +779,9 @@ body.touch-ui #room-flow p { margin: 3px 0; }
 body.touch-ui:not(.touch-more) #room-ready-list { display: none; }
 body.touch-ui.touch-more #room-flow { display: none; }
 body.touch-ui .walk-ui .wk-act { font-size: 12px; padding: 4px 10px; max-width: 46vw; }
+/* 浮動搖桿：左半邊（避開上方的計分板、面板）按下去就出現；沒按時搖桿在左下角變淡 */
+.joy-zone { display: none; position: absolute; left: 0; top: 22%; bottom: 0; width: 45%; touch-action: none; }
+body.touch-ui .walk-ui:not([hidden]) .joy-zone { display: block; }
+.walk-ui.rk .joy-zone, .walk-ui:has(.rp:not([hidden])) .joy-zone { display: none !important; }
+body.touch-ui .joy { opacity: .45; pointer-events: auto; transition: opacity .12s; }
+body.touch-ui .joy.live { opacity: 1; }

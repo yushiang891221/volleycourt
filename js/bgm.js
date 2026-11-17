@@ -26,7 +26,7 @@
   }
 
   function start() {
-    if (started) return;
+    if (started || window.__vbGated) return;   // 手機還在「加到主畫面」教學頁：不播
     started = true;
     removeEventListener('pointerdown', start, true);
     removeEventListener('keydown', start, true);

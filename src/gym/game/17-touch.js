@@ -28,6 +28,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     if (GYRO.asked) return; GYRO.asked = true;
     const D = window.DeviceMotionEvent; if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => {});
   };
+  document.addEventListener('touchend', gyroAsk, true);   // iPhone：「允許動作感應」只能在手指放開（touchend）時問，第一次碰螢幕放開就問
   addEventListener('devicemotion', (e) => {
     const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
     const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
@@ -40,20 +41,31 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now();
   });
 
-  // 搖桿：輕推＝走、推到邊緣（八成五以上）＝跑；放開就停（球場上不再鎖定自動跑步）
-  let jid = null;
+  // 搖桿（浮動，使用者 2026-11-17 要求）：螢幕左半邊任何地方按下去，搖桿就出現在手指底下；輕推＝走、推到邊緣（八成五以上）＝跑；
+  //   放開就停、搖桿回到左下角（變淡，當作提示）。右半邊空白處照舊是拖曳轉視角
+  const zone = document.createElement('div'); zone.className = 'joy-zone'; zone.id = 'joy-zone'; joy.parentElement.prepend(zone);   // 放最前面：其他按鈕、面板都疊在它上面
+  let jid = null, jc = null;
   const joySet = (e) => {
-    const r = joy.getBoundingClientRect(), R = r.width / 2;
-    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+    const R = joy.getBoundingClientRect().width / 2;
+    let x = (e.clientX - jc[0]) / R, y = (e.clientY - jc[1]) / R; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
     const run = m >= 0.85; walk.joy = { x, y }; walk.joyRun = run; walk.autoRun = false;
     joy.classList.toggle('run', run); tag.textContent = run ? '跑' : '走';
     knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`;
   };
-  joy.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); jid = e.pointerId; try { joy.setPointerCapture(jid); } catch (er) { /* ignore */ } joySet(e); });
-  joy.addEventListener('pointermove', (e) => { if (e.pointerId === jid) joySet(e); });
-  const joyEnd = (e) => { if (e.pointerId !== jid) return; jid = null; walk.joy = { x: 0, y: 0 }; walk.joyRun = false; joy.classList.remove('run', 'lock'); knob.style.transform = ''; tag.textContent = '推到邊緣＝跑'; };
-  joy.addEventListener('pointerup', joyEnd); joy.addEventListener('pointercancel', joyEnd);
-  tag.textContent = '推到邊緣＝跑';
+  const joyStart = (e) => {
+    if (jid != null || !walk.on || walk.paused) return;
+    e.preventDefault(); e.stopPropagation(); jid = e.pointerId; try { e.currentTarget.setPointerCapture(jid); } catch (er) { /* ignore */ }
+    const box = joy.offsetParent ? joy.offsetParent.getBoundingClientRect() : { left: 0, top: 0 }, R = joy.offsetWidth / 2;
+    joy.style.left = (e.clientX - box.left - R) + 'px'; joy.style.top = (e.clientY - box.top - R) + 'px'; joy.style.bottom = 'auto';
+    jc = [e.clientX, e.clientY]; joy.classList.add('live'); joySet(e);
+  };
+  const joyMove = (e) => { if (e.pointerId === jid) joySet(e); };
+  const joyEnd = (e) => {
+    if (e.pointerId !== jid) return; jid = null; jc = null; walk.joy = { x: 0, y: 0 }; walk.joyRun = false;
+    joy.classList.remove('run', 'lock', 'live'); knob.style.transform = ''; tag.textContent = '左半邊按住＝移動'; joy.style.left = joy.style.top = joy.style.bottom = '';
+  };
+  for (const el of [zone, joy]) { el.addEventListener('pointerdown', joyStart); el.addEventListener('pointermove', joyMove); el.addEventListener('pointerup', joyEnd); el.addEventListener('pointercancel', joyEnd); }
+  tag.textContent = '左半邊按住＝移動';
 
   // 五顆鈕：每顆有 down／move／up
   const ACT = {
@@ -157,7 +169,7 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
   const tick = () => {
     requestAnimationFrame(tick);
     const on = walk.on && !window.__rkOn;
-    menu.hidden = !on; rot.hidden = !(on && portrait.matches);
+    menu.hidden = !on; rot.hidden = true;   /* 直拿改由 js/mobile-gate.js 的「請將手機轉過來」黑畫面處理（全站共用） */
     if (!on) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }
     markStep();
     const cue = $('vb-cue'), k = cue.hidden ? '' : cue.dataset.k;

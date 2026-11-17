@@ -1,0 +1,19 @@
+{
+  "name": "Play One 排球",
+  "short_name": "Play One",
+  "description": "與球友一起上場，打好每一球。",
+  "id": "/",
+  "start_url": "/index.html?app=1",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#111B2B",
+  "theme_color": "#111B2B",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "/assets/img/brand/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/brand/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/img/brand/app-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
