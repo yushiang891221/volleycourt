@@ -13348,8 +13348,9 @@ async function prepareCreatorShot() {
 //   攔：按住＝起跳攔網，左右拖＝雙手往左右移
 //   轉動手機瞄準（陀螺儀，使用者 2026-11-17 要求）：按住「扣」的時候，轉動手機＝轉視角——左右轉＝方向、往下傾＝往下扣（落點近、釘）、往上＝打長；
 //     地板上的落點圈跟著動。手機沒有感應器（或沒允許）時，退回「按住扣拖曳」瞄準。手機預設第三人稱（tpActive）
+//   平常（沒按扣）也能轉手機看四周：左右轉＝轉頭、上下傾＝抬頭低頭，跟右半邊手指拖曳一起用；設定「遊戲」頁可關（gyroLook）
 const TOUCH = { on: false, aim: null, mark: null, press: null };
-const GYRO = { ok: 0, on: false, t: 0, asked: false };   // ok＝最後一次收到感應器資料的時間
+const GYRO = { ok: 0, on: false, t: 0, asked: false, sy: 0, sp: 0 };   // sy／sp＝平滑過的轉動速度（平常轉視角用）   // ok＝最後一次收到感應器資料的時間
 function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 度）＋視角（決定深淺：沒拖＝中等、往上＝長、往下＝釘）
   const down = clamp(0.3 + dy / 120, 0, 1);
   return { dyaw: clamp(-dx * 0.006, -0.61, 0.61), pitch: -(0.05 + 0.55 * down), down };
@@ -13369,17 +13370,31 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
     if (GYRO.asked) return; GYRO.asked = true;
     const D = window.DeviceMotionEvent; if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => {});
   };
+  // 平常也用陀螺儀轉視角的時機：設定有開、在遊戲裡、沒暫停、沒開選單／舉球轉盤／表情選單／重播／排行榜、扣球最後那一下不轉（跟手指拖曳一樣）
+  const gyroFree = () => VBSettings.values.gyroLook !== false && walk.on && !walk.paused && !window.__rkOn && !RP.on && !SETM.m && !(typeof EMO !== 'undefined' && EMO.menu)
+    && !(walk.spike && walk.spike.t > 0.98) && !document.body.classList.contains('touch-more') && !document.querySelector('dialog[open]');
   document.addEventListener('touchend', gyroAsk, true);   // iPhone：「允許動作感應」只能在手指放開（touchend）時問，第一次碰螢幕放開就問
   addEventListener('devicemotion', (e) => {
     const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
     const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
     if (Math.abs(r.beta) + Math.abs(r.gamma) + Math.abs(r.alpha || 0) > 0) GYRO.ok = now;
-    if (!GYRO.on || !walk.on || walk.paused) return;
+    const free = !GYRO.on && gyroFree();
+    if (!GYRO.on && !free) { GYRO.sy = GYRO.sp = 0; return; }
     const ang = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) % 360, a = (ang + 360) % 360;
     const yawR = a === 90 ? r.beta : a === 270 ? -r.beta : a === 180 ? -r.gamma : r.gamma;   // 繞螢幕直立軸：往左轉為正
     const pitR = a === 90 ? -r.gamma : a === 270 ? r.gamma : a === 180 ? -r.beta : r.beta;   // 繞螢幕橫軸：上緣往自己傾（往上看）為正
-    const k = (Math.PI / 180) * 1.3 * dt;   // 1.3 倍：手腕轉小一點就夠
-    walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now();
+    if (GYRO.on) {   // 按住「扣」瞄準：照原本的
+      const k = (Math.PI / 180) * 1.3 * dt;   // 1.3 倍：手腕轉小一點就夠
+      walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now(); return;
+    }
+    // 平常轉視角（使用者 2026-11-17 要求）：不用校正正前方——畫面現在看哪裡就從哪裡開始，轉多少加多少，跟手指拖曳直接相加
+    //   防抖：先平滑（一半新一半舊），每秒 3 度以下的小晃動不算，超過的部分才轉
+    GYRO.sy = GYRO.sy * 0.5 + yawR * 0.5; GYRO.sp = GYRO.sp * 0.5 + pitR * 0.5;
+    const dz = (v) => Math.sign(v) * Math.max(0, Math.abs(v) - 3);
+    const y = dz(GYRO.sy), pt = dz(GYRO.sp); if (!y && !pt) return;
+    const k = (Math.PI / 180) * dt * (VBSettings.values.sensitivity || 1);
+    walk.yaw += y * k; walk.pitch = clamp(walk.pitch + pt * k, -1.2, 1.1);
+    if (Math.abs(y) + Math.abs(pt) > 6) walk.lookT = now;   // 真的在轉才暫停視角輔助
   });
 
   // 搖桿（浮動，使用者 2026-11-17 要求）：螢幕左半邊任何地方按下去，搖桿就出現在手指底下；輕推＝走、推到邊緣（八成五以上）＝跑；
