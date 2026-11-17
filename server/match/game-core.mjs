@@ -9,7 +9,7 @@ import fs from 'node:fs';
 if (!globalThis.VBMatchSync) { const mod = { exports: {} }; new Function('module', fs.readFileSync(new URL('../../js/match-sync.js', import.meta.url), 'utf8'))(mod); globalThis.VBMatchSync = mod.exports; }
 // 3～5 人制的站位（網頁是另外載入的 js/court-formations.js，會掛在 globalThis.CourtFormations）
 if (!globalThis.CourtFormations) new Function(fs.readFileSync(new URL('../../js/court-formations.js', import.meta.url), 'utf8'))();
-export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState"];
+export const STUBS = ["toast","sfx","vmSay","vbImpact","vbBurst","netBallHit","vmStop","vm6Menu","vmOpenMenu","unlockMouse","peerTagsAll","vmRenderAi","vbWallFx","vmTrailPush","vmMark","vmOut","netBallSound","netFxHit","netFxStep","ballShadowSync","updateTweens","updateDoors","updateWind","vbBlockFx","vmGradeShow","vmShout","labelSprite","vmServeHint","renderRoomRules","vm6RotToast","recHit","recEvent","vbFx","tutEv","makeAvatar","avDrive","renderUseBar","setMenuClose","setMenuPick","vbManualSetCancel","vbNpcToggle","netPeerPlayback","rkOnNet","refreshPeerAppearance","emoOnNet","avPoseOf","langziReceive","renderMpList","rkPeerAi","makeRacket","sqFromMotion","myPoseCode","rkAiState","hlOnPoint","hlReset"];
 // 伺服器上沒有網頁：DOM／畫布一律給「什麼都不做、怎麼用都不會壞」的假物件（three.js 建貼圖時也會用到 document）
 const dummy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : k === 'then' ? undefined : dummy, apply: () => dummy, construct: () => dummy, set: () => true });
 if (!globalThis.document) globalThis.document = { createElementNS: () => dummy, createElement: () => dummy };
@@ -931,6 +931,8 @@ export function createGameCore(S = {}) {
     }
   }
   const RP = { on: false, t: 0, playing: true, speed: 1, view: 'cam', A: null, g: null, actors: new Map(), ballsM: new Map(), trails: new Map(), marks: [], hud: null, hudT: 0, recorder: null, chunks: [] };
+  function hlReset(...a) { return S.hlReset ? S.hlReset(...a) : undefined; }
+  function hlOnPoint(...a) { return S.hlOnPoint ? S.hlOnPoint(...a) : undefined; }
   const zoneDoors = [], mainDoors = [];
   const coarse = () => matchMedia('(pointer: coarse)').matches;
   const locked = () => document.pointerLockElement === renderer.domElement;
@@ -1086,7 +1088,7 @@ export function createGameCore(S = {}) {
   }
   function vbNpcToggle(...a) { return S.vbNpcToggle ? S.vbNpcToggle(...a) : undefined; }
   const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };
-  function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, roleTime: {}, roleSnapshot: {}, roleAt: null, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
+  function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, roleTime: {}, roleSnapshot: {}, roleAt: null, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); if (typeof hlReset === 'function') hlReset(); }
   function mrecRoles() {
     if (!MREC.id || !VM.host || !VM.six || VM.team?.[0]?.length !== 6) return;
     const now = performance.now();
@@ -1107,6 +1109,7 @@ export function createGameCore(S = {}) {
   }
   const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, kc: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });
   function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
+    VM.hlLast = { id, kind, team: vmTeamOf(id) };   // 得分精華：誰最後碰球（練習也要記，所以放在戰績判斷前面）
     if (!MREC.id) return;
     const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
     P.t++; if (['spike', 'tip', 'hit'].includes(kind)) P.sp++; else if (kind === 'serve') P.sv++; else if (kind === 'bump') P.rc++; else if (kind === 'set') P.st++; else if (kind === 'block') P.bt++;
@@ -1396,8 +1399,11 @@ export function createGameCore(S = {}) {
   }
   function vmGradeShow(...a) { return S.vmGradeShow ? S.vmGradeShow(...a) : undefined; }
   function vmFixSetter(...a) { return aiEngine().vmFixSetter(...a); }
+  const HL_GAP = 9.6;
   function vmPoint(win, why) {
     if (VM.phase !== 'rally') return;
+    const L = VM.hlLast; VM.hlLast = null;   // 得分精華：最後碰球的是得分這一隊＝他打出這一分；對手失誤送分＝null（不重播）
+    const by = L && L.team === win ? L.id : null, byK = by ? L.kind : undefined;
     vmPerfPoint(win);   // WEB-010 戰績
     const r = scorePoint(VM, win);   /* B2：比分、發球權、局數、換場判定在 engine/rules.js */
     sfx('whistle', 1);
@@ -1408,8 +1414,9 @@ export function createGameCore(S = {}) {
     else if (r.next === 'nextSet') fn = vm6NextSet;
     else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
     vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
-    VM.next = { at: VM.t + 3.2, fn };
-    vmBroadcast(true, null, { win, why });
+    VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
+    vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
+    if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
   }
   function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => !/^ai/.test(id)); return ids.includes(vmMe()) ? '你們' : !hs.length ? 'AI 隊' : hs.map(vmName).join('＋') + (hs.length < ids.length ? '＋AI' : ''); }
   function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
@@ -1702,7 +1709,7 @@ export function createGameCore(S = {}) {
       drawScore();
       const nowS = performance.now();
       for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
-      if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
+      if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); if (typeof hlOnPoint === 'function') hlOnPoint(d.pt.win, d.pt.why, 'by' in d.pt ? d.pt.by : undefined, d.pt.k); }
       else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
       if (d.ph === 'over') vmOver();
     } else if (d.e === 'serve' && d.id === NET.me) vmPrepServe(d.s);

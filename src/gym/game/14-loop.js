@@ -62,7 +62,7 @@ function drawFrame(force) {
   for (const r of zoneRoofs) r.visible = walk.on && !RP.on;
   if (ceilingGroup && RP.on) ceilingGroup.visible = cp.y < H + 0.5;
   if (!reduceMotion) for (const s of spinners) if (!walk.off.has(s.userData.spinOf)) s.rotation.y += 0.01;
-  if (walk.on) { roomKeepSpectatorOut(); staTick(dt); stowSync(); recTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
+  if (walk.on) { roomKeepSpectatorOut(); staTick(dt); stowSync(); recTick(now); hlTick(now); if (!RP.on) renderCamView(now); renderCctv(now); netTick(dt, now); rkSpecStep(dt); vmUpdate(dt); if (now - pc.clockT > 20000) { pc.clockT = now; pcClock(); } }
   if (walk.on) updateBalls(dt);
   vbTrailStep(dt);   /* 球的軌跡光帶 */
   if (walk.on) vmWireTick();

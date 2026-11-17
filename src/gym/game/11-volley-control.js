@@ -1303,7 +1303,7 @@ function vbCue() {
 // ---- WEB-010 比賽紀錄：開房比賽（練習不算）結束時，每個真人把自己的結果記進帳號
 //   房主統計每個人的扣球／攔網／發球得分、失誤、一球內攔網次數；自己的完美接球、舉球次數和連擊持球在自己的遊戲裡算
 const MREC = { id: '', t0: 0, pf: {}, blkR: {}, last: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } };   // cbF／cb＝絕處逢生：這局有沒有落後到對方局末點、我方 to−5 以下；逆轉拿下幾局
-function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, roleTime: {}, roleSnapshot: {}, roleAt: null, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); }
+function mrecReset(id) { Object.assign(MREC, { id: id || '', t0: Date.now(), pf: {}, roleTime: {}, roleSnapshot: {}, roleAt: null, tp: [0, 0], blkR: {}, last: null, save: null, cbF: [false, false], cb: [0, 0], local: { p: 0, sets: {} } }); if (typeof hlReset === 'function') hlReset(); }   // 新比賽：上一場的得分精華清掉
 // WEB-014：房主累計各位置時間，平手保留先擔任的位置。
 function mrecRoles() {
   if (!MREC.id || !VM.host || !VM.six || VM.team?.[0]?.length !== 6) return;
@@ -1325,6 +1325,7 @@ function mrecLongestRoles() {
 }
 const mrecPf = (id) => MREC.pf[id] || (MREC.pf[id] = { k: 0, kc: 0, b: 0, a: 0, e: 0, kl: 0, ks: 0, fs: 0, md: 0, qk: 0, ss: 0, as: 0, t: 0, sp: 0, sv: 0, rc: 0, st: 0, bt: 0, eb: 0, es: 0, wall: false });   // es 發球失誤、t 觸球、sp 攻擊、sv 發球、rc 接球、st 舉球、bt 攔網碰球、eb 接球失誤   // as＝舉球助攻（舉出去、攻擊手得分）   // ss＝第二下自己扣球得分   // fs＝救回場外球、md＝二次進攻吊球得分   // kl＝直線得分、ks＝扣進三米線內得分
 function vmPerfTouch(id, kind, b) {   // 房主：每次有效觸球
+  VM.hlLast = { id, kind, team: vmTeamOf(id) };   // 得分精華：誰最後碰球（練習也要記，所以放在戰績判斷前面）
   if (!MREC.id) return;
   const prev = MREC.last, team = vmTeamOf(id), P = mrecPf(id);
   P.t++; if (['spike', 'tip', 'hit'].includes(kind)) P.sp++; else if (kind === 'serve') P.sv++; else if (kind === 'bump') P.rc++; else if (kind === 'set') P.st++; else if (kind === 'block') P.bt++;

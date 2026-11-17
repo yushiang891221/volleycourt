@@ -26,6 +26,11 @@ function recTick(now) {
   REC.last = now;
   const t = (now - REC.t0) / 1000;
   if (t > 180) { recToggle(); return; }
+  REC.frames.push(recFrame(t, recId));
+}
+// 記一格畫面（球＋所有人）：手動錄影和得分精華共用；idOf 把球物件換成編號（兩邊各用各的編號表）
+function recFrame(t, idOf) {
+  const recId = idOf;
   const bl = [];
   // 第 5 欄：1＝在手上（拿著、拋球中），這段不算擊球
   for (const b of balls) bl.push([recId(b.m), +b.m.position.x.toFixed(3), +b.m.position.y.toFixed(3), +b.m.position.z.toFixed(3), 0]);
@@ -38,7 +43,7 @@ function recTick(now) {
   if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name, a.ch);
   if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練', VB.npc.ch);
   if (RK.on) { for (const P of Object.values(RK.P)) if (P.ai && P.av) npcRow('rkai', P.av.g, P.jy, P.swing ? (P.swing.over ? 7 : 8) : 6, '#E5484D', P.name, P.ch); const q = RK.ballM.position; bl.push([recId(RK.ballM), +q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), RK.b.held != null ? 1 : 0, RK.k]); }
-  REC.frames.push({ t, b: bl, p: ppl });
+  return { t, b: bl, p: ppl };
 }
 // ---- 分析：每顆球的時間序列 → 落地點、擊球點與球速、最高點、過網次數
 function recAnalyze(frames, events) {
@@ -85,7 +90,7 @@ function openReplay() {
   if (REC.on) recToggle();
   if (REC.frames.length < 10) { toast('還沒有錄影：先按「● 錄影」，打完球再按停止'); return; }
   const A = recAnalyze(REC.frames, REC.events);
-  RP.on = true; RP.A = A; RP.t = 0; RP.playing = true; RP.speed = 1; RP.view = REC.cam ? 'cam' : 'top';
+  RP.on = true; RP.A = A; RP.F = REC.frames; RP.hl = null; RP.t = 0; RP.playing = true; RP.speed = 1; RP.view = REC.cam ? 'cam' : 'top';
   { let sx = 0, sz = 0, n = 0; for (const T of A.tracks.values()) for (const q of T) { sx += q.x; sz += q.z; n++; } const mx = n ? sx / n : 0, mz = n ? sz / n : 0; RP.topC = state.items.filter((i) => CAT[i.type].court).sort((a, b) => Math.hypot(a.x - mx, a.z - mz) - Math.hypot(b.x - mx, b.z - mz))[0] || null; }
   RP.g = new THREE.Group(); scene.add(RP.g); RP.actors.clear(); RP.ballsM.clear(); RP.trails.clear(); RP.marks = [];
   // 現場的東西先藏起來，換成回放的人形與球
@@ -125,10 +130,12 @@ function closeReplay() {
 }
 function rpSetPlay(on) { RP.playing = on; $('rp-play').textContent = on ? '⏸' : '▶'; }
 function rpView(v) { RP.view = v; RP.followJump = true; for (const b of document.querySelectorAll('[data-rpv]')) setPressed(b, b.dataset.rpv === v); }
-function rpFrameAt(t) { const F = REC.frames; let lo = 0, hi = F.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= t) lo = m; else hi = m - 1; } return [F[lo], F[Math.min(F.length - 1, lo + 1)]]; }
+function rpFrameAt(t) { const F = RP.F || REC.frames; let lo = 0, hi = F.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= t) lo = m; else hi = m - 1; } return [F[lo], F[Math.min(F.length - 1, lo + 1)]]; }
 function updateReplay(dt) {
   const A = RP.A;
-  if (RP.playing) { RP.t += dt * RP.speed; if (RP.t >= A.dur) { RP.t = A.dur; rpSetPlay(false); if (RP.recorder && RP.recorder.state === 'recording') RP.recorder.stop(); } }
+  if (RP.hl) hlPace();
+  if (!RP.on) return;
+  if (RP.playing) { RP.t += dt * RP.speed; if (RP.t >= A.dur) { RP.t = A.dur; rpSetPlay(false); if (RP.hl) { hlLeave(); return; } if (RP.recorder && RP.recorder.state === 'recording') RP.recorder.stop(); } }
   $('rp-time').value = RP.t; $('rp-clock').textContent = `${RP.t.toFixed(1)} / ${A.dur.toFixed(1)} 秒`;
   const [f0, f1] = rpFrameAt(RP.t), k = f1.t > f0.t ? clamp((RP.t - f0.t) / (f1.t - f0.t), 0, 1) : 0;
   // 人
@@ -164,7 +171,8 @@ function updateReplay(dt) {
   for (const [id, m] of RP.ballsM) if (!live.has(id)) { m.visible = false; const tr = RP.trails.get(id); if (tr) tr.visible = false; }
   for (const mk of RP.marks) { const age = RP.t - mk.t; mk.o.visible = age >= 0 && age < mk.life; if (mk.o.visible && mk.o.material) mk.o.material.opacity = Math.min(1, 1.4 - age / mk.life); }
   // 鏡頭
-  if (RP.view === 'cam' && REC.cam) { camera.position.copy(REC.cam.p); camera.quaternion.copy(REC.cam.q); camera.fov = REC.cam.fov; }
+  if (RP.view === 'hl') { try { hlCamera(); } catch (e) { console.error('[得分精華] 鏡頭出錯', e); hlAbort(); return; } }
+  else if (RP.view === 'cam' && REC.cam) { camera.position.copy(REC.cam.p); camera.quaternion.copy(REC.cam.q); camera.fov = REC.cam.fov; }
   else if (RP.view === 'top') { const c = RP.topC || state.items.find((i) => CAT[i.type].court === 'vb') || { x: 0, z: 0 }; camera.position.set(c.x + 0.01, 24, c.z + 9); camera.lookAt(c.x, 0, c.z); camera.fov = 55; }
   else {
     // 跟著球：鏡頭擺在球往館內（最近的球場中心）那一側，並限制在建物裡面，不會穿到牆外
@@ -182,7 +190,12 @@ function updateReplay(dt) {
   }
   camera.updateProjectionMatrix();
   // 角落資訊
-  if (RP.hud && performance.now() - RP.hudT > 100) {
+  if (RP.hud && RP.hl && performance.now() - RP.hudT > 100) {   // 得分精華（下載的影片）：Play One 配色的簡單標籤
+    RP.hudT = performance.now();
+    const c = RP.hudCv.getContext('2d'); c.clearRect(0, 0, 512, 120); c.fillStyle = 'rgba(12,51,36,.9)'; c.fillRect(0, 0, 512, 120); c.fillStyle = '#D9B76A'; c.fillRect(0, 0, 8, 120);
+    c.font = 'italic 900 24px sans-serif'; c.fillText('REPLAY', 26, 44); c.fillStyle = '#fff'; c.font = 'bold 32px sans-serif'; c.fillText(hlSeg()?.title || '', 26, 92);
+    RP.hud.material.map.needsUpdate = true;
+  } else if (RP.hud && performance.now() - RP.hudT > 100) {
     RP.hudT = performance.now();
     const c = RP.hudCv.getContext('2d'); c.clearRect(0, 0, 512, 160); c.fillStyle = 'rgba(27,38,56,.82)'; c.fillRect(0, 0, 512, 160); c.fillStyle = '#F2B705'; c.fillRect(0, 0, 6, 160);
     c.fillStyle = '#F2B705'; c.font = 'bold 30px sans-serif'; c.fillText('球路偵測回放', 22, 42);
@@ -193,7 +206,7 @@ function updateReplay(dt) {
     RP.hud.material.map.needsUpdate = true;
   }
   const aspect = renderer.domElement.width / renderer.domElement.height, dist = 1, hh = Math.tan(((camera.fov / 2) * Math.PI) / 180) * dist;
-  if (RP.hud) { RP.hud.position.set(-hh * aspect + 0.36, hh - 0.13, -dist); RP.hud.scale.set(0.64, 0.2, 1); }
+  if (RP.hud) { RP.hud.position.set(-hh * aspect + 0.36, hh - 0.13, -dist); RP.hud.scale.set(0.64, RP.hl ? 0.15 : 0.2, 1); }
 }
 // 下載影片：從頭用 1 倍速播一次，同時錄下畫面（WebM）
 function rpDownload() {
@@ -209,6 +222,229 @@ function rpDownload() {
   };
   RP.t = 0; RP.speed = 1; rpSetPlay(true); RP.recorder.start(200); $('rp-dl').disabled = true;
   toast('錄製中：從頭播一次，播完就會下載');
+}
+// ---- 得分精華（WEB-025）：比賽中每台電腦自己記最近 10 秒（不多傳任何訊息）；有人打出得分（不含對手失誤送分）
+//      就用 Play One 球斜拉轉場、從第三人稱重播那一球；自己得的分另外收起來，比賽結束可以下載成一支影片（在自己電腦上產生，伺服器不存）
+const HL = { buf: [], ids: new Map(), nid: 0, last: 0, mine: [], wasOn: false, pendT: 0, btn: null, tag: null, tr: null, css: false };
+const HL_KIND = { spike: '扣球', tip: '吊球', hit: '攻擊', serve: '發球', block: '攔網' };
+// 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起改 12-match-2v2.js 的 HL_GAP：落地後 + 轉場×2 + 片段最長 + 慢動作多出來的）
+const HL_PRE = 2.5, HL_POST = 1.2, HL_MAX = 5.2, HL_TR = 1.2;
+function hlId(o) { if (!HL.ids.has(o.uuid)) HL.ids.set(o.uuid, ++HL.nid); return HL.ids.get(o.uuid); }
+function hlReset() { HL.buf = []; HL.mine = []; HL.ids.clear(); HL.nid = 0; clearTimeout(HL.pendT); hlButton(false); }
+function hlTick(now) {
+  if (VM.on && !HL.wasOn) { HL.wasOn = true; hlReset(); }
+  else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，按 Esc 放開滑鼠，點右下角就能下載`, 4500); } }
+  if (!VM.on || RP.on || now - HL.last < 33) return;
+  HL.last = now; HL.buf.push(recFrame(now / 1000, hlId));
+  while (HL.buf.length && HL.buf[0].t < now / 1000 - 10) HL.buf.shift();
+}
+// 得分了：by＝打出這一分的人（null＝對手失誤送分，不重播；undefined＝舊版伺服器沒帶，只重播落地得分）
+function hlOnPoint(win, why, by, kind) {
+  if (!walk.on) return;
+  if (by === undefined) { if (!/落地得分/.test(why || '')) return; by = null; }
+  else if (!by) return;
+  clearTimeout(HL.pendT);
+  HL.pendT = setTimeout(() => { try { hlCut(by, kind); } catch (e) { console.error('[得分精華] 剪片段失敗', e); hlAbort(); } }, HL_POST * 1000);   // 先在現場看球落地，順便把落地後的畫面錄進來
+}
+function hlCut(by, kind) {
+  if (!HL.buf.length || RP.on || HL.tr || !VM.on) return;
+  const end = HL.buf[HL.buf.length - 1].t, fr = HL.buf.filter((f) => f.t >= end - 9.5);
+  if (fr.length < 30) return;
+  const t0 = fr[0].t, frames = fr.map((f) => ({ t: f.t - t0, b: f.b, p: f.p })), d = frames[frames.length - 1].t, land = d - HL_POST;
+  const hit = recAnalyze(frames, []).hits.filter((h) => h.t < land - 0.05).pop();   // 最後一下擊球（扣、吊、發、攔）
+  const start = Math.max(0, (hit ? hit.t : land - 0.8) - HL_PRE, d - HL_MAX);
+  const clip = frames.filter((f) => f.t >= start).map((f) => ({ t: f.t - start, b: f.b, p: f.p }));
+  const me = !!by && by === vmMe(), name = by ? (me ? '你' : vmName(by)) : '';
+  const c = { frames: clip, by: me ? 'me' : by, hit: hit ? hit.t - start : null, title: by ? `${name} ${HL_KIND[kind] || ''}得分` : '得分', kind, court: VM.c ? { x: VM.c.x, z: VM.c.z, rot: VM.c.rot || 0 } : null };
+  if (me) HL.mine.push(c);
+  hlWipe(() => hlOpen([c], false));
+}
+// 播一段或好幾段（下載時把自己的得分接成一支）；rec＝同時錄成影片
+function hlOpen(clips, rec) {
+  if (RP.on || !clips.length) return false;
+  try { return hlOpen0(clips, rec); } catch (e) { console.error('[得分精華] 開重播失敗', e); hlAbort(); return false; }
+}
+// 重播出錯：直接收掉回到現場，不能讓比賽卡在重播畫面
+function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾淨也要放開 */ } if (RP.hl) walk.paused = RP.hl.paused; RP.on = false; RP.hl = null; RP.F = null; if (HL.tag) HL.tag.hidden = true; if (HL.tr) { HL.tr.el.remove(); HL.tr = null; } }
+function hlOpen0(clips, rec) {
+  const F = [], segs = []; let t = 0;
+  for (const c of clips) {
+    for (const f of c.frames) F.push({ t: t + f.t, b: f.b, p: f.p });
+    const d = c.frames[c.frames.length - 1].t;
+    segs.push({ t0: t, t1: t + d, by: c.by, hit: c.hit != null ? t + c.hit : null, title: c.title, kind: c.kind, court: c.court });
+    t += d + 1 / 30;
+  }
+  const A = recAnalyze(F, []);
+  RP.on = true; RP.A = A; RP.F = F; RP.t = 0; RP.playing = true; RP.speed = 1; RP.view = 'hl'; RP.followJump = true; RP.hlPh = '';
+  RP.hl = { segs, rec, paused: walk.paused, ph0: VM.phase, at: performance.now(), cancel: false, seg: null };
+  RP.g = new THREE.Group(); scene.add(RP.g); RP.actors.clear(); RP.ballsM.clear(); RP.trails.clear(); RP.marks = [];
+  ballsGroup.visible = false; hands.visible = false; for (const p2 of NET.peers.values()) { p2.av.g.visible = false; if (p2.ball) p2.ball.visible = false; }
+  rpLive(false); walk.paused = true;
+  if (rec) {   // 影片裡沒有網頁上的字：用畫面角落的資訊框寫這球是誰得分
+    const hcv = document.createElement('canvas'); hcv.width = 512; hcv.height = 120; RP.hudCv = hcv; RP.hudT = 0;
+    RP.hud = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(hcv), depthTest: false, transparent: true })); RP.hud.renderOrder = 30; camera.add(RP.hud);
+    const cv = renderer.domElement, type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t2) => MediaRecorder.isTypeSupported(t2)) || 'video/webm';
+    RP.chunks = []; RP.recorder = new MediaRecorder(cv.captureStream(30), { mimeType: type, videoBitsPerSecond: 6e6 });
+    RP.recorder.ondataavailable = (e) => { if (e.data.size) RP.chunks.push(e.data); };
+    const hl = RP.hl;
+    RP.recorder.onstop = () => {
+      if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); hlButton(true); return; }
+      const blob = new Blob(RP.chunks, { type: 'video/webm' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `我的得分精華-${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.webm`; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); hlButton(true);
+    };
+    RP.recorder.start(200);
+  }
+  hlTagShow();
+  return true;
+}
+function hlSeg() { const s = RP.hl && RP.hl.segs; return s ? s.find((q) => RP.t <= q.t1) || s[s.length - 1] : null; }
+// 每格：播放速度（得分那一下前後放慢）、下一球要發了就收掉、做影片時更新第幾球
+function hlPace() {
+  const H = RP.hl;
+  if (!H.rec && (!VM.on || (VM.phase === 'serve' && H.ph0 !== 'serve') || performance.now() - H.at > (HL_MAX + 1.2 + HL_TR) * 1000)) { hlLeave(); return; }
+  const s = hlSeg();
+  RP.speed = s && s.hit != null && RP.t > s.hit - 0.12 && RP.t < s.hit + 0.33 ? 0.5 : 1;
+  if (s && H.seg !== s) { H.seg = s; RP.hudT = 0; RP.followJump = true; RP.hlPh = ''; hlTagShow(); }
+}
+// 結束重播：做影片時直接收；平常用轉場換回現場
+function hlLeave() { if (!RP.hl || HL.tr) return; if (RP.hl.rec) hlEnd(); else hlWipe(hlEnd); }
+function hlEnd() {
+  if (!RP.hl) return;
+  const H = RP.hl;
+  closeReplay();
+  walk.paused = H.paused; RP.hl = null; RP.F = null;
+  if (HL.tag) HL.tag.hidden = true;
+}
+function hlSkip(cancelRec) { if (!RP.hl) return false; if (RP.hl.rec) { if (cancelRec) { RP.hl.cancel = true; hlEnd(); } return true; } if (performance.now() - RP.hl.at < 300) return true; hlLeave(); return true; }
+// ---- 轉場：Play One 球從右上斜拉到左下，後面拖著 PLAY ONE 標題帶；標題帶左邊是原本的畫面（先凍結成一張圖），右邊是新的畫面
+function hlCss() {
+  if (HL.css) return; HL.css = true;
+  const st = document.createElement('style');
+  st.textContent = `.hl-wipe{position:fixed;z-index:70;pointer-events:none;overflow:hidden}.hl-wipe canvas{position:absolute;inset:0;width:100%;height:100%}
+.hl-band{position:absolute;left:0;top:0;width:118px;transform-origin:50% 100%;background:linear-gradient(90deg,#D9B76A 0 7px,#0c3324 7px calc(100% - 7px),#D9B76A calc(100% - 7px));box-shadow:0 0 34px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hl-band span{transform:rotate(-90deg);white-space:nowrap;font:italic 900 62px/1 'Arial Black','Segoe UI',sans-serif;letter-spacing:.16em;color:#F1DDA4;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+.hl-ball{position:absolute;left:0;top:0;width:150px;height:150px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55))}
+.hl-tag{position:fixed;left:50%;bottom:128px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:12px;padding:8px 18px 8px 8px;border-radius:10px;background:rgba(12,51,36,.9);border:1px solid #D9B76A;color:#fff;font:600 19px/1.3 'Segoe UI',sans-serif;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.hl-tag b{background:#D9B76A;color:#0c3324;font:italic 900 15px/1 'Arial Black',sans-serif;letter-spacing:.12em;padding:6px 10px;border-radius:6px}
+.hl-tag small{font-weight:400;font-size:13px;opacity:.7;margin-left:6px}`;
+  document.head.appendChild(st);
+}
+function hlWipe(swap) {
+  hlCss();
+  const src = renderer.domElement, r = src.getBoundingClientRect(), fz = document.createElement('canvas');
+  fz.width = src.width; fz.height = src.height;
+  try { renderScene(); fz.getContext('2d').drawImage(src, 0, 0); } catch (e) { /* 拍不到就只有球和標題帶 */ }
+  const el = document.createElement('div'); el.className = 'hl-wipe'; el.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+  const band = document.createElement('div'); band.className = 'hl-band'; band.innerHTML = '<span>PLAY ONE</span>'; band.style.height = `${Math.hypot(r.width, r.height) * 1.4}px`;
+  const ball = document.createElement('img'); ball.className = 'hl-ball'; ball.src = 'assets/img/brand/ball-512.webp'; ball.alt = '';
+  el.append(fz, band, ball); document.body.appendChild(el);
+  HL.tr = { el, fz, band, ball, W: r.width, H: r.height, t0: performance.now() };
+  try { swap(); } catch (e) { console.error(e); }
+  hlWipeStep();
+}
+function hlWipeStep() {
+  const T = HL.tr; if (!T) return;
+  try { hlWipeStep0(T); } catch (e) { console.error('[得分精華] 轉場出錯', e); T.el.remove(); HL.tr = null; }
+}
+function hlWipeStep0(T) {
+  // 三段速度：快速飛進來（前 25% 時間走到 42%）→ 中間放慢讓 PLAY ONE 看得清楚（到 75% 時間才走到 58%）→ 加速飛出左下
+  const p = Math.min(1, (performance.now() - T.t0) / (HL_TR * 1000));
+  const e = p < 0.25 ? 0.42 * (1 - (1 - p / 0.25) ** 2) : p < 0.75 ? 0.42 + 0.16 * ((p - 0.25) / 0.5) : 0.58 + 0.42 * ((p - 0.75) / 0.25) ** 2;
+  const { W, H } = T, s = 0.62, bw = 118, ext = (s * H) / 2 + bw;
+  const c = W + ext - e * (W + 2 * ext);   // 分界線在畫面中間高度的 x：從右邊外面掃到左邊外面
+  T.fz.style.clipPath = `polygon(0 0, ${c + (s * H) / 2}px 0, ${c - (s * H) / 2}px ${H}px, 0 ${H}px)`;
+  const by = H * (-0.15 + 1.3 * e), bx = c + s * (H / 2 - by);   // 球沿著分界線從右上滑到左下
+  T.band.style.transform = `translate(${bx - bw / 2}px, ${by - parseFloat(T.band.style.height)}px) rotate(${Math.atan(s)}rad)`;
+  T.ball.style.transform = `translate(${bx - 75}px, ${by - 75}px) rotate(${-e * 900}deg)`;
+  if (p < 1) { requestAnimationFrame(hlWipeStep); return; }
+  T.el.remove(); HL.tr = null;
+}
+function hlTagShow() {
+  hlCss();
+  if (!HL.tag) { HL.tag = document.createElement('div'); HL.tag.className = 'hl-tag'; document.body.appendChild(HL.tag); }
+  const H = RP.hl, s = hlSeg(); if (!H || !s) return;
+  HL.tag.innerHTML = H.rec ? `<b>REPLAY</b>🎬 正在做你的得分精華（第 ${H.segs.indexOf(s) + 1}／${H.segs.length} 球）<small>Esc 取消</small>` : `<b>REPLAY</b>${esc(s.title)}<small>任意鍵跳過</small>`;
+  HL.tag.hidden = false;
+}
+// ---- 鏡頭（第三人稱、照球場方向擺）：擊球前在得分者身後斜上方；擊球前後（慢動作）切到網子側邊、跟他同高近看；擊球後拉回後方跟球到落地
+function hlCamera() {
+  const s = hlSeg(), av = s && s.by ? RP.actors.get(s.by) : null;
+  const P0 = av && av.g.visible ? av.g.position : null;
+  const C = (s && s.court) || VM.c || state.items.find((i) => CAT[i.type].court === 'vb') || { x: 0, z: 0, rot: 0 };
+  let m = null, md = Infinity;
+  for (const q of RP.ballsM.values()) if (q.visible) { const dd = P0 ? q.position.distanceTo(P0) : 0; if (dd < md) { md = dd; m = q; } }
+  if (!P0 && !m) return;
+  const L = (v) => toLocalOf(C, v.x, v.z), W = (lx, lz, y) => { const [x, z] = toWorldOf(C, lx, lz); return new THREE.Vector3(x, y, z); };
+  const [sx, sz] = L(P0 || m.position), side = Math.sign(sx) || 1;   // side：得分者在網子哪一邊（球場座標 x 的正負）
+  const bodyY = av ? av.body.position.y : 0, ph = !s || s.hit == null ? 'ball' : RP.t < s.hit - 0.35 ? 'back' : RP.t < s.hit + 0.55 ? 'side' : 'follow';
+  // 每個階段有好幾個機位（球場座標的偏移：[往後, 往旁, 高度]，往後＝離網子更遠）；剪接的那一刻挑「沒被別人擋住、沒被牆擠進來」的那個，整段都用它
+  let focus, cands;
+  if (ph === 'back' && P0) {   // 身後：左肩、右肩、高一點
+    focus = W(sx - side * 2.2, sz, 1.3 + bodyY * 0.7); if (m) focus.lerp(m.position, 0.25);
+    cands = [[3.4, -1.3, 2.2], [3.4, 1.3, 2.2], [4.6, 0, 3.6]];
+  } else if (ph === 'side' && P0) {   // 擊球：兩側同高、隔著網從正面看
+    focus = W(sx - side * 0.4, sz, 1.5 + bodyY); if (m) focus.lerp(m.position, 0.4);
+    const hy = THREE.MathUtils.clamp(1.4 + bodyY, 1.5, 3.2);
+    // 依得分方式排機位的優先順序（排前面＝比較想用；被擋住才往後換）：
+    //   扣球／吊球：先用攻擊手那一側的邊線機位（大砲在左邊就從左邊拍、副攻手在右邊就從右邊拍），再來另一側、隔網正面
+    //   攔網：先從對面拍（球被攔回來、朝鏡頭飛），再來網子邊線方向沿著網子拍
+    //   發球：先在發球者斜後方，再來兩側
+    const out = Math.sign(sz) || 1, net = -Math.abs(sx), across = (d) => -(Math.abs(sx) + d);
+    const sideA = [0.8, out * 4.3, hy], sideB = [0.8, -out * 4.3, hy], front = [across(2.6), out * 1.8, hy + 0.6], front2 = [across(2.6), -out * 1.8, hy + 0.6];
+    const k = s && s.kind;
+    if (k === 'block') cands = [[across(3.6), out * 1.4, 2.6], [across(3.6), -out * 1.4, 2.6], [net, out * 4.6, 2.9], [net, -out * 4.6, 2.9], sideA];
+    else if (k === 'serve') cands = [[2.4, out * 2.6, 2.0], [2.4, -out * 2.6, 2.0], sideA, sideB];
+    else cands = [sideA, sideB, front, front2];
+  } else {   // 擊球後（或不知道誰打的）：後方高處、側面高處跟著球
+    focus = m ? m.position.clone() : (P0 || m.position).clone().setY(1.2);
+    cands = [[5, 0, 3.3], [2, 5, 3.4], [2, -5, 3.4]];
+  }
+  const [bx, bz] = L(P0 || m.position);
+  const toWorld = (q) => W(bx + side * q[0], bz + q[1] - (ph === 'follow' || ph === 'ball' ? bz * 0.4 : 0), q[2]);
+  const P = outlinePoly(), xs = P.map((q) => q[0]), zs = P.map((q) => q[1]), topY = Math.max(2, state.building.H - 0.8);
+  const fit = (v) => { const o = v.clone(); v.x = THREE.MathUtils.clamp(v.x, Math.min(...xs) + 0.8, Math.max(...xs) - 0.8); v.z = THREE.MathUtils.clamp(v.z, Math.min(...zs) + 0.8, Math.max(...zs) - 0.8); v.y = Math.min(v.y, topY); return o.distanceTo(v); };
+  const cut = RP.followJump || ph !== RP.hlPh;   // 換階段＝剪接：直接換機位
+  if (cut) {
+    const targets = [P0 ? P0.clone().setY(1.2 + bodyY) : null, m ? m.position.clone() : null].filter(Boolean);
+    const others = [...RP.actors.entries()].filter(([id, a]) => a.g.visible && id !== (s && s.by)).map(([, a]) => a.g.position);
+    let best = 0, bestS = Infinity;
+    cands.forEach((q, i) => {
+      const v = toWorld(q), moved = fit(v);
+      let block = 0;   // 機位到目標的線段經過別人（當成半徑 0.45 m、高 2 m 的柱子）＝被擋住
+      for (const tg of targets) for (const o of others) {
+        const d = tg.clone().sub(v), h2 = d.x * d.x + d.z * d.z || 1;
+        const k = ((o.x - v.x) * d.x + (o.z - v.z) * d.z) / h2;   // 那個人在線段上的位置（0＝機位、1＝目標）
+        if (k < 0.05 || k > 0.95) continue;
+        if (Math.hypot(v.x + d.x * k - o.x, v.z + d.z * k - o.z) < 0.45 && v.y + d.y * k < 2) block++;
+      }
+      const score = block * 10 + moved * 3 + i * 1.5;   // 沒被擋、沒被牆擠時，照上面排的優先順序
+      if (score < bestS) { bestS = score; best = i; }
+    });
+    RP.hlPick = best;
+  }
+  const want = toWorld(cands[Math.min(RP.hlPick || 0, cands.length - 1)]); fit(want);
+  RP.hlPh = ph;
+  if (cut || !RP.hlLook) { camera.position.copy(want); RP.hlLook = focus.clone(); RP.followJump = false; }
+  else { camera.position.lerp(want, ph === 'follow' ? 0.06 : 0.1); RP.hlLook.lerp(focus, 0.18); }
+  camera.lookAt(RP.hlLook); camera.fov = ph === 'side' ? 48 : 58;
+}
+function hlButton(show) {
+  if (!show) { if (HL.btn) HL.btn.hidden = true; return; }
+  if (!HL.mine.length) return;
+  if (!HL.btn) {
+    HL.btn = document.createElement('div'); HL.btn.style.cssText = 'position:fixed;right:18px;bottom:96px;z-index:60;display:flex;gap:6px';
+    HL.btn.innerHTML = '<button type="button" data-hl="dl" style="padding:10px 16px;border-radius:10px;border:2px solid #D9B76A;background:#0c3324;color:#fff;font:600 16px sans-serif;cursor:pointer"></button><button type="button" data-hl="x" title="收起來" style="padding:10px 12px;border-radius:10px;border:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer">✕</button>';
+    HL.btn.addEventListener('click', (e) => { const k = e.target.closest('[data-hl]')?.dataset.hl; if (k === 'x') hlButton(false); else if (k === 'dl') hlDownload(); });
+    document.body.appendChild(HL.btn);
+  }
+  HL.btn.querySelector('[data-hl="dl"]').textContent = `🎬 下載我的得分精華（${HL.mine.length} 球）`;
+  HL.btn.hidden = false;
+}
+function hlDownload() {
+  if (!renderer.domElement.captureStream || typeof MediaRecorder === 'undefined') { toast('這個瀏覽器不支援錄影片，請用電腦版 Chrome 或 Edge'); return; }
+  if (RP.on || VM.on) { toast('比賽中不能做精華，打完再按'); return; }
+  if (hlOpen(HL.mine, true)) hlButton(false);
 }
 // ---- 門的清單：buildZones／buildBuilding 重建時清空
 const zoneDoors = [], mainDoors = [], zoneRoofs = [];
@@ -290,6 +526,7 @@ addEventListener('keydown', (e) => {
   if (!walk.on || VBSettings.isOpen) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = VBSettings.key(e);
+  if (RP.hl && !e.repeat) { e.preventDefault(); hlSkip(e.key === 'Escape'); return; }   // 得分精華：任意鍵跳過（做影片時只有 Esc 能取消）
   if (e.code === 'KeyG' && !e.repeat && !walk.paused && !$('wk-cart').hidden) { e.preventDefault(); togglePracticeCart(); return; }
   if (k === 'crouch') { e.preventDefault(); if (!walk.paused) walk.crouch = true; return; }   // 蹲下（按住）：接重扣比較穩
   if ((k === 'ready' || k === 'start') && !e.repeat && !walk.paused) { e.preventDefault(); if (k === 'ready') roomReady(); else roomStart(); return; }
@@ -379,6 +616,7 @@ document.addEventListener('fullscreenchange', () => updateLockHint());
 const vbClickOK = () => !roomSpectator() && (VM.on || !!VB.npc || !!vbCourt());
 renderer.domElement.addEventListener('contextmenu', (e) => { if (walk.on) e.preventDefault(); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (RP.hl && e.button === 0) { e.preventDefault(); hlSkip(false); return; }   // 得分精華：點一下跳過
   if (EMO.menu) { e.preventDefault(); emoMenuClose(true); return; }   // 互動選單：點一下確定
   if (SETM.m) { e.preventDefault(); setMenuClose(true); return; }   // 舉球轉盤：點一下＝選亮著的（沒亮＝預設）
   if (walk.on && walk.setAim && walk.noLock && !locked() && e.button === 0 && !walk.paused) {

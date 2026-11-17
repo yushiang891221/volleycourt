@@ -263,8 +263,12 @@ function vmGradeShow(G) {
 }
 // 不到位的球：AI 舉球員追得到就跑過去修正；追不到就換最近、追得到的 AI 隊友（接第一球的人不行）用下手舉高球（真人舉球員自己跑）
 function vmFixSetter(...a) { return aiEngine().vmFixSetter(...a); }   /* B3：AI 在 engine/ai.js */
+// 得分精華（WEB-025）：有人打出得分時，下一球等這麼久（落地後 1.2＋轉場 1.2×2＋片段最長 5.2＋慢動作多 0.45，再留一點）；伺服器裁判也用同一個數字
+const HL_GAP = 9.6;
 function vmPoint(win, why) {
   if (VM.phase !== 'rally') return;
+  const L = VM.hlLast; VM.hlLast = null;   // 得分精華：最後碰球的是得分這一隊＝他打出這一分；對手失誤送分＝null（不重播）
+  const by = L && L.team === win ? L.id : null, byK = by ? L.kind : undefined;
   vmPerfPoint(win);   // WEB-010 戰績
   const r = scorePoint(VM, win);   /* B2：比分、發球權、局數、換場判定在 engine/rules.js */
   sfx('whistle', 1);
@@ -275,8 +279,9 @@ function vmPoint(win, why) {
   else if (r.next === 'nextSet') fn = vm6NextSet;
   else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
-  VM.next = { at: VM.t + 3.2, fn };
-  vmBroadcast(true, null, { win, why });
+  VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
+  vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
+  if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
 }
 function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => !/^ai/.test(id)); return ids.includes(vmMe()) ? '你們' : !hs.length ? 'AI 隊' : hs.map(vmName).join('＋') + (hs.length < ids.length ? '＋AI' : ''); }
 function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
