@@ -592,7 +592,7 @@ const TUT_COACH = {
         base.y = 0.85;
         const hitter = this.avatar(base); d.hitters.push(hitter);
         if (mode === 'defense') {
-          const mesh = newBallMesh(); hitter.hands[0].add(mesh); mesh.position.y = -BALL_R;
+          const mesh = newBallMesh(); hitter.hands[0].add(mesh); mesh.position.y = -(mesh.geometry?.parameters?.radius ?? BALL_R);   /* 球放大後手上的球也跟著往下挪 */
           d.handBalls.push(mesh);
         }
       }

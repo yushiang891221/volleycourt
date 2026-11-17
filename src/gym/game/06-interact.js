@@ -455,9 +455,14 @@ function ballMaterial(hot) {
   return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, normalMap: BALL_TEX.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: BALL_TEX.rough, roughness: 1, sheen: 0.25, sheenRoughness: 0.6, sheenColor: '#FFF6D0', clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
-const BALL_VIS = 1.3;   // 畫面上的球比實際碰撞大 1.3 倍，比較好看清楚（物理、判定仍用 BALL_R）
+const BALL_VIS = 1.5;   // 畫面上的球比實際碰撞大 1.5 倍，比較好看清楚（物理、判定仍用 BALL_R）
+// 畫面上的球變大，球心卻還在 BALL_R 高度 → 會陷進地板。畫的時候把貼近地面的球往上抬（離地 0.6 m 以上就不抬），物理位置不動。
+const BALL_LIFT = (BALL_VIS - 1) * BALL_R;
+function ballLift(y) { return BALL_LIFT * clamp(1 - (y - BALL_R) / 0.6, 0, 1); }
+function ballLiftBefore() { const e = this.matrixWorld.elements, d = ballLift(e[13]); this.userData.lifted = d; e[13] += d; }
+function ballLiftAfter() { const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
 const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);   // 所有球共用一份（輪廓夠圓）
-function newBallMesh() { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); return m; }
+function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }   /* decor＝球車、球架上的擺設球：維持原尺寸、不抬 */
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
@@ -979,7 +984,7 @@ const ballShadows = [];
 function ballShadowSync() {
   for (let i = 0; i < Math.max(balls.length, ballShadows.length); i++) {
     let m = ballShadows[i];
-    if (!m && i < balls.length) { m = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 2; ballShadows.push(m); }
+    if (!m && i < balls.length) { m = new THREE.Mesh(new THREE.CircleGeometry(0.13 * BALL_VIS, 20), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 2; ballShadows.push(m); }
     if (!m) continue;
     if (i >= balls.length) { m.visible = false; continue; }
     if (!m.parent) ballsGroup.add(m);

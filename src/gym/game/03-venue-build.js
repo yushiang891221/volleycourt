@@ -325,7 +325,7 @@ function netFxStep(dt) {
 // 球車、球籃裡的球：把素材庫的單色球藏起來，換成寫實排球（位置跟建模時一樣）
 function realBalls(g, sx, sz, each) {
   g.traverse((o) => { if (o.isMesh && /^ball_/.test(o.userData.role || '')) o.visible = false; });
-  each((x, y, z) => { const b = newBallMesh(); b.scale.setScalar(0.98); b.position.set(x * sx, y, z * sz); g.add(b); });
+  each((x, y, z) => { const b = newBallMesh(true); b.scale.setScalar(0.98 / BALL_VIS); b.position.set(x * sx, y, z * sz); g.add(b); });
 }
 function buildItem(it, courtIndex) {
   const def = CAT[it.type];
@@ -708,7 +708,7 @@ function buildFurniture(g, it, w, d, def) {
       const nb = Math.max(1, Math.round(w / 1.0));
       if (KIT.ready) for (let k = 0; k < nb; k++) kit('shelf_bay', g, -w / 2 + (w / nb) * (k + 0.5), 0, 0, { sx: w / nb / 1.0, sz: d / 0.5 });
       else { for (let k = 0; k < 4; k++) box(g, w, 0.03, d, darkSteel, 0, 0.3 + k * 0.55, 0); for (let k = 0; k <= nb; k++) box(g, 0.035, 2.0, d, darkSteel, -w / 2 + (w * k) / nb, 0, 0); }
-      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = newBallMesh(); ball.position.set(-w / 2 + 0.2 + k * 0.3, KIT.ready ? 0.82 : 0.45, 0); g.add(ball); }
+      for (let k = 0; k < Math.min(10, Math.floor(w / 0.3)); k++) { const ball = newBallMesh(true); ball.scale.setScalar(1 / BALL_VIS); ball.position.set(-w / 2 + 0.2 + k * 0.3, KIT.ready ? 0.82 : 0.45, 0); g.add(ball); }
       break;
     }
     case 'stall': {
