@@ -317,29 +317,34 @@ function hlEnd() {
   if (HL.tag) HL.tag.hidden = true;
 }
 function hlSkip(cancelRec) { if (!RP.hl) return false; if (RP.hl.rec) { if (cancelRec) { RP.hl.cancel = true; hlEnd(); } return true; } if (performance.now() - RP.hl.at < 300) return true; hlLeave(); return true; }
-// ---- 轉場：Play One 球從右上斜拉到左下，後面拖著 PLAY ONE 標題帶；標題帶左邊是原本的畫面（先凍結成一張圖），右邊是新的畫面
+// ---- 轉場（使用者畫的樣子）：一條接近垂直、上端偏右的粗分界線從右往左掃，分界線左邊是原本的畫面（先凍結成一張圖）、右邊是新的畫面；
+//      Play One 球在分界線前面一點、從右往左下橫著飛，後面拖著一條飄動的 PLAY ONE 旗帶（往右上飄、會跨過分界線）
 function hlCss() {
   if (HL.css) return; HL.css = true;
   const st = document.createElement('style');
   st.textContent = `.hl-wipe{position:fixed;z-index:70;pointer-events:none;overflow:hidden}.hl-wipe canvas{position:absolute;inset:0;width:100%;height:100%}
-.hl-band{position:absolute;left:0;top:0;width:118px;transform-origin:50% 100%;background:linear-gradient(90deg,#D9B76A 0 7px,#0c3324 7px calc(100% - 7px),#D9B76A calc(100% - 7px));box-shadow:0 0 34px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.hl-band span{transform:rotate(-90deg);white-space:nowrap;font:italic 900 62px/1 'Arial Black','Segoe UI',sans-serif;letter-spacing:.16em;color:#F1DDA4;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+.hl-line{position:absolute;left:0;top:0;width:26px;transform-origin:50% 50%;background:linear-gradient(90deg,#0c3324 0 4px,#D9B76A 4px calc(100% - 4px),#0c3324 calc(100% - 4px));box-shadow:0 0 22px rgba(0,0,0,.5)}
+.hl-rib{position:absolute;left:0;top:0;overflow:visible;transform-origin:0 50%;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
 .hl-ball{position:absolute;left:0;top:0;width:150px;height:150px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55))}
 .hl-tag{position:fixed;left:50%;bottom:128px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:12px;padding:8px 18px 8px 8px;border-radius:10px;background:rgba(12,51,36,.9);border:1px solid #D9B76A;color:#fff;font:600 19px/1.3 'Segoe UI',sans-serif;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .hl-tag b{background:#D9B76A;color:#0c3324;font:italic 900 15px/1 'Arial Black',sans-serif;letter-spacing:.12em;padding:6px 10px;border-radius:6px}
 .hl-tag small{font-weight:400;font-size:13px;opacity:.7;margin-left:6px}`;
   document.head.appendChild(st);
 }
+const HL_RIB = { L: 500, H: 160 };   // 旗帶的畫布大小（px）
 function hlWipe(swap) {
   hlCss();
   const src = renderer.domElement, r = src.getBoundingClientRect(), fz = document.createElement('canvas');
   fz.width = src.width; fz.height = src.height;
-  try { renderScene(); fz.getContext('2d').drawImage(src, 0, 0); } catch (e) { /* 拍不到就只有球和標題帶 */ }
+  try { renderScene(); fz.getContext('2d').drawImage(src, 0, 0); } catch (e) { /* 拍不到就只有球和旗帶 */ }
   const el = document.createElement('div'); el.className = 'hl-wipe'; el.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-  const band = document.createElement('div'); band.className = 'hl-band'; band.innerHTML = '<span>PLAY ONE</span>'; band.style.height = `${Math.hypot(r.width, r.height) * 1.4}px`;
+  const line = document.createElement('div'); line.className = 'hl-line'; line.style.height = `${r.height * 1.3}px`;
+  const NS = 'http://www.w3.org/2000/svg', rib = document.createElementNS(NS, 'svg'), uid = 'hlrib' + Date.now();
+  rib.setAttribute('class', 'hl-rib'); rib.setAttribute('width', HL_RIB.L); rib.setAttribute('height', HL_RIB.H); rib.setAttribute('viewBox', `0 0 ${HL_RIB.L} ${HL_RIB.H}`);
+  rib.innerHTML = `<path class="hl-rib-body" fill="#0c3324" stroke="#D9B76A" stroke-width="5" stroke-linejoin="round"/><path id="${uid}" fill="none"/><text font-family="'Arial Black','Segoe UI',sans-serif" font-style="italic" font-weight="900" font-size="44" letter-spacing="5" fill="#F1DDA4" dominant-baseline="central"><textPath href="#${uid}" startOffset="16%">PLAY ONE</textPath></text>`;
   const ball = document.createElement('img'); ball.className = 'hl-ball'; ball.src = 'assets/img/brand/ball-512.webp'; ball.alt = '';
-  el.append(fz, band, ball); document.body.appendChild(el);
-  HL.tr = { el, fz, band, ball, W: r.width, H: r.height, t0: performance.now() };
+  el.append(fz, line, rib, ball); document.body.appendChild(el);
+  HL.tr = { el, fz, line, rib, body: rib.querySelector('.hl-rib-body'), mid: rib.querySelector('#' + uid), ball, W: r.width, H: r.height, t0: performance.now() };
   try { swap(); } catch (e) { console.error(e); }
   hlWipeStep();
 }
@@ -348,15 +353,25 @@ function hlWipeStep() {
   try { hlWipeStep0(T); } catch (e) { console.error('[得分精華] 轉場出錯', e); T.el.remove(); HL.tr = null; }
 }
 function hlWipeStep0(T) {
-  // 三段速度：快速飛進來（前 25% 時間走到 42%）→ 中間放慢讓 PLAY ONE 看得清楚（到 75% 時間才走到 58%）→ 加速飛出左下
-  const p = Math.min(1, (performance.now() - T.t0) / (HL_TR * 1000));
+  // 三段速度：快速飛進來（前 25% 時間走到 42%）→ 中間放慢讓 PLAY ONE 看得清楚（到 75% 時間才走到 58%）→ 加速飛出左邊
+  const now = performance.now(), p = Math.min(1, (now - T.t0) / (HL_TR * 1000));
   const e = p < 0.25 ? 0.42 * (1 - (1 - p / 0.25) ** 2) : p < 0.75 ? 0.42 + 0.16 * ((p - 0.25) / 0.5) : 0.58 + 0.42 * ((p - 0.75) / 0.25) ** 2;
-  const { W, H } = T, s = 0.62, bw = 118, ext = (s * H) / 2 + bw;
-  const c = W + ext - e * (W + 2 * ext);   // 分界線在畫面中間高度的 x：從右邊外面掃到左邊外面
-  T.fz.style.clipPath = `polygon(0 0, ${c + (s * H) / 2}px 0, ${c - (s * H) / 2}px ${H}px, 0 ${H}px)`;
-  const by = H * (-0.15 + 1.3 * e), bx = c + s * (H / 2 - by);   // 球沿著分界線從右上滑到左下
-  T.band.style.transform = `translate(${bx - bw / 2}px, ${by - parseFloat(T.band.style.height)}px) rotate(${Math.atan(s)}rad)`;
-  T.ball.style.transform = `translate(${bx - 75}px, ${by - 75}px) rotate(${-e * 900}deg)`;
+  const { W, H } = T, s = 0.13, lead = 150;   // s：分界線的斜度（往下每 1 px 往左 0.13 px）；lead：球在分界線前面多少
+  const c = W + 240 - e * (W + 640);   // 分界線在畫面中間高度的 x：從右邊外面掃到左邊外面（連旗帶尾巴都要掃出去）
+  const lineX = (y) => c + s * (H / 2 - y);
+  T.fz.style.clipPath = `polygon(0 0, ${lineX(0)}px 0, ${lineX(H)}px ${H}px, 0 ${H}px)`;
+  T.line.style.transform = `translate(${c - 13}px, ${H / 2 - parseFloat(T.line.style.height) / 2}px) rotate(${Math.atan(s)}rad)`;
+  const by = H * (0.36 + 0.26 * e), bx = lineX(by) - lead;   // 球：從右邊偏上橫著飛到左邊偏下
+  T.ball.style.transform = `translate(${bx - 75}px, ${by - 75}px) rotate(${-e * 720}deg)`;
+  // 旗帶：頭接在球的右邊、往右上飄（-15°），上下兩邊跟中線一起波浪擺動，越往尾巴擺越大
+  const { L, H: RH } = HL_RIB, ph = (now - T.t0) / 1000 * 9, top = [], bot = [], mid = [];
+  for (let i = 0; i <= 25; i++) {
+    const x = (L * i) / 25, f = x / L, yc = RH / 2 + (6 + 16 * f) * Math.sin(x / 60 - ph), hh = 40 - 7 * f;
+    top.push(`${x.toFixed(1)},${(yc - hh).toFixed(1)}`); bot.unshift(`${x.toFixed(1)},${(yc + hh).toFixed(1)}`); mid.push(`${x.toFixed(1)},${yc.toFixed(1)}`);
+  }
+  T.body.setAttribute('d', `M${top.join(' L')} L${bot.join(' L')} Z`);
+  T.mid.setAttribute('d', `M${mid.join(' L')}`);
+  T.rib.style.transform = `translate(${bx + 45}px, ${by - RH / 2 - 6}px) rotate(-15deg)`;
   if (p < 1) { requestAnimationFrame(hlWipeStep); return; }
   T.el.remove(); HL.tr = null;
 }
