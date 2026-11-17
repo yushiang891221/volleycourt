@@ -786,6 +786,37 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
 .sta { background: rgba(3,16,12,.85); border: 1px solid var(--pl-line); border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.45); padding: 2px; }
 .sta i { background: linear-gradient(90deg, var(--pl-gold), #FBBF24, #F97316); border-radius: 999px; }
 .sta b { color: var(--pl-gold-l); background: transparent; border: 0; padding: 0; text-shadow: 0 1px 4px rgba(0,0,0,.8); font-family: var(--pl-sport); }
+
+/* ---- WEB-026 手機操作：五顆鈕（扣在右下最大，其他圍一圈）、☰ 選單、橫放提示；只有 body.touch-ui（觸控裝置）才有作用 */
+.vpad button.tb { --s: 64px; font-size: 22px; opacity: .72; }
+.vpad button.tb small { font-size: 11px; }
+.vpad button.tb-spike { --s: 86px; font-size: 28px; opacity: .9; color: #1B2638; background: radial-gradient(circle at 50% 30%, #FFD84F, #E39B00); border-color: rgba(255,255,255,.85); }
+.vpad button.tb-bump { --dx: -104px; --dy: 8px; }
+.vpad button.tb-set { --dx: -82px; --dy: -82px; }
+.vpad button.tb-block { --dx: 2px; --dy: -106px; }
+.vpad button.tb-jump { --dx: -164px; --dy: -56px; --s: 56px; font-size: 19px; }
+.vpad button.tb-pass { --dx: -176px; --dy: 18px; --s: 50px; font-size: 16px; }
+.vpad button.tb.hot { opacity: 1; border-color: #FFF3B0; box-shadow: 0 0 0 4px rgba(242,183,5,.55), 0 0 22px rgba(242,183,5,.8); transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(1.1); }
+.vpad button.tb.on { opacity: 1; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(.9); filter: brightness(1.3); }
+.vpad button.tb[hidden] { display: none; }
+.tmenu { position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 12px; font-size: 22px; line-height: 1; background: rgba(15,23,36,.7); color: #fff; border: 1px solid rgba(255,255,255,.35); z-index: 30; }
+.tmenu[hidden] { display: none; }
+.trotate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: rgba(10,16,26,.92); color: #fff; font-size: 22px; font-weight: 800; }
+.trotate[hidden] { display: none; }
+/* 遊戲中只留必要的：設定、回大廳、房間資訊、聊天、說明都收進 ☰ */
+body.touch-ui:not(.touch-more) .walk-ui .walk-top, body.touch-ui:not(.touch-more) .walk-ui .room-info, body.touch-ui:not(.touch-more) .walk-ui #room-panel,
+body.touch-ui:not(.touch-more) .walk-ui .walk-help, body.touch-ui:not(.touch-more) .walk-ui .camview, body.touch-ui:not(.touch-more) .room-chat,
+body.touch-ui .walk-ui .wk-keys, body.touch-ui .walk-ui .vb-keycue, body.touch-ui .walk-ui .wk-lock { display: none !important; }
+body.touch-ui.touch-more .walk-ui .walk-top { right: 62px; }
+body.touch-ui .vpad button.tb { border-radius: 50% !important; }
+body.touch-ui .joy .joy-run { top: -30px; font-size: 11px; }
+/* 準備框：手機縮小、放右上角 ☰ 左邊，不擋按鈕 */
+body.touch-ui #room-flow { top: 8px; right: 62px; min-width: 0; max-width: 46vw; padding: 6px 8px; font-size: 11px; border-radius: 12px; }
+body.touch-ui #room-flow button { font-size: 13px; padding: 6px 12px; min-height: 0; }
+body.touch-ui #room-flow p { margin: 3px 0; }
+body.touch-ui:not(.touch-more) #room-ready-list { display: none; }
+body.touch-ui.touch-more #room-flow { display: none; }
+body.touch-ui .walk-ui .wk-act { font-size: 12px; padding: 4px 10px; max-width: 46vw; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -969,18 +1000,17 @@ html.phone-walk .wk-use { top: auto; bottom: 214px; left: max(10px, env(safe-are
       <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button><button type="button" class="jump" data-rk="jump">跳<small>空白</small></button></div>
       <div class="rk-menu" id="rk-menu" hidden></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
-      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">⇡ 推到底跑步</b><i></i></div>
+      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">推到邊緣＝跑</b><i></i></div>
       <div class="vpad" id="vpad" hidden>
-        <button type="button" class="main" data-act="spike">攻擊<small>拿球＝發球</small></button>
-        <button type="button" data-act="bump" style="--dx:-88px;--dy:0px">接球</button>
-        <button type="button" data-act="jump" style="--dx:-62px;--dy:-62px">跳</button>
-        <button type="button" data-act="block" style="--dx:0px;--dy:-88px">攔網</button>
-        <button type="button" class="sm" data-act="set1" style="--dx:-139px;--dy:-12px">4號位</button>
-        <button type="button" class="sm" data-act="set2" style="--dx:-119px;--dy:-74px">快攻</button>
-        <button type="button" class="sm" data-act="set3" style="--dx:-74px;--dy:-119px">2號位</button>
-        <button type="button" class="sm" data-act="set4" style="--dx:-152px;--dy:46px">後排</button>
-        <button type="button" class="sm" data-act="pass" style="--dx:-12px;--dy:-139px">傳</button>
+        <button type="button" class="tb tb-spike" data-act="spike">扣<small>發</small></button>
+        <button type="button" class="tb tb-jump" data-act="jump">跳</button>
+        <button type="button" class="tb tb-set" data-act="set">舉</button>
+        <button type="button" class="tb tb-bump" data-act="bump">接</button>
+        <button type="button" class="tb tb-block" data-act="block">攔</button>
+        <button type="button" class="tb tb-pass" data-act="pass" hidden>傳</button>
       </div>
+      <button type="button" class="tmenu" id="tmenu" hidden aria-label="選單">☰</button>
+      <div class="trotate" id="trotate" hidden>請把手機橫放</div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     <div class="gen hide" id="gen" role="status" aria-live="polite"><h3 id="gen-title">正在生成球館</h3><p id="gen-sub"></p><ol id="gen-steps"></ol><div class="bar"><i id="gen-bar"></i></div></div>
@@ -5678,7 +5708,7 @@ function startWalk() {
   const ent = entryInfo();
   walk.x = ent.x - ent.nx * 1.6; walk.z = ent.z - ent.nz * 1.6;
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
-  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '⇡ 推到底跑步';
+  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '推到邊緣＝跑';
   $('walk-ui').hidden = false;
   phoneFull(true);
   updateLockHint();
@@ -5968,10 +5998,10 @@ function updateFocus() {
   let t = '';
   if (skill.mode) t = '按住 Q／E 準備舉球，左鍵短按快、長按慢';
   else if (walk.serve) t = '';
-  else if (walk.hold) t = vbAtServeLine() ? '左鍵發球・空白鍵跳發・X 拋給隊友' : '左鍵扣球・Q／E 自拋舉球・X 拋給隊友';
+  else if (walk.hold) t = coarse() ? (vbAtServeLine() ? '按住「扣」瞄準、放開發球・「跳」跳發' : '按「扣」把球打出去') : vbAtServeLine() ? '左鍵發球・空白鍵跳發・X 拋給隊友' : '左鍵扣球・Q／E 自拋舉球・X 拋給隊友';   /* 手機換成按鈕說法 */
   else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
-  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
+  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = coarse() ? '按住「扣」起跳蓄力、轉手機瞄準、放開扣球' : '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   const cartButton = $('wk-cart');
   cartButton.hidden = !freeCartMode() || (!draggedCart && (walk.focus?.it?.type !== 'ballcart' || walk.hold));
@@ -6342,7 +6372,7 @@ function ballLiftBefore() {
   if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
   e[13] += d;
 }
-function ballLiftAfter() { if (this.userData.saved) { this.matrixWorld.elements.set(BALL_SAVE); this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
 const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);   // 所有球共用一份（輪廓夠圓）
 function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }   /* decor＝球車、球架上的擺設球：維持原尺寸、不抬 */
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
@@ -9343,57 +9373,6 @@ for (const el of document.querySelectorAll('#emo-menu [data-emo]')) {   // 沒�
 addEventListener('pointercancel', () => { vbManualSetCancel(); walk.chargeArm = null; walk.chargeArmGround = false; walk.charge = null; vbChgHud(); });
 addEventListener('blur', () => { walk.charge = null; walk.chargeArm = null; walk.chargeArmGround = false; vbChgHud(); });
 renderer.domElement.addEventListener('pointercancel', (e) => { if (walk.look && walk.look.id === e.pointerId) walk.look = null; });
-// 手機虛擬搖桿（左下）：往哪推就往哪走；往上推過外圈＝跑步，在跑步區放開＝鎖定自動跑步（再摸一下搖桿就停）
-(() => {
-  const joy = $('joy'), knob = joy.querySelector('i'), tag = $('joy-run'); let id = null;
-  const show = (x, y, R) => { knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`; };
-  const setK = (e) => {
-    const r = joy.getBoundingClientRect(), R = r.width / 2;
-    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R;
-    const inRun = y < -1.3 && Math.abs(x) < 0.9;   // 拇指拉到搖桿外圈上方
-    const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
-    walk.joy = { x, y }; walk.joyRun = inRun;
-    joy.classList.toggle('run', inRun); tag.textContent = inRun ? '🔒 放開＝一直跑' : '⇡ 推到底跑步';
-    show(x, y, R);
-  };
-  joy.addEventListener('pointerdown', (e) => {
-    if (walk.autoRun) { walk.autoRun = false; joy.classList.remove('lock'); }
-    id = e.pointerId; try { joy.setPointerCapture(id); } catch (er) { /* ignore */ } setK(e); e.preventDefault();
-  });
-  joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) setK(e); });
-  const end = (e) => {
-    if (e.pointerId !== id) return; id = null; joy.classList.remove('run');
-    if (walk.joyRun && e.type === 'pointerup') {
-      walk.autoRun = true; walk.joy = { x: 0, y: -1 }; joy.classList.add('lock'); tag.textContent = '🔒 自動跑步中（點搖桿停）';
-      show(0, -1, joy.getBoundingClientRect().width / 2); return;
-    }
-    walk.joy = { x: 0, y: 0 }; walk.joyRun = false; knob.style.transform = ''; tag.textContent = '⇡ 推到底跑步';
-  };
-  joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
-})();
-// 手機排球動作鍵（右下）：跟鍵盤一樣的動作，按下去就觸發
-(() => {
-  const key = (k, type = 'keydown') => dispatchEvent(new KeyboardEvent(type, { key: k }));
-  const ACT = {
-    spike: () => key('v'),
-    bump: () => key('v'),
-    block: () => key('b'),
-    set1: () => key('1'), set2: () => key('2'), set3: () => key('3'), set4: () => key('4'),
-    pass: () => key('f'),
-    jump: () => key(' '),
-  };
-  for (const b of $('vpad').querySelectorAll('button')) {
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation(); b.classList.add('on');
-      if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) { /* ignore */ }
-      ACT[b.dataset.act]();
-    });
-    const up = () => { if (!b.classList.contains('on')) return; b.classList.remove('on'); if (b.dataset.act === 'jump') key(' ', 'keyup'); };
-    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
-    b.addEventListener('contextmenu', (e) => e.preventDefault());
-  }
-})();
-
 
 // ---------------------------------------------------------------- 球拍對戰：羽球／匹克球單打（跟 AI 打，或跟多人連線房間裡的人打）
 // 玩法：WASD／搖桿跑位，J 軟、K 抽（高球自動變殺球）、L 挑；按下去就揮拍（拍子約 0.12 秒後掃到擊球點），球那時不在拍子範圍就揮空。
@@ -10590,10 +10569,11 @@ function vbHitAttack(b, d, tip, chg = null) {
   if (dy < -0.6) { q *= 0.72; note = '打晚了'; } else if (dy > 0.45) { q *= 0.85; note = '打早了'; }
   const C = air && !tip ? vbChargeOf(chg == null ? 0.55 : chg, chg == null ? null : ROLE_SUPER[vbMyRole()]) : null;   // 蓄力（沒有蓄力的手機按鈕＝中等力道）
   if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air, chg, zone: C && C.zone, pw: C && C.pw };
-  const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  const ta = walk.touchAim; walk.touchAim = null;   /* 手機拖曳瞄準（只有手機會設定；電腦永遠是 null，照原本的面向和視角） */
+  const yaw = walk.yaw + (ta ? ta.dyaw : 0) + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
   const dump = tip && ct && Math.abs(ct.lx) < 4.5 && vbIsSetter() && (!VM.on || vmSecond());   // 舉球員吊球（舉球員才有）：跳起來推＝貼網；沒跳＝只能送高球（下面另外算）
   // 深淺：平視打到網後 6.6 m，越往下看落點越近、越釘（往下看約 35 度＝網後 2 m）；按著 S 是 3.4 m 短斜線；吊球落在網後 1.5～2.5 m
-  const down = clamp((-walk.pitch - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
+  const down = clamp((-(ta ? ta.pitch : walk.pitch) - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
   const depth = dump ? 1 + Math.random() : tip ? 1.5 + Math.random() : Math.min(6.6, 6.6 - 4.6 * down);
   let dist = depth;
   if (ct) {
@@ -11543,7 +11523,7 @@ function vbOwnSide(b) {
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
 function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
-function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc); }
+function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc || coarse()); }   /* 手機：走到哪都預設第三人稱（設定裡關掉第三人稱就照舊） */
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 // 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
 function vbApproachK() {
@@ -13312,6 +13292,177 @@ async function prepareCreatorShot() {
   window.__creatorShot = { ready: true, court: court.id, position: camera.position.toArray(), target: [tx, tz] };
 }
 
+// ---- WEB-026 手機操作（2026-11-17）：只在觸控裝置啟動，電腦（滑鼠）完全不跑這裡的任何東西
+//   畫面只留：左下搖桿、右下五顆鈕（扣（發）、跳、舉、接、攔）、右上 ☰ 選單
+//   搖桿：輕推＝走、推到邊緣＝跑；跑動中按「接」＝撲救（跟電腦 Shift＋V 一樣）
+//   扣：地上按住＝起跳＋蓄力；（沒有陀螺儀時）按住拖曳＝左右定方向、往上打長、往下扣釘；放開＝揮臂；在空中輕點一下＝吊球
+//       拿著球：按住拖曳＝調發球落點（紅圈），放開＝發球；跳發＝拿球按「跳」，空中再按住「扣」
+//   舉：按住＝舉球輪盤，往要的位置拖、放開＝舉；另一隻手指點一下畫面＝換前排／後排
+//   攔：按住＝起跳攔網，左右拖＝雙手往左右移
+//   轉動手機瞄準（陀螺儀，使用者 2026-11-17 要求）：按住「扣」的時候，轉動手機＝轉視角——左右轉＝方向、往下傾＝往下扣（落點近、釘）、往上＝打長；
+//     地板上的落點圈跟著動。手機沒有感應器（或沒允許）時，退回「按住扣拖曳」瞄準。手機預設第三人稱（tpActive）
+const TOUCH = { on: false, aim: null, mark: null, press: null };
+const GYRO = { ok: 0, on: false, t: 0, asked: false };   // ok＝最後一次收到感應器資料的時間
+function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 度）＋視角（決定深淺：沒拖＝中等、往上＝長、往下＝釘）
+  const down = clamp(0.3 + dy / 120, 0, 1);
+  return { dyaw: clamp(-dx * 0.006, -0.61, 0.61), pitch: -(0.05 + 0.55 * down), down };
+}
+(() => {
+  if (!matchMedia('(pointer: coarse)').matches) return;   // 電腦：到這裡就結束
+  TOUCH.on = true;
+  document.body.classList.add('touch-ui');
+  const pad = $('vpad'), joy = $('joy'), knob = joy.querySelector('i'), tag = $('joy-run'), menu = $('tmenu'), rot = $('trotate');
+  const ok = () => walk.on && !walk.paused && !window.__rkOn && !RP.on && !(VM.on && roomSpectator());
+  const buzz = () => { if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) { /* ignore */ } };
+
+  // 陀螺儀：只在按住「扣」時把手機的轉動加到視角上（平常不動，避免拿著手機晃來晃去畫面亂轉）
+  //   rotationRate（每秒幾度）依螢幕方向換成「左右轉」和「上下傾」：橫拿（90／270 度）時手機的長邊是左右
+  const gyroLive = () => performance.now() - GYRO.ok < 1000;
+  const gyroAsk = () => {   // iPhone 要先問一次（要在手指放開那一下問才算使用者操作）
+    if (GYRO.asked) return; GYRO.asked = true;
+    const D = window.DeviceMotionEvent; if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => {});
+  };
+  addEventListener('devicemotion', (e) => {
+    const r = e.rotationRate; if (!r || r.beta == null || r.gamma == null) return;
+    const now = performance.now(), dt = clamp((now - (GYRO.t || now)) / 1000, 0, 0.05); GYRO.t = now;
+    if (Math.abs(r.beta) + Math.abs(r.gamma) + Math.abs(r.alpha || 0) > 0) GYRO.ok = now;
+    if (!GYRO.on || !walk.on || walk.paused) return;
+    const ang = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) % 360, a = (ang + 360) % 360;
+    const yawR = a === 90 ? r.beta : a === 270 ? -r.beta : a === 180 ? -r.gamma : r.gamma;   // 繞螢幕直立軸：往左轉為正
+    const pitR = a === 90 ? -r.gamma : a === 270 ? r.gamma : a === 180 ? -r.beta : r.beta;   // 繞螢幕橫軸：上緣往自己傾（往上看）為正
+    const k = (Math.PI / 180) * 1.3 * dt;   // 1.3 倍：手腕轉小一點就夠
+    walk.yaw += yawR * k; walk.pitch = clamp(walk.pitch + pitR * k, -1.2, 1.1); walk.lookT = performance.now();
+  });
+
+  // 搖桿：輕推＝走、推到邊緣（八成五以上）＝跑；放開就停（球場上不再鎖定自動跑步）
+  let jid = null;
+  const joySet = (e) => {
+    const r = joy.getBoundingClientRect(), R = r.width / 2;
+    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R; const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+    const run = m >= 0.85; walk.joy = { x, y }; walk.joyRun = run; walk.autoRun = false;
+    joy.classList.toggle('run', run); tag.textContent = run ? '跑' : '走';
+    knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`;
+  };
+  joy.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); jid = e.pointerId; try { joy.setPointerCapture(jid); } catch (er) { /* ignore */ } joySet(e); });
+  joy.addEventListener('pointermove', (e) => { if (e.pointerId === jid) joySet(e); });
+  const joyEnd = (e) => { if (e.pointerId !== jid) return; jid = null; walk.joy = { x: 0, y: 0 }; walk.joyRun = false; joy.classList.remove('run', 'lock'); knob.style.transform = ''; tag.textContent = '推到邊緣＝跑'; };
+  joy.addEventListener('pointerup', joyEnd); joy.addEventListener('pointercancel', joyEnd);
+  tag.textContent = '推到邊緣＝跑';
+
+  // 五顆鈕：每顆有 down／move／up
+  const ACT = {
+    spike: {
+      down(p) {
+        p.hold = !!walk.hold; p.yaw = walk.yaw; p.pitch = walk.pitch; walk.touchAim = null;
+        p.gyro = gyroLive(); GYRO.on = p.gyro;   // 有陀螺儀：轉手機瞄準；沒有：拖曳瞄準
+        if (p.hold) return;   // 拿著球：先瞄準（轉手機或拖曳），放開才發
+        TOUCH.aim = p.gyro ? { view: true } : touchAimOf(0, 0);
+        const ground = !walk.air && !walk.jserve;
+        vbPrimaryDown(false);   // 空中＝開始蓄力；地上＝準備（起跳那一刻開始蓄力）
+        if (ground && walk.chargeArmGround) vbJump('attack');
+      },
+      move(p, dx, dy) {
+        if (p.gyro) return;   // 轉手機瞄準時，手指不小心滑動不算
+        if (p.hold) { walk.yaw = p.yaw - dx * 0.005; walk.pitch = clamp(p.pitch - dy * 0.004, -1.2, 1.1); return; }   // 發球：落點圈跟著動
+        TOUCH.aim = touchAimOf(dx, dy);
+      },
+      up(p, dx, dy, dur) {
+        const aim = TOUCH.aim; TOUCH.aim = null; GYRO.on = false;
+        if (p.hold) { if (walk.hold) vbPrimaryDown(false); return; }
+        if (walk.charge && walk.air && !walk.jserve && dur < 160 && Math.hypot(dx, dy) < 14) {   // 空中輕點＝吊球
+          walk.charge = null; vbChgHud(); walk.chargeArm = null; walk.chargeArmGround = false; vbAttack(true); return;
+        }
+        if (aim && !aim.view && !walk.jserve) {   /* 轉手機瞄準＝直接用現在的視角（跟電腦一樣），不用另外給偏移 */ const ta = { dyaw: aim.dyaw, pitch: aim.pitch }; walk.touchAim = ta; setTimeout(() => { if (walk.touchAim === ta) walk.touchAim = null; }, 1200); }   // 揮臂後 0.6 秒內碰到球才用得到
+        const g = walk.chargeArmGround && walk.chargeArm && !walk.air; walk.chargeArm = null; walk.chargeArmGround = false;   // 跟電腦放開左鍵一樣
+        if (walk.charge) vbChargeRelease(); else if (g) vbAttack(false);
+      },
+    },
+    jump: {
+      down() { walk.keys.add(' '); if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack'); },
+      up() { walk.keys.delete(' '); },
+    },
+    bump: { down() { if (walk.setAim) vbManualSetCancel(); vbReceive(); } },
+    block: {
+      down(p) { if (walk.setAim) vbManualSetCancel(); vbJump('block'); p.blk = walk.blkAim || 0; },
+      move(p, dx) { if (walk.air && walk.air.block) walk.blkAim = clamp(p.blk + dx * 0.004, -0.5, 0.5); },
+    },
+    set: {
+      down(p) {
+        setWheelOpen(); if (!SETM.m) return;
+        p.lx = p.x; p.ly = p.y; TOUCH.setId = p.id;
+        const c = $('set-menu').querySelector('.sw-center small'); if (c) c.innerHTML = '拖到位置放開<br>另一指點畫面換' + (SETM.page ? '前排' : '後排');
+      },
+      move(p, dx, dy, e) { if (!SETM.m) return; setMenuMove((e.clientX - p.lx) * 1.5, (e.clientY - p.ly) * 1.5); p.lx = e.clientX; p.ly = e.clientY; },
+      up() { TOUCH.setId = null; if (SETM.m) setMenuClose(true); },
+    },
+    pass: { down() { passToFacing(); } },
+  };
+  for (const b of pad.querySelectorAll('button[data-act]')) {
+    const A = ACT[b.dataset.act]; let p = null;
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); if (p || !ok()) return;
+      p = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() }; TOUCH.press = b.dataset.act;
+      try { b.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
+      b.classList.add('on'); buzz(); A.down && A.down(p);
+    });
+    b.addEventListener('pointermove', (e) => { if (!p || e.pointerId !== p.id) return; e.stopPropagation(); A.move && A.move(p, e.clientX - p.x, e.clientY - p.y, e); });
+    const end = (e) => {
+      if (!p || e.pointerId !== p.id) return; e.preventDefault(); e.stopPropagation();
+      const q = p; p = null; TOUCH.press = null; b.classList.remove('on');
+      if (e.type === 'pointercancel') { if (A === ACT.set) { TOUCH.setId = null; setMenuClose(false); } else if (A === ACT.spike) { TOUCH.aim = null; GYRO.on = false; walk.chargeArm = null; walk.chargeArmGround = false; walk.charge = null; vbChgHud(); } else A.up && A.up(q, 0, 0, 999); return; }
+      A.up && A.up(q, e.clientX - q.x, e.clientY - q.y, performance.now() - q.t);
+      gyroAsk();   // iPhone：第一次放開按鈕時問「允許動作感應」
+    };
+    b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  // 舉球輪盤開著時，另一隻手指點畫面＝換前排／後排
+  addEventListener('pointerdown', (e) => {
+    if (TOUCH.setId == null || e.pointerId === TOUCH.setId || !SETM.m || !SETM.m.all) return;
+    e.preventDefault(); e.stopPropagation(); setWheelOpen(1 - SETM.page);
+    const c = $('set-menu').querySelector('.sw-center small'); if (c) c.innerHTML = '拖到位置放開<br>另一指點畫面換' + (SETM.page ? '前排' : '後排');
+  }, true);
+
+  // ☰ 選單：遊戲中把設定、回大廳、房間資訊、聊天收起來，按一下打開
+  menu.addEventListener('pointerdown', (e) => e.stopPropagation());
+  menu.addEventListener('click', () => document.body.classList.toggle('touch-more'));
+
+  // 扣球落點圈：按住「扣」時在對面場上畫出來（跟扣球公式一樣的方向和深淺；過網修正不算在內，所以是大概的位置）
+  const ring = () => {
+    if (TOUCH.mark) return TOUCH.mark;
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 36), new THREE.MeshBasicMaterial({ color: '#F2B705', transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.renderOrder = 4; m.visible = false; scene.add(m); TOUCH.mark = m; return m;
+  };
+  const markStep = () => {
+    const a = TOUCH.aim, ct = a && walk.on ? vbCourt() : null; if (!ct) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }
+    const dyaw = a.view ? 0 : a.dyaw, down = a.view ? clamp((-walk.pitch - 0.05) / 0.55, 0, 1) : a.down;   // 轉手機瞄準：照現在的視角（跟扣球公式一樣）
+    const yaw = walk.yaw + dyaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw), depth = 6.6 - 4.6 * down;
+    const [lx] = toLocalOf(ct.c, walk.x, walk.z), [ax] = toLocalOf(ct.c, walk.x + fx, walk.z + fz), dlx = ax - lx;
+    if (dlx * -Math.sign(lx) <= 0.12) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }   // 沒面向對面
+    const dist = Math.min(20, (Math.abs(lx) + depth) / Math.abs(dlx)), m = ring();
+    m.position.set(walk.x + fx * dist, 0.03, walk.z + fz * dist); m.visible = true;
+  };
+
+  // 每格：當下該按的鈕亮起來、「傳」只在閒逛拿球時出現、☰ 和橫放提示
+  const HOT = { jump: 'jump', hit: 'spike', set: 'set', block: 'block' };
+  const btn = Object.fromEntries([...pad.querySelectorAll('button[data-act]')].map((b) => [b.dataset.act, b]));
+  const portrait = matchMedia('(orientation: portrait)');
+  let last = '';
+  const tick = () => {
+    requestAnimationFrame(tick);
+    const on = walk.on && !window.__rkOn;
+    menu.hidden = !on; rot.hidden = !(on && portrait.matches);
+    if (!on) { if (TOUCH.mark) TOUCH.mark.visible = false; return; }
+    markStep();
+    const cue = $('vb-cue'), k = cue.hidden ? '' : cue.dataset.k;
+    let hot = HOT[k] || '';
+    if (!hot && walk.hold) hot = 'spike';
+    else if (!hot && VB.target && !walk.recv && !walk.hold && !walk.air) hot = 'bump';
+    const id = hot + (walk.hold && !VM.on ? '|p' : '');
+    if (id !== last) { last = id; for (const [a, b] of Object.entries(btn)) b.classList.toggle('hot', a === hot); btn.pass.hidden = !(walk.hold && !VM.on); }
+  };
+  requestAnimationFrame(tick);
+})();
 </script>
 
 <script>

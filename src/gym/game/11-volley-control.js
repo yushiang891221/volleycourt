@@ -567,10 +567,11 @@ function vbHitAttack(b, d, tip, chg = null) {
   if (dy < -0.6) { q *= 0.72; note = '打晚了'; } else if (dy > 0.45) { q *= 0.85; note = '打早了'; }
   const C = air && !tip ? vbChargeOf(chg == null ? 0.55 : chg, chg == null ? null : ROLE_SUPER[vbMyRole()]) : null;   // 蓄力（沒有蓄力的手機按鈕＝中等力道）
   if (window.__gym) window.__gym.lastAtk = { d: +d.toFixed(2), dy: +dy.toFixed(2), q: +q.toFixed(2), air: !!walk.air, chg, zone: C && C.zone, pw: C && C.pw };
-  const yaw = walk.yaw + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  const ta = walk.touchAim; walk.touchAim = null;   /* 手機拖曳瞄準（只有手機會設定；電腦永遠是 null，照原本的面向和視角） */
+  const yaw = walk.yaw + (ta ? ta.dyaw : 0) + (q < 0.65 ? rkGauss() * (1 - q) * 0.4 : 0) + (C ? rkGauss() * C.err * 0.14 : 0), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
   const dump = tip && ct && Math.abs(ct.lx) < 4.5 && vbIsSetter() && (!VM.on || vmSecond());   // 舉球員吊球（舉球員才有）：跳起來推＝貼網；沒跳＝只能送高球（下面另外算）
   // 深淺：平視打到網後 6.6 m，越往下看落點越近、越釘（往下看約 35 度＝網後 2 m）；按著 S 是 3.4 m 短斜線；吊球落在網後 1.5～2.5 m
-  const down = clamp((-walk.pitch - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
+  const down = clamp((-(ta ? ta.pitch : walk.pitch) - 0.05) / 0.55, 0, 1), steep = !tip && down > 0.25;   // steep＝你想往下壓：不自動幫你把球抬過網，打太低就掛網
   const depth = dump ? 1 + Math.random() : tip ? 1.5 + Math.random() : Math.min(6.6, 6.6 - 4.6 * down);
   let dist = depth;
   if (ct) {
@@ -1520,7 +1521,7 @@ function vbOwnSide(b) {
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
 function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
-function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc); }
+function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc || coarse()); }   /* 手機：走到哪都預設第三人稱（設定裡關掉第三人稱就照舊） */
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 // 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
 function vbApproachK() {

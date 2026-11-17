@@ -92,10 +92,10 @@ function updateFocus() {
   let t = '';
   if (skill.mode) t = '按住 Q／E 準備舉球，左鍵短按快、長按慢';
   else if (walk.serve) t = '';
-  else if (walk.hold) t = vbAtServeLine() ? '左鍵發球・空白鍵跳發・X 拋給隊友' : '左鍵扣球・Q／E 自拋舉球・X 拋給隊友';
+  else if (walk.hold) t = coarse() ? (vbAtServeLine() ? '按住「扣」瞄準、放開發球・「跳」跳發' : '按「扣」把球打出去') : vbAtServeLine() ? '左鍵發球・空白鍵跳發・X 拋給隊友' : '左鍵扣球・Q／E 自拋舉球・X 拋給隊友';   /* 手機換成按鈕說法 */
   else if (walk.sit) t = walk.sit.desk ? '打開電腦（走路就站起來）' : '站起來';
   else if (walk.focus) t = `${walk.focus.label}・${walk.focus.kind === 'ball' ? '排球' : walk.focus.kind === 'door' ? (walk.focus.d.main ? '主入口' : '門') : labelOf(walk.focus.it)}`;
-  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
+  else if (near && balls.some((b) => b.rest < 0.3 && b.m.position.y > 1 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) < 3.4)) t = coarse() ? '按住「扣」起跳蓄力、轉手機瞄準、放開扣球' : '空白鍵起跳，在空中按住左鍵蓄力、放開扣球（金色格最強最準）';
   const btn = $('wk-act'); btn.hidden = !t; if (t) $('wk-act-t').textContent = t;
   const cartButton = $('wk-cart');
   cartButton.hidden = !freeCartMode() || (!draggedCart && (walk.focus?.it?.type !== 'ballcart' || walk.hold));
@@ -466,7 +466,7 @@ function ballLiftBefore() {
   if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
   e[13] += d;
 }
-function ballLiftAfter() { if (this.userData.saved) { this.matrixWorld.elements.set(BALL_SAVE); this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
 const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);   // 所有球共用一份（輪廓夠圓）
 function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }   /* decor＝球車、球架上的擺設球：維持原尺寸、不抬 */
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢

@@ -56,7 +56,7 @@ function startWalk() {
   const ent = entryInfo();
   walk.x = ent.x - ent.nx * 1.6; walk.z = ent.z - ent.nz * 1.6;
   walk.yaw = Math.atan2(ent.nx, ent.nz); walk.pitch = -0.04; walk.target = null; walk.zoneKey = '';
-  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '⇡ 推到底跑步';
+  walk.keys.clear(); walk.joy = { x: 0, y: 0 }; walk.joyRun = false; walk.autoRun = false; $('joy').classList.remove('run', 'lock'); $('joy-run').textContent = '推到邊緣＝跑';
   $('walk-ui').hidden = false;
   phoneFull(true);
   updateLockHint();

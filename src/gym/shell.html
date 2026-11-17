@@ -220,18 +220,17 @@ html{background:#0b1220}#plan-host{display:none!important}
       <div class="rk-pad" id="rk-pad" hidden><button type="button" class="soft" data-rk="soft">軟<small>J</small></button><button type="button" class="lob" data-rk="lob">挑<small>L</small></button><button type="button" class="main" data-rk="drive">抽<small>K</small></button><button type="button" class="jump" data-rk="jump">跳<small>空白</small></button></div>
       <div class="rk-menu" id="rk-menu" hidden></div>
       <div class="zcard out" id="zcard" aria-live="polite"><div class="zc-k"><span id="zc-k"></span><span id="zc-n"></span></div><h3 id="zc-t"></h3><p id="zc-d"></p><dl id="zc-dl"></dl></div>
-      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">⇡ 推到底跑步</b><i></i></div>
+      <div class="joy" id="joy" hidden><b class="joy-run" id="joy-run">推到邊緣＝跑</b><i></i></div>
       <div class="vpad" id="vpad" hidden>
-        <button type="button" class="main" data-act="spike">攻擊<small>拿球＝發球</small></button>
-        <button type="button" data-act="bump" style="--dx:-88px;--dy:0px">接球</button>
-        <button type="button" data-act="jump" style="--dx:-62px;--dy:-62px">跳</button>
-        <button type="button" data-act="block" style="--dx:0px;--dy:-88px">攔網</button>
-        <button type="button" class="sm" data-act="set1" style="--dx:-139px;--dy:-12px">4號位</button>
-        <button type="button" class="sm" data-act="set2" style="--dx:-119px;--dy:-74px">快攻</button>
-        <button type="button" class="sm" data-act="set3" style="--dx:-74px;--dy:-119px">2號位</button>
-        <button type="button" class="sm" data-act="set4" style="--dx:-152px;--dy:46px">後排</button>
-        <button type="button" class="sm" data-act="pass" style="--dx:-12px;--dy:-139px">傳</button>
+        <button type="button" class="tb tb-spike" data-act="spike">扣<small>發</small></button>
+        <button type="button" class="tb tb-jump" data-act="jump">跳</button>
+        <button type="button" class="tb tb-set" data-act="set">舉</button>
+        <button type="button" class="tb tb-bump" data-act="bump">接</button>
+        <button type="button" class="tb tb-block" data-act="block">攔</button>
+        <button type="button" class="tb tb-pass" data-act="pass" hidden>傳</button>
       </div>
+      <button type="button" class="tmenu" id="tmenu" hidden aria-label="選單">☰</button>
+      <div class="trotate" id="trotate" hidden>請把手機橫放</div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     <div class="gen hide" id="gen" role="status" aria-live="polite"><h3 id="gen-title">正在生成球館</h3><p id="gen-sub"></p><ol id="gen-steps"></ol><div class="bar"><i id="gen-bar"></i></div></div>
