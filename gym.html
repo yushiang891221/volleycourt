@@ -16,6 +16,7 @@
 <script src="js/lobby-client.js"></script>
 <script src="js/game-lobby.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="js/mobile-gate.js"></script>
 <title>Play One｜球館</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/brand/favicon-32.png">
@@ -826,6 +827,16 @@ body.touch-ui .walk-ui:not([hidden]) .joy-zone { display: block; }
 .walk-ui.rk .joy-zone, .walk-ui:has(.rp:not([hidden])) .joy-zone { display: none !important; }
 body.touch-ui .joy { opacity: .45; pointer-events: auto; transition: opacity .12s; }
 body.touch-ui .joy.live { opacity: 1; }
+/* 手機版面（2026-11-17 iPhone 回報練習房面板疊在一起）：只在 body.touch-ui（觸控裝置）作用
+   上方：左＝練習說明條（寬、矮）、右＝準備框和 ☰；體力條搬到下方正中間（搖桿和按鍵中間）；打開 ☰ 時說明條、體力條先收起來，讓選單的按鈕不疊 */
+body.touch-ui .vb-tut-panel { top: max(8px, env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); width: min(420px, calc(100% - 330px)); max-height: 90px; padding: 6px 12px; font-size: 13px; line-height: 1.4; border-radius: 12px; }
+body.touch-ui .vb-tut-panel > strong { font-size: 14px; }
+body.touch-ui .vb-tut-panel p { margin: 2px 0 4px; }
+body.touch-ui .vb-tut-panel button { font-size: 12px; padding: 3px 8px; }
+body.touch-ui .sta { top: auto; bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: min(200px, 28vw); height: 14px; }
+body.touch-ui .sta b { left: auto; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 12px; }
+body.touch-ui .vb-tut-progress { top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 24px); padding: 4px 10px; }
+body.touch-ui.touch-more .vb-tut-panel, body.touch-ui.touch-more .vb-tut-progress, body.touch-ui.touch-more .sta { display: none !important; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>

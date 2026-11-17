@@ -2,7 +2,9 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- iPhone 主畫面 App：狀態列透明、畫面延伸到瀏海。要寫在 HTML 裡（JS 事後補的 iPhone 可能讀不到，轉橫拿後上方會留一條空白） -->
+  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script src="js/mobile-gate.js" data-fit="820" data-fit-h="360"></script>
   <link rel="stylesheet" href="css/lobby-mobile.css">
   <script src="js/lobby-mobile.js" defer></script>

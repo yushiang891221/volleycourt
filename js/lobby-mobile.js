@@ -47,7 +47,8 @@
     if (isOn('m-show-chat')) dot.hidden = true;
     pull.textContent = isOn('m-show-menu') ? '▲ 收起' : '▼ 功能';
     pull.style.top = '';   // 功能列拉下來後，把手移到功能列下緣（不蓋住按鈕）
-    if (isOn('m-show-menu') && foot) setTimeout(() => { if (!isOn('m-show-menu')) return; const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--m-zoom')) || 1; pull.style.top = (foot.getBoundingClientRect().bottom / k) + 'px'; }, 240);
+    // 用功能列本身的高度算（不量畫面位置：滑下來的動畫還沒跑完時量到的是收起來的位置，把手會卡在最上面蓋住按鈕）
+    if (isOn('m-show-menu') && foot) pull.style.top = (foot.offsetHeight + 8) + 'px';
     side.textContent = isOn('m-show-side') ? '收起' : '選單';
     side.style.left = isOn('m-show-side') ? 'calc(230px + var(--m-pl, 8px) - 8px)' : '';
   }

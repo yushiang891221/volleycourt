@@ -20,9 +20,11 @@
   const head = document.head || de;
   const add = (tag, attrs) => { const el = document.createElement(tag); for (const k in attrs) el.setAttribute(k, attrs[k]); head.appendChild(el); };
   if (!document.querySelector('link[rel=manifest]')) add('link', { rel: 'manifest', href: '/manifest.webmanifest' });
-  add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
-  add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
-  add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' });
+  // 狀態列透明這幾個最好直接寫在 HTML（iPhone 可能不讀 JS 事後補的）；HTML 沒寫才補
+  const meta = (name, content) => { if (!document.querySelector(`meta[name="${name}"]`)) add('meta', { name, content }); };
+  meta('apple-mobile-web-app-capable', 'yes');
+  meta('mobile-web-app-capable', 'yes');
+  meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
   add('meta', { name: 'apple-mobile-web-app-title', content: 'Play One' });
   add('meta', { name: 'theme-color', content: '#111B2B' });
   const vp = document.querySelector('meta[name=viewport]'); if (vp) vp.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');
@@ -87,6 +89,11 @@ dialog.m-rotate::backdrop, dialog.m-gate::backdrop { background: transparent; }
       .observe(de, { subtree: true, attributes: true, attributeFilter: ['open'] });
     fit(); addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 200));
   }
+  // iPhone 轉向後有時整頁會停在往下捲一段的位置（上方留一條空白）：轉完捲回最上面，再叫畫面重新量大小
+  const unshift = () => { if (scrollX || scrollY) scrollTo(0, 0); if (document.body && (document.body.scrollTop || document.body.scrollLeft)) document.body.scrollTop = document.body.scrollLeft = 0; };
+  const reflow = () => { unshift(); for (const t of [120, 400, 900]) setTimeout(() => { unshift(); dispatchEvent(new Event('resize')); }, t); };
+  addEventListener('orientationchange', reflow); addEventListener('pageshow', reflow);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', reflow);
   // 雙指縮放（iPhone 不理 user-scalable=no）
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 

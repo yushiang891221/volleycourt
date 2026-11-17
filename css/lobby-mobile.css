@@ -4,7 +4,7 @@
      - 上方列（Logo、連線、開啟房間、練習模式、快速加入、篩選、重新整理）：收在最左邊，點左邊的把手或往右拉就滑出來
      - 功能列（系統設定、公告、成就…）：收在最上面，點上方中間的「▼ 功能」或往下拉就滑下來
      - 在線玩家、留言板：右邊的「在線」「聊天」小把手，點了從右邊滑出來 */
-html.m-touch body { grid-template-rows: minmax(0, 1fr) !important; gap: 0 !important; padding-top: 8px !important; }
+html.m-touch body { grid-template-rows: minmax(0, 1fr) !important; gap: 0 !important; padding-top: 28px !important; }   /* 上面留位置給「▼ 功能」把手，不蓋房間列表標題 */
 html.m-touch .po-ticker, html.m-touch .me-col, html.m-touch .mode-help, html.m-touch #list-note, html.m-touch footer > .muted, html.m-touch .wordmark { display: none !important; }
 
 /* 房間列表佔滿；左右留位置給把手 */
@@ -23,11 +23,17 @@ html.m-touch header.top .actions { flex-direction: column; align-items: stretch;
 html.m-touch header.top .actions > * { width: 100%; min-height: 42px; font-size: 14px; justify-content: center; }
 
 /* 在線玩家、留言板：從右邊滑出的抽屜 */
-html.m-touch .players, html.m-touch .chat { position: fixed !important; top: 8px; bottom: var(--m-pb, 8px); right: var(--m-pr, 8px); width: min(380px, 52%); z-index: 44; grid-column: auto !important; grid-row: auto !important;
+html.m-touch .players, html.m-touch .chat { position: fixed !important; top: 8px; bottom: var(--m-pb, 8px); right: calc(var(--m-pr, 8px) + 26px); width: min(380px, 52%); z-index: 44; grid-column: auto !important; grid-row: auto !important;
   transform: translateX(calc(100% + 60px)); transition: transform .22s ease; box-shadow: -12px 0 30px rgba(0,0,0,.45); }
 html.m-touch body.m-show-players .players, html.m-touch body.m-show-chat .chat { transform: none; }
 html.m-touch .m-drawer-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; min-height: 0; padding: 0; border-radius: 8px; font-size: 18px; line-height: 1; z-index: 2; }
 html.m-touch .chat .messages { flex: 1; min-height: 0; overflow: auto; }
+/* 抽屜右邊讓出把手（上一行 right 多 26px）；標題列右邊讓出 ×，不蓋「全服聊天」「0 人」 */
+html.m-touch .players .panel-head, html.m-touch .chat .chat-heading { padding-right: 40px; }
+
+/* 換頁按鈕：手指點得到 */
+html.m-touch .pager button { min-height: 34px; min-width: 40px; padding: 0 14px; font-size: 14px; }
+html.m-touch .pager span { font-size: 14px; }
 
 /* 功能列：收在上面，「▼ 功能」把手拉下來 */
 html.m-touch footer { position: fixed !important; left: 50%; top: 0; z-index: 45; width: min(760px, calc(100% - 80px)); transform: translate(-50%, calc(-100% - 10px)); transition: transform .22s ease; flex-wrap: wrap; justify-content: center; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
