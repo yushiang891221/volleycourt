@@ -2,7 +2,9 @@ import { authMode, getAccountService } from './auth.js';
 import { bindFriendAction } from './player-menu.js';
 
 const grades = ['E','D','C','B','B+','A','A+','S','S+'];
-const thresholds = [0,1,10,30,100,250,500,1000,3000];
+// 門檻拉開（2026-11-19 使用者反映原本 0/1/10/30/100… 太快達成）；攔網本來就少，另用一組較低的門檻
+const thresholds = [0, 1, 30, 150, 400, 1000, 2500, 5000, 10000];
+const blockThresholds = [0, 1, 10, 40, 100, 250, 600, 1200, 2500];
 // 四項技能專精：照「分級表」排（2026-11-18 使用者要求）——每項一張卡，E～S+ 九級一級一行，寫這一級要累積幾次和代表什麼程度；
 //   已經達到的級數正常顯示、現在這一級標亮並附進度條、還沒到的變淡。上面是四個段位的顏色說明（評分說明 2026-11-18 使用者要求拿掉）
 const tierOf = (g) => /^S/.test(g) ? 's' : /^A/.test(g) ? 'a' : /^B/.test(g) ? 'b' : 'ce';
@@ -19,16 +21,17 @@ function masteryPanel(stats) {
   const grid = section.querySelector('.pm-grid');
   for (const [name, key, metric, lines] of SKILLS) {
     const card = document.createElement('article'); card.className = 'pm-card';
-    const has = stats && Number.isFinite(stats[key]), count = has ? stats[key] : 0, cur = has ? thresholds.findLastIndex((n) => count >= n) : -1;
+    const steps = key === 'blocks' ? blockThresholds : thresholds;
+    const has = stats && Number.isFinite(stats[key]), count = has ? stats[key] : 0, cur = has ? steps.findLastIndex((n) => count >= n) : -1;
     const head = document.createElement('header');
     head.innerHTML = `<b>${name}</b><span>${has ? `${grades[cur]}・${metric} ${count} 次` : '等待戰績資料'}</span>`;
     card.append(head);
     const list = document.createElement('ol');
     grades.forEach((g, i) => {
       const li = document.createElement('li'); li.className = `pm-t-${tierOf(g)}` + (i === cur ? ' now' : i > cur ? ' todo' : '');
-      li.innerHTML = `<i>${g}</i><span>${lines[i]}</span><em>${thresholds[i]} 次</em>`;
+      li.innerHTML = `<i>${g}</i><span>${lines[i]}</span><em>${steps[i]} 次</em>`;
       if (i === cur) {
-        const next = thresholds[i + 1], prev = thresholds[i], bar = document.createElement('div'); bar.className = 'pm-bar';
+        const next = steps[i + 1], prev = steps[i], bar = document.createElement('div'); bar.className = 'pm-bar';
         bar.innerHTML = next ? `<s style="width:${Math.min(100, ((count - prev) / (next - prev)) * 100).toFixed(1)}%"></s><small>距 ${grades[i + 1]} 差 ${next - count} 次</small>` : '<s style="width:100%"></s><small>已經是最高級</small>';
         li.append(bar);
       }
