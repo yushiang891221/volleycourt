@@ -1455,7 +1455,7 @@ export function createGameCore(S = {}) {
     four: () => '四次擊球（一隊最多碰三次）',
     held: n => `持球（${n}舉球時球在手上停太久）`,
     setDouble: n => `連擊（${n}舉球兩手沒同時碰到）`,
-    netReturn: n => `觸網（${n}把對方的扣球直接扣回去）`,
+    netReturn: n => `觸網（${n}把對方攻擊過來的球直接扣回去，只能攔網）`,
   };
   function vmOnTouch(b, id, kind) {
     if (b.langzi || kind === 'kick') return; /* WEB-022 裝飾球不計比賽事件。 */

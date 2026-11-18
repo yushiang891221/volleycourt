@@ -14,7 +14,7 @@ export const FAULT = {
   FOUR: 'four',                // 一隊碰四次
   HELD: 'held',                // 舉球持球
   SET_DOUBLE: 'setDouble',     // 舉球兩手沒同時碰到
-  NET_RETURN: 'netReturn',     // 對方扣過來、第一下就直接扣回去（當攔網用）＝觸網（2026-11-18 使用者要求：扣球判定寬，扣回去太好用）
+  NET_RETURN: 'netReturn',     // 對方攻擊過來（扣、吊）、第一下就直接扣回去（當攔網用）＝觸網：攻擊過來的球只能攔網（2026-11-18 使用者要求：扣球判定寬，扣回去太好用）
 };
 const ATTACK = new Set(['spike', 'tip', 'hit']), HARD = new Set(['spike', 'hit']);   // HARD＝扣球（跳扣、站著扣）
 
@@ -49,8 +49,8 @@ export function judgeTouch(M, t) {
     M.touch.n++; M.touch.last = id; M.touch.blk = false;
     if (M.touch.n > 3) return { fault: FAULT.FOUR, loser: team };
   } else {
-    // 球從對面過來：對面最後一下是扣球、這邊沒攔網直接扣回去
-    if (!block && HARD.has(kind) && !M.touch.serve && HARD.has(prevKind)) return { fault: FAULT.NET_RETURN, loser: team };
+    // 球從對面過來：對面最後一下是攻擊（扣、吊）、這邊沒攔網直接扣回去
+    if (!block && HARD.has(kind) && !M.touch.serve && ATTACK.has(prevKind)) return { fault: FAULT.NET_RETURN, loser: team };
     M.touch = { team, n: block ? 0 : 1, last: id, blk: block };
   }
   if (t.setFault && kind === 'set') return { fault: t.setFault === 'held' ? FAULT.HELD : FAULT.SET_DOUBLE, loser: team, setFaultUsed: true };
