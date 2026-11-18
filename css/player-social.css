@@ -17,7 +17,7 @@
 .profile-body img { border-radius:10px;object-fit:contain; }
 .profile-achievements { max-height:200px;overflow:auto;padding-left:24px; }
 .profile-achievements li { margin:7px 0; }
-.public-profile footer { text-align:right; }
+.public-profile .pp-acts { display:flex;align-items:center;gap:6px; }   /* 右上角：加好友＋關閉 */
 [data-player] { cursor:context-menu; }
 
 .fr-badge { margin-left: 6px; min-width: 16px; padding: 0 5px; border-radius: 8px; background: #e5483c; color: #fff; font-size: 10px; line-height: 16px; }
@@ -62,5 +62,4 @@
 .pm-bar { grid-column:2 / -1;position:relative;height:16px;border-radius:8px;background:#0a1220;overflow:hidden; }
 .pm-bar s { position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#F2B705,#F97316);text-decoration:none; }
 .pm-bar small { position:relative;display:block;text-align:center;font-size:11px;line-height:16px;color:#fff;text-shadow:0 1px 2px #000; }
-.profile-mastery details { margin-top:10px; } .profile-mastery details ul { margin:6px 0 0;padding-left:20px;color:#c8d4e6;font-size:13px;line-height:1.6; }
 @media (max-width: 720px) { .pm-grid { grid-template-columns:1fr; } .profile-body { grid-template-columns:1fr; } }

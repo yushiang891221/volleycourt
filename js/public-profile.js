@@ -4,7 +4,7 @@ import { bindFriendAction } from './player-menu.js';
 const grades = ['E','D','C','B','B+','A','A+','S','S+'];
 const thresholds = [0,1,10,30,100,250,500,1000,3000];
 // 四項技能專精：照「分級表」排（2026-11-18 使用者要求）——每項一張卡，E～S+ 九級一級一行，寫這一級要累積幾次和代表什麼程度；
-//   已經達到的級數正常顯示、現在這一級標亮並附進度條、還沒到的變淡。下面是四個段位的顏色說明和評分說明
+//   已經達到的級數正常顯示、現在這一級標亮並附進度條、還沒到的變淡。上面是四個段位的顏色說明（評分說明 2026-11-18 使用者要求拿掉）
 const tierOf = (g) => /^S/.test(g) ? 's' : /^A/.test(g) ? 'a' : /^B/.test(g) ? 'b' : 'ce';
 const SKILLS = [
   ['攻擊', 'kills', '攻擊得分', ['還沒有攻擊得分，先練助跑和起跳時機', '拿下第一記攻擊得分', '舉到位的球能扣進場內', '攻擊成為隊上穩定的得分來源', '好球能打出威脅，偶爾打穿攔網', '會看攔網選線、變化落點', '高球、後排攻擊也能得分', '多數舉球都能轉成有威脅的攻擊', '關鍵分交給你的王牌攻擊手']],
@@ -15,12 +15,7 @@ const SKILLS = [
 function masteryPanel(stats) {
   const section = document.createElement('section');
   section.className = 'profile-mastery';
-  section.innerHTML = '<h3>四項技能專精</h3><div class="pm-legend"><span class="pm-t-ce">C–E<small>入門</small></span><span class="pm-t-b">B<small>穩定</small></span><span class="pm-t-a">A<small>進階</small></span><span class="pm-t-s">S<small>頂尖</small></span></div><div class="pm-grid"></div>'
-    + '<details><summary aria-label="查看技能專精評分說明">？ 評分說明</summary><ul>'
-    + '<li>開房比賽結算後，每達成一次該項表現就累積 1 次：攻擊得分、舉球助攻、攔網得分、完美接球。</li>'
-    + '<li>四項分開升級，以前打過的戰績也算進來；練習模式、遊玩時數、練習球數和成就點數不算。</li>'
-    + '<li>每一級寫的是「累積幾次」和大約代表的程度；亮起來的那一行是你現在的級數，下面的進度條是離下一級還差多少。</li>'
-    + '<li>段位顏色：C–E 入門、B 穩定、A 進階、S 頂尖。</li></ul></details>';
+  section.innerHTML = '<h3>四項技能專精</h3><div class="pm-legend"><span class="pm-t-ce">C–E<small>入門</small></span><span class="pm-t-b">B<small>穩定</small></span><span class="pm-t-a">A<small>進階</small></span><span class="pm-t-s">S<small>頂尖</small></span></div><div class="pm-grid"></div>';
   const grid = section.querySelector('.pm-grid');
   for (const [name, key, metric, lines] of SKILLS) {
     const card = document.createElement('article'); card.className = 'pm-card';
@@ -45,9 +40,10 @@ function masteryPanel(stats) {
 }
 
 export async function openPublicProfile(nickname) {
+  // 加好友按鈕放右上角、關閉鈕旁邊（2026-11-18 使用者要求；原本在最下面要捲到底才看得到）
   const dialog = document.createElement('dialog'); dialog.className = 'public-profile';
   dialog.setAttribute('aria-label', '個人檔案');
-  dialog.innerHTML = '<form method="dialog"><header><h2>個人檔案</h2><button aria-label="關閉">✕</button></header></form><p role="status">載入中…</p><div class="profile-body"></div><footer><button type="button" data-action hidden></button></footer>';
+  dialog.innerHTML = '<form method="dialog"><header><h2>個人檔案</h2><div class="pp-acts"><button type="button" data-action hidden></button><button aria-label="關閉">✕</button></div></header></form><p role="status">載入中…</p><div class="profile-body"></div>';
   document.body.append(dialog); dialog.addEventListener('close', () => dialog.remove(), { once: true }); dialog.showModal();
   const status = dialog.querySelector('[role=status]');
   try {
