@@ -9,7 +9,7 @@
 .friend-notice { padding:15px;margin-top:10px; }
 .friend-notice b { display:block;margin-bottom:10px;overflow-wrap:anywhere; }
 .friend-notice p:empty { display:none; }
-.public-profile { width:920px;max-width:94vw;max-height:88vh;padding:22px;overflow:auto; }
+.public-profile { width:min(920px, calc(94vw / var(--z, 1)));max-width:none;max-height:calc(88dvh / var(--z, 1));padding:22px;overflow:auto; }   /* 大廳整體放大（zoom）時 vw／dvh 也被放大：除回去才不會超出畫面 */
 .public-profile::backdrop { background:#0009; }
 .public-profile header { display:flex;align-items:center;justify-content:space-between; }
 .public-profile h2 { margin:0; }
