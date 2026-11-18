@@ -249,6 +249,6 @@ function updateWalk(dt) {
   camera.rotation.order = 'YXZ'; camera.rotation.set(walk.pitch, walk.yaw, 0);
   if (performance.now() - walk.lastZ > 180) { walk.lastZ = performance.now(); updateZoneCard(); }
   if (performance.now() - walk.lastF > 90) { walk.lastF = performance.now(); updateFocus(); }
-  updateSkill(dt); if (!roomSpectator()) vbUpdate(dt); applyPose(dt); placeHeld();
+  updateSkill(dt); if (!roomSpectator()) vbUpdate(dt); else vbParts(dt); /* 觀戰時也要清掉擊球粒子：以前只有自己上場才清，觀戰越久留在場上的粒子越多、越來越卡 */ applyPose(dt); placeHeld();
   if (window.VBTutorial?.active) window.VBTutorial.frame(tutSnapshot());
 }

@@ -122,11 +122,21 @@ function rpLive(show) {
   for (const o of objs) if (o) o.visible = show && (o !== RK.landM && o !== RK.stanceM);
   if (TP.av && !show) { TP.av.g.visible = false; TP.ball.visible = false; }
 }
+// 重播用的人物、名牌、球用完要從顯示卡記憶體放掉（2026-11-18：以前每重播一球就多約 50 個模型、9 張貼圖，比賽打久了越來越卡）
+//   跟現場共用的（同一個模型、材質、貼圖、骨架）不放，避免現場的人物要重新上傳；骨架＝有骨頭的人物每個一張骨頭位置貼圖
+function rpDispose(root) {
+  if (!root) return;
+  const live = new Set(); scene.traverse((o) => { if (o.skeleton) live.add(o.skeleton); if (o.geometry) live.add(o.geometry); for (const m of [].concat(o.material || [])) { live.add(m); for (const k in m) if (m[k] && m[k].isTexture) live.add(m[k]); } });
+  const done = new Set(), drop = (x) => { if (x && !live.has(x) && !done.has(x)) { done.add(x); x.dispose(); } };
+  root.traverse((o) => { drop(o.skeleton); drop(o.geometry); for (const m of [].concat(o.material || [])) { for (const k in m) if (m[k] && m[k].isTexture) drop(m[k]); drop(m); } });
+}
+// 比賽特效（TOUCH、IN／OUT、攔網牆、旗子）、電腦球員用完：拿掉並放掉顯示卡記憶體（以前只拿掉，每球留下幾張貼圖，打久會卡）
+function fxDrop(g) { if (g.parent) g.parent.remove(g); rpDispose(g); }
 function closeReplay() {
   if (!RP.on) return;
   if (RP.recorder && RP.recorder.state !== 'inactive') RP.recorder.stop();
   for (const tr of RP.trails.values()) for (const mm of [tr.glow, tr.core]) if (mm) { mm.geometry.dispose(); mm.material.dispose(); }
-  RP.on = false; scene.remove(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); RP.hud = null; }
+  RP.on = false; scene.remove(RP.g); rpDispose(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); rpDispose(RP.hud); RP.hud = null; }
   ballsGroup.visible = true; for (const p2 of NET.peers.values()) p2.av.g.visible = true; hands.visible = !!walk.hold;
   rpLive(true);
   walk.paused = false; $('rp').hidden = true; camera.fov = walkFov(); camera.updateProjectionMatrix();
@@ -637,9 +647,11 @@ addEventListener('keydown', (e) => {
   if (!walk.on || VBSettings.isOpen) return;
   const tgt = e.target; if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT')) return;
   const k = VBSettings.key(e);
+  if (e.ctrlKey && /^Key[A-Z]$/.test(e.code) && !/^Key[RWTN]$/.test(e.code)) e.preventDefault();   /* 蹲下（Ctrl）時按字母鍵不要觸發瀏覽器快捷鍵（Ctrl＋D 加書籤會搶走畫面，放開按鍵收不到＝一直走） */
+  if (walk.crouch && walk.crouchCtrl && !e.ctrlKey && k !== 'crouch') walk.crouch = false;
   if (RP.hl && !e.repeat) { e.preventDefault(); hlSkip(e.key === 'Escape'); return; }   // 得分精華：任意鍵跳過（做影片時只有 Esc 能取消）
   if (e.code === 'KeyG' && !e.repeat && !walk.paused && !$('wk-cart').hidden) { e.preventDefault(); togglePracticeCart(); return; }
-  if (k === 'crouch') { e.preventDefault(); if (!walk.paused) walk.crouch = true; return; }   // 蹲下（按住）：接重扣比較穩
+  if (k === 'crouch') { e.preventDefault(); if (!walk.paused) { walk.crouch = true; walk.crouchCtrl = e.key === 'Control'; } return; }   // 蹲下（按住）：接重扣比較穩
   if ((k === 'ready' || k === 'start') && !e.repeat && !walk.paused) { e.preventDefault(); if (k === 'ready') roomReady(); else roomStart(); return; }
   if (typeof ROOM_UI !== 'undefined' && ROOM_UI?.picking) return;
   if (VM.on && roomSpectator() && ['v','q','e','1','2','3','4','5','6','b','f'].includes(k)) { e.preventDefault(); return; }
@@ -663,6 +675,11 @@ addEventListener('keydown', (e) => {
 addEventListener('blur', () => { walk.crouch = false; vbManualSetCancel(); });
 addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (walk.setAim && !walk.setAim.shot && k === (walk.setAim.back ? 'e' : 'q')) vbManualSetCancel(); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === (SETM.m.all ? 'q' : String(SETM.m.n))) setMenuClose(true); /* 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個 */ walk.keys.delete(k); });
 addEventListener('blur', () => walk.keys.clear());
+// 按鍵、滑鼠鍵卡住的保險（2026-11-18 使用者：Ctrl＋右鍵卡住後角色自己一直往右走）
+//   瀏覽器的快捷鍵視窗、右鍵選單、切到別的視窗、滑鼠鎖定被放開時，「放開按鍵」的訊息可能收不到 → 當作全部放開；還按著的鍵會再送按下
+document.addEventListener('visibilitychange', () => { if (document.hidden) { walk.keys.clear(); walk.crouch = false; } });
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) { walk.keys.clear(); walk.crouch = false; } });
+addEventListener('contextmenu', () => { if (walk.on) { walk.keys.clear(); walk.crouch = false; } }, true);
 // 看的方向：電腦上點一下畫面就鎖定滑鼠，之後滑鼠直接移動＝轉頭（像第一人稱遊戲），Esc 放開滑鼠；
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
@@ -773,7 +790,10 @@ function endLook(e) {
   walk.target = [p.x, p.z]; targetMark.position.set(p.x, 0.04, p.z); targetMark.visible = true;
 }
 renderer.domElement.addEventListener('pointerup', endLook);
-addEventListener('pointerup', (e) => { if (e.button === 0 && vbManualSetRelease()) return; if (e.button === 0 || e.button === 2) { const g = walk.chargeArmGround && walk.chargeArm && !walk.air; walk.chargeArm = null; walk.chargeArmGround = false; if (walk.charge) vbChargeRelease(); else if (g) vbAttack(false); } });   // 地上按、地上放＝站著打
+function vbPointerRelease() { const g = walk.chargeArmGround && walk.chargeArm && !walk.air; walk.chargeArm = null; walk.chargeArmGround = false; if (walk.charge) vbChargeRelease(); else if (g) vbAttack(false); }   // 地上按、地上放＝站著打
+addEventListener('pointerup', (e) => { if (e.button === 0 && vbManualSetRelease()) return; if (e.button === 0 || e.button === 2) vbPointerRelease(); });
+// 左右鍵一起按時瀏覽器只送一次放開（另一鍵的放開收不到）：滑鼠一動就照「現在真的按著哪些鍵」對一次；Ctrl 也一樣
+addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && (walk.chargeArm || walk.charge) && !(e.buttons & 3)) vbPointerRelease(); if (walk.crouch && walk.crouchCtrl && !e.ctrlKey) walk.crouch = false; });
 for (const el of document.querySelectorAll('#emo-menu [data-emo]')) {   // 沒鎖定滑鼠時：直接指、點選單
   el.addEventListener('pointerenter', () => { if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuDraw(); } });
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (EMO.menu) { EMO.menu.pick = el.dataset.emo; emoMenuClose(true); } });

@@ -598,7 +598,7 @@ export function createGameCore(S = {}) {
   function avDrive(...a) { return S.avDrive ? S.avDrive(...a) : undefined; }
   const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
   const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
-  const HIT_LOCK = { spike: [0.12, 0.1], block: [0.12, 0.1], set: [0.16, 0.3], bump: [0.14, 0.2], reach: [0.14, 0.2] };
+  const HIT_LOCK = { spike: [0.08, 0], block: [0.08, 0], set: [0.12, 0.1], bump: [0.1, 0], reach: [0.1, 0] };
   function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
   function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
   function avShoulders(av) { av.arms[0].getWorldPosition(TCH.S); av.arms[1].getWorldPosition(TCH.M); TCH.M.add(TCH.S).multiplyScalar(0.5); av.elbows[0].getWorldPosition(TCH.E); av.hands[0].getWorldPosition(TCH.H); return TCH.S.distanceTo(TCH.E) + TCH.E.distanceTo(TCH.H) + 0.05 * (av.g.scale.x || 1); }
@@ -642,7 +642,7 @@ export function createGameCore(S = {}) {
       if (U.hp && dtm > 0.004 && dtm < 0.25) {
         const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
         if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
-        if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
+        if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && p.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
           const Rv = BALL_R * BALL_VIS, sp = v.length(); let who = null, wd = Infinity;
           for (const av of LIVE_AVS) {
             if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) { if (now - av._drv > 3000) LIVE_AVS.delete(av); continue; }
@@ -1040,6 +1040,13 @@ export function createGameCore(S = {}) {
     }
   }
   const RP = { on: false, t: 0, playing: true, speed: 1, view: 'cam', A: null, g: null, actors: new Map(), ballsM: new Map(), trails: new Map(), marks: [], hud: null, hudT: 0, recorder: null, chunks: [] };
+  function rpDispose(root) {
+    if (!root) return;
+    const live = new Set(); scene.traverse((o) => { if (o.skeleton) live.add(o.skeleton); if (o.geometry) live.add(o.geometry); for (const m of [].concat(o.material || [])) { live.add(m); for (const k in m) if (m[k] && m[k].isTexture) live.add(m[k]); } });
+    const done = new Set(), drop = (x) => { if (x && !live.has(x) && !done.has(x)) { done.add(x); x.dispose(); } };
+    root.traverse((o) => { drop(o.skeleton); drop(o.geometry); for (const m of [].concat(o.material || [])) { for (const k in m) if (m[k] && m[k].isTexture) drop(m[k]); drop(m); } });
+  }
+  function fxDrop(g) { if (g.parent) g.parent.remove(g); rpDispose(g); }
   function hlReset(...a) { return S.hlReset ? S.hlReset(...a) : undefined; }
   function hlOnPoint(...a) { return S.hlOnPoint ? S.hlOnPoint(...a) : undefined; }
   function hlPanelBtn(...a) { return S.hlPanelBtn ? S.hlPanelBtn(...a) : undefined; }
@@ -1368,7 +1375,7 @@ export function createGameCore(S = {}) {
     if (!opps[0]) vmMkAi('ai1', 1, 'AI 對手', '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, 'AI 對手', '#F76B15', VM.chars.ai2);
     for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
     if (seats) {
-      for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); } VM.ai.clear(); VM.names = {};
+      for (const a of VM.ai.values()) { if (typeof fxDrop === 'function') fxDrop(a.av.g); else scene.remove(a.av.g); a.tag.element.remove(); } VM.ai.clear(); VM.names = {};
       VM.team = seats.map((row,t) => row.map((id,k) => id || `ai${t}${k}`));
       for (const t of [0,1]) for (const [k,id] of VM.team[t].entries()) {
         if (/^ai/.test(id)) vmMkAi(id,t,'AI',t===0?'#30A46C':'#E5484D',null);

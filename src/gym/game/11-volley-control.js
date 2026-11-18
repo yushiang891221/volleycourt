@@ -227,6 +227,7 @@ function vbParts(dt) {
 //   3. 碰到的東西：前臂墊球的悶擊、手掌扣球的響亮拍擊、手指舉球幾乎沒聲音、木地板的低頻「咚」、網繩的「嗡」
 // 全部再過一個鐵皮球館的殘響（約 2 秒，越遠殘響比例越高）。真實比賽錄音裡擊球的主要能量在 150～300 Hz、後面拖著長殘響
 const SFX = { on: true, ctx: null, floorT: 0, bus: null, noise: null };
+const SFX_TOUCH = new Set(['spike', 'serve', 'hit', 'tip', 'block', 'bump', 'set']);   // 碰到球的聲音
 SFX.on = !VBSettings.values.mute;
 function sfxNoise(ac, dur, shape = 3) { const len = Math.max(1, Math.floor(ac.sampleRate * dur)), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (fxRandom() * 2 - 1) * Math.pow(1 - i / len, shape); return buf; }
 // 球館殘響：前 50 ms 幾個早期反射，之後指數衰減的雜訊，高頻比低頻衰減快（越後面越悶）
@@ -262,7 +263,8 @@ function sfx(kind, q = 1, pos) {
     const ac = SFX.ctx; if (ac.state === 'suspended') ac.resume();
     // 位置：越遠越小聲、殘響比例越高；在左邊就偏左聲道
     let vol = 1, pan = 0;
-    if (pos) { const d = pos.distanceTo(camera.position); vol = clamp(1.2 - d / 20, 0.1, 1); const rt = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), rel = pos.clone().sub(camera.position); pan = clamp(rel.dot(rt) / Math.max(1.5, d), -0.8, 0.8); }
+    //   碰球聲（扣、發、舉、墊、攔）在球館裡整場都聽得清楚：最小 0.6（以前一律 1.2－d/20，對面底線發球只剩 0.25、幾乎全是回音，聽起來像沒出聲）
+    if (pos) { const d = pos.distanceTo(camera.position); vol = SFX_TOUCH.has(kind) ? clamp(1.1 - d / 40, 0.6, 1) : clamp(1.2 - d / 20, 0.1, 1);const rt = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), rel = pos.clone().sub(camera.position); pan = clamp(rel.dot(rt) / Math.max(1.5, d), -0.8, 0.8); }
     sfxPlay(ac, kind, q, vol, pan);
   } catch (e) { /* 不支援就安靜 */ }
 }

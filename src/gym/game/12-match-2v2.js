@@ -76,7 +76,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (!opps[0]) vmMkAi('ai1', 1, 'AI 對手', '#E5484D', VM.chars.ai1); if (!opps[1]) vmMkAi('ai2', 1, 'AI 對手', '#F76B15', VM.chars.ai2);
   for (const id of [mateId, ...opps]) if (id) VM.names[id] = (NET.peers.get(id) || {}).n || '球友';
   if (seats) {
-    for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); } VM.ai.clear(); VM.names = {};
+    for (const a of VM.ai.values()) { if (typeof fxDrop === 'function') fxDrop(a.av.g); else scene.remove(a.av.g); a.tag.element.remove(); } VM.ai.clear(); VM.names = {};
     VM.team = seats.map((row,t) => row.map((id,k) => id || `ai${t}${k}`));
     for (const t of [0,1]) for (const [k,id] of VM.team[t].entries()) {
       if (/^ai/.test(id)) vmMkAi(id,t,'AI',t===0?'#30A46C':'#E5484D',null);
@@ -109,7 +109,7 @@ function vmStop(silent) {
   VM.watchFrames = null; VM.watchBall = null; VM.watchOffset = null;
   vbTrailClear();
   if (VM.host && NET.on && !silent) NET.tx.publish('vm', { e: 'end' });
-  for (const a of VM.ai.values()) { scene.remove(a.av.g); a.tag.element.remove(); }
+  for (const a of VM.ai.values()) { if (typeof fxDrop === 'function') fxDrop(a.av.g); else scene.remove(a.av.g); a.tag.element.remove(); }
   VM.ai.clear(); VM.on = false; VM.host = false; VM.phase = 'idle'; VM.six = false; peerTagsAll();
   $('vm-rot').hidden = true; $('vm-rot').dataset.k = '';
   $('vm-hud').hidden = true; $('walk-ui').classList.remove('vm');
@@ -327,7 +327,7 @@ function vbTouchFx(pos, word) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 28), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide })); ring.lookAt(camera.position.clone().sub(pos).add(pos)); g.add(ring);
   const sp = labelSprite(out ? 'TOUCH・出界' : 'TOUCH', out ? '#E5484D' : '#FFFFFF', 0.65); sp.position.y = 0.45; g.add(sp); scene.add(g);
   vbBurst(pos, '#FFFFFF', 10, 1.2);
-  const t0 = performance.now(); (function anim() { const k = (performance.now() - t0) / 900; if (k >= 1 || !g.parent) { scene.remove(g); return; } ring.scale.setScalar(1 + k * 2.2); ring.material.opacity = 0.95 * (1 - k); sp.position.y = 0.45 + k * 0.35; requestAnimationFrame(anim); })();
+  const t0 = performance.now(); (function anim() { const k = (performance.now() - t0) / 900; if (k >= 1 || !g.parent) { vmFxDrop(g); return; } ring.scale.setScalar(1 + k * 2.2); ring.material.opacity = 0.95 * (1 - k); sp.position.y = 0.45 + k * 0.35; requestAnimationFrame(anim); })();
 }
 // 攔網碰到球的動畫：衝擊光圈（兩圈往外擴）、火花、彈出來的大字；攔死時鏡頭震一下
 //   stuff＝攔死、out＝打手出界、soft＝撐起來、through＝打穿、touch＝碰到
@@ -342,7 +342,7 @@ function vbBlockFx(pos, type) {
   if (type === 'stuff' && pos.distanceTo(camera.position) < 10) vbShake(0.32, 0.11);
   const base = sp.scale.clone(), t0 = performance.now();
   (function anim() {
-    const k = (performance.now() - t0) / 1100; if (k >= 1 || !g.parent) { scene.remove(g); return; }
+    const k = (performance.now() - t0) / 1100; if (k >= 1 || !g.parent) { vmFxDrop(g); return; }
     for (const m of [r1, r2, flash]) m.quaternion.copy(camera.quaternion);   // 光圈一直正對鏡頭
     r1.scale.setScalar(1 + k * 5); r1.material.opacity = 0.95 * (1 - k); r2.scale.setScalar(1 + Math.max(0, k - 0.12) * 7); r2.material.opacity = 0.8 * Math.max(0, 1 - k * 1.3);
     flash.scale.setScalar(1 + k * 2); flash.material.opacity = Math.max(0, 0.9 - k * 3);
@@ -368,7 +368,7 @@ function vbWallFx() {
     const edge = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.05), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); edge.position.y = 0.45;
     const sp = labelSprite(L.length >= 3 ? '三人攔網・一面牆' : '雙人攔網！', col, 1.05); sp.position.y = 0.85; g.add(wall, edge, sp); scene.add(g);
     const t0 = performance.now(), base = sp.scale.clone();
-    (function anim() { const k = (performance.now() - t0) / 1000; if (k >= 1 || !g.parent) { scene.remove(g); return; } wall.material.opacity = 0.32 * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); edge.material.opacity = 0.9 * (1 - k); sp.scale.copy(base).multiplyScalar(k < 0.12 ? 0.5 + k * 4.2 : 1); sp.material.opacity = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1; requestAnimationFrame(anim); })();
+    (function anim() { const k = (performance.now() - t0) / 1000; if (k >= 1 || !g.parent) { vmFxDrop(g); return; } wall.material.opacity = 0.32 * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); edge.material.opacity = 0.9 * (1 - k); sp.scale.copy(base).multiplyScalar(k < 0.12 ? 0.5 + k * 4.2 : 1); sp.material.opacity = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1; requestAnimationFrame(anim); })();
   }
 }
 // 人跟人不能重疊：每個人身體半徑約 0.3 m，兩個人中心至少隔 0.6 m——被擋住就停在旁邊，不會穿過去、疊在一起搶同一顆球
@@ -379,16 +379,18 @@ function vbBodyPush() {
   for (const o of others) { const dx = walk.x - o.x, dz = walk.z - o.z, d = Math.hypot(dx, dz); if (d > 0.001 && d < 0.6) { walk.x = o.x + (dx / d) * 0.6; walk.z = o.z + (dz / d) * 0.6; } }
 }
 // 落點：場內綠圈 IN、場外紅圈 OUT，停 2.5 秒
+// 特效、電腦球員拿掉時順便放掉顯示卡記憶體（fxDrop 在 09-replay.js；單獨測這個檔時沒有就只拿掉）
+function vmFxDrop(g) { if (typeof fxDrop === 'function') fxDrop(g); else if (g.parent) g.parent.remove(g); }
 function vmMark(x, z, inside) {
   const g = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.28, 32), new THREE.MeshBasicMaterial({ color: inside ? '#30A46C' : '#E5484D', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
   const sp = labelSprite(inside ? 'IN' : 'OUT', inside ? '#30A46C' : '#E5484D', 0.7); sp.position.y = 0.7; g.add(sp);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => scene.remove(g), 2500);
+  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
 }
 // OUT：落點插一支小旗子一下
 function vmOut(B) {
   const [x, z] = vmW(B.x, B.z), g = new THREE.Group(); cyl(g, 0.012, 0.012, 1.1, '#FFFFFF', 0, 0, 0); box(g, 0.3, 0.2, 0.01, '#E5484D', 0.15, 0.88, 0);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => scene.remove(g), 2500);
+  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
 }
 // ---- AI 球員
 // 一次進攻：誰接（離落點最近的人）、誰舉（另一個）、誰攻（接球的人）

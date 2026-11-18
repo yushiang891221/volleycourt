@@ -675,14 +675,14 @@ function avDrive(av, P, k, sp = 0, air = false) {
   if (av._tk) avTouch(av, av._tk);
 }
 // ---- 手真的碰到球（2026-11-18 使用者：手和球中間不能有空隙；自己第三人稱、別人看你、電腦、重播都一樣）
-//   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）
-//   2. 擊球那一瞬間（畫面上球突然轉向）：找出碰球的人，手臂伸向擊球點，畫面上的球先貼在手上、再接回真正的飛行路線（touchPass，約 0.16 秒）
+//   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）；只迎向飛過來的球，地上、滾動的球不動，也不把球拉向手
+//   2. 擊球那一瞬間（畫面上球突然轉向）：找出碰球的人，手臂伸向擊球點，擊球那一格球在手上、馬上接回真正的飛行路線（touchPass，0.08～0.12 秒，不停留；使用者嫌像手黏球）
 //      判定的手比畫面上的人物手長（判定手高 2.37 m、畫面 1.91 m，觸球範圍約 1 m），沒有這一步會看到手和球中間隔著一段空隙
 //   扣球＝右手手掌貼球後面、舉球＝雙手包住球的後下方、接球＝雙手前臂併攏墊在球下面、攔網＝雙手手掌擋在球前面、撲救＝靠近那隻手的手掌
 //   只動畫面（ballPullOn），物理和判定不變
 const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
 const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
-const HIT_LOCK = { spike: [0.12, 0.1], block: [0.12, 0.1], set: [0.16, 0.3], bump: [0.14, 0.2], reach: [0.14, 0.2] };   // 擊球後 [球貼在手上、再接回飛行路線的總時間（秒）, 前面幾成時間完全貼著]；扣球貼太久會像黏住
+const HIT_LOCK = { spike: [0.08, 0], block: [0.08, 0], set: [0.12, 0.1], bump: [0.1, 0], reach: [0.1, 0] };   // 擊球後 [球貼在手上、再接回飛行路線的總時間（秒）, 前面幾成時間完全貼著]；扣球貼太久會像黏住
 function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
 // 手臂末端（碰球的點）：手掌＝手腕再往外 5 cm；前臂＝手肘到手腕 6 成的地方（不管哪種骨架都用世界座標算）
 function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
@@ -730,12 +730,11 @@ function avTouch(av, kind) {
     m.updateWorldMatrix(true, false); TCH.Bb.setFromMatrixPosition(m.matrixWorld);
     const d = TCH.Bb.distanceTo(TCH.M); if (d < bd) { bd = d; best = m; TCH.B.copy(TCH.Bb); }
   }
-  if (!best || (best.userData.lock && best.userData.lock.av === av)) return;   // 擊球瞬間交給 touchPass
+  if (!best || best.userData.lock) return;   // 擊球瞬間交給 touchPass
+  // 只迎向「飛過來」的球：停在地上、滾動、慢慢飄走的球手不動（2026-11-18 使用者：球停在地上手會亂甩）
+  const hv = best.userData.hv; if (!hv || hv.lengthSq() < 9 || TCH.B.y < 0.5 || hv.dot(TCH.g.copy(TCH.M).sub(TCH.B)) <= 0) return;
   let w = clamp(1 - (bd - reach - Rv) / TCH_CFG[kind].band, 0, 1); w = w * w * (3 - 2 * w); if (w < 0.01) return;
-  const gl = avReachTo(av, kind, TCH.B, w), k = w * clamp(1 - (gl - 0.55) / 0.35, 0, 1);   /* 差 55 cm 以內整段補上，再遠就慢慢不補 */
-  if (k < 0.01 || best.userData.lock) return;
-  const old = best.userData.pull, now = performance.now();
-  if (!old || old.t <= (touchPass.t || 0) || k >= (old.w || 0)) best.userData.pull = { x: TCH.P.x * k, y: TCH.P.y * k, z: TCH.P.z * k, w: k, t: now };
+  avReachTo(av, kind, TCH.B, w);   // 擊球前只動手、不把球拉向手（使用者：像手去黏球）
 }
 // 2. 擊球瞬間：每一格畫之前看每顆球有沒有突然轉向（＝被打到），有就鎖定碰球的人，手伸向擊球點、球先貼在手上再飛走
 function touchPass() {
@@ -747,7 +746,7 @@ function touchPass() {
     if (U.hp && dtm > 0.004 && dtm < 0.25) {
       const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
       if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
-      if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
+      if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && p.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
         const Rv = BALL_R * BALL_VIS, sp = v.length(); let who = null, wd = Infinity;
         for (const av of LIVE_AVS) {
           if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) { if (now - av._drv > 3000) LIVE_AVS.delete(av); continue; }

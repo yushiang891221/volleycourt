@@ -1130,6 +1130,7 @@ function hitWorldBall(b, kind) {
   const ty = 1.2;
   b.v.set((tx - p.x) / T, (ty - p.y) / T + 0.5 * 9.8 * T, (tz - p.z) / T);
   b.rest = 0; b.spike = null; b.serve = false;
+  b.squash = 0.12; sfx(kind, 0.85, p);   // 球飛到手邊直接碰出去：以前這條路沒出聲
   pose = kind === 'set' ? 'setPush' : 'bumpHit'; hands.visible = true; applyPose(0, true); walk.flash = 0.45;
   skill.dip = 0.05;
   if (NET.on) netBallHit(b, kind);
