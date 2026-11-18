@@ -32,7 +32,7 @@ const api = window.PlayOneLobby = {
     match = { ...value, state: value?.state === 'searching' ? 'searching' : 'idle' };
     const sec = Math.max(0, Math.floor(Number(match.seconds) || 0));
     $('start-match').textContent = match.state === 'searching' ? `配對中 ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} · 取消` : '開始配對';
-    notice(match.note || ''); $('match-ai').hidden = match.state !== 'searching' || sec < 10;
+    notice(match.note || match.reason || ''); $('match-ai').hidden = match.state !== 'searching' || !match.canAI;
     updateControls();
   }
 };
@@ -44,7 +44,7 @@ function selectPage(page) {
 }
 document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => selectPage(b.dataset.page));
 $('tab-locker').onclick = () => $('equip-open').click();
-$('start-match').onclick = () => canLead() && (match.state === 'searching' ? api.onCancelMatch(mode) : api.onStartMatch(mode));
+$('start-match').onclick = () => match.state === 'searching' ? api.onCancelMatch(mode) : canLead() && api.onStartMatch(mode);
 $('match-ai').onclick = () => canLead() && api.onStartAI(mode);
 function setMode(value) {
   mode = value; save('po.lobby.mode', mode);
@@ -56,8 +56,8 @@ function rankText(m) { return Number(m.placed) >= 10 || (m.placed === true) ? `$
 function updateControls() {
   const leader = canLead();
   document.querySelectorAll('[data-mode]').forEach(b => { b.disabled = !leader || match.state === 'searching'; });
-  $('start-match').disabled = !leader;
-  if (!leader) $('start-match').textContent = '等隊長開始';
+  $('start-match').disabled = !leader && match.state !== 'searching';
+  if (!leader && match.state !== 'searching') $('start-match').textContent = '等隊長開始';
   else if (match.state !== 'searching') $('start-match').textContent = '開始配對';
   $('match-ai').disabled = !leader;
   $('party-link').disabled = !leader;
@@ -96,7 +96,7 @@ function summary(prog = P.cachedProgress() || {}) {
   $('my-summary').textContent = `${nick()}　Lv${P.levelOf(prog.exp || 0)}　經驗 ${P.expInLevel(prog.exp || 0)} / ${P.EXP_PER_LEVEL}　🪙 ${prog.coins || 0}　${title}`;
 }
 if (demo === '2' || demo === '6') members = Array.from({ length: Number(demo) }, (_, i) => ({ id: `demo-${i}`, name: i ? ['小晴', '阿哲', '小宇', '可可', '阿凱'][i - 1] : nick(), rating: 1000 + i * 650, tier: ['新手', '新手', '野場小白', '野場小白', '野場NPC', '野場NPC'][i], isLeader: i === 0, look: myLookCode() }));
-setMode(mode); selectPage(read('po.lobby.page', 'home')); summary();
+setMode(mode); selectPage(location.hash === '#lobby' ? 'home' : read('po.lobby.page', 'home')); summary();
 try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
 preloadAvatars().then(renderParty, () => {});
 new ResizeObserver(() => preview?.redraw()).observe($('party-stage'));

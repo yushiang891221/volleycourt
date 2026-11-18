@@ -1,0 +1,36 @@
+請用繁體中文工作。程式在 D:\開排球場\volleycourt，分支 game-site。
+這是 WEB-029 快速配對的「網頁」部分（工作單 docs\codex工作單\WEB_029_快速配對.md 的 B 節；企劃 docs\企劃-積分天梯與快速配對.md 第三節）。
+伺服器部分 Claude 已經寫好並提交（e510688，server\shared\matchmaker.mjs、server\rt\server.mjs），你不用、也寫不進 server 資料夾。組隊（js\lobby-party.js）已經完成。
+
+## 伺服器已經支援的訊息（大廳 WebSocket，跟 party- 訊息一樣）
+網頁送：
+- {k:'mm-start', mode:'2v2'|'6v6'}：隊長（或沒組隊的人）按「開始配對」
+- {k:'mm-cancel'}：隊伍裡任何人都可以取消
+- {k:'mm-ai-now'}：等 10 秒以後才有效（直接用 AI 開打）
+伺服器回（隊伍裡每個人都會收到）：
+- {k:'mm-status', state:'searching', mode, seconds, canAI, note}：每秒一次；note 例如「正在找 2 人隊伍」「正在找對手」；canAI＝true 時顯示「直接用 AI 開打」
+- {k:'mm-status', state:'idle', reason?}：取消了（reason 例如「小晴 取消了配對」「隊伍有變動，已取消配對」「有人離開大廳，已取消配對」，有就顯示）
+- {k:'mm-error', reason}：顯示給玩家
+- {k:'mm-found', room, mode, me, host, plan:{count, lv, to, bestOf, picks, names, host}}：配到了
+  - room＝房號；me＝你在這個房間要用的代號（一定要用它當 NET.me，伺服器只讓座位表裡的代號進房）；host＝true 的人負責帶房間流程
+  - plan.picks＝座位表，長度 count×2，前 count 格是一隊、後 count 格是另一隊，null＝AI；plan.names＝代號→暱稱；lv＝AI 強度（3 高手、4 校隊、5 企聯）
+
+## A. 大廳（js\lobby-party.js、js\lobby-ranked.js、js\lobby.js）
+1. PlayOneLobby 的 onStartMatch → mm-start；onCancelMatch → mm-cancel；onStartAI → mm-ai-now；mm-status → setMatchState（隊員也要看到配對中，也能取消）。
+2. 收到 mm-found：把 {room, mode, me, plan} 存進 sessionStorage 'vb.ranked'，然後跳到 gym.html?site=bs-shenjing&room=房號&mode=模式&ranked=1&me=代號（host 為 true 再加 &host=1；照 lobby.js 的 enter() 用 VBLobby.carry 帶參數）。
+3. 從遊戲回到大廳後隊伍還在（伺服器會保留），大廳要回到「大廳」分頁。
+
+## B. 遊戲裡的積分賽房間（網址有 ranked=1）
+1. src\gym\game\07-net.js 的 netJoin：ranked 時 NET.me 用網址的 me（只允許 [A-Za-z0-9_-]，最多 40 字）。
+2. js\room-settings.js 加一個房主才能用的方法（例如 startPlanned({picks, court, count, lv, to, bestOf})）：直接把 count、lv、to、bestOf 設好，flow 設成 {phase:'playing', ready: picks 裡的真人, picks, court, deadline:0, round: round+1} 並送出。要通過現有 receive() 對 flow 的檢查（picks 長度＝count×2、真人都在 ready 裡）。
+3. 帶房間流程的人（&host=1）：房間確認自己是房主後，等座位表裡所有真人代號都進房，或最多等 15 秒（沒來的人那格改成 null，由 AI 補），就呼叫 startPlanned；court 用場地上第一個排球場（state.items 裡 type 'vb' 的那個，照 roomCourtOf 現在怎麼找球場）。之後走現有流程：roomRulesChanged 會照 picks 把人放到位置，並送 srv-start 請伺服器開賽（伺服器會再用自己的座位表蓋過去）。
+4. 積分賽房間不顯示：準備、選位、房主規則設定、開始按鈕、房間邀請連結。改顯示「積分賽 2 對 2・等待所有球員進場…（已到 3/4）」，開賽後照一般比賽畫面。
+5. 比賽打完（結算面板關掉，或結算出現後 20 秒）自動回大廳（VBLobby.home()）。
+6. 一般房間、練習模式行為完全不變（沒有 ranked=1 就跟現在一樣）。
+
+## 規則
+- 改了 src\gym 之後要跑 node tools\build-gym.cjs 和 node tools\build-headless.cjs（tests 會檢查 gym.html 和 server\match\game-core.mjs 是不是最新）。如果 build-headless 要寫 server\match 而你寫不進去，就在報告裡寫明，Claude 會在這邊重跑。如果 src\gym 也寫不進去，就只做 A 和 room-settings.js，B 的其他部分把要改的地方（檔案、位置、程式）寫進報告。
+- 不能動：server 資料夾；其他人正在改的遊戲玩法（只加 ranked 相關的判斷，不改判定、手感、AI）。
+- 檢查：tests\verify-web029b.cjs（大廳訊息、sessionStorage、網址、room-settings 的 startPlanned 與 receive 檢查）；node tools\run-tests.cjs --quiet 不能有新失敗。
+- Codex 用量不可超過 50%；做完就停，額度快不夠時先把進度寫進報告再停。不要推送、不要部署、不要 git add 或提交。截圖做不到就略過。
+- 報告寫在 repo 根目錄 WEB_029B_報告.md：改了什麼、測試結果、還沒做的。

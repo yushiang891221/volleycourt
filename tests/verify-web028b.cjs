@@ -4,7 +4,7 @@ const source = fs.readFileSync('js/lobby-party.js', 'utf8');
 const ranked = fs.readFileSync('js/lobby-ranked.js', 'utf8'), lobby = fs.readFileSync('js/lobby.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8'), css = fs.readFileSync('css/lobby-ranked.css', 'utf8');
 for (const id of ['party-incoming', 'party-accept', 'party-decline', 'party-countdown', 'party-copy-url']) assert(html.includes(`id="${id}"`), id);
-for (const text of ['等隊長開始', '斷線中', '請出隊伍', '離開隊伍', "m.rating === null ? '定級中'", 'canLead() && (match.state']) assert(ranked.includes(text), text);
+for (const text of ['等隊長開始', '斷線中', '請出隊伍', '離開隊伍', "m.rating === null ? '定級中'", "match.state === 'searching' ? api.onCancelMatch(mode) : canLead() && api.onStartMatch(mode)"]) assert(ranked.includes(text), text);
 assert(css.includes('pointer-events:auto; min-height:44px'));
 assert(lobby.includes("queueMicrotask(()=>{if(client?.send({k:'party-sync'}))"));
 // 真實 connector 的 onstate 在 hello 前同步呼叫，組隊同步使用微任務延後。

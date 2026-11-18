@@ -135,6 +135,15 @@ function connectLobby(){if(client)return;startAccountList();client=VBLobby.conne
  // socket 在 onstate 返回後送 hello；微任務確保 party-sync 排在 hello 後。
  if(connected)queueMicrotask(()=>{if(client?.send({k:'party-sync'})){window.VBPartyBridge.ready=true;dispatchEvent(new Event('vb-party-ready'));}});$('connection-status').textContent=({online:'已連線',connecting:'連線中…',offline:'連不上 · 自動重試中'})[state];$('connection-dot').dataset.state=state;renderRooms();renderPlayers();
 },onmessage:m=>{
+ if(m.k==='mm-status'){window.PlayOneLobby?.setMatchState(m);if(m.reason)notify(m.reason);}
+ if(m.k==='mm-error')notify(m.reason);
+ if(m.k==='mm-found'){
+  try { sessionStorage.setItem('vb.ranked',JSON.stringify({room:m.room,mode:m.mode,me:m.me,plan:m.plan})); }
+  catch (_) { notify('無法保存配對資料，請允許此網站使用工作階段儲存空間'); return; }
+  try { localStorage.setItem('po.lobby.page','home'); } catch (_) {}
+  const q=new URLSearchParams({site:'bs-shenjing',room:m.room,mode:m.mode,ranked:'1',me:m.me});
+  if(m.host)q.set('host','1');VBLobby.carry(q);location.href=`gym.html?${q}`;
+ }
  if(m.k==='party')window.VBPartyBridge.party=m;
  if(m.k==='party'||m.k.startsWith('party-'))dispatchEvent(new CustomEvent('vb-party-message',{detail:m}));
  if(m.k==='state'){rooms=m.rooms;players=m.players;$('messages').querySelectorAll('.chat-line').forEach(p=>p.remove());m.chats.forEach(c=>appendChat(c));renderRooms();renderPlayers();}

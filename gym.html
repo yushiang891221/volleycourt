@@ -7144,6 +7144,7 @@ function roomKeepSpectatorOut() {
 function isRoomHost() { return new URLSearchParams(location.search).has('practice') || !!(ROOM && ROOM.isHost); }
 function renderRoomRules() {
   const host = isRoomHost(); $('w-host').hidden = !host; $('room-speed').value = String(VB.ts); $('room-speed').disabled = !host;
+  if (new URLSearchParams(location.search).get('ranked') === '1') { $('w-host').hidden = true; $('room-panel').hidden = true; return; }
   if (!host) $('room-panel').hidden = true;
   if (!NET.on) { $('room-list').textContent = (VBSettings.values.nickname || '球友') + '（你・房主）'; }
   else $('room-title').textContent = '房間 ' + NET.room + (host ? ' · 你是房主' : ROOM && ROOM.host ? ' · 房主：' + (NET.peers.get(ROOM.host)?.n || '球友') : ' · 確認房主中…');
@@ -7296,6 +7297,11 @@ async function netJoin(room) {
   room = String(room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 64);
   if (!room) { netStatus('請輸入房間代碼', 'warn'); return; }
   if (NET.on) netLeave(true);
+  if (new URLSearchParams(location.search).get('ranked') === '1') {
+    const me = new URLSearchParams(location.search).get('me') || '';
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(me)) { netStatus('積分賽代號無效，請回大廳重新配對', 'warn'); return; }
+    NET.me = me;
+  }
   NET.me = NET.me || 'p' + Math.random().toString(36).slice(2, 9);
   const typed = VBSettings.values.nickname;
   NET.name = [...(typed || '球友' + NET.me.slice(-3))].slice(0, 12).join('');
@@ -7317,11 +7323,32 @@ async function netJoin(room) {
   for (const m of others) netPeer(m.id, m);
   netStatus(`已進入房間 ${room}（${others.length + 1}/${NET_MAX} 人）${tx.kind === 'cf' || tx.kind === 'ably' ? '' : '・備用線路（跟走主線路的人看不到彼此）'}`, 'ok');
   ROOM.start();
+  if (new URLSearchParams(location.search).get('ranked') === '1') {
+    let saved;
+    try { saved = JSON.parse(sessionStorage.getItem('vb.ranked')); } catch (_) {}
+    const plan = saved?.room === room && saved?.me === NET.me ? saved.plan : null;
+    const q = new URLSearchParams(location.search);
+    let since = 0, started = false;
+    NET.rankedTimer = setInterval(() => {
+      ROOM_UI?.render();
+      if (!ROOM || started || q.get('host') !== '1' || !ROOM.isHost) return;
+      if (!plan || !Array.isArray(plan.picks)) { netStatus('配對資料遺失，請回大廳重新配對', 'warn'); clearInterval(NET.rankedTimer); return; }
+      if (!since) since = Date.now();
+      const present = id => id === NET.me || NET.peers.has(id);
+      if (!plan.picks.every(id => id === null || present(id)) && Date.now() - since < 15000) return;
+      const court = state.items.find(i => i.type === 'vb');
+      if (!court || ROOM.snapshot.flow.phase !== 'waiting') return;
+      const picks = plan.picks.map(id => id && present(id) ? id : null);
+      if (typeof ROOM.startPlanned !== 'function') { netStatus('積分賽房間流程尚未更新，請回大廳', 'warn'); clearInterval(NET.rankedTimer); return; }
+      started = ROOM.startPlanned({ ...plan, picks, court: court.id });
+    }, 250);
+  }
   $('room-title').textContent = '房間 ' + room;
   renderMpList();
-  toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
+  if (new URLSearchParams(location.search).get('ranked') !== '1') toast(`進入房間 ${room}：把邀請連結傳給朋友，最多 ${NET_MAX} 人一起打`);
 }
 function netLeave(quiet) {
+  clearInterval(NET.rankedTimer);
   RoomChat.reset();
   for (const bubble of chatBubbles.values()) { clearTimeout(bubble.timer); scene.remove(bubble.label); bubble.label.element.remove(); }
   chatBubbles.clear();

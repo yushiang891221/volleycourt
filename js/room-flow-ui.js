@@ -3,6 +3,13 @@
   'use strict';
   window.createRoomFlowUI=({getRoom,me,name,release,ready,start})=>{
     const $=id=>document.getElementById(id);
+    const ranked=new URLSearchParams(location.search).get('ranked')==='1';
+    let rankedPlan=null;
+    if(ranked){
+      try { const saved=JSON.parse(sessionStorage.getItem('vb.ranked')); if(saved?.room===new URLSearchParams(location.search).get('room') && saved.me===new URLSearchParams(location.search).get('me'))rankedPlan=saved.plan; } catch (_) {}
+      const style=document.createElement('style');
+      style.textContent='#room-ready,#room-start,#w-host,#room-panel,#room-pick{display:none!important}';document.head.append(style);
+    }
     const panel=document.createElement('dialog');panel.id='room-pick';panel.setAttribute('aria-labelledby','pick-title');
     panel.innerHTML='<header><h2 id="pick-title">選擇隊伍與位置</h2><strong id="pick-clock"></strong></header><p>彼此之間必須<strong class="pick-rule">維持正確的前後左右相對位置</strong>，不能隨意變更位置！</p><div class="pick-court"><div class="pick-half" data-team="0"><b>左隊</b></div><div class="pick-half" data-team="1"><b>右隊</b></div></div><p class="pick-foot">先選先鎖定，可以換到空位。倒數結束自動分配，空位由 AI 補上。</p>';
     document.body.append(panel);
@@ -27,6 +34,15 @@
     function render(){
       const s=getRoom()?.snapshot;if(!s)return;
       const {flow:f,count:n}=s, mine=f.ready.includes(me()), locked=f.phase!=='waiting';
+      if(ranked){
+        if(panel.open)panel.close();
+        const count=rankedPlan?.count||n, humans=(rankedPlan?.picks||[]).filter(Boolean), arrived=humans.filter(id=>s.order.includes(id)).length;
+        $('room-title').textContent=`積分賽 ${count} 對 ${count}`;
+        $('room-flow-note').textContent=f.phase==='playing'?'比賽中':`積分賽 ${count} 對 ${count}・等待所有球員進場…（已到 ${arrived}/${humans.length}）`;
+        const ai='AI '+({3:'高手',4:'校隊',5:'企聯'}[rankedPlan?.lv]||'高手');
+        $('room-ready-list').textContent=f.phase==='playing'?'':rankedPlan?.picks?.map((id,i)=>(i===count?'｜ ':'')+(id?(rankedPlan.names?.[id]||'球友'):ai)).join('、')||'正在讀取配對名單…';
+        return;
+      }
       $('room-size').value=n;$('room-size').disabled=locked||!s.isHost;$('room-size-value').textContent=`${n} 對 ${n}`;
       $('room-size-note').textContent=locked?'比賽結束後才能改':'兩隊人數相同，空位補 AI';
       const rotation=s.tactics==='rotation';

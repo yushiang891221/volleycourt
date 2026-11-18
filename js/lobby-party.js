@@ -53,6 +53,9 @@ export function installParty(api, { myLookCode, setMode }) {
     if (!api.canLead()) return notify('只有隊長可以邀請');
     drawLists(); if (!$('party-invite').open) $('party-invite').showModal(); loadLists();
   };
+  api.onStartMatch = mode => { if (api.canLead()) send({ k:'mm-start', mode }); };
+  api.onCancelMatch = () => send({ k:'mm-cancel' });
+  api.onStartAI = () => { if (api.canLead()) send({ k:'mm-ai-now' }); };
   api.leaveParty = () => send({ k:'party-leave' });
   api.kickMember = id => { if (api.canLead()) send({ k:'party-kick', id }); };
   api.onMode = mode => { if (!api.canLead()) return; if (party?.id) send({ k:'party-mode', mode }); else setMode(mode); };

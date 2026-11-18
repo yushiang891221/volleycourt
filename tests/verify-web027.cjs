@@ -8,7 +8,7 @@ for(const api of ['window.PlayOneLobby','setParty(','setMyRating(','setMatchStat
 assert(js.includes("matchMedia('(pointer: coarse), (max-width: 819px)')"));
 assert(js.includes('mobile.matches ? party.slice(0, 1) : party'));
 assert(css.includes('.avatar-card'));
-assert(js.includes('sec < 10'));
+assert(js.includes('!match.canAI'));   /* WEB-029：「直接用 AI 開打」改看伺服器給的 canAI（等滿 10 秒） */
 console.log('WEB-027 結構檢查通過；互動與手機畫面由 capture-web027.cjs 驗證。');
 
 // WEB-027B：入口唯一、預設收合與收合切換。

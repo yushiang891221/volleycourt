@@ -91,6 +91,14 @@
       setBestOf(n){if(!settled||host()!==id||flow.phase!=='waiting'||!validBest(n))return false;bestOf=n;commit();return true;},
       setTactics(mode){if(!settled||host()!==id||flow.phase!=='waiting'||count!==6||!['roles','rotation'].includes(mode))return false;tactics=mode;commit();return true;},
       toggleReady(){return command({e:'ready'});},pick(slot){return command({e:'pick',slot});},
+      // WEB-029 積分賽：伺服器配好的座位表，房主直接開賽（不走準備、選位）；picks 裡的真人都必須已經在房間
+      startPlanned({picks,court,count:n,lv:level,to:points,bestOf:best}={}){
+        if(!settled||host()!==id||flow.phase!=='waiting'||!Number.isInteger(n)||n<1||n>6||!validLv(level)||!validTo(points)||!validBest(best)||typeof court!=='string'||!court||!Array.isArray(picks)||picks.length!==n*2)return false;
+        const ready=picks.filter(x=>x!==null);
+        if(!ready.length||new Set(ready).size!==ready.length||!ready.every(x=>typeof x==='string'&&order.includes(x)))return false;
+        count=n;lv=level;to=points;bestOf=best;
+        flow={phase:'playing',ready,picks:[...picks],court,deadline:0,round:flow.round+1};commit();return true;
+      },
       begin(){
         if(!settled||host()!==id||flow.phase!=='waiting')return false;
         flow.ready=flow.ready.filter(x=>courtOf(x)===flow.court);

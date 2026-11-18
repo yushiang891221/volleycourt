@@ -105,7 +105,15 @@ export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLose
     <div class="mr-rank"><div><h5>${esc(teamLabel(myTeam))}（你們）</h5>${rows(myTeam)}</div><div><h5>${esc(teamLabel(1 - myTeam))}</h5>${rows(1 - myTeam)}</div></div>
     <div class="mr-btns"><button type="button" data-close>確定</button></div></div>`;
   d.hidden = false;
-  d.querySelector('[data-close]').onclick = () => { d.hidden = true; };
+  const ranked = typeof location !== 'undefined' && /[?&]ranked=1(&|$)/.test(location.search || '');   /* WEB-029 積分賽：打完自動回大廳 */
+  let returned = false;
+  const home = () => {
+    if (returned) return; returned = true;
+    try { localStorage.setItem('po.lobby.page', 'home'); sessionStorage.removeItem('vb.ranked'); } catch (_) {}
+    location.href = window.VBLobby.home();
+  };
+  const returnTimer = ranked ? setTimeout(home, 20000) : null;
+  d.querySelector('[data-close]').onclick = () => { d.hidden = true; if (ranked) { clearTimeout(returnTimer); home(); } };
 }
 
 // 經驗、金幣、等級條（record_match 回來後）
