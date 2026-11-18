@@ -78,12 +78,12 @@ async function fillShots(d, items) {
 }
 
 // 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
-function livePreview(old, bg = '#0B362B') {   // Play One 風格：深綠底
+export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：大廳共用畫布的角色位置
   // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
   const canvas = document.createElement('canvas'); canvas.className = old.className; canvas.setAttribute('aria-label', old.getAttribute('aria-label') || ''); old.replaceWith(canvas);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: bg === null });
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(bg);
+  const scene = new THREE.Scene(); scene.background = bg === null ? null : new THREE.Color(bg);
   scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
   const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
@@ -91,7 +91,25 @@ function livePreview(old, bg = '#0B362B') {   // Play One 風格：深綠底
   let av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
   const target = new THREE.Vector3(0, 0.78, 0), DIST0 = 3.0; let dist = DIST0;   // 滾輪縮放遠近（1.2～5 公尺）
   const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
-  const draw = () => { raf = 0; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target); renderer.render(scene, camera); };
+  // 自己腳下的香檳金底座，與角色共用鏡頭。
+  const partyHalo = slots ? new THREE.Mesh(new THREE.RingGeometry(.28, .38, 64), new THREE.MeshBasicMaterial({ color: '#E5B869', side: THREE.DoubleSide, transparent: true, opacity: .8 })) : null;
+  if (partyHalo) { partyHalo.rotation.x = -Math.PI / 2; partyHalo.position.y = .01; scene.add(partyHalo); }
+  let party = [];
+  const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
+    if (!slots) { renderer.render(scene, camera); return; }
+    // 同一個 renderer／scene，以 scissor 畫各站位；手機 slots 只回傳自己。
+    renderer.setScissorTest(false); renderer.clear(); renderer.setScissorTest(true);
+    const bounds = canvas.getBoundingClientRect();
+    for (const [i, el] of [...slots().entries()].reverse()) {
+      if (!party[i] || !el) continue;
+      const r = el.getBoundingClientRect(), x = r.left - bounds.left, y = bounds.bottom - r.bottom;
+      party.forEach((a, n) => { a.g.visible = i === n; });
+      partyHalo.visible = i === 0;
+      renderer.setViewport(x, y, r.width, r.height); renderer.setScissor(x, y, r.width, r.height);
+      camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); renderer.render(scene, camera);
+    }
+    renderer.setScissorTest(false);
+  };
   const ask = () => { if (!raf) raf = requestAnimationFrame(draw); };
   canvas.style.cursor = 'grab'; canvas.style.touchAction = 'none';
   canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
@@ -101,9 +119,15 @@ function livePreview(old, bg = '#0B362B') {   // Play One 風格：深綠底
   const up = () => { drag = null; canvas.style.cursor = 'grab'; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   return {
+    setParty(members) {
+      // 模型資源可能由 avatar-toy 共用；移除舊節點，避免誤 dispose 共用材質。
+      party.forEach(a => scene.remove(a.g));
+      party = members.map((m, i) => makeToyAvatar(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
+      party.forEach(a => scene.add(a.g)); ask();
+    },
     rebuild(code) { if (av) scene.remove(av.g); av = makeToyAvatar(decodeLook(code), readWornJersey() || 'orange'); scene.add(av.g); ask(); },
     redraw: ask,
-    dispose() { cancelAnimationFrame(raf); renderer.dispose(); renderer.forceContextLoss(); },
+    dispose() { cancelAnimationFrame(raf); partyHalo?.geometry.dispose(); partyHalo?.material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
   };
 }
 // 球衣與裝備（三欄）：左＝角色預覽（可轉）、目前穿戴、玩家資料（可改暱稱）、調整外觀；中＝分類＋物品格；右＝稱號、T 輪盤動作

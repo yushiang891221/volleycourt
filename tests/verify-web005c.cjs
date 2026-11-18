@@ -80,7 +80,7 @@ async function introFlow(saved, hash = '') {
   assert(gym.includes("ch: myChar() || 'none'"));
   assert(gym.includes('refreshPeerAppearance(p2);'));
   assert(!gym.includes('openCreator('));
-  assert(read('index.html').includes('id="character-info"'));
+  assert(read('index.html').includes('id="party-stage"')); // WEB-027：角色資訊改為中央大廳舞台
   assert(read('index.html').includes('"three/addons/":'));
   console.log('PASS module syntax and normal game/lobby integration entry points');
 })().catch(error => { console.error(error); process.exitCode = 1; });

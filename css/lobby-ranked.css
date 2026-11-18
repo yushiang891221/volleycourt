@@ -1,0 +1,79 @@
+﻿/* WEB-027：沿用 Play One 深綠、金色與斜切按鈕。 */
+body { min-width: 0; }
+#lobby-shell main { display:grid; grid-template-columns:230px minmax(0,1fr); grid-template-rows:minmax(300px,1fr) auto; gap:10px; }
+#lobby-shell [hidden] { display:none !important; }
+.lobby-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.lobby-tabs [aria-current="page"], .mode-options [aria-pressed="true"] { color:#06211A; background:#E5B869; border-color:#E5B869; }
+#home-page, #custom-page, #rank-page { grid-column:2; grid-row:1; min-height:0; min-width:0; position:relative; }
+#custom-page { display:flex; flex-direction:column; gap:10px; }
+#custom-page .actions { display:flex; gap:8px; flex-wrap:wrap; }
+#custom-page .rooms { flex:1; overflow:auto; }
+#lobby-shell .players { grid-column:1; grid-row:1 / 3; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+#lobby-shell .chat { grid-column:2; grid-row:2; }
+#lobby-shell .chat .messages { max-height:55px; }
+#lobby-shell .players h3 { margin:4px 0; color:#E5B869; font-size:12px; }
+#lobby-friends > div { display:flex; justify-content:space-between; align-items:center; }
+#lobby-shell .player { flex-wrap:wrap; }
+#my-summary { position:relative; z-index:2; font-size:12px; padding:8px 12px; border-left:2px solid #E5B869; background:#06211acc; }
+#party-stage { position:absolute; inset:40px 270px 0 0; min-height:240px; background:radial-gradient(ellipse at 50% 80%,#296c4b66,transparent 68%); }
+#party-stage canvas, #party-slots { position:absolute; width:100%; height:100%; inset:0; }
+#party-stage canvas { z-index:1; }
+#party-slots { pointer-events:none; }
+.party-slot { position:absolute; width:38%; height:calc(90% - 10px); bottom:5%; left:18%; }
+.party-slot.slot-1 { left:60%; width:32%; height:72%; }
+.party-view { position:absolute; inset:40px 0 0; }
+.party-label { position:relative; margin:0 auto; width:max-content; max-width:100%; box-sizing:border-box; text-align:center; display:flex; flex-direction:column; gap:1px; padding:3px 7px; font-size:11px; line-height:14px; color:#f1ead9; background:#06211acc; border-radius:5px; z-index:2; }
+.party-label b, .party-label small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.party-label small { font-size:10px; color:#c4d1c9; }
+.is-self .party-label { border:1px solid #E5B869; color:#E5B869; }
+.is-self .party-label small { color:#E5B869; }
+.empty-slot { display:flex; align-items:center; justify-content:center; }
+.empty-slot button { pointer-events:auto; position:relative; z-index:2; width:58px; height:70px; font-size:30px; background:#0b362b88; border:1px dashed #E5B86988; }
+/* 分隔上下排整個視窗；自己的角色視窗高度為隊友的 1.25 倍。 */
+[data-mode="6v6"] .party-slot { width:30%; height:42.4%; bottom:3%; }
+[data-mode="6v6"] .slot-0 { left:35%; height:calc(53% - 10px); }
+[data-mode="6v6"] .slot-1 { left:1%; }
+[data-mode="6v6"] .slot-2 { left:69%; }
+[data-mode="6v6"] .slot-3, [data-mode="6v6"] .slot-4, [data-mode="6v6"] .slot-5 { width:28%; top:0; bottom:auto; }
+[data-mode="6v6"] .slot-3 { left:0; } [data-mode="6v6"] .slot-4 { left:36%; } [data-mode="6v6"] .slot-5 { left:72%; }
+.stage-hint { position:absolute; bottom:0; left:30%; font-size:11px; color:#b7c9be; }
+.match-card { position:absolute; bottom:0; right:0; width:255px; }
+.match-card h2 { margin:8px 0 16px; font-size:25px; color:#E5B869; }
+.mode-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mode-options button:last-child { grid-column:1 / -1; }
+#start-match, #match-ai { width:100%; margin-top:8px; min-height:44px; }
+#match-note { min-height:18px; font-size:12px; }
+@media (pointer:coarse), (max-width:819px) {
+ #lobby-shell main { grid-template-columns:minmax(0,1fr) !important; grid-template-rows:minmax(260px,1fr) !important; }
+ #home-page, #custom-page, #rank-page { grid-column:1; grid-row:1; }
+ #party-stage { inset:28px 205px 0 0; min-height:200px; }
+ #my-summary { font-size:10px; padding:4px; }
+ .match-card { width:195px; padding:10px; }
+ .match-card h2 { margin:3px 0 8px; font-size:20px; }
+ .mode-options { gap:4px; } .mode-options button { padding:6px; font-size:12px; }
+ #start-match { min-height:38px; }
+ #party-slots.mobile-party .slot-0 { top:auto; left:22%; width:56%; height:79%; bottom:20%; }
+ #party-slots.mobile-party .party-slot:not(.slot-0) { position:relative; top:auto; left:auto; bottom:auto; width:auto; height:55px; flex:1; min-width:0; }
+ #party-slots.mobile-party { display:flex; align-items:flex-end; gap:4px; padding-bottom:14px; }
+ .avatar-card { display:flex; align-items:center; background:#0b362be6; border:1px solid #e5b86955; }
+ .avatar-card .party-label { font-size:9px; padding:2px; min-width:0; } .avatar-card .party-label small { font-size:8px; }
+ .party-avatar { padding:4px; color:#E5B869; } .empty-slot button { width:100%; height:46px; }
+ .party-label { font-size:11px; } .party-view { top:36px; }
+ .stage-hint { bottom:0; left:20%; font-size:9px; }
+ #lobby-shell .chat { grid-column:1; }
+ html:not(.m-touch) #lobby-shell main { grid-template-rows:320px auto auto !important; }
+ html:not(.m-touch) #lobby-shell .players { grid-row:2; grid-column:1; max-height:170px; }
+ html:not(.m-touch) #lobby-shell .chat { grid-row:3; }
+ html:not(.m-touch) body { height:auto; min-height:100dvh; }
+}
+
+#lobby-shell .chat { min-width:0; }
+#lobby-shell .chat.is-collapsed { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; padding:5px 10px; gap:10px; }
+#lobby-shell .chat.is-collapsed .chat-heading h2 { display:none; }
+#chat-toggle { padding:3px 10px; font-size:11px; }
+#lobby-shell .chat.is-collapsed #chat { display:none; }
+#lobby-shell .chat.is-collapsed .messages { padding:0; border:0; background:none; overflow:hidden; }
+#lobby-shell .chat.is-collapsed .messages > :not(:last-child) { display:none; }
+#lobby-shell .chat.is-collapsed .messages > :last-child { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }

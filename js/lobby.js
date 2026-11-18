@@ -94,6 +94,7 @@ function renderPlayers(){
   row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
   const state=row.querySelector('.state');state.textContent=p.status;
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
+  if(!p.self&&!p.offline){const invite=document.createElement('button');invite.textContent='邀請';invite.onclick=()=>window.PlayOneLobby?.openInvite(p.name);row.append(invite);}
  }
  $('player-count').textContent=accounts===null?`${all.length} 人`:`在線 ${all.filter(p=>!p.offline).length} 人・共 ${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
  fitPlayerPage();
@@ -143,7 +144,6 @@ addEventListener('vb-lobby-enter', () => import('./friends.js').then(({ startBad
 $('ach-open').addEventListener('click', () => import('./character-panel.js').then(({ openAchievementPanel }) => openAchievementPanel()).catch(() => notify('成就載入失敗，請稍後重試')));
 $('team-open').addEventListener('click', () => import('./character-panel.js').then(({ openTeamPanel }) => openTeamPanel()).catch(() => notify('球隊載入失敗，請稍後重試')));
 $('equip-open').addEventListener('click', () => import('./character-panel.js').then(({ openEquipPanel }) => openEquipPanel()).catch(() => notify('裝備載入失敗，請稍後重試')));
-import('./character-panel.js').then(({ mountCharacterCard }) => mountCharacterCard($('character-info'))).catch(() => { const e = $('character-info').querySelector('.me-err'); if (e) e.textContent = '角色資訊載入失敗，請重新整理'; });
 $('news-open').addEventListener('click', () => $('lobby-news').showModal());
 $('system-settings').addEventListener('click',()=>VBSettings.open());
 $('feedback-open').addEventListener('click',()=>import('./feedback.js').then(m=>m.openFeedback()).catch(()=>notify('建議信箱暫時無法開啟，請稍後再試')));
@@ -196,3 +196,11 @@ document.querySelectorAll('[data-soon]').forEach(b=>b.addEventListener('click',(
 $('sound').addEventListener('click',()=>{sound=!sound;const b=$('sound');b.setAttribute('aria-pressed',String(sound));b.innerHTML=icon(sound?'sound':'mute');b.title=sound?'關閉留言音效':'開啟留言音效';b.setAttribute('aria-label',b.title);});
 $('chat').addEventListener('submit',e=>{e.preventDefault();const text=$('message').value.trim();if(text&&client&&client.send({k:'chat',text}))$('message').value='';else if(text)notify('大廳尚未連線，請稍後再試');});
 addEventListener('pagehide',()=>client?.close());renderRooms();renderPlayers();
+
+// WEB-027B：收合時由 CSS 顯示最新一則，保留原訊息及表單。
+$('chat-toggle').addEventListener('click', () => {
+ const collapsed = document.querySelector('.chat').classList.toggle('is-collapsed');
+ $('chat-toggle').setAttribute('aria-expanded', String(!collapsed));
+ $('chat-toggle').textContent = collapsed ? '展開' : '收合';
+ $('messages').scrollTop = $('messages').scrollHeight;
+});
