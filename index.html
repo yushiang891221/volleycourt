@@ -80,7 +80,7 @@
 </section>
   <aside class="players panel" aria-labelledby="players-title">
     <div class="panel-head"><h2 id="players-title"><span data-icon="users"></span>大廳在線玩家</h2><span class="online-count" id="player-count">0 人</span></div>
-    <h3>在線好友</h3><div id="lobby-friends">登入後顯示好友</div><h3>最近隊友／大廳在線玩家</h3><div class="player-list" id="players"></div><button id="party-link">複製邀請連結</button>
+    <div class="player-list" id="players"></div>
     <div class="player-note muted" id="player-note">正在取得在線名單</div>
     <div class="pager players-pager"><button id="players-prev" disabled aria-label="玩家上一頁">‹</button><span id="players-page">1 / 1 頁</span><button id="players-next" disabled aria-label="玩家下一頁">›</button></div>
   </aside>
@@ -102,7 +102,7 @@
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>
 <dialog id="room-dialog" aria-labelledby="room-dialog-title"><form id="room-form"><span class="eyebrow">CREATE A ROOM</span><h2 id="room-dialog-title">開啟房間</h2><p>房間會出現在大廳清單，邀請球友一起打球。</p><label>房間名稱<input id="room-name" maxlength="30" required placeholder="例如：週末友誼練球"></label><label>比賽模式<select id="mode"><option>1v1</option><option selected>2v2</option><option>3v3</option><option>4v4</option><option>5v5</option><option>6v6</option></select></label><label>密碼（選填）<input id="password" type="password" maxlength="30" autocomplete="new-password"></label><p class="form-note">密碼房需輸入密碼；房主分享邀請連結的人可以直接進房。</p><div class="buttons"><button type="button" id="cancel">取消</button><button class="orange">建立並進入 →</button></div></form></dialog>
 <dialog id="password-dialog"><form id="password-form"><h2>輸入房間密碼</h2><label>密碼<input id="join-password" type="password" maxlength="30" autocomplete="current-password" required></label><div class="buttons"><button type="button" id="password-cancel">取消</button><button class="orange">加入房間</button></div></form></dialog>
-<dialog id="party-invite"><h2>邀請隊友</h2><p>只能邀請目前在大廳在線的球友。</p><div id="party-invite-list"></div><form method="dialog"><button>關閉</button></form></dialog>
+<dialog id="party-invite"><h2>邀請隊友</h2><p>只能邀請目前在大廳在線的球友。</p><div id="party-invite-list"></div><button type="button" id="party-link">複製邀請連結（傳給不在線上的朋友）</button><form method="dialog"><button>關閉</button></form></dialog>
 <dialog id="party-incoming" aria-labelledby="party-incoming-title"><form method="dialog"><h2 id="party-incoming-title"></h2><p id="party-countdown" role="status"></p><div class="buttons"><button type="button" id="party-accept" class="orange">接受</button><button type="button" id="party-decline">拒絕</button></div></form></dialog>
 <dialog id="party-copy" aria-labelledby="party-copy-title"><form method="dialog"><h2 id="party-copy-title">邀請連結</h2><p>若未自動複製，請按複製或選取連結手動複製。</p><input id="party-copy-url" aria-label="邀請連結" readonly><div class="buttons"><button type="button" id="party-copy-button">複製</button><button>關閉</button></div></form></dialog>
 <div id="toast" role="status" hidden></div>

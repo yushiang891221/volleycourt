@@ -33,9 +33,8 @@ export function installParty(api, { myLookCode, setMode }) {
     if (!box.children.length) box.textContent = '目前沒有可邀請的在線球友';
   }
   function drawLists() {
-    rows($('lobby-friends'), friends);
     const box = $('party-invite-list'); box.replaceChildren();
-    for (const [title, names] of [['在線好友', friends], ['最近隊友', readRecent()], ['球隊成員', team]]) {
+    for (const [title, names] of [['在線好友', friends], ['最近隊友', readRecent()], ['球隊成員', team], ['大廳在線玩家', online().map(p => p.name)]]) {
       const section = document.createElement('section'), heading = document.createElement('h3'), list = document.createElement('div');
       heading.textContent = title; rows(list, names); section.append(heading, list); box.append(section);
     }

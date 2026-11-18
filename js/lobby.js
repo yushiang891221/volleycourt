@@ -94,7 +94,6 @@ function renderPlayers(){
   row.querySelector('.player-level').textContent=p.no?`NO.${p.no}`:'';
   const state=row.querySelector('.state');state.textContent=p.status;
   state.classList.toggle('busy',p.status==='比賽中');state.classList.toggle('practice',p.status==='練習中');state.classList.toggle('in-room',p.status==='房間中');list.append(row);
-  if(!p.self&&!p.offline){const invite=document.createElement('button');invite.textContent='邀請';invite.onclick=()=>window.PlayOneLobby?.openInvite(p.name);row.append(invite);}
  }
  $('player-count').textContent=accounts===null?`${all.length} 人`:`在線 ${all.filter(p=>!p.offline).length} 人・共 ${all.length} 人`;$('player-note').textContent=connected?'在線狀態由大廳同步':'正在重新連線，名單可能尚未更新';
  fitPlayerPage();

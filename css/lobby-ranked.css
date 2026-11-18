@@ -1,6 +1,6 @@
 ﻿/* WEB-027：沿用 Play One 深綠、金色與斜切按鈕。 */
 body { min-width: 0; }
-#lobby-shell main { display:grid; grid-template-columns:230px minmax(0,1fr); grid-template-rows:minmax(300px,1fr) auto; gap:10px; }
+#lobby-shell main { display:grid; grid-template-columns:300px minmax(0,1fr); grid-template-rows:minmax(300px,1fr) auto; gap:10px; }
 #lobby-shell [hidden] { display:none !important; }
 .lobby-tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .lobby-tabs [aria-current="page"], .mode-options [aria-pressed="true"] { color:#06211A; background:#E5B869; border-color:#E5B869; }
@@ -12,7 +12,6 @@ body { min-width: 0; }
 #lobby-shell .chat { grid-column:2; grid-row:2; }
 #lobby-shell .chat .messages { max-height:55px; }
 #lobby-shell .players h3 { margin:4px 0; color:#E5B869; font-size:12px; }
-#lobby-friends > div { display:flex; justify-content:space-between; align-items:center; }
 #lobby-shell .player { flex-wrap:wrap; }
 #my-summary { position:relative; z-index:2; font-size:12px; padding:8px 12px; border-left:2px solid #E5B869; background:#06211acc; }
 #party-stage { position:absolute; inset:40px 270px 0 0; min-height:240px; background:radial-gradient(ellipse at 50% 80%,#296c4b66,transparent 68%); }
