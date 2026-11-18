@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { verifiedPlayer } from '../shared/verify-player.mjs';
 import { MatchHost, HOST_ID } from '../match/host.mjs';
+import { createParties } from '../shared/party.mjs';
 
 const PORT = Number(process.env.PORT || 8787);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || 'https://volleycourts.vercel.app').split(',').map(s => s.trim()).filter(Boolean);
@@ -121,7 +122,7 @@ const L = {
     this.socks.add(ws); this.expire();
     this.send(ws, { k: 'state', players: this.players(), rooms: this.publicRooms(), chats: this.data.chats });
     ws.on('message', (raw, binary) => { const s = raw.toString(); if (s === 'ping') { ws.send('pong'); return; } this.message(ws, binary ? null : s); });
-    ws.on('close', () => { this.socks.delete(ws); this.bye(ws); });
+    ws.on('close', () => { this.socks.delete(ws); parties.bye(ws); this.bye(ws); });
   },
   message(ws, raw) {
     const fail = reason => this.send(ws, { k: 'error', reason });
@@ -139,6 +140,10 @@ const L = {
       const name = clean(m.name); if (!name || [...name].length > 12) return fail('暱稱需為 1～12 字');
       p.name = name;
     } else if (!p.name) return fail('請先設定暱稱');
+    if (typeof m.k === 'string' && m.k.startsWith('party-')) {   // WEB-028 組隊（server/shared/party.mjs）
+      if (!allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });
+      parties.handle(ws, m); return;
+    }
     const room = () => this.data.rooms.find(r => r.no === Number(m.no || p.no));
     const member = r => r.members.find(x => x.id === p.id && x.token === p.token);
     if (m.k === 'hello' || m.k === 'status') {
@@ -200,6 +205,8 @@ const L = {
     this.save(); this.publish();
   },
 };
+
+const parties = createParties({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets() });
 
 // ---- HTTP／WebSocket 入口
 const server = http.createServer((req, res) => {

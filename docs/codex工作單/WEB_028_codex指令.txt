@@ -1,0 +1,18 @@
+請用繁體中文工作。讀 docs\codex工作單\WEB_028_組隊.md，照它做（企劃在 docs\企劃-積分天梯與快速配對.md；程式在 D:\開排球場\volleycourt，分支 game-site）。
+上一輪因為 server\rt 資料夾寫不進去而停下（見 docs\codex工作單\WEB_028_報告_第1輪.md）。這一輪改成這樣分工：
+
+1. 伺服器組隊邏輯全部寫在新檔 server\shared\party.mjs（不要寫 server\rt，你寫不進去）。
+   匯出 createParties({ send, sockets, now }) 回傳 { handle(ws, m), bye(ws) }：
+   - send(ws, obj)：送訊息給某個連線；sockets()：目前所有大廳連線；now()：現在時間（測試可以換假時鐘）。
+   - 每個連線的資料在 ws.meta：{ id, token, player（帳號 id）, name, status, no }。訪客怎麼分辨，請看 server\rt\server.mjs 和 server\shared\verify-player.mjs 現在的做法。
+   - handle(ws, m)：m.k 是 party- 開頭的訊息就處理並回傳 true，其他回傳 false。
+   - bye(ws)：連線關掉時呼叫（60 秒沒回來才移出隊伍）。
+   - 計時器要能清掉（提供 stop()），測試才不會卡住。
+2. 我（Claude）會在 server\rt\server.mjs 加接線：建立 createParties、在大廳 message() 裡 hello 檢查之後把 party- 訊息交給 handle、close 時呼叫 bye；deploy.sh 也由我加。你在報告裡寫清楚接線需要的程式（幾行、放哪裡）。
+3. tests\verify-web028.cjs 直接 import server\shared\party.mjs，用假連線、假時鐘測工作單驗收第 1 點的全部情況（不用開真的伺服器）。
+4. 網頁大廳那邊（js、css、index.html）照工作單 B 節做，接上 WEB-027 的 window.PlayOneLobby。
+
+不能動：遊戲（gym.html、src/gym、engine、server/match）；那些檔案可能有別人正在改的未提交變更，完全不要碰也不要還原。自訂房間功能不變。大廳現有訊息格式不改。
+Codex 用量不可超過 50%；做完就停，額度快不夠時先把進度寫進報告再停。不要推送、不要部署伺服器。
+不要嘗試 git add 或提交（.git 在你的環境是唯讀）。截圖做不到就略過，在報告寫明。
+報告覆蓋寫在 repo 根目錄 WEB_028_報告.md：改了什麼、伺服器新訊息格式、接線說明、測試結果、還沒做的。
