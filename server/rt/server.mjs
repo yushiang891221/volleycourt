@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { verifiedPlayer } from '../shared/verify-player.mjs';
 import { MatchHost, HOST_ID } from '../match/host.mjs';
 import { createParties } from '../shared/party.mjs';
+import { createRanked, planFor } from '../shared/matchmaker.mjs';
 
 const PORT = Number(process.env.PORT || 8787);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || 'https://volleycourts.vercel.app').split(',').map(s => s.trim()).filter(Boolean);
@@ -25,6 +26,9 @@ setInterval(() => { const now = Date.now(); for (const [k, b] of buckets) if (no
 
 // ---- 房間：誰送的訊息就轉給同房其他人；有人進出通知大家
 const rooms = new Map();   // 房號 → Set(ws)
+// WEB-029 積分賽房間：房號 → { plan（座位表）, byId: 房間 id → 帳號, at }；只有配到這場的人進得去，開賽座位以伺服器為準
+const rankedRooms = new Map();
+setInterval(() => { const t = Date.now(); for (const [k, r] of rankedRooms) if (t - r.at > 3 * 3600000) rankedRooms.delete(k); }, 600000).unref();
 const hosts = new Map();   // 房號 → MatchHost（B5：伺服器當房主，網頁加 &srv=1 才會用到）
 function cast(set, from, obj) {
   const s = JSON.stringify(obj);
@@ -32,6 +36,8 @@ function cast(set, from, obj) {
 }
 function roomJoin(ws, name, id, player) {
   const set = rooms.get(name) || new Set(); rooms.set(name, set);
+  const rk = rankedRooms.get(name);
+  if (rk && (!rk.byId.has(id) || (rk.byId.get(id) !== player && process.env.ALLOW_DEV_TOKEN !== '1'))) { if (!set.size) rooms.delete(name); return ws.close(4003, 'not in this match'); }   /* 積分賽：不是這場的人不能進（本機開發的測試帳號不比對帳號） */
   const duplicate = [...set].find(o => o.meta.id === id);
   if (duplicate && duplicate.meta.player !== player) return ws.close(4009, 'identity in use');
   const others = [...set].filter(o => o !== duplicate);
@@ -52,6 +58,12 @@ function roomJoin(ws, name, id, player) {
     if (m.k === 'enter') { me.d = m.d && typeof m.d === 'object' ? m.d : {}; cast(set, ws, { k: 'p', a: 'enter', id: me.id, d: me.d }); return; }
     if (m.k === 'm' && typeof m.t === 'string') {
       if (m.t === 'srv-start') {   // B5：房主請伺服器開賽（伺服器當房主）
+        const rk = rankedRooms.get(name);
+        if (rk && m.d && typeof m.d === 'object') {   // 積分賽：座位、人數、AI 強度、規則一律用伺服器配好的，不信網頁送來的
+          const pl = rk.plan, n = pl.count;
+          m.d = { ...m.d, six: n !== 2, count: n, seats: [pl.picks.slice(0, n), pl.picks.slice(n)], names: { ...pl.names }, rules: { ...(m.d.rules && typeof m.d.rules === 'object' ? m.d.rules : {}), count: n, lv: pl.lv, to: pl.to, bestOf: pl.bestOf } };
+          rk.started = Date.now();
+        }
         hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留
         const h = new MatchHost((t, d) => cast(set, null, { k: 'm', t, d, f: HOST_ID }), (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
         try { h.start(m.d); } catch (e) {
@@ -140,6 +152,10 @@ const L = {
       const name = clean(m.name); if (!name || [...name].length > 12) return fail('暱稱需為 1～12 字');
       p.name = name;
     } else if (!p.name) return fail('請先設定暱稱');
+    if (typeof m.k === 'string' && m.k.startsWith('mm-')) {   // WEB-029 快速配對（server/shared/matchmaker.mjs）
+      if (!allow('mm:' + p.player, 60)) return this.send(ws, { k: 'mm-error', reason: '操作太頻繁，請稍後再試' });
+      ranked.handle(ws, m); return;
+    }
     if (typeof m.k === 'string' && m.k.startsWith('party-')) {   // WEB-028 組隊（server/shared/party.mjs）
       if (!allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });
       parties.handle(ws, m); return;
@@ -192,7 +208,7 @@ const L = {
       if ((r.host !== p.id || r.hostToken !== p.token) && this.ownerOnline(r)) return fail('只有房主可以更新房間');
       if (!Number.isInteger(m.count) || m.count < 1 || m.count > 20 || !['waiting', 'playing'].includes(m.status) || (m.latency !== null && (!Number.isFinite(m.latency) || m.latency < 0 || m.latency > 60000))) return fail('房間資料不正確');
       if (m.mode !== undefined && (!/^([1-6])v\1$/.test(m.mode) || (r.status === 'playing' && m.status === 'playing' && m.mode !== r.mode))) return fail('比賽模式不正確或比賽尚未結束');
-      Object.assign(r, { host: p.id, hostToken: p.token, hostPlayer: p.player, hostName: p.name, count: m.count, status: m.status, latency: m.latency, lastBeat: now, hidden: false, ...(m.mode ? { mode: m.mode } : {}) });
+      Object.assign(r, { host: p.id, hostToken: p.token, hostPlayer: p.player, hostName: p.name, count: m.count, status: m.status, latency: m.latency, lastBeat: now, hidden: !!r.ranked, ...(m.mode && !r.ranked ? { mode: m.mode } : {}) });   /* 積分賽房間一直隱藏、模式不能改 */
     } else if (m.k === 'room-close') {
       const r = room(); if (!r || r.host !== p.id || r.hostToken !== p.token || p.no !== r.no) return fail('只有房主可以關閉房間');
       r.hidden = true; r.members = r.members.filter(x => x.id !== p.id || x.token !== p.token); p.no = null; p.status = '大廳中';
@@ -207,6 +223,17 @@ const L = {
 };
 
 const parties = createParties({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets() });
+// 配到一場：開一間隱藏的積分賽房間（大廳清單看不到），回傳每個人要用的房號、房間 id、座位表
+function openRankedRoom(match) {
+  const plan = planFor(match), code = crypto.randomBytes(10).toString('hex').toUpperCase(), now = Date.now();
+  rankedRooms.set(code, { plan, byId: new Map([...plan.ids].map(([player, id]) => [id, player])), at: now, started: 0 });
+  L.data.rooms.push({ no: L.data.next++, name: `積分賽 ${match.mode}`, mode: match.mode, code, salt: '', passwordHash: '', count: match.teams.flat().length, status: 'waiting', host: '', hostToken: '', hostPlayer: '', hostName: '', latency: null, lastBeat: now, hidden: true, ranked: true, members: [] });
+  L.save();
+  console.log('[配對]', match.mode, code, JSON.stringify({ humans: match.teams.map(t => t.length), lv: match.lv }));
+  const { ids, ...pub } = plan;
+  return { forPlayer: player => ({ room: code, mode: match.mode, me: ids.get(player), host: ids.get(player) === plan.host, plan: pub }) };
+}
+const ranked = createRanked({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets(), parties, openRoom: openRankedRoom });
 
 // ---- HTTP／WebSocket 入口
 const server = http.createServer((req, res) => {
