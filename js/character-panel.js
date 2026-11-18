@@ -274,10 +274,39 @@ export async function openTeamPanel() {   // 球隊系統（T2）：新的球隊
   return openTeamHub();
 }
 // 大廳右欄下半部的角色資訊卡（登出、刪除帳號在「系統設定 → 其他」）
+// 大廳角色看板（2026-11-18 使用者要求）：角色跟「球衣與裝備」一樣可以拖曳 360 度轉、滾輪縮放；
+//   左側疊著稱號＋目前穿戴的裝備，右側疊著 T 輪盤裡的炫技動作（4 個）；名字、等級、戰績照舊在下面
+const SLOT_ICON = { jersey: '👕', knee: '🦵', hat: '🧢', glasses: '🕶️', neck: '📿', wrist: '🎽' };
+function wornNow() {
+  const L = decodeLook(readLook()), eq = readEquip(), out = [];
+  const tw = readTeamWear(), basic = BASIC_JERSEYS.find((b) => b.top === L.top);
+  out.push(['jersey', tw ? '球隊球衣' : basic ? basic.name.replace('基本球衣・', '') + '球衣' : '球衣']);
+  if (L.pants !== 1 && OPTIONS.knee[L.knee] && !/不戴|不穿/.test(OPTIONS.knee[L.knee])) out.push(['knee', OPTIONS.knee[L.knee]]);
+  for (const k of ['hat', 'glasses', 'neck', 'wrist']) { const n = EQUIP[k] && EQUIP[k].items[eq[k] | 0]; if (n && !/不戴|不穿/.test(n)) out.push([k, n]); }
+  return out;
+}
 export function mountCharacterCard(card) {
   if (!card) return;
   const img = card.querySelector('img'), name = card.querySelector('.me-name'), err = card.querySelector('.me-err');
-  const draw = () => { try { preview(img); err.textContent = ''; } catch { err.textContent = '角色預覽載入失敗，請重新整理。'; } };
+  // 舞台：左（稱號、穿戴）＋可轉的角色＋右（炫技動作）；WebGL 開不起來就退回原本的靜態圖
+  const stage = document.createElement('div'); stage.className = 'me-stage';
+  const left = document.createElement('div'), right = document.createElement('div'); left.className = 'me-l'; right.className = 'me-r';
+  img.replaceWith(stage); stage.append(left, img, right);
+  let live = null;
+  try { img.setAttribute('aria-label', '你的角色（拖曳轉動、滾輪縮放、點兩下還原）'); live = livePreview(img, '#0a2a22'); } catch { live = null; stage.insertBefore(img, right); }
+  const hint = document.createElement('span'); hint.className = 'me-drag'; hint.textContent = '拖曳轉動・滾輪縮放'; stage.append(hint);
+  const sides = async () => {
+    const P = await import('./progress.js'), prog = P.cachedProgress() || {}, t = prog.title && P.ACHIEVEMENTS[prog.title];
+    left.innerHTML = `<div class="me-tt"><small>稱號</small><b>${t ? esc(t.title) : '未套用'}</b></div><div class="me-eq"><small>穿戴中</small>${wornNow().map(([k, n]) => `<span title="${esc(n)}"><i>${SLOT_ICON[k]}</i>${esc(n)}</span>`).join('')}</div>`;
+    const w = P.myWheel();
+    right.innerHTML = `<small>炫技動作</small>${[0, 1, 2, 3].map((i) => { const e = w[i] && P.EMOTES[w[i]]; return `<span class="${e ? '' : 'off'}"><i>${e ? e.icon : '＋'}</i>${e ? esc(e.name) : '空'}</span>`; }).join('')}`;
+  };
+  const draw = () => {
+    try { if (live) live.rebuild(myLookCode()); else preview(img); err.textContent = ''; } catch { err.textContent = '角色預覽載入失敗，請重新整理。'; }
+    sides().catch(() => {});
+  };
+  // 在「球衣與裝備」換了東西、改了輪盤或稱號：關掉那個面板就更新看板
+  document.addEventListener('close', (e) => { if (e.target && e.target.id === 'equip-panel') draw(); }, true);
   const setName = () => { name.textContent = (window.VBSettings && window.VBSettings.values.nickname) || '球友'; };
   name.onclick = async () => (await import('./public-profile.js')).openPublicProfile(name.textContent);
   const statsEl = card.querySelector('.me-stats tbody');
@@ -290,7 +319,7 @@ export function mountCharacterCard(card) {
     statsEl.innerHTML = P.STAT_KEYS.map(([k, name]) => { const a = w[k] | 0, b = l[k] | 0; return `<tr><td>${name}</td><td>${a}</td><td>${b}</td><td>${a + b ? Math.round((a / (a + b)) * 100) + '%' : '—'}</td></tr>`; }).join('');
   };
   showProgress(); import('./progress.js').then((P) => P.loadProgress()).then(showProgress, () => {});
-  addEventListener('vb-progress-change', () => showProgress());
+  addEventListener('vb-progress-change', () => { showProgress(); sides().catch(() => {}); });
   setName(); draw();
   preloadAvatars().then(draw, () => {});   // 模型載好再畫一次（一開始可能還是備用角色）
   addEventListener('vb-settings-change', setName);

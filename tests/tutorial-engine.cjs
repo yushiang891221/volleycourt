@@ -58,7 +58,7 @@ function engine() {
     CHG: { sw0: 0.72, sw1: 0.88, over: 1, max: 1.2 },
     RECV_CROUCH: { crouchDy: -0.5, crouchDT: 0.15 }, BLK_FX: {},
     TOUCH_OUT: { outKeep: .09, outKeepPow: .08, outPast: [.15,.7], outLatMax: [2.6,1.2], topKeep: .14, topKeepPow: .14, topVy: [2,1.4], powVy: 1.6 },
-    skill: {}, hands: {}, pose: 'hold', AVP: { idle: {} }, SFX: { floorT: 0 }, SPIN_AX: new Vector(),
+    skill: {}, hands: {}, pose: 'hold', AVP: { idle: {} }, SFX: { floorT: 0 }, SPIN_AX: new Vector(), ballSpinRate: () => 0, BALL_SPIN_STEP: 0.45,
     vmIsPractice: () => true, STA: { v: 1 }, locked: () => true, tpActive: () => !!c.third,
     clamp: (x, lo, hi) => Math.max(lo, Math.min(hi, x)), rkGauss: () => 0,
     newBallMesh: () => new Object3D(), makeAvatar: () => ({ g: new Object3D() }), myChar: () => null,

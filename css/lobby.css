@@ -394,3 +394,17 @@ dialog { max-height: calc((100dvh - 36px) / var(--z, 1)); }
 .fr-send { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #22314a; } .fr-send input { flex: 1; min-width: 0; font: inherit; color: #fff; background: #0b1220; border: 1px solid #2c3b52; border-radius: 8px; padding: 8px 12px; } .fr-send button { padding: 8px 16px; border-radius: 8px; }
 .add-friend { display: none; opacity: 1; } .player:hover .add-friend, .player:focus-within .add-friend { display: inline-block; }
 .player:hover .state { display: none; }
+/* 2026-11-18 角色看板：可以轉的角色（跟「球衣與裝備」一樣拖曳轉動、滾輪縮放），左側疊稱號＋穿戴、右側疊炫技動作 */
+.me-col .me-stage { position: relative; flex: 1 1 0; min-height: 200px; max-height: 58%; border-radius: 12px; overflow: hidden; background: #0a2a22; }
+.me-col .me-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.me-col .me-stage img { width: 100%; height: 100%; object-fit: contain; }
+.me-stage .me-l, .me-stage .me-r { position: absolute; top: 8px; bottom: 8px; width: 31%; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 1; }
+.me-stage .me-l { left: 8px; } .me-stage .me-r { right: 8px; align-items: flex-end; }
+.me-stage small { display: block; font-size: 10px; letter-spacing: .08em; color: #E2B865; margin-bottom: 2px; }
+.me-stage .me-tt b { display: inline-block; max-width: 100%; padding: 3px 8px; border-radius: 8px; background: linear-gradient(90deg, #E8C273, #D39A3E); color: #1B2638; font-size: 12px; font-weight: 900; line-height: 1.3; overflow-wrap: anywhere; }
+.me-stage .me-eq, .me-stage .me-r { overflow: hidden; }
+.me-stage .me-eq span, .me-stage .me-r span { display: flex; align-items: center; gap: 4px; max-width: 100%; margin-top: 3px; padding: 2px 7px 2px 3px; border-radius: 999px; background: rgba(4,20,16,.72); border: 1px solid rgba(229,184,105,.3); color: #EEF2F7; font-size: 11px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-stage .me-r span { flex-direction: row-reverse; padding: 2px 3px 2px 7px; }
+.me-stage i { font-style: normal; flex: none; width: 18px; text-align: center; }
+.me-stage .me-r span.off { opacity: .45; }
+.me-stage .me-drag { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 10px; color: rgba(238,242,247,.55); pointer-events: none; white-space: nowrap; }

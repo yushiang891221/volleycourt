@@ -779,7 +779,10 @@ body.touch-ui #room-flow { top: 8px; right: 62px; min-width: 0; max-width: 46vw;
 body.touch-ui #room-flow button { font-size: 13px; padding: 6px 12px; min-height: 0; }
 body.touch-ui #room-flow p { margin: 3px 0; }
 body.touch-ui:not(.touch-more) #room-ready-list { display: none; }
-body.touch-ui.touch-more #room-flow { display: none; }
+/* 玩的時候畫面只留搖桿和按鍵（2026-11-18 使用者要求）：準備框、場地列（1 號場／陪練）、專項說明條平常收起來，打開 ☰ 才出現（新手教學的步驟提示照樣顯示） */
+body.touch-ui:not(.touch-more) #room-flow, body.touch-ui:not(.touch-more) .walk-ui .wk-use, body.touch-ui:not(.touch-more) .vb-tut-panel[data-phase="drill"] { display: none !important; }
+body.touch-ui .walk-ui .wk-use [data-npc] { display: none !important; }   /* 手機不放「陪練舉球／陪練對碰」（2026-11-18 使用者要求）；2 對 2 等開賽按鈕照留 */
+body.touch-ui.touch-more #room-flow { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 100px); right: max(10px, env(safe-area-inset-right, 0px)); }
 body.touch-ui .walk-ui .wk-act { font-size: 12px; padding: 4px 10px; max-width: 46vw; }
 /* 浮動搖桿：左半邊（避開上方的計分板、面板）按下去就出現；沒按時搖桿在左下角變淡 */
 .joy-zone { display: none; position: absolute; left: 0; top: 22%; bottom: 0; width: 45%; touch-action: none; }
@@ -796,4 +799,10 @@ body.touch-ui .vb-tut-panel button { font-size: 12px; padding: 3px 8px; }
 body.touch-ui .sta { top: auto; bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: min(200px, 28vw); height: 14px; }
 body.touch-ui .sta b { left: auto; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 12px; }
 body.touch-ui .vb-tut-progress { top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 24px); padding: 4px 10px; }
-body.touch-ui.touch-more .vb-tut-panel, body.touch-ui.touch-more .vb-tut-progress, body.touch-ui.touch-more .sta { display: none !important; }
+/* 打開 ☰：上排＝房間資訊（左）、選單按鈕（右）；第二排＝練習說明條（左）、準備框（右）；場地列在說明條下面；體力條先收起來 */
+body.touch-ui.touch-more .vb-tut-panel { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 100px); }
+body.touch-ui.touch-more .walk-ui .wk-use { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 198px); bottom: auto; }
+body.touch-ui.touch-more .vb-tut-progress, body.touch-ui.touch-more .sta { display: none !important; }
+/* 遊戲頁不能選取文字（2026-11-18 使用者回報電腦版拖曳轉視角會把畫面上的字反白）：輸入框、聊天輸入照常可以選字複製 */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable], [contenteditable] * { -webkit-user-select: text; user-select: text; }

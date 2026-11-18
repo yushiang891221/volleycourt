@@ -1301,7 +1301,7 @@ function vmWireReceive(d, from) {
     b.wirePrediction = null; vmWireApply(b, d.ball);
     const age = clamp((now + w.offset - d.at) / 1000, 0, .35), flight = VBMatchSync.sample(d.ball, age * VB.ts, BALL_R, age);
     const error = before.sub(new THREE.Vector3(...flight.p));
-    b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
+    b.m.position.set(...flight.p); b.v.set(...flight.v);   /* 球的轉向在本機自己轉（vmWireRemoteStep），不用伺服器的：伺服器那邊球不會轉 */
     b.wireVisualError = hadFrame && !d.ball.floor && error.length() < 2 ? error : null;
   }
   b.wireFrame = d;
@@ -1319,7 +1319,11 @@ function vmWireRemoteStep(b, dt) {
   const ball = prediction ? prediction.ball : frame.ball;
   const age = clamp((prediction ? now - prediction.at : now + (w.offset || 0) - frame.at) / 1000, 0, .35);
   const flight = VBMatchSync.sample(ball, age * VB.ts, BALL_R, age);
-  b.m.position.set(...flight.p); b.v.set(...flight.v); b.m.quaternion.set(...flight.q);
+  b.m.position.set(...flight.p); b.v.set(...flight.v);
+  {   /* 旋轉：照主機給的轉速在本機轉（以前每次收到都把轉向拉回伺服器的值，扣球看起來不會轉） */
+    const s0 = !ball.f && !ball.floor && ball.s, w = s0 ? Math.hypot(s0[0], s0[1], s0[2]) : 0;
+    if (w > 0.01 && b.m.position.y > BALL_R + 0.03) { const r = w >= 28 ? clamp(Math.hypot(...flight.v) * 0.9, 10, 26) : Math.min(w, 26); b.m.rotateOnWorldAxis(SPIN_AX.set(s0[0] / w, s0[1] / w, s0[2] / w), Math.min(r * dt, BALL_SPIN_STEP)); }
+  }
   if (b.wireVisualError) b.wireVisualError.multiplyScalar(Math.exp(-dt / .08));
   if (ball.floor && !prediction) {   /* 落地後：直接用房主回報的位置和速度（已經彈起來了），交給本機物理接著彈跳滾動，不再釘在落點 */
     b.m.position.set(ball.p[0], Math.max(BALL_R, ball.p[1]), ball.p[2]); b.v.set(...ball.v); b.acc = null; b.float = null;

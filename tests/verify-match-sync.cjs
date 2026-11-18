@@ -14,11 +14,11 @@ class V3 {
   length() { return Math.hypot(this.x,this.y,this.z); }
   toArray() { return [this.x,this.y,this.z]; }
 }
-function mesh() { return { position:new V3(), quaternion:{ a:[0,0,0,1], set(...a){this.a=a;return this;},toArray(){return this.a.slice();}},userData:{} }; }
+function mesh() { return { position:new V3(), quaternion:{ a:[0,0,0,1], set(...a){this.a=a;return this;},toArray(){return this.a.slice();}},rotateOnWorldAxis(){return this;},userData:{} }; }
 function harness(delay=80) {
   let now=1000, packetN=0, dropClaim=false; const queue=[],nodes=new Map(),trace=[];
   function node(id, host, skew) {
-    const c={VBMatchSync:sync,Math,Date,clamp,performance:{now:()=>now+skew},THREE:{Vector3:V3},BALL_R:.105,VB:{ts:.7},walk:{x:1,z:0},balls:[],ballsGroup:{add(){},remove(){}},newBallMesh:mesh,NET:{on:true,me:id,lat:new Map(),peers:new Map()},VM:{on:true,host,hostId:'host',ai:new Map(),startData:{},phase:'rally',sc:[0,0],team:[['host','a'],['b','c']],touch:{team:0,n:1,last:'host'},poss:[null,null],t:0,sg:1},sfx(){},vbImpact(){},vbMarkSet(){},vbBlockTest(){},vmTrailPush(){},vmAiSnapshot(){},vmStatePayload:()=>({ai:[]}),vmPerfTouch(){},vmGrade(){},vmName:id=>id};
+    const c={SPIN_AX:new V3(),BALL_SPIN_STEP:.45,VBMatchSync:sync,Math,Date,clamp,performance:{now:()=>now+skew},THREE:{Vector3:V3},BALL_R:.105,VB:{ts:.7},walk:{x:1,z:0},balls:[],ballsGroup:{add(){},remove(){}},newBallMesh:mesh,NET:{on:true,me:id,lat:new Map(),peers:new Map()},VM:{on:true,host,hostId:'host',ai:new Map(),startData:{},phase:'rally',sc:[0,0],team:[['host','a'],['b','c']],touch:{team:0,n:1,last:'host'},poss:[null,null],t:0,sg:1},sfx(){},vbImpact(){},vbMarkSet(){},vbBlockTest(){},vmTrailPush(){},vmAiSnapshot(){},vmStatePayload:()=>({ai:[]}),vmPerfTouch(){},vmGrade(){},vmName:id=>id};
     c.NET.tx={publish(t,d){trace.push([id,t,structuredClone(d)]);if(dropClaim&&t==='match-claim'){dropClaim=false;return;} for(const to of ['host','a','b','c','spectator']) if(to!==id) queue.push({from:id,to,t,d:structuredClone(d),at:now+delay+([0,40,-20,15][packetN++%4])});}};
     c.vmMe=()=>id;c.vmTeamOf=who=>c.VM.team[0].includes(who)?0:c.VM.team[1].includes(who)?1:-1;c.vmServer=()=>c.server||'host';c.netLat=()=>delay/1000;
     c.vmClearBalls=()=>{c.balls.length=0;};c.vmDropHeld=()=>{};c.vmL=(x,z)=>[x,z];c.vmSide=t=>t? -1:1;
@@ -71,7 +71,7 @@ for(const delay of [40,100,200]) {
     assert.equal(c.VM.wire.order.seq,h.host.VM.wire.order.seq,'five nodes converge');
     assert.equal(c.VM.wire.pending,null,'prediction resolved');
     assert(Math.hypot(...c.VM.ball.m.position.toArray().map((n,i)=>n-h.host.VM.ball.m.position.toArray()[i]))<.35,'clock-aligned positions');
-    assert(Math.abs(c.VM.ball.m.quaternion.toArray().reduce((s,n,i)=>s+n*h.host.VM.ball.m.quaternion.toArray()[i],0))>.97,'spin phase synchronized');
+    /* 2026-11-18：球的轉向改成各自畫面自己轉（照主機給的轉速、限制每格最多轉多少，避免轉太快看起來不轉），不再每台對齊轉到哪個角度 */
   }
   const client=h.nodes.get('c'),latest=structuredClone(client.VM.wire.latest),saved=client.VM.wire.order.frame;
   h.deliver({to:'c',from:'host',t:'match-frame',d:{...latest,frame:saved-1,ball:{...latest.ball,p:[900,900,900]}}});

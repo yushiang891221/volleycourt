@@ -298,10 +298,13 @@ function vmTeamLabel(t) { const ids = VM.team[t] || [], hs = ids.filter((id) => 
 function vmPointMsg(win, why) { return `${why}・${vmTeamLabel(win)}得分　${VM.sc[0]}：${VM.sc[1]}`; }
 function vmOver() {
   vmSendResult();   // WEB-010 戰績（開房比賽才送）
-  if (ROOM) { if (ROOM.isHost) { toast(`比賽結束 ${VM.sc[0]}：${VM.sc[1]}，請重新準備`,4000); ROOM.end(); } return; }
-  VM.phase = 'over'; vmBroadcast(true);
-  const my = Math.max(0, vmTeamOf(vmMe())), A = vmMulti() ? VM.sets : VM.sc, won = A[my] > A[1 - my], m = $('rk-menu');
-  m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${vmTeamLabel(A[0] > A[1] ? 0 : 1)}贏了`}</h3><p class="rk-final">${vmMulti() ? `局數 ${VM.sets[0]}：${VM.sets[1]}` : `${VM.sc[0]}：${VM.sc[1]}`}</p>${vmMulti() ? `<p class="rk-sub" style="text-align:center">最後一局 ${VM.sc[0]}：${VM.sc[1]}</p>` : ''}<div class="rk-btns">${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button></div></div>`;
+  // 練習房也有 ROOM（練習模式），但練習沒有開房的評分面板：照樣結束這場（回到準備），再顯示比分框（2026-11-18 使用者回報結算面板不見了）
+  if (ROOM && !vmIsPractice()) { if (ROOM.isHost) { toast(`比賽結束 ${VM.sc[0]}：${VM.sc[1]}，請重新準備`,4000); ROOM.end(); } return; }
+  const multi = vmMulti(), sets = VM.sets ? [...VM.sets] : null, sc = [...VM.sc], my = Math.max(0, vmTeamOf(vmMe())), A = multi ? sets : sc, won = A[my] > A[1 - my], winLabel = vmTeamLabel(A[0] > A[1] ? 0 : 1), m = $('rk-menu');
+  const inRoom = !!ROOM;   // 先記好比分、隊名：結束這場（ROOM.end）會把比賽收掉
+  if (inRoom) { if (ROOM.isHost) ROOM.end(); } else { VM.phase = 'over'; vmBroadcast(true); }
+  const btns = inRoom ? '<button type="button" class="primary" data-vm="close">確定</button>' : `${VM.host ? '<button type="button" class="primary" data-vm="again">再一局</button>' : ''}<button type="button" data-vm="quit">離開比賽</button>`;
+  m.innerHTML = `<div class="rk-box"><h3>${won ? '🏆 你們贏了！' : `${winLabel}贏了`}</h3><p class="rk-final">${multi ? `局數 ${sets[0]}：${sets[1]}` : `${sc[0]}：${sc[1]}`}</p>${multi ? `<p class="rk-sub" style="text-align:center">最後一局 ${sc[0]}：${sc[1]}</p>` : ''}${inRoom ? '<p class="rk-sub" style="text-align:center">想再打一場：站上球場按「準備」</p>' : ''}<div class="rk-btns">${btns}</div></div>`;
   m.hidden = false; unlockMouse();
   if (typeof hlPanelBtn === 'function') hlPanelBtn(m.querySelector('.rk-btns'), m);   // 得分精華下載
 }

@@ -169,9 +169,9 @@ function vbTrailStep(dt) {
     h.visible = !RP.on && !T.noHalo; if (h.visible) { h.position.copy(hp); h.scale.setScalar(2 * TRAIL.haloR * (1 + 0.4 * Math.max(0, 1 - (now - T.t0) / 180))); h.material.opacity = T.fade * clamp((hp.distanceTo(camera.position) - 0.5) / 1.5, 0, 1); }
   }
 }
-function vbTrailBuild(T, m, W, A, white, now) {
+function vbTrailBuild(T, m, W, A, white, now, replay) {   // replay＝重播自己畫的光帶（現場的光帶在重播時藏起來）
   const P = T.pts, n = P.length, geo = m.geometry, cam = camera.position;
-  m.visible = !RP.on && n >= 2; if (!m.visible) return;
+  m.visible = (replay || !RP.on) && n >= 2; if (!m.visible) return;
   const pa = geo.attributes.position.array, ca = geo.attributes.color.array, c = T.col;
   const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;
   for (let i = 0; i < n; i++) {

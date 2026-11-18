@@ -455,7 +455,7 @@ function ballMaterial(hot) {
   return new THREE.MeshPhysicalMaterial({ map: BALL_TEX.map, normalMap: BALL_TEX.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: BALL_TEX.rough, roughness: 1, sheen: 0.25, sheenRoughness: 0.6, sheenColor: '#FFF6D0', clearcoat: 0.35, clearcoatRoughness: 0.45, emissive: hot ? '#FFF2B8' : '#000000', emissiveIntensity: hot ? 0.12 : 0 });
 }
 const ballMat = ballMaterial(false), ballHot = ballMaterial(true);
-const BALL_VIS = 1.5;   // 畫面上的球比實際碰撞大 1.5 倍，比較好看清楚（物理、判定仍用 BALL_R）
+const BALL_VIS = 1.125;   // 畫面上的球比實際碰撞大 1.125 倍，比較好看清楚（物理、判定仍用 BALL_R）；2026-11-18 使用者要求從 1.5 縮成 0.75 倍
 // 畫面上的球變大，球心卻還在 BALL_R 高度 → 會陷進地板。畫的時候把貼近地面的球往上抬（離地 0.6 m 以上就不抬），物理位置不動。
 const BALL_LIFT = (BALL_VIS - 1) * BALL_R;
 function ballLift(y) { return BALL_LIFT * clamp(1 - (y - BALL_R) / 0.6, 0, 1); }
@@ -467,6 +467,14 @@ function ballLiftBefore() {
   e[13] += d;
 }
 function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+// 畫面上的轉速（每秒幾弧度，0＝不轉）。轉太快反而看起來像不轉：排球的色塊每格剛好轉到差不多的位置（2026-11-18 使用者回報扣球、跳發不會轉）
+//   扣球、跳發（強上旋）：照球速，越大力轉越快，每秒 10～26 弧度；其他照擊球時的旋轉，最多 26；飄球、落地不轉
+const BALL_SPIN_STEP = 0.45;   // 每一格畫面最多轉幾弧度（超過就會出現「看起來不轉」的錯覺）
+function ballSpinRate(b) {
+  if (!b.spinW || b.float || b.m.position.y <= BALL_R + 0.03) return 0;
+  const w = b.spinW.length(); if (w < 0.01) return 0;
+  return w >= 28 ? clamp(b.v.length() * 0.9, 10, 26) : Math.min(w, 26);
+}
 const BALL_GEO = new THREE.SphereGeometry(BALL_R * BALL_VIS, 56, 36);   // 所有球共用一份（輪廓夠圓）
 function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }   /* decor＝球車、球架上的擺設球：維持原尺寸、不抬 */
 // 雙手（跟著鏡頭）：前臂＋手掌＋五根手指，每幀用「手肘、手腕、手指方向、掌心方向」擺出姿勢
@@ -1061,8 +1069,9 @@ function updateBalls(dt) {
     const sp = Math.hypot(b.v.x, b.v.z);
     if (b.netEv && VM.on && VM.wire) { b.netEv = false; VM.wire.dirty = true; }
     if (b.netEv) { b.netEv = false; if (NET.on && NET.ownBall && b.room) { const m = netBallMsg(b); m.n = 1; NET.tx.publish('ball', m); NET.lastBall = performance.now(); } }   // 碰網：負責這顆球的人馬上把結果送出去
-    if (b.spinW && !b.float && b.m.position.y > BALL_R + 0.03) { const w = b.spinW.length(); if (w > 0.01) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).divideScalar(w), w * flightDt); }   // 空中：照擊球時的旋轉
-    else if (!(VM.on && VM.wire && b.room) || b.m.position.y <= BALL_R + 0.03) { if (b.m.position.y <= BALL_R + 0.03) b.spinW = null; if (sp > 0.01) { b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 新同步空中零旋轉／飄球不能套用地面滾動。
+    const sr = ballSpinRate(b);
+    if (sr > 0) b.m.rotateOnWorldAxis(SPIN_AX.copy(b.spinW).normalize(), Math.min(sr * flightDt, BALL_SPIN_STEP));   // 空中：照擊球時的旋轉（每格最多轉 BALL_SPIN_STEP）
+    else if (b.m.position.y <= BALL_R + 0.03) { b.spinW = null; if (sp > 0.01) {   /* 地上才滾；空中沒有旋轉的球（飄球、好的舉球）不轉 */ b.m.rotation.x += (b.v.z / BALL_R) * dt; b.m.rotation.z -= (b.v.x / BALL_R) * dt; } }   // 新同步空中零旋轉／飄球不能套用地面滾動。
     b.rest = sp < 0.05 && b.m.position.y <= BALL_R + 0.01 ? b.rest + dt : 0;
     if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
   }
