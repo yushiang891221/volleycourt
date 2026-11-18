@@ -272,12 +272,16 @@ export function createGameCore(S = {}) {
   const BALL_LIFT = (BALL_VIS - 1) * BALL_R;
   function ballLift(y) { return BALL_LIFT * clamp(1 - (y - BALL_R) / 0.6, 0, 1); }
   const BALL_SAVE = new Float32Array(16);
+  const LIVE_BALLS = new Set(), LIVE_AVS = new Set();
+  function ballPullOn(m) { LIVE_BALLS.add(m); const p = m.userData.pull, e = m.matrixWorld.elements; if (p && p.t > (touchPass.prev || 0)) {   /* 只用這一格算出來的（上一次畫之後才設的） */ e[12] += p.x; e[13] += p.y; e[14] += p.z; m.userData.pd = p; } }
+  function ballPullOff(m) { const p = m.userData.pd; if (p) { const e = m.matrixWorld.elements; e[12] -= p.x; e[13] -= p.y; e[14] -= p.z; m.userData.pd = null; } }
   function ballLiftBefore() {
+    ballPullOn(this);
     const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
     if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
     e[13] += d;
   }
-  function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+  function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; ballPullOff(this); return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } ballPullOff(this); }
   const BALL_SPIN_STEP = 0.45;
   function ballSpinRate(b) {
     if (!b.spinW || b.float || b.m.position.y <= BALL_R + 0.03) return 0;
@@ -377,6 +381,25 @@ export function createGameCore(S = {}) {
       if (y >= 2.6) return v;
     }
     return new THREE.Vector3((tx - p0.x) / 2.6, (BALL_R - p0.y) / 2.6 + 4.9 * 2.6, (tz - p0.z) / 2.6);
+  }
+  let reachState = null;
+  const OFF_L = { e: [-0.3, -0.9, 0.05], w: [-0.25, -0.95, -0.1], f: [0, 0, -1], n: [0, 1, 0], c: 0.5 };
+  const OFF_R = { e: [0.3, -0.9, 0.05], w: [0.25, -0.95, -0.1], f: [0, 0, -1], n: [0, 1, 0], c: 0.5 };
+  function reach(worldPoint, fn, opt = {}) {
+    if (reachState || walk.hold) { fn(); return; }
+    camera.updateMatrixWorld(true);
+    const local = hands.worldToLocal(worldPoint.clone());
+    const armFor = (sx) => {
+      const sh = new THREE.Vector3(0.2 * sx, -0.3, 0.05), dir = local.clone().add(new THREE.Vector3(0.05 * sx * (opt.both ? 1 : 0), 0, 0)).sub(sh);
+      const L = Math.min(dir.length(), 0.6); dir.normalize();
+      const w = sh.clone().addScaledVector(dir, L), e = sh.clone().addScaledVector(dir, L * 0.42).add(new THREE.Vector3(0.07 * sx, -0.06, 0));
+      return { e: e.toArray(), w: w.toArray(), f: dir.clone().add(new THREE.Vector3(0, -0.15, 0)).toArray(), n: opt.wash ? [0, 1, 0] : [-sx, 0.2, 0], c: opt.prop ? 0.9 : 0.35 };
+    };
+    POSE.reach = { L: opt.both ? armFor(-1) : OFF_L, R: armFor(1), ball: [0, 0, 0] };
+    POSE.rest = { L: OFF_L, R: OFF_R, ball: [0, 0, 0] };
+    pose = 'rest'; applyPose(0, true); hands.visible = true; pose = 'reach';
+    if (opt.prop) { opt.prop.position.set(0, 0.05, 0.12); armR.hand.add(opt.prop); }
+    reachState = { t: 0, fn, fired: false, opt };
   }
   function updateWind(...a) { return S.updateWind ? S.updateWind(...a) : undefined; }
   function serveVel(p, tx, tz, spd, g, court, sg, margin = 0.12) {
@@ -573,6 +596,74 @@ export function createGameCore(S = {}) {
   const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
   function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }
   function avDrive(...a) { return S.avDrive ? S.avDrive(...a) : undefined; }
+  const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
+  const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
+  const HIT_LOCK = { spike: [0.12, 0.1], block: [0.12, 0.1], set: [0.16, 0.3], bump: [0.14, 0.2], reach: [0.14, 0.2] };
+  function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
+  function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
+  function avShoulders(av) { av.arms[0].getWorldPosition(TCH.S); av.arms[1].getWorldPosition(TCH.M); TCH.M.add(TCH.S).multiplyScalar(0.5); av.elbows[0].getWorldPosition(TCH.E); av.hands[0].getWorldPosition(TCH.H); return TCH.S.distanceTo(TCH.E) + TCH.E.distanceTo(TCH.H) + 0.05 * (av.g.scale.x || 1); }
+  function avReachTo(av, kind, B, w) {
+    const C = TCH_CFG[kind], Rv = BALL_R * BALL_VIS, sc = av.g.scale.x || 1;
+    avShoulders(av);
+    TCH.r.setFromMatrixColumn(av.g.matrixWorld, 0).normalize().negate();   // 人物的右手邊（arms[0] 在 -x 那側）
+    TCH.n.copy(B).sub(TCH.M).normalize();
+    let arms = C.arms;
+    if (!arms) { av.arms[0].getWorldPosition(TCH.S); const d0 = TCH.S.distanceTo(B); av.arms[1].getWorldPosition(TCH.S); arms = [d0 <= TCH.S.distanceTo(B) ? 0 : 1]; }
+    TCH.P.set(0, 0, 0);
+    for (const i of arms) {
+      const sd = i === 0 ? 1 : -1, arm = av.arms[i], el = av.elbows[i];
+      arm.getWorldPosition(TCH.S);
+      const T = TCH.T.copy(B);
+      if (kind === 'spike' || kind === 'reach') T.addScaledVector(TCH.g.copy(B).sub(TCH.S).normalize(), -(Rv + 0.015));
+      else if (kind === 'set') T.addScaledVector(TCH.n, -Rv * 0.5).addScaledVector(TCH.UP, -Rv * 0.4).addScaledVector(TCH.r, sd * Rv * 0.78);
+      else if (kind === 'block') T.addScaledVector(TCH.n, -Rv * 0.8).addScaledVector(TCH.r, sd * Rv * 0.55);
+      else T.addScaledVector(TCH.UP, -(Rv + 0.04 * sc)).addScaledVector(TCH.r, sd * 0.045 * sc);
+      // 手肘：兩節手臂照目標距離算要彎多少（接球、攔網手臂打直；扣球幾乎打直）
+      avTouchEnd(av, i, kind, TCH.F); el.getWorldPosition(TCH.E);
+      const a = TCH.S.distanceTo(TCH.E), c = TCH.E.distanceTo(TCH.F), dT = clamp(TCH.S.distanceTo(T), Math.abs(a - c) + 1e-3, a + c - 1e-3);
+      const bend = C.bend ? clamp(Math.PI - Math.acos(clamp((a * a + c * c - dT * dT) / (2 * a * c), -1, 1)), 0, C.maxBend || 2.4) : 0;
+      el.rotation.x += (-bend - el.rotation.x) * w; arm.updateMatrixWorld(true);
+      // 整隻手臂轉過去，讓碰球的點對準目標
+      avTouchEnd(av, i, kind, TCH.F);
+      TCH.g.copy(TCH.F).sub(TCH.S).normalize(); TCH.V.copy(T).sub(TCH.S).normalize();
+      TCH.q.setFromUnitVectors(TCH.g, TCH.V); TCH.qw.identity().slerp(TCH.q, w);
+      arm.getWorldQuaternion(TCH.qp); TCH.qw.multiply(TCH.qp); arm.parent.getWorldQuaternion(TCH.qp).invert();
+      arm.quaternion.copy(TCH.qp.multiply(TCH.qw)); arm.updateMatrixWorld(true);
+      avTouchEnd(av, i, kind, TCH.F); TCH.P.add(TCH.F.sub(T));
+    }
+    TCH.P.multiplyScalar(1 / arms.length); return TCH.P.length();
+  }
+  function touchPass() {
+    const now = performance.now(); if (now - (touchPass.t || 0) < 4) return; touchPass.prev = touchPass.t || 0; touchPass.t = now;
+    for (const m of LIVE_BALLS) {
+      const U = m.userData;
+      if (!m.parent || !ballShown(m)) { U.hp = null; U.hv = null; U.lock = null; continue; }
+      const p = TCH.B.setFromMatrixPosition(m.matrixWorld), dtm = U.hp ? (now - U.ht) / 1000 : 0;
+      if (U.hp && dtm > 0.004 && dtm < 0.25) {
+        const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
+        if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
+        if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
+          const Rv = BALL_R * BALL_VIS, sp = v.length(); let who = null, wd = Infinity;
+          for (const av of LIVE_AVS) {
+            if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) { if (now - av._drv > 3000) LIVE_AVS.delete(av); continue; }
+            const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
+            if (d < lim && sc < wd) { wd = sc; who = av; }
+          }
+          if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; }
+        }
+        U.hv = (U.hv || new THREE.Vector3()).copy(v);
+      }
+      U.hp = (U.hp || new THREE.Vector3()).copy(p); U.ht = now;
+      const L = U.lock; if (!L) continue;
+      const kd = L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
+      if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
+      const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+      avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));
+      // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再慢慢接回真正的位置
+      const hold = TCH.V.copy(L.C).add(TCH.P), s = sm((u - LK[1]) / (1 - LK[1]));
+      hold.lerp(p, s).sub(p); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
+    }
+  }
   function avPoseOf(...a) { return S.avPoseOf ? S.avPoseOf(...a) : undefined; }
   function peerTag(p2) { const tag = (p2.tt ? `「${p2.tt}」` : '') + VM.on && VM.six && VM.role && VM.role[p2.id] ? `${V6_TAG[VM.role[p2.id]]}・${p2.n}` : p2.n; return tag + (ROOM?.snapshot.flow.ready.includes(p2.id) && ROOM.snapshot.flow.phase !== 'playing' ? ' · 準備' : ''); }
   function peerTagsAll(...a) { return S.peerTagsAll ? S.peerTagsAll(...a) : undefined; }

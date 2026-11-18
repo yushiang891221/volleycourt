@@ -461,12 +461,17 @@ const BALL_LIFT = (BALL_VIS - 1) * BALL_R;
 function ballLift(y) { return BALL_LIFT * clamp(1 - (y - BALL_R) / 0.6, 0, 1); }
 // 落地壓扁（userData.wsq＝[橫向倍數, 高度倍數]）：在世界座標上下壓（球自己在轉也一樣是貼著地板扁下去），底部仍貼地
 const BALL_SAVE = new Float32Array(16);
+// 手碰球（avTouch）：畫的時候把球往手那邊挪一點，球面剛好貼在手上（userData.pull＝{x,y,z,t}；只在當格有效，物理位置不動）
+const LIVE_BALLS = new Set(), LIVE_AVS = new Set();   // 畫面上的球、有在動的人物（avTouch／touchPass 用）
+function ballPullOn(m) { LIVE_BALLS.add(m); const p = m.userData.pull, e = m.matrixWorld.elements; if (p && p.t > (touchPass.prev || 0)) {   /* 只用這一格算出來的（上一次畫之後才設的） */ e[12] += p.x; e[13] += p.y; e[14] += p.z; m.userData.pd = p; } }
+function ballPullOff(m) { const p = m.userData.pd; if (p) { const e = m.matrixWorld.elements; e[12] -= p.x; e[13] -= p.y; e[14] -= p.z; m.userData.pd = null; } }
 function ballLiftBefore() {
+  ballPullOn(this);
   const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
   if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
   e[13] += d;
 }
-function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } }
+function ballLiftAfter() { if (this.userData.saved) { const e = this.matrixWorld.elements; for (let i = 0; i < 16; i++) e[i] = BALL_SAVE[i];   /* three.js 的 elements 是一般陣列，沒有 .set */ this.userData.saved = false; this.userData.lifted = 0; ballPullOff(this); return; } const d = this.userData.lifted; if (d) { this.matrixWorld.elements[13] -= d; this.userData.lifted = 0; } ballPullOff(this); }
 // 畫面上的轉速（每秒幾弧度，0＝不轉）。轉太快反而看起來像不轉：排球的色塊每格剛好轉到差不多的位置（2026-11-18 使用者回報扣球、跳發不會轉）
 //   扣球、跳發（強上旋）：照球速，越大力轉越快，每秒 10～26 弧度；其他照擊球時的旋轉，最多 26；飄球、落地不轉
 const BALL_SPIN_STEP = 0.45;   // 每一格畫面最多轉幾弧度（超過就會出現「看起來不轉」的錯覺）

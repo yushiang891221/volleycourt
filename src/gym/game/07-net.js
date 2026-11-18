@@ -558,9 +558,11 @@ const AVP = {
   rkSideBack: { sh: [[-1.2, 1.3], [-0.9, 0.2]], el: [0.9, 0.8], hip: [0.6, 0.4], kn: [1.0, 0.7], sp: 0.3, tw: 0.7, arm: 0 },
   rkSideFollow: { sh: [[-1.5, -0.6], [-0.6, 0.3]], el: [0.6, 0.9], hip: [0.5, 0.5], kn: [0.9, 0.9], sp: 0.3, tw: -0.6, arm: 0 },
 };
+// 會碰到球的姿勢：球靠近時手臂自動伸過去（avTouch）。spike＝右手、set＝雙手、bump＝雙手前臂、block＝雙手
+for (const [k, t] of Object.entries({ setReady: 'set', setPush: 'set', setBack: 'set', bump: 'bump', bumpStand: 'bump', bumpHit: 'bump', airUp: 'spike', spikeHit: 'spike', block: 'block' })) AVP[k].touch = t;
 function avMix(a, b, t) {
   t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t, ha = a.hab || [0, 0], hb = b.hab || [0, 0];
-  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), ankle: [0, 1].map(i => L(a.ankle?.[i] || 0, b.ankle?.[i] || 0)), head: [0, 1].map(i => L(a.head?.[i] || 0, b.head?.[i] || 0)), lean: L(a.lean || 0, b.lean || 0), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])) };
+  return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), ankle: [0, 1].map(i => L(a.ankle?.[i] || 0, b.ankle?.[i] || 0)), head: [0, 1].map(i => L(a.head?.[i] || 0, b.head?.[i] || 0)), lean: L(a.lean || 0, b.lean || 0), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])), touch: t < 0.5 ? a.touch || b.touch : b.touch || a.touch };
 }
 // 左右對調的姿勢（往左撲＝往右撲的鏡像）
 const AVP_MIR = new Map();
@@ -632,7 +634,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     const knG = on * g2 * ((0.3 + 1.15 * w) * Math.pow(Math.max(0, Math.cos(ph + 0.45)), 1.6) + (0.06 + 0.22 * w) * Math.max(0, -c));   // 擺盪期收腿、支撐期緩衝
     const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i], armG = armA * Math.sin(ph + Math.PI);
     if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + B.shy[i];
-    a.rotation.x = B.sh[i][0] - armG; a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
+    a.rotation.y = 0; a.rotation.x = B.sh[i][0] - armG;   /* rotation.y 歸零：avTouch 會把手臂整個轉向球 */ a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
     e.rotation.x = -(B.el[i] + B.arm * on * (0.18 + 1.25 * w) + B.arm * 0.12 * w * Math.max(0, Math.sin(ph + Math.PI)));
     h.rotation.x = -(B.hip[i] + hipG); kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
     const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = ((av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk)) * Math.cos(B.hab[i]);
@@ -669,7 +671,105 @@ function avDrive(av, P, k, sp = 0, air = false) {
   const gy = av.g.getWorldPosition(GP_V).y; let minY = Infinity;
   for (const [o, x, y, z] of av._gp || (av._gp = avGroundPts(av))) { GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < minY) minY = GP_V.y; }
   if (minY < gy + 0.022) { R.position.y += (gy + 0.022 - minY) / (av.g.scale.y || 1); R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
+  av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
+  if (av._tk) avTouch(av, av._tk);
 }
+// ---- 手真的碰到球（2026-11-18 使用者：手和球中間不能有空隙；自己第三人稱、別人看你、電腦、重播都一樣）
+//   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）
+//   2. 擊球那一瞬間（畫面上球突然轉向）：找出碰球的人，手臂伸向擊球點，畫面上的球先貼在手上、再接回真正的飛行路線（touchPass，約 0.16 秒）
+//      判定的手比畫面上的人物手長（判定手高 2.37 m、畫面 1.91 m，觸球範圍約 1 m），沒有這一步會看到手和球中間隔著一段空隙
+//   扣球＝右手手掌貼球後面、舉球＝雙手包住球的後下方、接球＝雙手前臂併攏墊在球下面、攔網＝雙手手掌擋在球前面、撲救＝靠近那隻手的手掌
+//   只動畫面（ballPullOn），物理和判定不變
+const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
+const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
+const HIT_LOCK = { spike: [0.12, 0.1], block: [0.12, 0.1], set: [0.16, 0.3], bump: [0.14, 0.2], reach: [0.14, 0.2] };   // 擊球後 [球貼在手上、再接回飛行路線的總時間（秒）, 前面幾成時間完全貼著]；扣球貼太久會像黏住
+function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
+// 手臂末端（碰球的點）：手掌＝手腕再往外 5 cm；前臂＝手肘到手腕 6 成的地方（不管哪種骨架都用世界座標算）
+function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
+function avShoulders(av) { av.arms[0].getWorldPosition(TCH.S); av.arms[1].getWorldPosition(TCH.M); TCH.M.add(TCH.S).multiplyScalar(0.5); av.elbows[0].getWorldPosition(TCH.E); av.hands[0].getWorldPosition(TCH.H); return TCH.S.distanceTo(TCH.E) + TCH.E.distanceTo(TCH.H) + 0.05 * (av.g.scale.x || 1); }   // TCH.M＝兩肩中間；回傳手臂長
+// 手臂伸向球心在 B 的球（w＝伸多少 0～1）；TCH.P＝各手「碰球點 − 該碰的位置」的平均（把球挪這麼多就剛好貼在手上），回傳那段距離
+function avReachTo(av, kind, B, w) {
+  const C = TCH_CFG[kind], Rv = BALL_R * BALL_VIS, sc = av.g.scale.x || 1;
+  avShoulders(av);
+  TCH.r.setFromMatrixColumn(av.g.matrixWorld, 0).normalize().negate();   // 人物的右手邊（arms[0] 在 -x 那側）
+  TCH.n.copy(B).sub(TCH.M).normalize();
+  let arms = C.arms;
+  if (!arms) { av.arms[0].getWorldPosition(TCH.S); const d0 = TCH.S.distanceTo(B); av.arms[1].getWorldPosition(TCH.S); arms = [d0 <= TCH.S.distanceTo(B) ? 0 : 1]; }
+  TCH.P.set(0, 0, 0);
+  for (const i of arms) {
+    const sd = i === 0 ? 1 : -1, arm = av.arms[i], el = av.elbows[i];
+    arm.getWorldPosition(TCH.S);
+    const T = TCH.T.copy(B);
+    if (kind === 'spike' || kind === 'reach') T.addScaledVector(TCH.g.copy(B).sub(TCH.S).normalize(), -(Rv + 0.015));
+    else if (kind === 'set') T.addScaledVector(TCH.n, -Rv * 0.5).addScaledVector(TCH.UP, -Rv * 0.4).addScaledVector(TCH.r, sd * Rv * 0.78);
+    else if (kind === 'block') T.addScaledVector(TCH.n, -Rv * 0.8).addScaledVector(TCH.r, sd * Rv * 0.55);
+    else T.addScaledVector(TCH.UP, -(Rv + 0.04 * sc)).addScaledVector(TCH.r, sd * 0.045 * sc);
+    // 手肘：兩節手臂照目標距離算要彎多少（接球、攔網手臂打直；扣球幾乎打直）
+    avTouchEnd(av, i, kind, TCH.F); el.getWorldPosition(TCH.E);
+    const a = TCH.S.distanceTo(TCH.E), c = TCH.E.distanceTo(TCH.F), dT = clamp(TCH.S.distanceTo(T), Math.abs(a - c) + 1e-3, a + c - 1e-3);
+    const bend = C.bend ? clamp(Math.PI - Math.acos(clamp((a * a + c * c - dT * dT) / (2 * a * c), -1, 1)), 0, C.maxBend || 2.4) : 0;
+    el.rotation.x += (-bend - el.rotation.x) * w; arm.updateMatrixWorld(true);
+    // 整隻手臂轉過去，讓碰球的點對準目標
+    avTouchEnd(av, i, kind, TCH.F);
+    TCH.g.copy(TCH.F).sub(TCH.S).normalize(); TCH.V.copy(T).sub(TCH.S).normalize();
+    TCH.q.setFromUnitVectors(TCH.g, TCH.V); TCH.qw.identity().slerp(TCH.q, w);
+    arm.getWorldQuaternion(TCH.qp); TCH.qw.multiply(TCH.qp); arm.parent.getWorldQuaternion(TCH.qp).invert();
+    arm.quaternion.copy(TCH.qp.multiply(TCH.qw)); arm.updateMatrixWorld(true);
+    avTouchEnd(av, i, kind, TCH.F); TCH.P.add(TCH.F.sub(T));
+  }
+  TCH.P.multiplyScalar(1 / arms.length); return TCH.P.length();
+}
+// 1. 球靠近時手先伸過去（擊球前：自己、別人在等球時就看得到手迎向球）
+function avTouch(av, kind) {
+  if (!TCH_CFG[kind] || !av.arms || !av.hands) return;
+  const Rv = BALL_R * BALL_VIS, reach = avShoulders(av);
+  let best = null, bd = Infinity;
+  for (const m of LIVE_BALLS) {
+    if (!m.parent) { LIVE_BALLS.delete(m); continue; }
+    if (!ballShown(m)) continue;
+    m.updateWorldMatrix(true, false); TCH.Bb.setFromMatrixPosition(m.matrixWorld);
+    const d = TCH.Bb.distanceTo(TCH.M); if (d < bd) { bd = d; best = m; TCH.B.copy(TCH.Bb); }
+  }
+  if (!best || (best.userData.lock && best.userData.lock.av === av)) return;   // 擊球瞬間交給 touchPass
+  let w = clamp(1 - (bd - reach - Rv) / TCH_CFG[kind].band, 0, 1); w = w * w * (3 - 2 * w); if (w < 0.01) return;
+  const gl = avReachTo(av, kind, TCH.B, w), k = w * clamp(1 - (gl - 0.55) / 0.35, 0, 1);   /* 差 55 cm 以內整段補上，再遠就慢慢不補 */
+  if (k < 0.01 || best.userData.lock) return;
+  const old = best.userData.pull, now = performance.now();
+  if (!old || old.t <= (touchPass.t || 0) || k >= (old.w || 0)) best.userData.pull = { x: TCH.P.x * k, y: TCH.P.y * k, z: TCH.P.z * k, w: k, t: now };
+}
+// 2. 擊球瞬間：每一格畫之前看每顆球有沒有突然轉向（＝被打到），有就鎖定碰球的人，手伸向擊球點、球先貼在手上再飛走
+function touchPass() {
+  const now = performance.now(); if (now - (touchPass.t || 0) < 4) return; touchPass.prev = touchPass.t || 0; touchPass.t = now;
+  for (const m of LIVE_BALLS) {
+    const U = m.userData;
+    if (!m.parent || !ballShown(m)) { U.hp = null; U.hv = null; U.lock = null; continue; }
+    const p = TCH.B.setFromMatrixPosition(m.matrixWorld), dtm = U.hp ? (now - U.ht) / 1000 : 0;
+    if (U.hp && dtm > 0.004 && dtm < 0.25) {
+      const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
+      if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
+      if (U.hv && U.hv.lengthSq() > 4 && v.lengthSq() > 4 && U.hv.angleTo(v) > 0.45 && U.hp.y > 0.4 && !(U.lock && now - U.lock.t0 < 120)) {
+        const Rv = BALL_R * BALL_VIS, sp = v.length(); let who = null, wd = Infinity;
+        for (const av of LIVE_AVS) {
+          if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) { if (now - av._drv > 3000) LIVE_AVS.delete(av); continue; }
+          const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
+          if (d < lim && sc < wd) { wd = sc; who = av; }
+        }
+        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; }
+      }
+      U.hv = (U.hv || new THREE.Vector3()).copy(v);
+    }
+    U.hp = (U.hp || new THREE.Vector3()).copy(p); U.ht = now;
+    const L = U.lock; if (!L) continue;
+    const kd = L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
+    if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
+    const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+    avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));
+    // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再慢慢接回真正的位置
+    const hold = TCH.V.copy(L.C).add(TCH.P), s = sm((u - LK[1]) / (1 - LK[1]));
+    hold.lerp(p, s).sub(p); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
+  }
+}
+scene.onBeforeRender = touchPass;
 // 姿勢代碼（連線、回放、AI 共用）→ 全身姿勢；t＝這個動作做到哪（0～1）
 function avPoseOf(code, t = 0.5, ready = false) {
   switch (code) {
