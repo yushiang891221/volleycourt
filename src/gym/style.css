@@ -806,3 +806,8 @@ body.touch-ui.touch-more .vb-tut-progress, body.touch-ui.touch-more .sta { displ
 /* 遊戲頁不能選取文字（2026-11-18 使用者回報電腦版拖曳轉視角會把畫面上的字反白）：輸入框、聊天輸入照常可以選字複製 */
 body { -webkit-user-select: none; user-select: none; }
 input, textarea, [contenteditable], [contenteditable] * { -webkit-user-select: text; user-select: text; }
+
+/* 記分板：畫面正中間、貼齊最上面（使用者 2026-11-19） */
+.vm-hud { left: 50%; top: 0; transform: translateX(-50%); align-items: center; }
+html.phone-walk .vm-hud { left: 50%; top: env(safe-area-inset-top, 0px); }
+.vm-sb { border-top: 0; border-radius: 0 0 14px 14px; }

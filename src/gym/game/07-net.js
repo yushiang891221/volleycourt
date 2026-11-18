@@ -1503,6 +1503,7 @@ function netOnMessage(t, d, from) {
   }
   if (t === 'chat') { RoomChat.receive(d, from); return; }
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
+  if (t === 'ranked-result') { if (from === 'srv' && d && d.list) import('./js/match-result.js').then(mr => mr.setRankedResult?.(d.list[NET.me], d)).catch(() => {}); return; }   /* WEB-030 積分賽加減分 */
   if (t === 'srv-fail') { if (from === 'srv') srvJudgeFailed(d?.why || '伺服器裁判出錯'); return; }   /* B5：伺服器開賽失敗／比賽途中出錯 */
   if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t, hostTime: performance.now() }); return; }   // 量延遲

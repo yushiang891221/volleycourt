@@ -2,8 +2,17 @@
 body { min-width: 0; }
 #lobby-shell main { display:grid; grid-template-columns:300px minmax(0,1fr); grid-template-rows:minmax(300px,1fr) auto; gap:10px; }
 #lobby-shell [hidden] { display:none !important; }
-.lobby-tabs { display:flex; gap:6px; flex-wrap:wrap; }
-.lobby-tabs [aria-current="page"], .mode-options [aria-pressed="true"] { color:#06211A; background:#E5B869; border-color:#E5B869; }
+/* 上方分頁：置中橫條（參考 Apex 大廳的排法，顏色照 Play One） */
+#lobby-shell header.top { position:relative; }
+.lobby-tabs { position:absolute; left:50%; top:0; bottom:0; transform:translateX(-50%); display:flex; align-items:stretch; gap:0; }
+.lobby-tabs button { position:relative; min-width:120px; padding:0 26px; border:0; border-left:1px solid #e5b86930; border-radius:0; background:transparent; color:#c4d1c9; font-family:Oswald, 'Noto Sans TC', sans-serif; font-size:17px; font-weight:700; letter-spacing:.12em; box-shadow:none; transform:none; clip-path:none; }
+.lobby-tabs button:last-child { border-right:1px solid #e5b86930; }
+.lobby-tabs button:hover { color:#f1ead9; background:linear-gradient(to top, #e5b86914, transparent 70%); }
+.lobby-tabs button[aria-current="page"] { color:#E5B869; background:linear-gradient(to top, #e5b86933, transparent 75%); }
+.lobby-tabs button[aria-current="page"]::after { content:''; position:absolute; left:14px; right:14px; bottom:0; height:3px; background:#E5B869; box-shadow:0 0 10px #e5b869aa; }
+@media (max-width:1100px) { .lobby-tabs button { min-width:0; padding:0 16px; font-size:15px; } }
+@media (pointer:coarse), (max-width:819px) { .lobby-tabs { position:static; transform:none; } .lobby-tabs button { padding:8px 12px; } }
+.mode-options [aria-pressed="true"] { color:#06211A; background:#E5B869; border-color:#E5B869; }
 #home-page, #custom-page, #rank-page { grid-column:2; grid-row:1; min-height:0; min-width:0; position:relative; }
 #custom-page { display:flex; flex-direction:column; gap:10px; }
 #custom-page .actions { display:flex; gap:8px; flex-wrap:wrap; }
@@ -92,3 +101,8 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
  #party-slots.mobile-party .slot-0 { bottom:44%; height:55%; }
  #start-match, .mode-options button { min-height:44px; }
 }
+
+/* 留言板展開：往上長高、半透明疊在大廳上面；佔的格子高度跟收合時一樣，中間的人物不會被擠小 */
+#lobby-shell .chat.is-collapsed { height:40px; box-sizing:border-box; }
+#lobby-shell .chat:not(.is-collapsed) { position:relative; z-index:20; box-sizing:border-box; height:min(62vh, 560px); margin-top:calc(40px - min(62vh, 560px)); display:flex; flex-direction:column; background:rgba(6,33,26,.55); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+#lobby-shell .chat:not(.is-collapsed) .messages { flex:1; min-height:0; max-height:none; overflow:auto; background:rgba(4,22,17,.35); }

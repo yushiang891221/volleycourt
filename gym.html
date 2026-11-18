@@ -846,6 +846,11 @@ body.touch-ui.touch-more .vb-tut-progress, body.touch-ui.touch-more .sta { displ
 /* 遊戲頁不能選取文字（2026-11-18 使用者回報電腦版拖曳轉視角會把畫面上的字反白）：輸入框、聊天輸入照常可以選字複製 */
 body { -webkit-user-select: none; user-select: none; }
 input, textarea, [contenteditable], [contenteditable] * { -webkit-user-select: text; user-select: text; }
+
+/* 記分板：畫面正中間、貼齊最上面（使用者 2026-11-19） */
+.vm-hud { left: 50%; top: 0; transform: translateX(-50%); align-items: center; }
+html.phone-walk .vm-hud { left: 50%; top: env(safe-area-inset-top, 0px); }
+.vm-sb { border-top: 0; border-radius: 0 0 14px 14px; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -8578,6 +8583,7 @@ function netOnMessage(t, d, from) {
   }
   if (t === 'chat') { RoomChat.receive(d, from); return; }
   if (t === 'room-settings') { if (ROOM) ROOM.receive(d, from); return; }
+  if (t === 'ranked-result') { if (from === 'srv' && d && d.list) import('./js/match-result.js').then(mr => mr.setRankedResult?.(d.list[NET.me], d)).catch(() => {}); return; }   /* WEB-030 積分賽加減分 */
   if (t === 'srv-fail') { if (from === 'srv') srvJudgeFailed(d?.why || '伺服器裁判出錯'); return; }   /* B5：伺服器開賽失敗／比賽途中出錯 */
   if (t === 'room-match-sync') { if (ROOM?.isHost && VM.on && VM.host && VM.startData) { NET.tx.publish('vm', VM.startData); vmBroadcast(true); } return; }
   if (t === 'ping') { NET.tx.publish('pong', { to: from, t: d.t, hostTime: performance.now() }); return; }   // 量延遲

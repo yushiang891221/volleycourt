@@ -136,6 +136,7 @@ function connectLobby(){if(client)return;startAccountList();client=VBLobby.conne
 },onmessage:m=>{
  if(m.k==='mm-status'){window.PlayOneLobby?.setMatchState(m);if(m.reason)notify(m.reason);}
  if(m.k==='mm-error')notify(m.reason);
+ if(m.k==='rating')window.PlayOneLobby?.setRatings(m.ratings);   /* WEB-030：自己的積分與段位 */
  if(m.k==='mm-found'){
   try { sessionStorage.setItem('vb.ranked',JSON.stringify({room:m.room,mode:m.mode,me:m.me,plan:m.plan})); }
   catch (_) { notify('無法保存配對資料，請允許此網站使用工作階段儲存空間'); return; }

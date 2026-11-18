@@ -10,7 +10,7 @@ const GONE_MS = 60000;          // 隊員斷線 60 秒沒回來就移出隊伍
 const clean = s => typeof s === 'string' ? s.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, '').trim() : '';
 const lookOf = s => { const v = clean(s); return v.length <= 160 ? v : ''; };
 
-export function createParties({ send, sockets, now = Date.now }) {
+export function createParties({ send, sockets, now = Date.now, ratingOf = () => null }) {
   const parties = new Map();    // 隊伍 id → { id, leader（帳號）, mode, members: [{ player, id, name, look, at, gone }], code, codeAt }
   const byPlayer = new Map();   // 帳號 → 隊伍 id
   const invites = new Map();    // `${隊伍}|${被邀帳號}` → { party, to, from, at }
@@ -25,7 +25,7 @@ export function createParties({ send, sockets, now = Date.now }) {
   function view(party, player) {
     return {
       k: 'party', id: party.id, mode: party.mode, max: PARTY_MAX[party.mode],
-      members: party.members.map(m => ({ id: m.id, name: m.name, look: m.look, rating: null, leader: m.player === party.leader, self: m.player === player, online: !m.gone })),
+      members: party.members.map(m => ({ id: m.id, name: m.name, look: m.look, ...(ratingOf(m.player, party.mode) || { rating: null }), leader: m.player === party.leader, self: m.player === player, online: !m.gone })),
     };
   }
   function publish(party) { for (const m of party.members) toPlayer(m.player, view(party, m.player)); }
@@ -156,5 +156,5 @@ export function createParties({ send, sockets, now = Date.now }) {
   }
   const timer = setInterval(tick, 1000); if (timer.unref) timer.unref();
 
-  return { handle, bye, tick, stop: () => clearInterval(timer), partyOf: player => { const x = partyOf(player); return x ? { id: x.id, mode: x.mode, leader: x.leader, players: x.members.map(m => m.player) } : null; } };
+  return { handle, bye, tick, refresh: player => { const x = partyOf(player); if (x) publish(x); }, stop: () => clearInterval(timer), partyOf: player => { const x = partyOf(player); return x ? { id: x.id, mode: x.mode, leader: x.leader, players: x.members.map(m => m.player) } : null; } };
 }

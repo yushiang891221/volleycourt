@@ -28,6 +28,7 @@ const api = window.PlayOneLobby = {
   canLead,
   onMode: value => setMode(value),
   setMyRating(value) { rating = { ...rating, ...value }; renderParty(); },
+  setRatings(map) { ratings = map && typeof map === 'object' ? map : null; if (ratings?.[mode]) api.setMyRating(ratings[mode]); },   // WEB-030：伺服器給的兩個模式分數，切模式時換顯示
   setMatchState(value) {
     match = { ...value, state: value?.state === 'searching' ? 'searching' : 'idle' };
     const sec = Math.max(0, Math.floor(Number(match.seconds) || 0));
@@ -37,17 +38,19 @@ const api = window.PlayOneLobby = {
   }
 };
 function selectPage(page) {
-  if (!['home', 'rank', 'custom'].includes(page)) page = 'home';
-  for (const name of ['home', 'rank', 'custom']) $(name + '-page').hidden = name !== page;
+  if (!['home', 'custom'].includes(page)) page = 'home';
+  for (const name of ['home', 'custom']) $(name + '-page').hidden = name !== page;
   document.querySelectorAll('[data-page]').forEach(b => b.setAttribute('aria-current', b.dataset.page === page ? 'page' : 'false'));
   document.body.dataset.lobbyPage = page; save('po.lobby.page', page); preview?.redraw();
 }
 document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => selectPage(b.dataset.page));
-$('tab-locker').onclick = () => $('equip-open').click();
+$('tab-team').onclick = () => $('team-open').click();   // 球隊放上方分頁；底下的球隊鈕藏起來，沿用它的開啟程式
 $('start-match').onclick = () => match.state === 'searching' ? api.onCancelMatch(mode) : canLead() && api.onStartMatch(mode);
 $('match-ai').onclick = () => canLead() && api.onStartAI(mode);
+let ratings = null;
 function setMode(value) {
   mode = value; save('po.lobby.mode', mode);
+  if (ratings?.[mode]) rating = { ...rating, ...ratings[mode] };
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
   renderParty();
 }

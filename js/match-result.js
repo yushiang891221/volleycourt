@@ -37,6 +37,7 @@ function css() {
 .mr-rank h5 { margin: 0 0 4px; font-size: 12.5px; color: #B8C2D0; }
 .mr-rank div.row { display: flex; align-items: center; gap: 8px; padding: 3px 8px; border-radius: 6px; font-size: 13px; }
 .mr-rank div.row.me { background: rgba(242,183,5,.16); } .mr-rank .g { width: 20px; font-weight: 900; } .mr-rank .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .mr-rank .s { font-variant-numeric: tabular-nums; }
+.mr-ranked { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: #0b362b; color: #f1ead9; font-size: 15px; } .mr-ranked .up { color: #7be495; font-weight: 800; } .mr-ranked .down { color: #ff8a80; font-weight: 800; } .mr-ranked strong { color: #E5B869; }
 .mr-btns { display: flex; justify-content: flex-end; margin-top: 14px; } .mr-btns button { min-height: 0; padding: 8px 22px; background: #F2B705; color: #1B2638; border: 0; border-radius: 8px; font-weight: 800; cursor: pointer; }
 `;
   document.head.append(s);
@@ -79,6 +80,17 @@ function commentary(my, st, isMvp, won) {
 }
 
 // 開面板
+// WEB-030 積分賽：伺服器結算完送來這場的加減分（可能比結算面板晚一點到）
+let rankedPending = null;
+function renderRanked() {
+  const d = document.getElementById('mr-panel'), r = rankedPending; if (!d || !r) return;
+  let el = d.querySelector('.mr-ranked'); if (!el) { el = document.createElement('div'); el.className = 'mr-ranked'; d.querySelector('.mr-btns')?.before(el); }
+  if (!r.saved) { el.textContent = '這場積分沒有記錄（伺服器暫時無法寫入）'; return; }
+  const sign = r.delta > 0 ? '+' : r.delta < 0 ? '−' : '±';
+  el.innerHTML = `<b>積分賽</b> <span class="${r.delta >= 0 ? 'up' : 'down'}">${sign}${Math.abs(r.delta)}</span> → <strong>${r.after}</strong> 分　${r.tier ? esc(r.tier) : `定級中 ${Math.min(10, r.placed)}/10`}`;
+}
+export function setRankedResult(mine, all) { if (!mine) return; rankedPending = { ...mine, saved: !!all?.saved }; renderRanked(); }
+
 export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLoser, teams, myTeam, me, nameOf, teamLabel }) {
   css();
   let d = document.getElementById('mr-panel');
@@ -104,6 +116,7 @@ export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLose
     </div>
     <div class="mr-rank"><div><h5>${esc(teamLabel(myTeam))}（你們）</h5>${rows(myTeam)}</div><div><h5>${esc(teamLabel(1 - myTeam))}</h5>${rows(1 - myTeam)}</div></div>
     <div class="mr-btns"><button type="button" data-close>確定</button></div></div>`;
+  renderRanked();
   d.hidden = false;
   const ranked = typeof location !== 'undefined' && /[?&]ranked=1(&|$)/.test(location.search || '');   /* WEB-029 積分賽：打完自動回大廳 */
   let returned = false;

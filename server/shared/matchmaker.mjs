@@ -69,7 +69,7 @@ export function createMatchmaker({ now = Date.now } = {}) {
 
 // 接大廳：mm-start／mm-cancel／mm-ai-now；每秒送 mm-status；配到送 mm-found
 // openRoom(match) 由 server.mjs 提供：開隱藏房間、記下這場的座位，回傳 { code }
-export function createRanked({ send, sockets, parties, openRoom, now = Date.now }) {
+export function createRanked({ send, sockets, parties, openRoom, now = Date.now, ratingOf = () => null }) {
   const mm = createMatchmaker({ now });
   const live = player => sockets().filter(ws => ws.meta && ws.meta.player === player && ws.meta.name);
   const toPlayer = (player, obj) => { for (const ws of live(player)) send(ws, obj); };
@@ -96,7 +96,9 @@ export function createRanked({ send, sockets, parties, openRoom, now = Date.now 
       if (players.some(x => !names.has(x))) return fail('有隊友不在大廳，等他回來再開始');
       for (const x of players) { const k = keyOf(x); if (k) cancel(k); }
       const key = party ? 'party:' + party.id : 'solo:' + p.player;
-      mm.add({ key, mode: m.mode, players: players.map(x => ({ player: x, name: names.get(x), rating: 1000 })) });   // 積分 WEB-030 才有，先一律 1000
+      const rs = players.map(x => ratingOf(x, m.mode)?.rating ?? 1000);
+      if (Math.max(...rs) - Math.min(...rs) > 2000) return fail('隊員分數差超過 2000，不能一起排積分賽（可以去自訂房間一起打）');
+      mm.add({ key, mode: m.mode, players: players.map((x, i) => ({ player: x, name: names.get(x), rating: rs[i] })) });
       roster.set(key, players.slice().sort().join('|'));
       for (const x of players) toPlayer(x, { k: 'mm-status', state: 'searching', mode: m.mode, ...mm.status(key) });
       return true;

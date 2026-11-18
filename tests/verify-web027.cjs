@@ -1,6 +1,7 @@
 ﻿const assert = require('node:assert/strict'), fs = require('node:fs');
 const h = fs.readFileSync('index.html','utf8'), js = fs.readFileSync('js/lobby-ranked.js','utf8'), css = fs.readFileSync('css/lobby-ranked.css','utf8');
-for (const tab of ['home','rank','custom']) assert(h.includes(`data-page="${tab}"`));
+for (const tab of ['home','custom']) assert(h.includes(`data-page="${tab}"`));
+assert(h.includes('id="tab-team"') && !h.includes('data-page="rank"') && !h.includes('tab-locker'));   /* 2026-11-19 使用者：上方只留大廳、自訂房間、練習、球隊 */
 const custom=h.split('<section id="custom-page"')[1].split('</section>')[0];
 for(const id of ['create','quick','filter','refresh','rooms','rooms-prev','rooms-next']) assert(custom.includes(`id="${id}"`),id);
 assert(!h.includes('id="character-info"'));

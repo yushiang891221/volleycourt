@@ -9,6 +9,9 @@ import { verifiedPlayer } from '../shared/verify-player.mjs';
 import { MatchHost, HOST_ID } from '../match/host.mjs';
 import { createParties } from '../shared/party.mjs';
 import { createRanked, planFor } from '../shared/matchmaker.mjs';
+import { settleRanked } from '../shared/ranked-result.mjs';
+import { ratingsOf, reportMatch } from '../shared/ranked-db.mjs';
+import { rankView } from '../../js/ranks.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const ALLOWED = (process.env.ALLOWED_ORIGINS || 'https://volleycourts.vercel.app').split(',').map(s => s.trim()).filter(Boolean);
@@ -65,7 +68,7 @@ function roomJoin(ws, name, id, player) {
           rk.started = Date.now();
         }
         hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留
-        const h = new MatchHost((t, d) => cast(set, null, { k: 'm', t, d, f: HOST_ID }), (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
+        const h = new MatchHost((t, d) => { cast(set, null, { k: 'm', t, d, f: HOST_ID }); if (rk && t === 'vm' && d && d.e === 'result') rankedResult(name, rk, d, set); }, (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
         try { h.start(m.d); } catch (e) {
           console.warn('[比賽] 開賽失敗', name, e && e.stack || e); h.stop(); hosts.delete(name);
           cast(set, null, { k: 'm', t: 'srv-fail', d: { why: String(e && e.message || e).slice(0, 200) }, f: HOST_ID });   // 叫大家這一場改回房主電腦裁判
@@ -150,7 +153,7 @@ const L = {
     this.expire();
     if (m.k === 'hello') {
       const name = clean(m.name); if (!name || [...name].length > 12) return fail('暱稱需為 1～12 字');
-      p.name = name;
+      p.name = name; loadRatings(ws).catch(() => {});
     } else if (!p.name) return fail('請先設定暱稱');
     if (typeof m.k === 'string' && m.k.startsWith('mm-')) {   // WEB-029 快速配對（server/shared/matchmaker.mjs）
       if (!allow('mm:' + p.player, 60)) return this.send(ws, { k: 'mm-error', reason: '操作太頻繁，請稍後再試' });
@@ -222,7 +225,21 @@ const L = {
   },
 };
 
-const parties = createParties({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets() });
+// WEB-030 每個連線記著自己兩個模式的分數（進大廳時查一次；打完積分賽會更新）
+const ratingOf = (player, mode) => { const ws = L.sockets().find(o => o.meta.player === player && o.meta.ratings); return ws ? rankView(ws.meta.ratings[mode]) : null; };
+const parties = createParties({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets(), ratingOf });
+// WEB-030 積分賽打完（伺服器裁判送出結果那一刻）：算加減分、寫進 Supabase、告訴房間裡每個人。一間積分賽房間只算一次
+async function rankedResult(code, rk, d, set) {
+  if (rk.reported) return; rk.reported = true;
+  try {
+    const present = new Set([...set].filter(ws => ws.readyState === 1).map(ws => ws.meta.id));
+    const r = await settleRanked({ code, rk, d, present, ratingsOf, reportMatch }); if (!r) return;
+    cast(set, null, { k: 'm', t: 'ranked-result', d: { mode: r.mode, saved: r.saved, list: r.list }, f: HOST_ID });
+    console.log('[積分]', code, r.saved ? '已記錄' : '未寫入', JSON.stringify(r.changes.map(c => [c.before, c.delta])));
+    for (const c of r.changes) for (const ws of L.sockets()) if (ws.meta.player === c.player && ws.meta.ratings) ws.meta.ratings[r.mode] = { rating: c.after, games: r.games(c.player) };
+  } catch (e) { console.warn('[積分] 結算失敗', code, e && e.message); }
+}
+
 // 配到一場：開一間隱藏的積分賽房間（大廳清單看不到），回傳每個人要用的房號、房間 id、座位表
 function openRankedRoom(match) {
   const plan = planFor(match), code = crypto.randomBytes(10).toString('hex').toUpperCase(), now = Date.now();
@@ -233,7 +250,14 @@ function openRankedRoom(match) {
   const { ids, ...pub } = plan;
   return { forPlayer: player => ({ room: code, mode: match.mode, me: ids.get(player), host: ids.get(player) === plan.host, plan: pub }) };
 }
-const ranked = createRanked({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets(), parties, openRoom: openRankedRoom });
+const ranked = createRanked({ send: (ws, obj) => L.send(ws, obj), sockets: () => L.sockets(), parties, openRoom: openRankedRoom, ratingOf });
+async function loadRatings(ws) {
+  const p = ws.meta; if (!p || !p.player || p.ratingsAt) return; p.ratingsAt = Date.now();
+  const [a, b] = await Promise.all([ratingsOf([p.player], '2v2'), ratingsOf([p.player], '6v6')]);
+  p.ratings = { '2v2': a.get(p.player), '6v6': b.get(p.player) };
+  L.send(ws, { k: 'rating', ratings: { '2v2': rankView(p.ratings['2v2']), '6v6': rankView(p.ratings['6v6']) } });
+  parties.refresh(p.player);
+}
 
 // ---- HTTP／WebSocket 入口
 const server = http.createServer((req, res) => {

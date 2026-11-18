@@ -55,7 +55,7 @@
 <div id="lobby-shell" inert>
 <header class="top panel">
   <div class="brand"><img class="logo logo-img" src="assets/img/brand/ball-512.webp" alt=""><div><div class="brand-line"><h1>PLAY <span class="po-one">ONE</span></h1><span class="wordmark">VOLLEYBALL LEAGUE</span></div><div class="status"><i class="dot" id="connection-dot"></i><span id="connection-status" role="status">連線中…</span><button type="button" class="server-pick" id="server-pick" title="換伺服器">伺服器…</button></div></div></div>
-  <nav class="lobby-tabs" aria-label="大廳分頁"><button data-page="home">大廳</button><button data-page="rank">排行榜</button><button data-page="custom">自訂房間</button><button id="practice">練習</button><button id="tab-locker">置物櫃</button></nav>
+  <nav class="lobby-tabs" aria-label="大廳分頁"><button data-page="home">大廳</button><button data-page="custom">自訂房間</button><button id="practice">練習</button><button id="tab-team">球隊</button></nav>
 </header>
 <div class="po-ticker" id="po-ticker" aria-label="大廳動態"><span class="tk-label">LIVE TICKER</span><div class="tk-view"><div class="tk-track"></div></div></div>
 <main>
@@ -72,7 +72,7 @@
 
   </section>
 </section>
-<section id="rank-page" class="panel" hidden><h2>排行榜</h2><p>即將開放</p></section>
+
 <section id="home-page">
 <div id="my-summary" aria-label="我的角色資料"></div>
 <div id="party-stage"><canvas aria-label="角色預覽，拖曳旋轉"></canvas><div id="party-slots"></div><span class="stage-hint">拖曳旋轉 · 滾輪縮放</span></div>
@@ -96,7 +96,7 @@
     <button id="ach-open"><span data-icon="trophy"></span>成就系統</button>
     <button id="equip-open"><span data-icon="shirt"></span>球衣與裝備</button>
     <button id="friends-open"><span data-icon="user"></span>好友<b class="fr-badge" id="friends-badge" hidden>0</b></button>
-    <button id="team-open"><span data-icon="users"></span>球隊</button>
+    <button id="team-open" hidden><span data-icon="users"></span>球隊</button>
     <button id="feedback-open" aria-haspopup="dialog"><span data-icon="chat"></span>匿名建議</button>
   </nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>

@@ -6,6 +6,8 @@ After=network-online.target
 WorkingDirectory=/opt/volleycourt
 ExecStart=/usr/bin/node server/rt/server.mjs
 Environment=LOBBY_FILE=/var/lib/volleycourt/lobby.json
+# WEB-030：Supabase service_role 金鑰（寫積分用）放這個檔案，一行 SUPABASE_SERVICE_ROLE_KEY=…；沒有這個檔案也能啟動（只是不寫積分）
+EnvironmentFile=-/etc/volleycourt/secrets.env
 Restart=always
 RestartSec=2
 User=volley
