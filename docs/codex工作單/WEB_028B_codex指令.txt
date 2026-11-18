@@ -1,0 +1,34 @@
+請用繁體中文工作。程式在 D:\開排球場\volleycourt，分支 game-site。
+這是 WEB-028 組隊的「大廳畫面」部分（工作單 docs\codex工作單\WEB_028_組隊.md 的 B 節）。伺服器部分 Claude 已經寫好並提交（429d55f），你不用、也寫不進 server 資料夾。
+
+## 伺服器已經支援的訊息（大廳 WebSocket，跟現有 chat、create 一樣送 JSON）
+網頁送：
+- {k:'party-sync'}：連上大廳、送完 hello 之後送一次，拿回目前隊伍（重新整理網頁也能回到隊伍）
+- {k:'party-invite', to:連線id, mode:'2v2'|'6v6', look:外觀代碼}：邀請大廳在線玩家（to＝在線玩家清單裡的 id）。還沒組隊時會自動建隊，自己當隊長
+- {k:'party-accept', partyId, look}、{k:'party-decline', partyId}
+- {k:'party-leave'}、{k:'party-kick', id:連線id}（隊長）、{k:'party-mode', mode}（隊長；沒組隊時不用送）
+- {k:'party-link', mode}：拿邀請代碼（隊長；沒組隊會自動建隊）
+- {k:'party-join-code', code, look}：用代碼加入
+- {k:'party-look', look}：自己的外觀改了就送
+伺服器回：
+- {k:'party', id, mode, max, members:[{id, name, look, rating:null, leader, self, online}]}：隊伍有變動就送給全隊；id 是 null＝沒有隊伍
+- {k:'party-invited', partyId, from:暱稱, mode, expiresIn:30000}
+- {k:'party-sent', to, name}、{k:'party-declined', name}、{k:'party-link', code, expiresIn}
+- {k:'party-error', reason}：直接把 reason 顯示給玩家看（例如「剛邀請過對方，請等 30 秒」「隊伍已滿」「邀請已過期」「你被隊長請出隊伍」）
+
+## 要做的事
+1. 收到 party 就呼叫 window.PlayOneLobby.setParty（第一筆放自己，其餘照 members 順序；rating null 顯示定級中）。online:false 的隊員顯示「斷線中」。
+2. 空位「＋」、左邊清單的「邀請」→ party-invite。邀請清單：在線好友、最近隊友、球隊成員，只能邀請目前在大廳在線的人（對應到在線玩家清單的 id）。最近隊友先用 localStorage 記最近一起組過隊的人（讀寫包 try/catch）。
+3. 收到 party-invited：跳出視窗「XXX 邀請你一起打 2 對 2」＋接受／拒絕＋30 秒倒數，倒數完自動關。
+4. 「複製邀請連結」→ party-link → 複製 index.html?party=代碼。開這個網址的人登入、進大廳後自動送 party-join-code，然後把網址上的 ?party 拿掉。
+5. 隊長在隊友頭上有「請出隊伍」；自己是隊員時有「離開隊伍」。只有隊長能切模式、按開始配對；隊員的按鈕顯示「等隊長開始」。隊長切模式送 party-mode。
+6. 手機版照 WEB-027 的頭像卡片，按鈕要好按。
+
+## 不能動
+server 資料夾、遊戲（gym.html、src/gym、engine）。自訂房間功能不變。現有大廳訊息格式不改。
+
+## 驗收
+- 更新 tests\verify-web028.cjs 不要覆蓋掉現有的伺服器測試；畫面的檢查另外寫 tests\verify-web028b.cjs（結構與事件檢查即可）。
+- node tools\run-tests.cjs --quiet 不能有新失敗。
+- Codex 用量不可超過 50%；做完就停，額度快不夠時先把進度寫進報告再停。不要推送、不要部署、不要 git add 或提交。截圖做不到就略過。
+- 報告寫在 repo 根目錄 WEB_028B_報告.md：改了什麼、測試結果、還沒做的。

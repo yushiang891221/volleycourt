@@ -77,3 +77,19 @@ body { min-width: 0; }
 #lobby-shell .chat.is-collapsed .messages > :last-child { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
+/* WEB-028B：可點擊的隊伍操作與手機頭像卡片。 */
+.party-action { pointer-events:auto; min-height:44px; padding:6px 10px; font-size:12px; white-space:normal; }
+.party-invite-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:8px 0; }
+.party-invite-row span { overflow-wrap:anywhere; min-width:0; }
+.party-invite-row button, #party-incoming button, #party-copy button, #party-link, #lobby-shell .player > button { min-height:44px; min-width:44px; }
+#party-invite, #party-incoming, #party-copy { max-width:min(480px, calc(100vw - 32px)); max-height:85dvh; overflow:auto; }
+#party-incoming-title { overflow-wrap:anywhere; }
+#party-copy-url { width:100%; box-sizing:border-box; }
+@media (pointer:coarse), (max-width:819px) {
+ #party-slots.mobile-party { flex-wrap:wrap; align-content:flex-end; }
+ #party-slots.mobile-party .party-slot:not(.slot-0) { flex:1 1 28%; height:auto; min-height:66px; }
+ .avatar-card .party-label { flex:1; }
+ .avatar-card .party-action { width:100%; padding:4px; font-size:11px; }
+ #party-slots.mobile-party .slot-0 { bottom:44%; height:55%; }
+ #start-match, .mode-options button { min-height:44px; }
+}

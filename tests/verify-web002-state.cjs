@@ -52,7 +52,7 @@ await check('game heartbeat, member/host transitions, practice and socket failur
  current.practice=true;const mark=sent.length;tick();assert.equal(sent.at(-1).status,'練習中');assert(!sent.slice(mark).some(m=>m.k==='room-update'));
  events.pagehide();assert(closed);
 });
-await check('real lobby handlers: pagination, filtering, safe text, dialogs and joined navigation',()=>{
+await check('real lobby handlers: pagination, filtering, safe text, dialogs and joined navigation',async()=>{
  class Element {
   constructor(){this.children=[];this.parts={};this.listeners={};this.value='';this.textContent='';this.dataset={};this.classList={toggle(){}};}
   set innerHTML(v){this.html=v;this.children=[];}get innerHTML(){return this.html||'';}
@@ -68,8 +68,11 @@ await check('real lobby handlers: pagination, filtering, safe text, dialogs and 
   VBSettings:{values:{nickname:'測試球友'},open(){},nicknameError:()=>'',update:()=>true},VBLobby:{id:'self',carry(){},connect(o){options=o;return {send(m){sent.push(m);return true;},close(){}};}},
   VBIntro:{entered:true},   /* 大廳要進到大廳後才連線（WEB-010 修正：被踢掉、沒登入的分頁不掛在在線名單） */
   location:{search:'?demo=1',href:''},URLSearchParams,addEventListener(){},setTimeout(){},clearTimeout(){},setInterval(){return 1;}};
+ // WEB-028B 大廳橋接使用瀏覽器全域與 hello 後的微任務。
+ context.window=context;context.queueMicrotask=queueMicrotask;context.Event=Event;context.dispatchEvent=()=>true;
  vm.runInNewContext(read('js/lobby.js'),context);
  assert.equal(elements.rooms.children.length,6);options.onstate('online');assert.equal(elements.rooms.children.length,0);
+ await Promise.resolve();assert.equal(sent.at(-1).k,'party-sync');
  const rooms=Array.from({length:8},(_,i)=>({no:101+i,name:i===0?'<script>房名</script>':'房'+i,mode:i%2?'6v6':'2v2',count:1,max:20,status:'waiting',locked:i===0,latency:null}));
  const players=Array.from({length:10},(_,i)=>({id:i===9?'self':'p'+i,name:'球友'+i,status:'大廳中'}));
  options.onmessage({k:'state',players,rooms,chats:[{name:'<b>人名</b>',text:'<script>alert(1)</script>'}]});

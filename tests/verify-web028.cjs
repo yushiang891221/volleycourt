@@ -31,6 +31,13 @@ const { pathToFileURL } = require('node:url');
   assert.ok(pa.members[0].leader && pa.members[0].self && !pa.members[1].self); assert.ok(pb.members[1].self);
   assert.ok(!JSON.stringify(pa).includes('"A"'), '不把帳號 id 給網頁');
 
+  // WEB-028B 前端依賴：同步保留 self／leader、未定級、外觀變更廣播。
+  go(b, { k: 'party-sync' });
+  assert.equal(last(b, 'party').members[1].self, true);
+  assert.equal(last(b, 'party').members[1].rating, null);
+  go(b, { k: 'party-look', look: 'web028b-look' });
+  assert.equal(last(a, 'party').members[1].look, 'web028b-look');
+
   // 2 對 2 滿了不能再邀；隊員不能邀
   go(a, { k: 'party-invite', to: 'conn-c' }); assert.match(err(a), /隊伍已滿/);
   go(b, { k: 'party-invite', to: 'conn-c' }); assert.equal(err(b), '只有隊長可以邀請');
