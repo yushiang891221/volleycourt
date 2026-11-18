@@ -438,7 +438,8 @@ function vbJump(kind) {
   if (staGame()) { if (STA.v >= staCost(ck, vmMe())) tired = 0.4 + 0.6 * staPay(ck); else { camK = 0; staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
   walk.blkShift = 0; walk.blkAim = 0;
   const hk = vbHangK();
-  walk.air = { g: JUMP_G * hk, y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired * Math.sqrt(hk), vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
+  // 攔網（B）起跳初速 4.3＝約 1.1 m（2026-11-18 使用者要求跳高一點點，以前 4.1＝約 1.0 m）
+  walk.air = { g: JUMP_G * hk, y: 0, vy: (block ? 4.3 : vbJumpVy(hs)) * tired * Math.sqrt(hk), vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
   const a = walk.air;
   a.camK = !block && VBSettings.values.cameraAssist && balls.some(b => b.rest <= 0.2 && b.v.lengthSq() > 0 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) <= 4) ? camK : 0;
   a.camT = 2 * a.vy / a.g; a.camOff = 0;

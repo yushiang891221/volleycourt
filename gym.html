@@ -8874,9 +8874,11 @@ function recFrame(t, idOf) {
   for (const s0 of [walk.spike, walk.serve]) if (s0 && s0.ball && !s0.hit) bl.push([recId(s0.ball), +s0.ball.position.x.toFixed(3), +s0.ball.position.y.toFixed(3), +s0.ball.position.z.toFixed(3), 1]);
   for (const p2 of NET.peers.values()) if (p2.ball && p2.ball.visible) bl.push([recId(p2.ball), +p2.ball.position.x.toFixed(3), +p2.ball.position.y.toFixed(3), +p2.ball.position.z.toFixed(3), 1]);
   // 第 10 欄：攔網時雙手往左右移多少（重播的攔網手才會跟著實際左右揮）
-  const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你', myChar(), +(walk.blkShift || 0).toFixed(3)]];
-  for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n, p2.ch || null, +(p2.bs || 0)]);
-  const npcRow = (id, g, y, poseC, col, name, ch, bs) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name, ch || null, +(bs || 0).toFixed(3)]);
+  // 第 11 欄：哪一隊（比賽中才有，-1＝沒分隊）：重播照隊伍穿隊服（以前沒記，重播時對手跟我們穿一樣的衣服）
+  const tmOf = (id) => (VM.on && typeof vmTeamOf === 'function' ? vmTeamOf(id) : -1);
+  const ppl = [['me', walk.x, walk.z, window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE), walk.yaw, myPoseCode(), NET.color || '#F2B705', NET.on ? NET.name : '你', myChar(), +(walk.blkShift || 0).toFixed(3), tmOf(vmMe())]];
+  for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n, p2.ch || null, +(p2.bs || 0), tmOf(p2.id)]);
+  const npcRow = (id, g, y, poseC, col, name, ch, bs) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name, ch || null, +(bs || 0).toFixed(3), tmOf(id)]);
   const aiBs = (a) => { if (!a.bs || a.pose !== 9 || typeof vmW !== 'function') return 0; const [ox, oz] = vmW(0, a.bs), [cx, cz] = vmW(0, 0), r = a.av.g.rotation.y; return (ox - cx) * -Math.cos(r) + (oz - cz) * Math.sin(r); };   /* 同 13-match-6v6.js 畫 AI 攔網手 */
   if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name, a.ch, aiBs(a));
   if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練', VB.npc.ch);
@@ -9009,7 +9011,7 @@ function updateReplay(dt) {
   const seen = new Set();
   for (const p0 of f0.p) {
     const [id, x, z, y, yaw, poseC, col, , ch, bs] = p0, q = f1.p.find((r2) => r2[0] === id) || p0;
-    let av = RP.actors.get(id); if (!av) { av = makeAvatar(col || '#F2B705', ch); RP.g.add(av.g); RP.actors.set(id, av); }
+    let av = RP.actors.get(id); if (!av) { av = makeAvatar(col || '#F2B705', ch, Number.isInteger(p0[10]) ? p0[10] : -1); RP.g.add(av.g); RP.actors.set(id, av); }
     seen.add(id); av.g.visible = true;
     const X = x + (q[1] - x) * k, Z = z + (q[2] - z) * k; let dy = q[4] - yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     const sp = Math.hypot(q[1] - x, q[2] - z) * 30;
@@ -9122,7 +9124,14 @@ const HL_KIND = { spike: '扣球', tip: '吊球', hit: '攻擊', serve: '發球'
 // 擊球前、落地後各錄幾秒、片段最長幾秒、轉場幾秒（改了要一起看 12-match-2v2.js 的 HL_GAP：重播播完回到現場後約 2～3 秒吹哨）
 const HL_PRE = 2.5, HL_POST = 1.2, HL_MAX = 5.2, HL_TR = 1.2;
 function hlId(o) { if (!HL.ids.has(o.uuid)) HL.ids.set(o.uuid, ++HL.nid); return HL.ids.get(o.uuid); }
-function hlReset() { HL.buf = []; HL.mine = []; HL.ids.clear(); HL.nid = 0; clearTimeout(HL.pendT); hlButton(false); }
+// 新比賽：還沒下載的精華留著（結算面板還沒按下載、下一場就開始了，以前會整個不見——2026-11-18 使用者回報），打完這場跟這場的一起下載；
+//   已經下載過的才丟掉。最多留 30 球。人物編號（ids）不歸零：留著的片段和新比賽的人不會撞號
+function hlReset() {
+  HL.buf = []; clearTimeout(HL.pendT); hlButton(false); HL.matchNo = (HL.matchNo || 0) + 1;
+  const keep = HL.mine.filter((c) => !c.saved).slice(-30);
+  if (keep.length && performance.now() - (HL.keepT ?? -1e9) > 5000) HL.keepT = performance.now(), setTimeout(() => toast(`上一場還沒下載的 ${keep.length} 球得分精華先幫你留著，打完這場可以一起下載`, 4200), 3800);   // 晚一點說：不然被「比賽開始」的提示蓋掉
+  HL.mine = keep; if (!keep.length) { HL.ids.clear(); HL.nid = 0; }
+}
 function hlTick(now) {
   if (VM.on && !HL.wasOn) { HL.wasOn = true; hlReset(); }
   else if (!VM.on && HL.wasOn) { HL.wasOn = false; HL.buf = []; if (HL.mine.length) { hlButton(true); toast(`比賽結束：你有 ${HL.mine.length} 球得分精華，結算畫面上有下載按鈕（關掉後在右下角）`, 4500); } }
@@ -9148,7 +9157,7 @@ function hlCut(by, kind) {   // 回傳 true＝開始播重播
   const clip = frames.filter((f) => f.t >= start).map((f) => ({ t: f.t - start, b: f.b, p: f.p }));
   hlAddToss(clip);
   const me = !!by && by === vmMe(), name = by ? (me ? '你' : vmName(by)) : '';
-  const c = { frames: clip, by: me ? 'me' : by, hit: hit ? hit.t - start : null, title: by ? `${name} ${HL_KIND[kind] || ''}得分` : '得分', kind, court: VM.c ? { x: VM.c.x, z: VM.c.z, rot: VM.c.rot || 0 } : null };
+  const c = { frames: clip, by: me ? 'me' : by, hit: hit ? hit.t - start : null, title: by ? `${name} ${HL_KIND[kind] || ''}得分` : '得分', kind, court: VM.c ? { x: VM.c.x, z: VM.c.z, rot: VM.c.rot || 0 } : null, m: HL.matchNo || 0 };   // m＝第幾場（不同場的電腦會用一樣的代號）
   if (me) HL.mine.push(c);
   hlWipe(() => { if (!hlOpen([c], false)) hlFree(); });
   return true;
@@ -9182,9 +9191,10 @@ function hlAbort() { try { if (RP.on) closeReplay(); } catch (e) { /* 收不乾�
 function hlOpen0(clips, rec) {
   const F = [], segs = []; let t = 0;
   for (const c of clips) {
-    for (const f of c.frames) F.push({ t: t + f.t, b: f.b, p: f.p });
+    const rid = (id) => (!c.m || id === 'me' ? id : `${c.m}:${id}`);   // 留到下一場的片段：電腦代號加上場次，重播才不會拿這場同代號電腦的樣子
+    for (const f of c.frames) F.push({ t: t + f.t, b: f.b, p: c.m ? f.p.map((r) => [rid(r[0]), ...r.slice(1)]) : f.p });
     const d = c.frames[c.frames.length - 1].t;
-    segs.push({ t0: t, t1: t + d, by: c.by, hit: c.hit != null ? t + c.hit : null, title: c.title, kind: c.kind, court: c.court });
+    segs.push({ t0: t, t1: t + d, by: c.by && rid(c.by), hit: c.hit != null ? t + c.hit : null, title: c.title, kind: c.kind, court: c.court });
     t += d + 1 / 30;
   }
   const A = recAnalyze(F, []);
@@ -9205,6 +9215,7 @@ function hlOpen0(clips, rec) {
       if (hl.cancel) { toast('已取消，精華還在，可以再按一次下載'); if (after) after(); else hlButton(true); return; }
       const blob = new Blob(RP.chunks, { type: 'video/webm' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `我的得分精華-${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.webm`; document.body.appendChild(a); a.click(); a.remove();
+      for (const c of clips) c.saved = true;   // 下載過了：下一場開始時才丟掉（這場還可以再下載一次）
       setTimeout(() => URL.revokeObjectURL(a.href), 20000); toast('得分精華存好了（WebM，可以用瀏覽器或 VLC 播）', 4000); if (after) after(); else hlButton(true);
     };
     RP.recorder.start(200);
@@ -10703,7 +10714,8 @@ function vbJump(kind) {
   if (staGame()) { if (STA.v >= staCost(ck, vmMe())) tired = 0.4 + 0.6 * staPay(ck); else { camK = 0; staWarn('體力不夠：只能小跳'); STA.v = 0; STA.useT = performance.now(); tired = 0.75; } }
   walk.blkShift = 0; walk.blkAim = 0;
   const hk = vbHangK();
-  walk.air = { g: JUMP_G * hk, y: 0, vy: (block ? 4.1 : vbJumpVy(hs)) * tired * Math.sqrt(hk), vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
+  // 攔網（B）起跳初速 4.3＝約 1.1 m（2026-11-18 使用者要求跳高一點點，以前 4.1＝約 1.0 m）
+  walk.air = { g: JUMP_G * hk, y: 0, vy: (block ? 4.3 : vbJumpVy(hs)) * tired * Math.sqrt(hk), vx: hv[0] * (block ? 0.2 : 0.35), vz: hv[1] * (block ? 0.2 : 0.35), block, t: 0, x0: walk.x, z0: walk.z };
   const a = walk.air;
   a.camK = !block && VBSettings.values.cameraAssist && balls.some(b => b.rest <= 0.2 && b.v.lengthSq() > 0 && Math.hypot(b.m.position.x - walk.x, b.m.position.z - walk.z) <= 4) ? camK : 0;
   a.camT = 2 * a.vy / a.g; a.camOff = 0;
@@ -12089,6 +12101,7 @@ const FAULT_TEXT = {
   four: () => '四次擊球（一隊最多碰三次）',
   held: n => `持球（${n}舉球時球在手上停太久）`,
   setDouble: n => `連擊（${n}舉球兩手沒同時碰到）`,
+  netReturn: n => `觸網（${n}把對方的扣球直接扣回去）`,
 };
 function vmOnTouch(b, id, kind) {
   if (b.langzi || kind === 'kick') return; /* WEB-022 裝飾球不計比賽事件。 */

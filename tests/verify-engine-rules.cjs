@@ -33,7 +33,8 @@ function context(code, seed) {
   return c;
 }
 const oldC = s => context(pieces(oldSrc), s);
-const newC = s => context(require('./engine-for-tests.cjs').rulesScript(gym).replace(/^const FAULT_TEXT[\s\S]*$/m, '') + cut(newSrc, 'const FAULT_TEXT = {', 'function vmOnTouch(') + pieces(newSrc), s);
+const rulesNoNetReturn = (src) => { assert(src.includes('HARD.has(prevKind)'), '找不到扣回去的規則'); return src.replace('HARD.has(prevKind)', 'false'); };   /* 2026-11-18 新規則「對方扣過來直接扣回去＝觸網」舊版沒有：比對舊版時關掉，最後另外檢查 */
+const newC = (s, withNew = false) => context((withNew ? (x) => x : rulesNoNetReturn)(require('./engine-for-tests.cjs').rulesScript(gym)).replace(/^const FAULT_TEXT[\s\S]*$/m, '') + cut(newSrc, 'const FAULT_TEXT = {', 'function vmOnTouch(') + pieces(newSrc), s);
 
 let rnd = 99; const R = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647), pick = a => a[Math.floor(R() * a.length)];
 const KINDS = ['bump', 'set', 'spike', 'tip', 'hit', 'block', 'block', 'serve'];
@@ -84,4 +85,17 @@ assert(ends.nextSet > 20 && ends.swap > 5 && ends.over > 100, '要涵蓋換局�
   const one = { six: false, phase: 'rally', sc: [6, 3], to: 7, srvTeam: 0 }; assert.equal(sp(one, 0).next, 'over');   /* 沒設局數＝一局 */
   const five = { six: false, phase: 'rally', sc: [24, 20], sets: [2, 1], bestOf: 5, to: 25, srvTeam: 0 }; r = sp(five, 0); assert.equal(r.next, 'over'); assert.equal(js(five.sets), '[3,1]');
   console.log('PASS 2 對 2 多局：換局、決勝局 15 分、三戰兩勝／五戰三勝結束');
+}
+{   // 對方扣過來（跳扣／站著扣），這邊第一下就扣回去＝觸網；先攔網、對方吊球、發球都不算
+  const jt = vm.runInContext('judgeTouch', newC(1, true));
+  const rally = () => ({ six: false, phase: 'rally', touch: { team: 0, n: 1, last: 'a0' } });
+  let M = rally(); jt(M, { team: 0, id: 'a1', kind: 'spike' });
+  let r = jt(M, { team: 1, id: 'b0', kind: 'spike' }); assert.equal(r.fault, 'netReturn'); assert.equal(r.loser, 1);
+  M = rally(); jt(M, { team: 0, id: 'a1', kind: 'hit' }); assert.equal(jt(M, { team: 1, id: 'b0', kind: 'hit' }).fault, 'netReturn');
+  M = rally(); jt(M, { team: 0, id: 'a1', kind: 'spike' }); assert(jt(M, { team: 1, id: 'b0', kind: 'bump' }).ok);   /* 接起來沒事 */
+  M = rally(); jt(M, { team: 0, id: 'a1', kind: 'spike' }); assert(jt(M, { team: 1, id: 'b0', kind: 'tip' }).ok);   /* 吊回去沒事 */
+  M = rally(); jt(M, { team: 0, id: 'a1', kind: 'spike' }); assert(jt(M, { team: 1, id: 'b0', kind: 'block' }).ok); assert(jt(M, { team: 1, id: 'b1', kind: 'spike' }).ok);   /* 攔網碰到再扣沒事 */
+  M = rally(); jt(M, { team: 0, id: 'a1', kind: 'tip' }); assert(jt(M, { team: 1, id: 'b0', kind: 'spike' }).ok);   /* 對方吊過來可以扣 */
+  M = { six: false, phase: 'serve', touch: { team: -1, n: 0, last: null } }; jt(M, { team: 0, id: 'a0', kind: 'serve' }); assert(jt(M, { team: 1, id: 'b0', kind: 'spike' }).ok);   /* 發球不算扣球 */
+  console.log('PASS 扣回對方的扣球＝觸網（接、吊、先攔網、發球都不算）');
 }
