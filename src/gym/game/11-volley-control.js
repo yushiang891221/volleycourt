@@ -642,6 +642,8 @@ function vbDive() {
   const [fx, fz] = vbFwd(), dx = tx != null ? tx - walk.x : fx, dz = tx != null ? tz - walk.z : fz, d = Math.hypot(dx, dz) || 1, sp = clamp((tx != null ? d : 2) / 0.4, 3.5, 7.5);
   walk.dive = { t: 0, vx: (dx / d) * sp, vz: (dz / d) * sp };
   walk.diveDir = Math.atan2(dx * -Math.cos(walk.yaw) + dz * Math.sin(walk.yaw), dx * -Math.sin(walk.yaw) + dz * -Math.cos(walk.yaw));   // 撲的方向（身體座標）：決定往前魚躍還是側倒
+  // 魚躍只用在球在正前方（40 度內）、或球在 3 m 外而且不在身後（轉身撲過去）；球在左右兩側、或在身後 → 側倒滾翻（往球那一側）
+  { const ad = Math.abs(walk.diveDir); walk.diveFish = ad <= 0.7 || (tx != null && d >= 3 && ad <= 2.1); if (!walk.diveFish) walk.diveDir = (Math.sin(walk.diveDir) < 0 ? -1 : 1) * Math.PI / 2; }
   walk.recv = { t0: performance.now(), prev: null, dive: true }; pose = 'bump'; hands.visible = true;
   tutEv('dive', {});
   return true;
@@ -1580,7 +1582,7 @@ function tpBegin(dt) {
   if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readWornJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
-  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
+  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, fish: !!walk.diveFish, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
   const v = walk.vel || [0, 0], sp = walk.air ? 0 : Math.hypot(v[0], v[1]); av.phase += dt * Math.min(12, sp * 5.5);
   avDrive(av, ...myAvPose(), sp, air > 0.05);
   // 手上的球：第一人稱掛在鏡頭上，第三人稱改畫在人的手上

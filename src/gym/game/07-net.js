@@ -563,6 +563,12 @@ const AVP = {
   diveFly: { sh: [[-3.05, 0.15], [-3.05, 0.15]], el: [0.05, 0.05], hip: [-0.18, -0.08], kn: [0.12, 0.3], hab: [0.04, 0.04], sp: -0.32, tw: 0, arm: 0, gait: 0 },
   diveCatch: { sh: [[-2.15, 0.45], [-2.15, 0.45]], el: [0.75, 0.75], hip: [-0.12, -0.12], kn: [0.95, 1.15], hab: [0.06, 0.06], sp: -0.5, tw: 0, arm: 0, gait: 0 },
   diveSlide: { sh: [[-2.65, 0.45], [-2.0, 0.6]], el: [0.35, 0.95], hip: [-0.06, 0.08], kn: [1.75, 1.95], hab: [0.08, 0.1], sp: -0.58, tw: 0, arm: 0, gait: 0 },
+  // 魚躍（2026-11-19 使用者給的分解圖）：蹬地飛撲、單手往球伸 → 雙前臂和手肘先著地、抬頭 → 胸口著地、手肘貼地往前滑、雙腿懸空 → 腹部貼地、腿還抬著 → 大腿貼地順勢滑 → 雙手推地起身
+  diveReach: { sh: [[-3.0, 0.05], [-2.3, 0.35]], el: [0.05, 0.45], hip: [-0.15, -0.05], kn: [0.25, 0.5], hab: [0.05, 0.08], sp: -0.25, tw: 0.1, arm: 0, gait: 0, head: [-0.35, 0] },
+  diveForearm: { sh: [[-1.85, 0.32], [-1.85, 0.32]], el: [1.45, 1.45], hip: [-0.5, -0.45], kn: [0.45, 0.6], hab: [0.06, 0.06], sp: -0.45, tw: 0, arm: 0, gait: 0, head: [-0.75, 0] },
+  diveChest: { sh: [[-1.85, 0.34], [-1.85, 0.34]], el: [1.5, 1.5], hip: [-0.55, -0.5], kn: [0.55, 0.7], hab: [0.06, 0.06], sp: -0.5, tw: 0, arm: 0, gait: 0, head: [-0.8, 0] },
+  diveBelly: { sh: [[-1.8, 0.34], [-1.8, 0.34]], el: [1.5, 1.5], hip: [-0.38, -0.34], kn: [0.75, 0.9], hab: [0.06, 0.06], sp: -0.38, tw: 0, arm: 0, gait: 0, head: [-0.7, 0] },
+  diveThigh: { sh: [[-1.75, 0.34], [-1.75, 0.34]], el: [1.45, 1.45], hip: [-0.08, -0.06], kn: [0.95, 1.1], hab: [0.06, 0.06], sp: -0.22, tw: 0, arm: 0, gait: 0, head: [-0.55, 0] },
   // 側接（往右；往左＝鏡像）：右腳往旁邊大跨一步蹲很低、左腳往旁邊伸直，上身往球那邊壓低、雙手併攏往下伸 → 坐到右邊屁股上、右手往球伸長 → 往後滾成仰躺、腳翹起來
   sideLunge: { sh: [[-1.05, -0.1], [-1.05, -0.32]], el: [0.02, 0.02], hip: [1.05, 0.15], kn: [1.85, 0.05], hab: [0.75, 0.65], sp: 0.72, tw: -0.85, arm: 0, gait: 0 },
   sideFall: { sh: [[-3.0, 0.35], [-0.9, 0.65]], el: [0.05, 1.2], hip: [1.05, 0.65], kn: [1.45, 1.05], hab: [0.3, 0.3], sp: 0.22, tw: 0.3, arm: 0, gait: 0 },
@@ -601,12 +607,13 @@ const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
 //   左右滾翻：側弓箭步、雙手往球那側伸到地上 → 坐到球那側屁股上、手伸長 → 側躺 → 腳從肩膀上方翻過去（整個人往球那側翻一圈）→ 跪著雙手撐地 → 站起來
 // 最後一欄＝這一格哪裡貼地（avGroundSolve）：0＝空中（只防穿地）、1＝全身最低點貼地（腳、手撐地、跪）、2＝軀幹貼地（胸口、屁股、背、肩膀），穿進地板的手腳自己轉上來，不會把整個人撐高
 const DIVE_KF = {
-  fwd: [[0, 0, 0.98, 0, 0, 'idle', 1], [0.15, 0.1, 0.6, 0.75, 0, 'diveLunge', 1], [0.3, -0.55, 0.42, 1.45, 0, 'diveFly', 0], [0.45, -0.8, 0.28, 1.8, 0, 'diveCatch', 1], [0.7, -0.9, 0.04, 1.62, 0, 'diveSlide', 2], [1.0, -0.95, 0.04, 1.56, 0, 'down', 1]],
+  fwd: [[0, 0, 0.98, 0, 0, 'ready', 1], [0.12, 0.1, 0.55, 0.8, 0, 'diveLunge', 1], [0.26, -0.5, 0.42, 1.4, 0, 'diveReach', 0], [0.36, -0.75, 0.3, 1.78, 0, 'diveForearm', 1], [0.48, -0.85, 0.1, 1.7, 0, 'diveChest', 2], [0.62, -0.9, 0.06, 1.6, 0, 'diveBelly', 2], [0.8, -0.93, 0.04, 1.52, 0, 'diveThigh', 2], [1.0, -0.95, 0.04, 1.52, 0, 'down', 1]],
   side: [[0, 0, 0.98, 0, 0, 'idle', 1], [0.22, 0.12, 0.55, 0.35, 0.35, 'sideLunge', 1], [0.42, 0.2, 0.1, 0.15, 1.15, 'sideFall', 2], [0.6, 0.25, 0.04, -0.15, 1.55, 'sideFlat', 2], [0.8, 0.35, 0.3, 0.0, 3.0, 'sideTuck', 2], [0.98, 0.45, 0.25, 0.2, 4.6, 'sideTuck', 2], [1.15, 0.55, 0.3, 0.4, Math.PI * 2, 'kneel', 1]],
   // 髖的高度只是大概：真正的高度由 avGroundSolve 照貼地的部位往上抬或往下壓到剛好貼著地板
 };
-function avDiveKey(dir, t) {
-  const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, K = side ? DIVE_KF.side : DIVE_KF.fwd, M = (p) => (side && sn > 0 ? avMirror(AVP[p]) : AVP[p]);
+// fish＝魚躍（true）／側倒滾翻（false）；沒給就照方向分：球在左右兩側、或在身後 → 側倒滾翻（2026-11-19 使用者：魚躍只用在球在前方或遠處，往旁邊、往後魚躍很怪）
+function avDiveKey(dir, t, fish) {
+  const sn = Math.sin(dir), side = fish === true ? false : fish === false ? true : Math.abs(sn) > 0.6 || Math.cos(dir) < -0.3, K = side ? DIVE_KF.side : DIVE_KF.fwd, M = (p) => (side && sn > 0 ? avMirror(AVP[p]) : AVP[p]);
   let i = 0; while (i < K.length - 2 && t >= K[i + 1][0]) i++;
   const a = K[i], b = K[i + 1], u0 = clamp((t - a[0]) / (b[0] - a[0]), 0, 1), u = u0 * u0 * (3 - 2 * u0), L = (j) => a[j] + (b[j] - a[j]) * u;
   return { side, sn, d: L(1), y: L(2), pitch: L(3), roll: L(4), pose: u >= 1 ? M(b[5]) : avMix(M(a[5]), M(b[5]), u), ga: a[6] ?? 1, gb: b[6] ?? 1, u };
@@ -658,7 +665,10 @@ function avGroundPts(av) {
   for (const h of av.hands) P.push([h, 0, -0.03, 0], [h, 0, -0.12, 0], [h, 0.045, -0.08, 0], [h, -0.045, -0.08, 0], [h, 0, -0.08, 0.035], [h, 0, -0.08, -0.035]);   // 手掌、手指
   for (const e of av.elbows) P.push([e, 0, 0, 0], [e, 0.05, 0, 0], [e, -0.05, 0, 0], [e, 0, 0, 0.05], [e, 0, 0, -0.05], [e, 0, -0.15, 0.04], [e, 0, -0.15, -0.04], [e, 0.04, -0.15, 0], [e, -0.04, -0.15, 0]);   // 手肘、前臂
   for (const a of av.arms) P.push([a, 0, 0, 0]);
-  const hr = av.chibi ? 0.17 : 0.12; for (const [x, y, z] of [[0, 0.13, hr], [0, 0.13, -hr], [hr, 0.13, 0], [-hr, 0.13, 0], [0, 0.13 + hr, 0]]) P.push([av.head, x, y, z]);
+  // 頭：Q 版的頭是半徑 0.27 m 的大球、球心在頭節點上方 0.27 m（avatar-toy.js 的 HEAD_R、hy）；以前用半徑 0.17、高 0.13，翻滾時頭會陷進地板
+  //   球面上取 6 個正方向＋8 個斜角，頭頂、後腦、側邊、臉都檢查得到
+  const hc = av.chibi ? 0.268 : 0.13, hr = av.chibi ? 0.27 : 0.12, hs = av.chibi ? [1.04, 0.95, 0.98] : [1, 1, 1], q3 = 1 / Math.sqrt(3);
+  for (const [x, y, z] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1], ...[1, -1].flatMap((a) => [1, -1].flatMap((b) => [[a * q3, q3, b * q3], [a * q3, -q3, b * q3]]))]) P.push([av.head, x * hr * hs[0], hc + y * hr * hs[1], z * hr * hs[2]]);
   for (const [x, y, z] of [[0, 0.3, 0.15], [0, 0.3, -0.15], [0.18, 0.35, 0], [-0.18, 0.35, 0]]) P.push([av.spine, x, y, z]);
   for (const [x, y, z] of [[0, 0.9, 0.13], [0, 0.9, -0.13], [0.15, 0.95, 0], [-0.15, 0.95, 0]]) P.push([av.root, x, y, z]);
   return P;
@@ -670,9 +680,9 @@ function avDrive(av, P, k, sp = 0, air = false) {
   const F = av.fall, fT = F ? clamp(F.a, 0, 1) : 0;
   if (F && !av._fOn) av._ft = 0; av._fOn = !!F;
   av._fa = (av._fa || 0) + (fT - (av._fa || 0)) * (1 - Math.exp(-dt * (fT > (av._fa || 0) ? 9 : 3.2)));
-  if (F) { av._fd = F.d; av._ft = F.t != null ? F.t : (av._ft || 0) + dt; }
+  if (F) { av._fd = F.d; av._ff = F.fish; av._ft = F.t != null ? F.t : (av._ft || 0) + dt; }
   const fa = av._fa, fd = av._fd || 0, ft = av._ft || 0;
-  const DK = fa > 0.01 ? avDiveKey(fd, ft) : null;
+  const DK = fa > 0.01 ? avDiveKey(fd, ft, av._ff) : null;
   if (DK) { P = fa > 0.995 ? DK.pose : avMix(P, DK.pose, fa); k = Math.max(k, 0.35); }
   const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], shy: [...(P.shy || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
   const L = (a, b) => a + (b - a) * k;
@@ -709,10 +719,10 @@ function avDrive(av, P, k, sp = 0, air = false) {
   let rx = av._lean, rz = av._bank;
   if (DK) {
     const sg = Math.sign(DK.sn) || 1, dRoll = DK.side ? Math.atan2(Math.sin(DK.roll), Math.cos(DK.roll)) : 0;
-    const dx = DK.side ? DK.pitch : DK.pitch * Math.cos(fd), dz = DK.side ? -dRoll * sg : -DK.pitch * DK.sn;
+    const dx = DK.pitch, dz = DK.side ? -dRoll * sg : 0;   /* 魚躍：身體先轉向撲的方向（下面的 rotation.y），再往前倒 */
     rx = fa > 0.9 ? dx : av._lean * (1 - fa) + dx * fa; rz = fa > 0.9 ? dz : av._bank * (1 - fa) + dz * fa;
   }
-  R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa), rz);
+  R.rotation.order = 'YXZ'; R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa) + (DK && !DK.side ? fd * fa : 0), rz);   // YXZ：先轉向、再前傾／側倒（魚躍往斜前方、遠處撲時整個人轉過去面向球）
   av.spine.rotation.x = B.sp + dipA * 0.6 + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
   av.spine.rotation.z = B.lean;
   av.spine.rotation.y = B.tw - on * (0.16 + 0.1 * w) * Math.sin(av.gp);
@@ -1324,7 +1334,7 @@ function emoPose(k, t) {
   if (k === 'taunt') { const w = Math.sin(t * 9); return { ...AVP.taunt, el: [1.3 + 0.45 * w, 1.3 + 0.45 * w] }; }   // 手掌朝上一勾一勾
   return AVP.hi5Up;
 }
-function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return Math.abs(sn) > 0.6 ? (sn < 0 ? 11 : 12) : 10; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 // WEB-018 network correction only.
 function netSmoothBall(b, dt, courts) {
   const p = b.m.position, before = p.clone();
