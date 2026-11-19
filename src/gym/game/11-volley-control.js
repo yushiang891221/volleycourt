@@ -72,7 +72,7 @@ function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
   b.spinW = vbSpinFor(b, v, kind, q);
   if (NET.on) netBallHit(b, kind, q);   // 別人收到的是「碰到的位置＋出去的速度」
   b.snap = null;
-  vbImpact(b, kind, q);
+  vbImpact(b, kind, q); if (typeof touchEvent === 'function') touchEvent(b.m, kind);   // A1（測試只抽出這個函式時沒有 touchEvent）：告訴動畫這一下是誰、什麼動作（下一格鎖定）
 }
 // 球在空中怎麼轉（看得到）：扣球強烈上旋；好的舉球幾乎不轉（兩手同時、平均出力），沒舉好、連擊就會轉；其他照品質轉一點
 function vbSpinFor(b, v, kind, q) {

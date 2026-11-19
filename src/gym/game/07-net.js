@@ -687,15 +687,16 @@ function avDrive(av, P, k, sp = 0, air = false) {
   const w = clamp((v - 1.6) / 2.4, 0, 1), on = clamp(v / 0.8, 0, 1), stride = 1.25 + 1.4 * w;   // w：0＝走、1＝跑；stride＝一個完整步伐（左右各一步）走多遠
   av.gp = ((av.gp || 0) + (dt * Math.PI * 2 * v) / stride) % (Math.PI * 200);
   const g2 = B.gait, A = on * (0.36 + 0.36 * w) * g2, armA = on * (0.28 + 0.6 * w) * B.arm, ext = [0, 0];
+  const dipA = air || fa > 0.01 || !av._br ? 0 : Math.acos(clamp(1 - av._br.dip / (av.g.scale.y || 1) / ((av.L1 || 0.44) + (av.L2 || 0.46)), 0.3, 1));   // A2：低球要蹲低多少 → 髖、膝多彎（大腿往前 a、膝蓋 2a，腳底不動、身體降低）
   for (let i = 0; i < 2; i++) {
     const sx = i === 0 ? -1 : 1, ph = av.gp + i * Math.PI, s = Math.sin(ph), c = Math.cos(ph);
-    const hipG = A * s;   // 往前擺為正
+    const hipG = A * s + dipA;   // 往前擺為正
     const knG = on * g2 * ((0.3 + 1.15 * w) * Math.pow(Math.max(0, Math.cos(ph + 0.45)), 1.6) + (0.06 + 0.22 * w) * Math.max(0, -c));   // 擺盪期收腿、支撐期緩衝
     const a = av.arms[i], e = av.elbows[i], h = av.legs[i], kn = av.knees[i], armG = armA * Math.sin(ph + Math.PI);
     if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + B.shy[i];
     a.rotation.y = 0; a.rotation.x = B.sh[i][0] - armG;   /* rotation.y 歸零：avTouch 會把手臂整個轉向球 */ a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
     e.rotation.x = -(B.el[i] + B.arm * on * (0.18 + 1.25 * w) + B.arm * 0.12 * w * Math.max(0, Math.sin(ph + Math.PI)));
-    h.rotation.x = -(B.hip[i] + hipG); h.rotation.y = 0; /* 歸零：撲救貼地（avLimbUp）會把整條腿轉過去 */ kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
+    h.rotation.x = -(B.hip[i] + hipG); h.rotation.y = 0; /* 歸零：撲救貼地（avLimbUp）會把整條腿轉過去 */ kn.rotation.x = B.kn[i] + knG + 2 * dipA; h.rotation.z = sx * B.hab[i];
     const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = ((av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk)) * Math.cos(B.hab[i]);
     if (av.feet) av.feet[i].rotation.z = -h.rotation.z;
     if (av.feet) av.feet[i].rotation.x = air ? 0.45 : -(h.rotation.x + kn.rotation.x) * 0.9 + on * (0.2 + 0.4 * w) * Math.max(0, -s) * (c > 0 ? 1 : 0.35);   // 腳掌貼地；後腳離地前踮腳尖；空中腳尖朝下
@@ -712,7 +713,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     rx = fa > 0.9 ? dx : av._lean * (1 - fa) + dx * fa; rz = fa > 0.9 ? dz : av._bank * (1 - fa) + dz * fa;
   }
   R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa), rz);
-  av.spine.rotation.x = B.sp + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
+  av.spine.rotation.x = B.sp + dipA * 0.6 + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
   av.spine.rotation.z = B.lean;
   av.spine.rotation.y = B.tw - on * (0.16 + 0.1 * w) * Math.sin(av.gp);
   av.head.rotation.x = -B.sp * 0.6 - R.rotation.x * 0.7 * (1 - 0.6 * fa) - 0.1 * w * on; av.head.rotation.z = -R.rotation.z * 0.6 * (1 - fa);
@@ -735,6 +736,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
   }
   av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
   if (av._tk) avTouch(av, av._tk);
+  if (avBodyReach(av, dt) && av._tk) avTouch(av, av._tk, true);   // A2：上身傾過去之後手再對準一次
 }
 // ---- 手真的碰到球（2026-11-18 使用者：手和球中間不能有空隙；自己第三人稱、別人看你、電腦、重播都一樣）
 //   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）；只迎向飛過來的球，地上、滾動的球不動，也不把球拉向手
@@ -782,7 +784,7 @@ function avReachTo(av, kind, B, w) {
   TCH.P.multiplyScalar(1 / arms.length); return TCH.P.length();
 }
 // 1. 球靠近時手先伸過去（擊球前：自己、別人在等球時就看得到手迎向球）
-function avTouch(av, kind) {
+function avTouch(av, kind, noBody = false) {
   if (!TCH_CFG[kind] || !av.arms || !av.hands) return;
   const Rv = BALL_R * BALL_VIS, reach = avShoulders(av);
   let best = null, bd = Infinity;
@@ -792,12 +794,44 @@ function avTouch(av, kind) {
     m.updateWorldMatrix(true, false); TCH.Bb.setFromMatrixPosition(m.matrixWorld);
     const d = TCH.Bb.distanceTo(TCH.M); if (d < bd) { bd = d; best = m; TCH.B.copy(TCH.Bb); }
   }
-  if (!best || best.userData.lock) return;   // 擊球瞬間交給 touchPass
+  if (!best) return;
+  if (best.userData.lock) { if (best.userData.lock.av === av && av._bodyKeep && !noBody) av._bodyT = av._bodyKeep; return; }   // 擊球瞬間交給 touchPass（身體維持剛剛傾過去的樣子）
   // 只迎向「飛過來」的球：停在地上、滾動、慢慢飄走的球手不動（2026-11-18 使用者：球停在地上手會亂甩）
-  const hv = best.userData.hv; if (!hv || hv.lengthSq() < 9 || TCH.B.y < 0.5 || hv.dot(TCH.g.copy(TCH.M).sub(TCH.B)) <= 0) return;
-  let w = clamp(1 - (bd - reach - Rv) / TCH_CFG[kind].band, 0, 1); w = w * w * (3 - 2 * w); if (w < 0.01) return;
+  const hv = best.userData.hv; if (!hv || hv.lengthSq() < 1 || TCH.B.y < 0.5 || hv.dot(TCH.g.copy(TCH.M).sub(TCH.B)) <= 0) return;
+  const ex = bd - reach - Rv, band = TCH_CFG[kind].band;
+  // A2 身體去找球：肩膀到球比手臂長多少，就用上身往球那邊傾（以腳底為軸）、蹲低或往上跳去補（avBodyReach 套用）；球越近補越多
+  //   照球的飛行路線預測 0.5 秒內最靠近肩膀的那一點（＝會在哪裡碰到），觸球前 0.35 秒開始動、到觸球那一刻剛好補滿
+  if (!noBody) {
+    let tc = 0, dc = bd; TCH.Bb.copy(TCH.B);
+    for (let t = 0.02; t <= 0.5; t += 0.02) { TCH.F.set(TCH.B.x + hv.x * t, TCH.B.y + hv.y * t - 4.9 * t * t, TCH.B.z + hv.z * t); const d = TCH.F.distanceTo(TCH.M); if (d < dc) { dc = d; tc = t; TCH.Bb.copy(TCH.F); } }
+    let wt = clamp(1 - tc / 0.35, 0, 1), wd = clamp(1 - ex / (band + 1.2), 0, 1); wt = wt * wt * (3 - 2 * wt); wd = wd * wd * (3 - 2 * wd);   // wt＝照預測時間、wd＝照現在距離（對手比預測早出手時靠這個）
+    if (wd > wt) { TCH.Bb.copy(TCH.B); dc = bd; }
+    const exP = dc - reach - Rv, wb = Math.max(wt, wd);
+    if (exP > 0.02 && exP < 2 && wb > 0.01) {
+      av.g.getWorldQuaternion(TCH.qp).invert(); const D = TCH.V.copy(TCH.Bb).sub(TCH.M).setLength(exP * wb).applyQuaternion(TCH.qp);
+      av.g.getWorldPosition(TCH.F); const h = Math.max(0.5, TCH.M.y - TCH.F.y), A = BODY_REACH.lean;
+      av._bodyT = av._bodyKeep = { z: clamp(Math.asin(clamp(D.z / h, -1, 1)), -A, A), x: clamp(-Math.asin(clamp(D.x / h, -1, 1)), -A, A), dip: kind === 'spike' || kind === 'block' ? 0 : clamp(-D.y, 0, BODY_REACH.dip), up: kind === 'bump' ? 0 : clamp(D.y, 0, BODY_REACH.up) };
+    }
+  }
+  let w = clamp(1 - ex / band, 0, 1); w = w * w * (3 - 2 * w); if (w < 0.01) return;
   avReachTo(av, kind, TCH.B, w);   // 擊球前只動手、不把球拉向手（使用者：像手去黏球）
 }
+// A2（2026-11-19）身體去找球（只改畫面，判定不變）：lean＝上身最多傾幾弧度、dip＝最多蹲低幾公尺
+const BODY_REACH = { lean: 0.32, dip: 0.32, up: 0.8 };   // up＝球比手高時整個人最多往上多跳幾公尺（舉高球＝跳舉、扣球跳更高迎球）
+function avBodyReach(av, dt) {
+  const T = av._bodyT, S = av._br || (av._br = { x: 0, z: 0, dip: 0 }); av._bodyT = null;
+  const k = 1 - Math.exp(-dt * (T ? 14 : 5));
+  S.x += ((T ? T.x : 0) - S.x) * k; S.z += ((T ? T.z : 0) - S.z) * k; S.dip += ((T ? T.dip : 0) - S.dip) * k; S.up = (S.up || 0) + ((T ? T.up : 0) - (S.up || 0)) * k;
+  if (Math.abs(S.x) + Math.abs(S.z) + S.up < 1e-3) return false;
+  const R = av.root; R.rotation.x += S.z; R.rotation.z += S.x; R.position.y += S.up / (av.g.scale.y || 1); R.updateMatrixWorld(true); return true;
+}
+// A0 量測（網址加 &debug）：每次鎖定擊球記一筆「手伸到底還差多遠」＝畫面要把球拉多少才貼到手上（越小越真實）
+const TOUCH_LOG = [];
+function touchLog(L, src) { if (!window.__gym) return; const kd = L.ev ? L.kind : L.av._tk || L.kind, g = avReachTo(L.av, kd, L.C, 1), r3 = (v) => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; L.av.g.getWorldPosition(TCH.F); TOUCH_LOG.push({ src, kind: kd, gap: +g.toFixed(3), tk: L.av._tk, C: r3(L.C), M: r3(TCH.M), at: r3(TCH.F), off: r3(TCH.P), br: L.av._br ? [+L.av._br.x.toFixed(2), +L.av._br.z.toFixed(2), +L.av._br.dip.toFixed(2), +(L.av._br.up || 0).toFixed(2)] : null, keep: !!L.av._bodyKeep }); if (TOUCH_LOG.length > 400) TOUCH_LOG.shift(); }
+// A1 擊球事件：遊戲擊球（vbLaunch）當下就告訴動畫「哪顆球、什麼動作」，下一格直接鎖定碰球的人，不用等球轉向再猜（猜會慢一格、會猜錯人和動作）
+//   連線收到別人的擊球、重播仍用 touchPass 裡的偵測
+const TCH_KIND = { spike: 'spike', hit: 'spike', tip: 'spike', serve: 'spike', set: 'set', bump: 'bump', block: 'block' };
+function touchEvent(m, kind) { if (m && m.userData) m.userData.tev = { t: performance.now(), kind: TCH_KIND[kind] || 'reach' }; }
 // 2. 擊球瞬間：每一格畫之前看每顆球有沒有突然轉向（＝被打到），有就鎖定碰球的人，手伸向擊球點、球先貼在手上再飛走
 function touchPass() {
   const now = performance.now(); if (now - (touchPass.t || 0) < 4) return; touchPass.prev = touchPass.t || 0; touchPass.t = now;
@@ -805,6 +839,18 @@ function touchPass() {
     const U = m.userData;
     if (!m.parent || !ballShown(m)) { U.hp = null; U.hv = null; U.lock = null; continue; }
     const p = TCH.B.setFromMatrixPosition(m.matrixWorld), dtm = U.hp ? (now - U.ht) / 1000 : 0;
+    if (U.tev) {   // A1：遊戲剛擊球——擊球點＝上一格畫面上的球，找離它最近、正在做那個動作的人
+      const E = U.tev; U.tev = null;
+      if (now - E.t < 150 && U.hp && !window.__tchEvOff) {
+        let who = null, wd = Infinity;
+        for (const av of LIVE_AVS) {
+          if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) continue;
+          const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - BALL_R * BALL_VIS, sc = d - (av._tk === E.kind ? 0.4 : av._tk || (av._fa || 0) > 0.5 ? 0.2 : 0);
+          if (d < 1.6 && sc < wd) { wd = sc; who = av; }
+        }
+        if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); }
+      }
+    }
     if (U.hp && dtm > 0.004 && dtm < 0.25) {
       const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
       if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
@@ -815,13 +861,13 @@ function touchPass() {
           const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
           if (d < lim && sc < wd) { wd = sc; who = av; }
         }
-        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; }
+        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); }
       }
       U.hv = (U.hv || new THREE.Vector3()).copy(v);
     }
     U.hp = (U.hp || new THREE.Vector3()).copy(p); U.ht = now;
     const L = U.lock; if (!L) continue;
-    const kd = L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
+    const kd = L.ev ? L.kind : L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
     if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
     const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
     avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));

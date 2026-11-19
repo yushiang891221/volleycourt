@@ -417,6 +417,7 @@ function vbBlockOutcome(off, low, pow, skill) {
 // 碰手後球還剩多少力道（使用者 2026-11-04：touch out 彈太遠救不到 → 縮小；扣得越大力（pow 越大）保留越多，大力或打點好還是常救不到，但偶爾救得到）
 const TOUCH_OUT = { outKeep: 0.09, outKeepPow: 0.08, outPast: [0.15, 0.7], outLatMax: [2.6, 1.2], topKeep: 0.14, topKeepPow: 0.14, topVy: [2.0, 1.4], powVy: 1.6 };   // powVy：扣得越大力，碰手後彈得越高（比較有時間跑去救）   // 2026-11-04 第二次調小
 function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
+  if (typeof touchEvent === 'function') touchEvent(b.m, 'block');   // A1：攔網碰到球，告訴動畫
   const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
   if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
   if (kind === 'out') {   // 打手出界：球擦到外側那隻手，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m
