@@ -311,8 +311,8 @@ function netTextTexture(span, depth, text, band = 4.5) {
   grid(c, 'rgba(20,20,20,0.85)', 1.8);
   // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
   const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-  grid(l, '#FFFFFF', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-  c.globalAlpha = 0.22; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層很淡的白：字看起來比較淺、比較飽滿，還是看得到對面（2026-11-19 使用者：太細太深）
+  grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
   c.drawImage(lit, 0, 0);
   // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
   c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);

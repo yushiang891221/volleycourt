@@ -8,7 +8,7 @@
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
 // 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
 const JUMP_G = 8.4;
-const AV_SCALE = 1.2, AV_JUMP_K = 1.6;   /* 2026-11-19 從 1.18 加大：扣球、攔網跳起來手要摸得到判定的擊球點（判定高度不變，扣球一樣能打得很釘） */   /* 角色放大 1.2 倍後舉手高約 1.91 m（判定手高 2.37 m）；離地高度在放大的座標裡再乘 1.18，畫面上總共約 1.4 倍，到頂時手跟判定位置差不多 */
+const AV_SCALE = 1.2, AV_JUMP_K = 1.12, AV_JUMP_BLOCK = 1.36;   /* 畫面上的跳躍高度倍數（判定不變）。2026-11-19 使用者：以 1.6（當時正式站）為 100%，攻擊 70%＝1.12、攔網 85%＝1.36 */
 // 體力設定（百分比，比賽選單「⚙️ 體力設定」可以改，存在這台電腦；連線時大家照開局的人的設定）
 const STA_DEF = { sprint: 21, jump: 15.5, jserve: 15.5, block: 11.5, spike: 8, hit: 4, serve: 4, tip: 2.6, set: 2.6, bump: 2, dive: 39, spec: 30, regMove: 5, regStill: 8, regDead: 10 };   // 每個動作比上一版多耗三成
 const STA_LBL = { sprint: '衝刺（每秒）', jump: '起跳攻擊', jserve: '跳發', block: '攔網起跳', spike: '扣球', hit: '站著打', serve: '發球', tip: '吊球', set: '舉球', bump: '接球', dive: '撲救', spec: '專職少耗', regMove: '比賽中跑動（每秒回）', regStill: '比賽中站著（每秒回）', regDead: '死球、等發球（每秒回）' };
@@ -120,7 +120,10 @@ function vbHaloTex() {   // 光圈：一圈實心色環＋外面一點柔光，�
 }
 function vbHaloSprite(col) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: vbHaloTex(), color: col, transparent: true, depthWrite: false, toneMapped: false }));
-  sp.renderOrder = 13; sp.visible = false; sp.userData.noPick = true; scene.add(sp); return sp;
+  sp.renderOrder = 13; sp.visible = false; sp.userData.noPick = true; scene.add(sp);
+  // 2026-11-19 使用者回報光圈一格一格跳、沒跟到球：連線時畫面上的球是平滑過的位置（vmWireRender），光圈以前用物理位置；改成畫光圈前直接對到這一格球畫的位置
+  sp.onBeforeRender = function () { const m = this.userData.ballMesh, P = m && m.userData.drawAt; if (P && m.userData.drawF === frameNo) { this.position.copy(P); this.updateMatrixWorld(); this.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, this.matrixWorld); } };
+  return sp;
 }
 function vbTrailMesh(add) {
   const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
@@ -138,6 +141,7 @@ function vbTrailStart(b, q) {
   for (const T of TRAIL.list) if (T.b === b) { vbTrailEnd(T, 3.5); T.halo.visible = false; T.noHalo = true; }   // 同一顆球再被碰到：舊的快速淡掉，光圈換新的
   const col = vbTrailColor(q);
   TRAIL.list.push({ b, col, pts: [{ p: vbTrailAt(b.m.position), t: now }], live: true, fade: 1, rate: 2, t0: now, glow: vbTrailMesh(), core: vbTrailMesh(true), halo: vbHaloSprite(col) });
+  TRAIL.list[TRAIL.list.length - 1].halo.userData.ballMesh = b.m;
   while (TRAIL.list.length > 12) vbTrailDrop(TRAIL.list[0]);
 }
 function vbTrailEnd(T, rate) { if (T.live) { T.live = false; T.rate = rate; } }

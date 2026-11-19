@@ -468,6 +468,7 @@ function ballPullOff(m) { const p = m.userData.pd; if (p) { const e = m.matrixWo
 function ballLiftBefore() {
   ballPullOn(this);
   const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
+  (this.userData.drawAt || (this.userData.drawAt = new THREE.Vector3())).set(e[12], e[13] + d, e[14]); this.userData.drawF = frameNo;   // 這一格球實際畫在哪（連線平滑、拉到手上、貼地抬高都算進去）：光圈跟著它
   if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
   e[13] += d;
 }

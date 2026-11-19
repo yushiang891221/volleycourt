@@ -28,7 +28,7 @@ function context(code, seed) {
     function vm6Rotate(t) { VM.rot[t] = VM.rot[t].slice(1).concat(VM.rot[t][0]); log.push(['rotate', t]); }
     function vmTeamLabel(t) { return 'T' + t; } function vmPointMsg(win, why) { return why + '/' + win; }
     function vmSetupServe() { log.push(['serve']); } function vm6NextSet() { log.push(['nextSet']); } function vmOver() { log.push(['over']); } function vm6Swap() { log.push(['swap']); }
-    function vmMark(x, z, inside) { log.push(['mark', inside]); } function vmOut() { log.push(['out']); }
+    function vmMark(x, z, inside) { log.push(['mark', inside]); } function vmOut() {}   /* 2026-11-19 出界小旗子併進落點旗子（vmMark），新版不再另外呼叫 vmOut */
   ` + code, c);
   return c;
 }

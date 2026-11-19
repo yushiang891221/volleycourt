@@ -385,6 +385,7 @@ function vmOnNet(d, from) {
     drawScore();
     const nowS = performance.now();
     for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
+    if (d.pt && Array.isArray(d.pt.fl) && d.pt.fl.length === 3 && d.pt.fl.slice(0, 2).every(Number.isFinite)) vmMark(d.pt.fl[0], d.pt.fl[1], !!d.pt.fl[2]);   // 落點旗子（房主／伺服器判的）
     if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); if (typeof hlOnPoint === 'function') hlOnPoint(d.pt.win, d.pt.why, 'by' in d.pt ? d.pt.by : undefined, d.pt.k); }
     else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     if (d.ph === 'over') vmOver();

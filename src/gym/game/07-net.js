@@ -734,7 +734,8 @@ function avDrive(av, P, k, sp = 0, air = false) {
     R.position.x = (tx - hp.x) * fa; R.position.z = (tz - hp.z) * fa; R.position.y = -drop * (1 - fa) + (DK.y - hp.y) * fa; av._rootY = R.position.y;
   } else {   // 跳躍：Q 版角色比判定用的身高矮，畫面上的離地高度乘 AV_JUMP_K（等於起跳速度和重力乘同倍數：到頂時間不變、手能到網子上方；判定不變）
     R.position.x = 0; R.position.z = 0; av._rootY = av._rootY == null ? R.position.y : av._rootY; av._rootY += (-drop - av._rootY) * (1 - Math.exp(-dt * 22));
-    R.position.y = av._rootY + (av.chibi ? Math.max(0, av.body.position.y) * (AV_JUMP_K - 1) : 0);
+    const jk = P.touch === 'block' ? AV_JUMP_BLOCK : AV_JUMP_K; av._jk = av._jk == null ? jk : av._jk + (jk - av._jk) * (1 - Math.exp(-dt * 10));   // 攔網跳得比攻擊高一點；換姿勢時慢慢換，不會突然一跳
+    R.position.y = av._rootY + (av.chibi ? Math.max(0, av.body.position.y) * (av._jk - 1) : 0);
   }
   // 不陷進地板（翻滾時身體、跑步時鞋尖鞋跟）：全身最低的點比地板低，就把整個人往上抬
   av.g.updateMatrixWorld(true);
@@ -747,6 +748,26 @@ function avDrive(av, P, k, sp = 0, air = false) {
   av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
   if (av._tk) avTouch(av, av._tk);
   if (avBodyReach(av, dt) && av._tk) avTouch(av, av._tk, true);   // A2：上身傾過去之後手再對準一次
+  avKickApply(av, now);
+}
+// A3 撞擊回饋（2026-11-19）：碰到球那一下身體先吃到力（立刻、0.1 秒內退掉），手鎖在球上（0.08～0.12 秒）放開後手臂接著做跟隨動作；
+//   球越快力道越大。扣球＝上身往前收、手往下甩；接球＝重球把手壓低、膝蓋緩衝，接著手往上送；舉球＝手肘先吃一下再推出去；攔網＝手和上身被往後推
+function avKick(av, kind, speed, now) { if (!av || !['spike', 'bump', 'set', 'block'].includes(kind)) return; av._kick = { kind, t0: now, amp: clamp(speed / 18, 0.35, 1), arms: (TCH_CFG[kind] && TCH_CFG[kind].arms) || [0, 1] }; }
+function avKickApply(av, now) {
+  const K = av._kick; if (!K) return;
+  const t = (now - K.t0) / 1000; if (t > 0.5) { av._kick = null; return; }
+  const a = K.amp, body = (t < 0.04 ? t / 0.04 : Math.exp(-(t - 0.04) / 0.11)) * a, arm = Math.exp(-(((t - 0.14) / 0.08) ** 2)) * a, S = av.spine;
+  for (const i of K.arms) {
+    const A = av.arms[i], E = av.elbows[i];
+    if (K.kind === 'spike') A.rotation.x += 0.9 * arm + 0.2 * body;
+    else if (K.kind === 'bump') A.rotation.x += 0.28 * body - 0.22 * arm;
+    else if (K.kind === 'set') { E.rotation.x += -0.35 * body + 0.3 * arm; A.rotation.x += 0.08 * body; }
+    else if (K.kind === 'block') A.rotation.x -= 0.32 * body;
+  }
+  if (K.kind === 'spike') S.rotation.x += 0.28 * body + 0.12 * arm;
+  else if (K.kind === 'bump') { S.rotation.x += 0.06 * body; for (const kn of av.knees) kn.rotation.x += 0.16 * body - 0.08 * arm; }
+  else if (K.kind === 'set') for (const kn of av.knees) kn.rotation.x += 0.1 * body;
+  else if (K.kind === 'block') { S.rotation.x -= 0.16 * body; av.head.rotation.x -= 0.1 * body; }
 }
 // ---- 手真的碰到球（2026-11-18 使用者：手和球中間不能有空隙；自己第三人稱、別人看你、電腦、重播都一樣）
 //   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）；只迎向飛過來的球，地上、滾動的球不動，也不把球拉向手
@@ -858,7 +879,7 @@ function touchPass() {
           const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - BALL_R * BALL_VIS, sc = d - (av._tk === E.kind ? 0.4 : av._tk || (av._fa || 0) > 0.5 ? 0.2 : 0);
           if (d < 1.6 && sc < wd) { wd = sc; who = av; }
         }
-        if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); }
+        if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); avKick(who, U.lock.kind, U.hv ? U.hv.length() : 8, now); }
       }
     }
     if (U.hp && dtm > 0.004 && dtm < 0.25) {
@@ -871,7 +892,7 @@ function touchPass() {
           const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
           if (d < lim && sc < wd) { wd = sc; who = av; }
         }
-        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); }
+        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); avKick(who, who._tk || U.lock.kind, U.hv.length(), now); }
       }
       U.hv = (U.hv || new THREE.Vector3()).copy(v);
     }
@@ -893,7 +914,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 1: return AVP.hold;
     case 2: return t < 0.15 ? AVP.setReady : AVP.setPush;
     case 3: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bump, (t - 0.3) / 0.5);
-    case 4: return t < 0.18 ? avMix(AVP.airUp, AVP.spikeHit, t / 0.18) : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.18) / 0.5);
+    case 4: return t < 0.12 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.12) / 0.45);   // A3：t＝0 就是碰到球（以前先花 0.18 從舉手揮過來，手臂比球晚約 0.06 秒到）
     case 5: return t < 0.28 ? AVP.takeoff : avMix(AVP.takeoff, AVP.airUp, (t - 0.28) / 0.4);
     case 13: return AVP.approach;
     case 19: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bumpStand, (t - 0.3) / 0.5);   // 站著接球
@@ -1334,7 +1355,7 @@ function emoPose(k, t) {
   if (k === 'taunt') { const w = Math.sin(t * 9); return { ...AVP.taunt, el: [1.3 + 0.45 * w, 1.3 + 0.45 * w] }; }   // 手掌朝上一勾一勾
   return AVP.hi5Up;
 }
-function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.ohQ) return 2; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike) return walk.spike.hit ? 4 : walk.air ? 5 : 1; if (walk.serve) return walk.serve.hit ? 4 : 1; if (walk.swing) return walk.swing.done ? 4 : walk.air ? 5 : 4;   /* A3：真的碰到球才送扣球動作（以前一按就送，提早按的話別人先看到揮完的手） */ if (walk.ohQ) return 2; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 // WEB-018 network correction only.
 function netSmoothBall(b, dt, courts) {
   const p = b.m.position, before = p.clone();

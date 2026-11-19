@@ -292,7 +292,8 @@ function vmPoint(win, why) {
   else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
   VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
-  vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
+  const land = VM.land; VM.land = null;
+  vmBroadcast(true, null, { win, why, by, k: byK, ...(land ? { fl: land } : {}) });   // by／k 跟著原本的得分訊息走，不多送訊息
   if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
 }
 // 2 對 2 多局：比分歸零，上一局先發球的另一隊先發（決勝局抽籤）；不換場（換場要把真人搬到另一邊，先不做）
@@ -329,8 +330,9 @@ function vmJudge() {
   }
   const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, L = judgeLanding(B.x, B.z, VM.sg, VM.touch.team, BALL_R);   /* B2 */
   vmMark(b.floorHit[0], b.floorHit[1], L.inside);
+  VM.land = [+b.floorHit[0].toFixed(3), +b.floorHit[1].toFixed(3), L.inside ? 1 : 0];   // 跟著得分訊息送給大家（伺服器裁判時每個真人都是加入者，以前看不到落點）
   if (L.inside) vmPoint(L.winner, '落地得分');
-  else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
+  else vmPoint(L.winner, 'OUT 出界');
 }
 // 攔網碰到球：手的位置閃一圈白光、跳出 TOUCH（打手出界時特別標出來，裁判也是看這個判）
 function vbTouchFx(pos, word) {
@@ -392,16 +394,27 @@ function vbBodyPush() {
 // 落點：場內綠圈 IN、場外紅圈 OUT，停 2.5 秒
 // 特效、電腦球員拿掉時順便放掉顯示卡記憶體（fxDrop 在 09-replay.js；單獨測這個檔時沒有就只拿掉）
 function vmFxDrop(g) { if (typeof fxDrop === 'function') fxDrop(g); else if (g.parent) g.parent.remove(g); }
+// 落地插旗（2026-11-19 使用者：落地插一支旗子、精確落點）：地上一個跟球一樣大的圓＝球實際碰地的範圍（看得出有沒有壓到線），
+//   正中間插一支旗子，旗面寫 IN（綠）／OUT（紅），面向自己的鏡頭；下一支旗子插下去或 6 秒後收掉
+const LAND_FLAG = { g: null, t: 0 };
 function vmMark(x, z, inside) {
-  const g = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.28, 32), new THREE.MeshBasicMaterial({ color: inside ? '#30A46C' : '#E5484D', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
-  const sp = labelSprite(inside ? 'IN' : 'OUT', inside ? '#30A46C' : '#E5484D', 0.7); sp.position.y = 0.7; g.add(sp);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
-}
-// OUT：落點插一支小旗子一下
-function vmOut(B) {
-  const [x, z] = vmW(B.x, B.z), g = new THREE.Group(); cyl(g, 0.012, 0.012, 1.1, '#FFFFFF', 0, 0, 0); box(g, 0.3, 0.2, 0.01, '#E5484D', 0.15, 0.88, 0);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
+  if (LAND_FLAG.g) vmFxDrop(LAND_FLAG.g);
+  const col = inside ? '#2FBF71' : '#E5484D', g = new THREE.Group();
+  const foot = new THREE.Mesh(new THREE.CircleGeometry(BALL_R, 32), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55, depthWrite: false }));
+  foot.rotation.x = -Math.PI / 2; foot.position.y = 0.012; g.add(foot);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(BALL_R - 0.008, BALL_R + 0.006, 40), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.014; g.add(rim);
+  cyl(g, 0.009, 0.009, 1.15, '#F4F4F0', 0, 0, 0);   // 旗桿：插在正中間
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const c = cv.getContext('2d');
+  c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.lineTo(256, 22); c.lineTo(236, 80); c.lineTo(256, 138); c.lineTo(0, 160); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(0, 0, 256, 18);
+  c.fillStyle = '#FFFFFF'; c.font = '900 84px "Arial Black", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(inside ? 'IN' : 'OUT', 112, 84);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.26), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  flag.position.set(0.21, 1.0, 0); const pole = new THREE.Group(); pole.add(flag); g.add(pole);
+  pole.rotation.y = Math.atan2(camera.position.x - x, camera.position.z - z) - Math.PI / 2;   // 旗面朝自己的鏡頭（字不會反）
+  g.position.set(x, 0, z); scene.add(g); LAND_FLAG.g = g;
+  setTimeout(() => { if (LAND_FLAG.g === g) LAND_FLAG.g = null; vmFxDrop(g); }, 6000);
 }
 // ---- AI 球員
 // 一次進攻：誰接（離落點最近的人）、誰舉（另一個）、誰攻（接球的人）

@@ -2012,8 +2012,8 @@ function netTextTexture(span, depth, text, band = 4.5) {
   grid(c, 'rgba(20,20,20,0.85)', 1.8);
   // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
   const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-  grid(l, '#FFFFFF', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-  c.globalAlpha = 0.22; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層很淡的白：字看起來比較淺、比較飽滿，還是看得到對面（2026-11-19 使用者：太細太深）
+  grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
   c.drawImage(lit, 0, 0);
   // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
   c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
@@ -6445,6 +6445,7 @@ function ballPullOff(m) { const p = m.userData.pd; if (p) { const e = m.matrixWo
 function ballLiftBefore() {
   ballPullOn(this);
   const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
+  (this.userData.drawAt || (this.userData.drawAt = new THREE.Vector3())).set(e[12], e[13] + d, e[14]); this.userData.drawF = frameNo;   // 這一格球實際畫在哪（連線平滑、拉到手上、貼地抬高都算進去）：光圈跟著它
   if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
   e[13] += d;
 }
@@ -7872,7 +7873,8 @@ function avDrive(av, P, k, sp = 0, air = false) {
     R.position.x = (tx - hp.x) * fa; R.position.z = (tz - hp.z) * fa; R.position.y = -drop * (1 - fa) + (DK.y - hp.y) * fa; av._rootY = R.position.y;
   } else {   // 跳躍：Q 版角色比判定用的身高矮，畫面上的離地高度乘 AV_JUMP_K（等於起跳速度和重力乘同倍數：到頂時間不變、手能到網子上方；判定不變）
     R.position.x = 0; R.position.z = 0; av._rootY = av._rootY == null ? R.position.y : av._rootY; av._rootY += (-drop - av._rootY) * (1 - Math.exp(-dt * 22));
-    R.position.y = av._rootY + (av.chibi ? Math.max(0, av.body.position.y) * (AV_JUMP_K - 1) : 0);
+    const jk = P.touch === 'block' ? AV_JUMP_BLOCK : AV_JUMP_K; av._jk = av._jk == null ? jk : av._jk + (jk - av._jk) * (1 - Math.exp(-dt * 10));   // 攔網跳得比攻擊高一點；換姿勢時慢慢換，不會突然一跳
+    R.position.y = av._rootY + (av.chibi ? Math.max(0, av.body.position.y) * (av._jk - 1) : 0);
   }
   // 不陷進地板（翻滾時身體、跑步時鞋尖鞋跟）：全身最低的點比地板低，就把整個人往上抬
   av.g.updateMatrixWorld(true);
@@ -7885,6 +7887,26 @@ function avDrive(av, P, k, sp = 0, air = false) {
   av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
   if (av._tk) avTouch(av, av._tk);
   if (avBodyReach(av, dt) && av._tk) avTouch(av, av._tk, true);   // A2：上身傾過去之後手再對準一次
+  avKickApply(av, now);
+}
+// A3 撞擊回饋（2026-11-19）：碰到球那一下身體先吃到力（立刻、0.1 秒內退掉），手鎖在球上（0.08～0.12 秒）放開後手臂接著做跟隨動作；
+//   球越快力道越大。扣球＝上身往前收、手往下甩；接球＝重球把手壓低、膝蓋緩衝，接著手往上送；舉球＝手肘先吃一下再推出去；攔網＝手和上身被往後推
+function avKick(av, kind, speed, now) { if (!av || !['spike', 'bump', 'set', 'block'].includes(kind)) return; av._kick = { kind, t0: now, amp: clamp(speed / 18, 0.35, 1), arms: (TCH_CFG[kind] && TCH_CFG[kind].arms) || [0, 1] }; }
+function avKickApply(av, now) {
+  const K = av._kick; if (!K) return;
+  const t = (now - K.t0) / 1000; if (t > 0.5) { av._kick = null; return; }
+  const a = K.amp, body = (t < 0.04 ? t / 0.04 : Math.exp(-(t - 0.04) / 0.11)) * a, arm = Math.exp(-(((t - 0.14) / 0.08) ** 2)) * a, S = av.spine;
+  for (const i of K.arms) {
+    const A = av.arms[i], E = av.elbows[i];
+    if (K.kind === 'spike') A.rotation.x += 0.9 * arm + 0.2 * body;
+    else if (K.kind === 'bump') A.rotation.x += 0.28 * body - 0.22 * arm;
+    else if (K.kind === 'set') { E.rotation.x += -0.35 * body + 0.3 * arm; A.rotation.x += 0.08 * body; }
+    else if (K.kind === 'block') A.rotation.x -= 0.32 * body;
+  }
+  if (K.kind === 'spike') S.rotation.x += 0.28 * body + 0.12 * arm;
+  else if (K.kind === 'bump') { S.rotation.x += 0.06 * body; for (const kn of av.knees) kn.rotation.x += 0.16 * body - 0.08 * arm; }
+  else if (K.kind === 'set') for (const kn of av.knees) kn.rotation.x += 0.1 * body;
+  else if (K.kind === 'block') { S.rotation.x -= 0.16 * body; av.head.rotation.x -= 0.1 * body; }
 }
 // ---- 手真的碰到球（2026-11-18 使用者：手和球中間不能有空隙；自己第三人稱、別人看你、電腦、重播都一樣）
 //   1. 球靠近「會碰球的姿勢」時，手臂自動伸向球真正的位置：先照距離算手肘要彎多少（兩節手臂），再把整隻手臂轉過去對準（avTouch）；只迎向飛過來的球，地上、滾動的球不動，也不把球拉向手
@@ -7996,7 +8018,7 @@ function touchPass() {
           const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - BALL_R * BALL_VIS, sc = d - (av._tk === E.kind ? 0.4 : av._tk || (av._fa || 0) > 0.5 ? 0.2 : 0);
           if (d < 1.6 && sc < wd) { wd = sc; who = av; }
         }
-        if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); }
+        if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); avKick(who, U.lock.kind, U.hv ? U.hv.length() : 8, now); }
       }
     }
     if (U.hp && dtm > 0.004 && dtm < 0.25) {
@@ -8009,7 +8031,7 @@ function touchPass() {
           const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
           if (d < lim && sc < wd) { wd = sc; who = av; }
         }
-        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); }
+        if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); avKick(who, who._tk || U.lock.kind, U.hv.length(), now); }
       }
       U.hv = (U.hv || new THREE.Vector3()).copy(v);
     }
@@ -8031,7 +8053,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 1: return AVP.hold;
     case 2: return t < 0.15 ? AVP.setReady : AVP.setPush;
     case 3: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bump, (t - 0.3) / 0.5);
-    case 4: return t < 0.18 ? avMix(AVP.airUp, AVP.spikeHit, t / 0.18) : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.18) / 0.5);
+    case 4: return t < 0.12 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.12) / 0.45);   // A3：t＝0 就是碰到球（以前先花 0.18 從舉手揮過來，手臂比球晚約 0.06 秒到）
     case 5: return t < 0.28 ? AVP.takeoff : avMix(AVP.takeoff, AVP.airUp, (t - 0.28) / 0.4);
     case 13: return AVP.approach;
     case 19: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bumpStand, (t - 0.3) / 0.5);   // 站著接球
@@ -8472,7 +8494,7 @@ function emoPose(k, t) {
   if (k === 'taunt') { const w = Math.sin(t * 9); return { ...AVP.taunt, el: [1.3 + 0.45 * w, 1.3 + 0.45 * w] }; }   // 手掌朝上一勾一勾
   return AVP.hi5Up;
 }
-function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.ohQ) return 2; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike) return walk.spike.hit ? 4 : walk.air ? 5 : 1; if (walk.serve) return walk.serve.hit ? 4 : 1; if (walk.swing) return walk.swing.done ? 4 : walk.air ? 5 : 4;   /* A3：真的碰到球才送扣球動作（以前一按就送，提早按的話別人先看到揮完的手） */ if (walk.ohQ) return 2; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 // WEB-018 network correction only.
 function netSmoothBall(b, dt, courts) {
   const p = b.m.position, before = p.clone();
@@ -10474,7 +10496,7 @@ for (const b of $('rk-pad').querySelectorAll('[data-rk]')) {
 const STA = { v: 1, lock: false, useT: 0, warnT: 0 };
 // 跳躍：空中往下掉得比真實慢一點（滯空久，攔中可以先跳起來等舉球）；玩家、連線的人、AI 都一樣
 const JUMP_G = 8.4;
-const AV_SCALE = 1.2, AV_JUMP_K = 1.6;   /* 2026-11-19 從 1.18 加大：扣球、攔網跳起來手要摸得到判定的擊球點（判定高度不變，扣球一樣能打得很釘） */   /* 角色放大 1.2 倍後舉手高約 1.91 m（判定手高 2.37 m）；離地高度在放大的座標裡再乘 1.18，畫面上總共約 1.4 倍，到頂時手跟判定位置差不多 */
+const AV_SCALE = 1.2, AV_JUMP_K = 1.12, AV_JUMP_BLOCK = 1.36;   /* 畫面上的跳躍高度倍數（判定不變）。2026-11-19 使用者：以 1.6（當時正式站）為 100%，攻擊 70%＝1.12、攔網 85%＝1.36 */
 // 體力設定（百分比，比賽選單「⚙️ 體力設定」可以改，存在這台電腦；連線時大家照開局的人的設定）
 const STA_DEF = { sprint: 21, jump: 15.5, jserve: 15.5, block: 11.5, spike: 8, hit: 4, serve: 4, tip: 2.6, set: 2.6, bump: 2, dive: 39, spec: 30, regMove: 5, regStill: 8, regDead: 10 };   // 每個動作比上一版多耗三成
 const STA_LBL = { sprint: '衝刺（每秒）', jump: '起跳攻擊', jserve: '跳發', block: '攔網起跳', spike: '扣球', hit: '站著打', serve: '發球', tip: '吊球', set: '舉球', bump: '接球', dive: '撲救', spec: '專職少耗', regMove: '比賽中跑動（每秒回）', regStill: '比賽中站著（每秒回）', regDead: '死球、等發球（每秒回）' };
@@ -10586,7 +10608,10 @@ function vbHaloTex() {   // 光圈：一圈實心色環＋外面一點柔光，�
 }
 function vbHaloSprite(col) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: vbHaloTex(), color: col, transparent: true, depthWrite: false, toneMapped: false }));
-  sp.renderOrder = 13; sp.visible = false; sp.userData.noPick = true; scene.add(sp); return sp;
+  sp.renderOrder = 13; sp.visible = false; sp.userData.noPick = true; scene.add(sp);
+  // 2026-11-19 使用者回報光圈一格一格跳、沒跟到球：連線時畫面上的球是平滑過的位置（vmWireRender），光圈以前用物理位置；改成畫光圈前直接對到這一格球畫的位置
+  sp.onBeforeRender = function () { const m = this.userData.ballMesh, P = m && m.userData.drawAt; if (P && m.userData.drawF === frameNo) { this.position.copy(P); this.updateMatrixWorld(); this.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, this.matrixWorld); } };
+  return sp;
 }
 function vbTrailMesh(add) {
   const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
@@ -10604,6 +10629,7 @@ function vbTrailStart(b, q) {
   for (const T of TRAIL.list) if (T.b === b) { vbTrailEnd(T, 3.5); T.halo.visible = false; T.noHalo = true; }   // 同一顆球再被碰到：舊的快速淡掉，光圈換新的
   const col = vbTrailColor(q);
   TRAIL.list.push({ b, col, pts: [{ p: vbTrailAt(b.m.position), t: now }], live: true, fade: 1, rate: 2, t0: now, glow: vbTrailMesh(), core: vbTrailMesh(true), halo: vbHaloSprite(col) });
+  TRAIL.list[TRAIL.list.length - 1].halo.userData.ballMesh = b.m;
   while (TRAIL.list.length > 12) vbTrailDrop(TRAIL.list[0]);
 }
 function vbTrailEnd(T, rate) { if (T.live) { T.live = false; T.rate = rate; } }
@@ -12486,7 +12512,8 @@ function vmPoint(win, why) {
   else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
   vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
   VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
-  vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
+  const land = VM.land; VM.land = null;
+  vmBroadcast(true, null, { win, why, by, k: byK, ...(land ? { fl: land } : {}) });   // by／k 跟著原本的得分訊息走，不多送訊息
   if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
 }
 // 2 對 2 多局：比分歸零，上一局先發球的另一隊先發（決勝局抽籤）；不換場（換場要把真人搬到另一邊，先不做）
@@ -12523,8 +12550,9 @@ function vmJudge() {
   }
   const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, L = judgeLanding(B.x, B.z, VM.sg, VM.touch.team, BALL_R);   /* B2 */
   vmMark(b.floorHit[0], b.floorHit[1], L.inside);
+  VM.land = [+b.floorHit[0].toFixed(3), +b.floorHit[1].toFixed(3), L.inside ? 1 : 0];   // 跟著得分訊息送給大家（伺服器裁判時每個真人都是加入者，以前看不到落點）
   if (L.inside) vmPoint(L.winner, '落地得分');
-  else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
+  else vmPoint(L.winner, 'OUT 出界');
 }
 // 攔網碰到球：手的位置閃一圈白光、跳出 TOUCH（打手出界時特別標出來，裁判也是看這個判）
 function vbTouchFx(pos, word) {
@@ -12586,16 +12614,27 @@ function vbBodyPush() {
 // 落點：場內綠圈 IN、場外紅圈 OUT，停 2.5 秒
 // 特效、電腦球員拿掉時順便放掉顯示卡記憶體（fxDrop 在 09-replay.js；單獨測這個檔時沒有就只拿掉）
 function vmFxDrop(g) { if (typeof fxDrop === 'function') fxDrop(g); else if (g.parent) g.parent.remove(g); }
+// 落地插旗（2026-11-19 使用者：落地插一支旗子、精確落點）：地上一個跟球一樣大的圓＝球實際碰地的範圍（看得出有沒有壓到線），
+//   正中間插一支旗子，旗面寫 IN（綠）／OUT（紅），面向自己的鏡頭；下一支旗子插下去或 6 秒後收掉
+const LAND_FLAG = { g: null, t: 0 };
 function vmMark(x, z, inside) {
-  const g = new THREE.Group(), ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.28, 32), new THREE.MeshBasicMaterial({ color: inside ? '#30A46C' : '#E5484D', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
-  const sp = labelSprite(inside ? 'IN' : 'OUT', inside ? '#30A46C' : '#E5484D', 0.7); sp.position.y = 0.7; g.add(sp);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
-}
-// OUT：落點插一支小旗子一下
-function vmOut(B) {
-  const [x, z] = vmW(B.x, B.z), g = new THREE.Group(); cyl(g, 0.012, 0.012, 1.1, '#FFFFFF', 0, 0, 0); box(g, 0.3, 0.2, 0.01, '#E5484D', 0.15, 0.88, 0);
-  g.position.set(x, 0, z); scene.add(g); setTimeout(() => vmFxDrop(g), 2500);
+  if (LAND_FLAG.g) vmFxDrop(LAND_FLAG.g);
+  const col = inside ? '#2FBF71' : '#E5484D', g = new THREE.Group();
+  const foot = new THREE.Mesh(new THREE.CircleGeometry(BALL_R, 32), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55, depthWrite: false }));
+  foot.rotation.x = -Math.PI / 2; foot.position.y = 0.012; g.add(foot);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(BALL_R - 0.008, BALL_R + 0.006, 40), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.014; g.add(rim);
+  cyl(g, 0.009, 0.009, 1.15, '#F4F4F0', 0, 0, 0);   // 旗桿：插在正中間
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const c = cv.getContext('2d');
+  c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.lineTo(256, 22); c.lineTo(236, 80); c.lineTo(256, 138); c.lineTo(0, 160); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(0, 0, 256, 18);
+  c.fillStyle = '#FFFFFF'; c.font = '900 84px "Arial Black", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(inside ? 'IN' : 'OUT', 112, 84);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.26), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  flag.position.set(0.21, 1.0, 0); const pole = new THREE.Group(); pole.add(flag); g.add(pole);
+  pole.rotation.y = Math.atan2(camera.position.x - x, camera.position.z - z) - Math.PI / 2;   // 旗面朝自己的鏡頭（字不會反）
+  g.position.set(x, 0, z); scene.add(g); LAND_FLAG.g = g;
+  setTimeout(() => { if (LAND_FLAG.g === g) LAND_FLAG.g = null; vmFxDrop(g); }, 6000);
 }
 // ---- AI 球員
 // 一次進攻：誰接（離落點最近的人）、誰舉（另一個）、誰攻（接球的人）
@@ -13066,6 +13105,7 @@ function vmOnNet(d, from) {
     drawScore();
     const nowS = performance.now();
     for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
+    if (d.pt && Array.isArray(d.pt.fl) && d.pt.fl.length === 3 && d.pt.fl.slice(0, 2).every(Number.isFinite)) vmMark(d.pt.fl[0], d.pt.fl[1], !!d.pt.fl[2]);   // 落點旗子（房主／伺服器判的）
     if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); if (typeof hlOnPoint === 'function') hlOnPoint(d.pt.win, d.pt.why, 'by' in d.pt ? d.pt.by : undefined, d.pt.k); }
     else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
     if (d.ph === 'over') vmOver();

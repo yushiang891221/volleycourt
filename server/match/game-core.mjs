@@ -196,8 +196,8 @@ export function createGameCore(S = {}) {
     grid(c, 'rgba(20,20,20,0.85)', 1.8);
     // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
     const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-    grid(l, '#FFFFFF', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-    c.globalAlpha = 0.22; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層很淡的白：字看起來比較淺、比較飽滿，還是看得到對面（2026-11-19 使用者：太細太深）
+    grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+    c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
     c.drawImage(lit, 0, 0);
     // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
     c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
@@ -310,6 +310,7 @@ export function createGameCore(S = {}) {
   function ballLiftBefore() {
     ballPullOn(this);
     const e = this.matrixWorld.elements, d = ballLift(e[13]), q = this.userData.wsq; this.userData.lifted = d;
+    (this.userData.drawAt || (this.userData.drawAt = new THREE.Vector3())).set(e[12], e[13] + d, e[14]); this.userData.drawF = frameNo;   // 這一格球實際畫在哪（連線平滑、拉到手上、貼地抬高都算進去）：光圈跟著它
     if (q) { BALL_SAVE.set(e); this.userData.saved = true; for (const i of [0, 4, 8]) e[i] *= q[0]; for (const i of [1, 5, 9]) e[i] *= q[1]; for (const i of [2, 6, 10]) e[i] *= q[0]; e[13] += d - BALL_R * BALL_VIS * (1 - q[1]); return; }
     e[13] += d;
   }
@@ -634,6 +635,7 @@ export function createGameCore(S = {}) {
   const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
   function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }
   function avDrive(...a) { return S.avDrive ? S.avDrive(...a) : undefined; }
+  function avKick(av, kind, speed, now) { if (!av || !['spike', 'bump', 'set', 'block'].includes(kind)) return; av._kick = { kind, t0: now, amp: clamp(speed / 18, 0.35, 1), arms: (TCH_CFG[kind] && TCH_CFG[kind].arms) || [0, 1] }; }
   const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
   const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
   const HIT_LOCK = { spike: [0.08, 0], block: [0.08, 0], set: [0.12, 0.1], bump: [0.1, 0], reach: [0.1, 0] };
@@ -690,7 +692,7 @@ export function createGameCore(S = {}) {
             const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - BALL_R * BALL_VIS, sc = d - (av._tk === E.kind ? 0.4 : av._tk || (av._fa || 0) > 0.5 ? 0.2 : 0);
             if (d < 1.6 && sc < wd) { wd = sc; who = av; }
           }
-          if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); }
+          if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); avKick(who, U.lock.kind, U.hv ? U.hv.length() : 8, now); }
         }
       }
       if (U.hp && dtm > 0.004 && dtm < 0.25) {
@@ -703,7 +705,7 @@ export function createGameCore(S = {}) {
             const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
             if (d < lim && sc < wd) { wd = sc; who = av; }
           }
-          if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); }
+          if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); avKick(who, who._tk || U.lock.kind, U.hv.length(), now); }
         }
         U.hv = (U.hv || new THREE.Vector3()).copy(v);
       }
@@ -1601,7 +1603,8 @@ export function createGameCore(S = {}) {
     else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
     vmSay(vmPointMsg(win, why), VM.team[win].includes(vmMe()) ? 'gold' : 'warn', 3000);
     VM.next = { at: VM.t + (by ? HL_GAP : 3.2), fn };   // 有得分重播的球：等大家看完重播再發下一球
-    vmBroadcast(true, null, { win, why, by, k: byK });   // by／k 跟著原本的得分訊息走，不多送訊息
+    const land = VM.land; VM.land = null;
+    vmBroadcast(true, null, { win, why, by, k: byK, ...(land ? { fl: land } : {}) });   // by／k 跟著原本的得分訊息走，不多送訊息
     if (typeof hlOnPoint === 'function') hlOnPoint(win, why, by, byK);
   }
   function vm2NextSet() {
@@ -1636,13 +1639,13 @@ export function createGameCore(S = {}) {
     }
     const [fx, fz] = vmL(b.floorHit[0], b.floorHit[1]), B = { x: fx, z: fz }, L = judgeLanding(B.x, B.z, VM.sg, VM.touch.team, BALL_R);   /* B2 */
     vmMark(b.floorHit[0], b.floorHit[1], L.inside);
+    VM.land = [+b.floorHit[0].toFixed(3), +b.floorHit[1].toFixed(3), L.inside ? 1 : 0];   // 跟著得分訊息送給大家（伺服器裁判時每個真人都是加入者，以前看不到落點）
     if (L.inside) vmPoint(L.winner, '落地得分');
-    else { vmPoint(L.winner, 'OUT 出界'); vmOut(B); }
+    else vmPoint(L.winner, 'OUT 出界');
   }
   function vbBlockFx(...a) { return S.vbBlockFx ? S.vbBlockFx(...a) : undefined; }
   function vbWallFx(...a) { return S.vbWallFx ? S.vbWallFx(...a) : undefined; }
   function vmMark(...a) { return S.vmMark ? S.vmMark(...a) : undefined; }
-  function vmOut(...a) { return S.vmOut ? S.vmOut(...a) : undefined; }
   function vmAiStep(...a) { return aiEngine().vmAiStep(...a); }
   function vbBlockOutcome(off, low, pow, skill) {
     const centered = off < 0.4, edge = off > 0.42;
@@ -1909,6 +1912,7 @@ export function createGameCore(S = {}) {
       drawScore();
       const nowS = performance.now();
       for (const row of d.ai) { const a = VM.ai.get(row[0]); if (a) vmAiSnapshot(a, row, nowS); }
+      if (d.pt && Array.isArray(d.pt.fl) && d.pt.fl.length === 3 && d.pt.fl.slice(0, 2).every(Number.isFinite)) vmMark(d.pt.fl[0], d.pt.fl[1], !!d.pt.fl[2]);   // 落點旗子（房主／伺服器判的）
       if (d.pt) { vmSay(vmPointMsg(d.pt.win, d.pt.why), VM.team[d.pt.win].includes(vmMe()) ? 'gold' : 'warn', 3000); sfx('whistle', 1); if (typeof hlOnPoint === 'function') hlOnPoint(d.pt.win, d.pt.why, 'by' in d.pt ? d.pt.by : undefined, d.pt.k); }
       else if (d.msg) { vmSay(d.msg, /你們得分/.test(d.msg) ? 'gold' : 'warn', 3000); sfx('whistle', 1); }
       if (d.ph === 'over') vmOver();
@@ -2378,6 +2382,7 @@ export function createGameCore(S = {}) {
   };
   let AI_ENGINE = null;
   function aiEngine() { return AI_ENGINE || (AI_ENGINE = createAi(AI_GAME)); }
+  let frameNo = 0;
   function vmSmallCount() { const n = VM.six && VM.team?.[0]?.length; return n === 1 || n === 3 || n === 4 || n === 5 ? n : 0; }
   function vmPositionSetters(team) {
     const rot = VM.rot[team], n = vmSmallCount();
