@@ -29,8 +29,8 @@ body { min-width: 0; }
 #party-stage canvas, #party-slots { position:absolute; width:100%; height:100%; inset:0; }
 #party-stage canvas { z-index:1; }
 #party-slots { pointer-events:none; }
-.party-slot { position:absolute; width:38%; height:calc(90% - 10px); bottom:5%; left:18%; }
-.party-slot.slot-1 { left:60%; width:32%; height:72%; }
+.party-slot { position:absolute; width:28%; height:64%; bottom:5%; left:23%; }   /* 2026-11-19 使用者：人物太大（以前 90% 高） */
+.party-slot.slot-1 { left:56%; width:24%; height:52%; }
 .party-view { position:absolute; inset:40px 0 0; }
 .party-label { position:relative; top:var(--head,0px); margin:0 auto; width:max-content; max-width:100%; box-sizing:border-box; text-align:center; display:flex; flex-direction:column; gap:1px; padding:3px 7px; font-size:11px; line-height:14px; color:#f1ead9; background:#06211acc; border-radius:5px; z-index:2; }
 .party-label b, .party-label small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
