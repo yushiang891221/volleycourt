@@ -33,15 +33,11 @@ require('node:vm').runInNewContext(lobby.slice(lobby.indexOf("$('chat-toggle').a
 handler(); assert.equal(toggle['aria-expanded'], 'true'); assert.equal(toggle.textContent, '收合');
 assert.equal(messages.scrollTop, 123);
 handler(); assert.equal(toggle['aria-expanded'], 'false'); assert.equal(toggle.textContent, '展開');
-// 將實際 CSS 的站位尺寸代入不同舞台高度，驗證排間留白與角色視窗比例。
-assert(css.includes('height:calc(53% - 10px)'));
-assert(css.includes('height:42.4%; bottom:3%'));
-assert(css.includes('inset:40px 0 0'));
-for (const height of [240, 320, 400, 480, 720, 1080]) {
- const backBottom = height * .424;
- const selfTop = height * .97 - (height * .53 - 10);
- assert(selfTop >= backBottom, '前排名牌不可進入後排視窗');
- assert(Math.abs((height * .53 - 50) / (height * .424 - 40) - 1.25) < 1e-9);
- assert(Math.abs((height * .9 - 50) / (height * .72 - 40) - 1.25) < 1e-9);
-}
+// 6 對 6 是 V 字隊形（使用者 2026-11-19）：自己最前面中間最大，越後面越小、越高；前面的人蓋在後面的人上面
+const six = n => { const at = css.indexOf(`[data-mode="6v6"] .slot-${n} { left:`); assert(at >= 0, 'slot-' + n); const rule = css.slice(at, css.indexOf('}', at)); const num = k => Number((rule.match(new RegExp(k + ':([0-9.]+)')) || [])[1]); return [num('left'), num('width'), num('height'), num('bottom'), num('z-index')]; };
+const S = [0, 1, 2, 3, 4, 5].map(six);
+for (let n = 1; n < 6; n++) { assert(S[n][2] < S[0][2] && S[n][3] > S[0][3] && S[n][4] < S[0][4], '隊友比自己小、站後面、被自己擋住'); assert(S[n][0] >= 0 && S[n][0] + S[n][1] <= 100, '全員放得進舞台'); }
+assert(S[0][0] + S[0][1] / 2 === 50, '自己在正中間');
+const panel = fs.readFileSync('js/character-panel.js', 'utf8');
+assert(panel.includes('renderer.clearDepth()') && panel.includes('a[2].bottom - b[2].bottom'), '後面的人先畫、前面的人蓋上去');
 console.log('WEB-027B 入口、留言板切換、站位與尺寸比例檢查通過。');

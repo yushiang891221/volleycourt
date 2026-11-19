@@ -113,11 +113,13 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
     if (!slots) { renderer.render(scene, camera); return; }
     // 同一個 renderer／scene，以 scissor 畫各站位；手機 slots 只回傳自己。
-    renderer.setScissorTest(false); renderer.clear(); renderer.setScissorTest(true);
+    // 後面的人先畫、前面的人後畫（只清深度不清顏色），前面的人才會擋住後面的人（6 對 6 的 V 字隊形會重疊）
+    renderer.autoClear = false; renderer.setScissorTest(false); renderer.clear(); renderer.setScissorTest(true);
     const bounds = canvas.getBoundingClientRect();
-    for (const [i, el] of [...slots().entries()].reverse()) {
-      if (!party[i] || !el) continue;
-      const r = el.getBoundingClientRect(), x = r.left - bounds.left, y = bounds.bottom - r.bottom;
+    const order = [...slots().entries()].filter(([i, el]) => party[i] && el).map(([i, el]) => [i, el, el.getBoundingClientRect()]).sort((a, b) => a[2].bottom - b[2].bottom || b[0] - a[0]);
+    for (const [i, , r] of order) {
+      const x = r.left - bounds.left, y = bounds.bottom - r.bottom;
+      renderer.clearDepth();
       party.forEach((a, n) => { a.g.visible = i === n; });
       partyHalo.visible = i === 0;
       renderer.setViewport(x, y, r.width, r.height); renderer.setScissor(x, y, r.width, r.height);

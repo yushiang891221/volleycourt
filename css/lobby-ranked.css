@@ -38,12 +38,16 @@ body { min-width: 0; }
 .empty-slot { display:flex; align-items:center; justify-content:center; }
 .empty-slot button { pointer-events:auto; position:relative; z-index:2; width:58px; height:70px; font-size:30px; background:#0b362b88; border:1px dashed #E5B86988; }
 /* 分隔上下排整個視窗；自己的角色視窗高度為隊友的 1.25 倍。 */
-[data-mode="6v6"] .party-slot { width:30%; height:42.4%; bottom:3%; }
-[data-mode="6v6"] .slot-0 { left:35%; height:calc(53% - 10px); }
-[data-mode="6v6"] .slot-1 { left:1%; }
-[data-mode="6v6"] .slot-2 { left:69%; }
-[data-mode="6v6"] .slot-3, [data-mode="6v6"] .slot-4, [data-mode="6v6"] .slot-5 { width:28%; top:0; bottom:auto; }
-[data-mode="6v6"] .slot-3 { left:0; } [data-mode="6v6"] .slot-4 { left:36%; } [data-mode="6v6"] .slot-5 { left:72%; }
+/* 6 對 6：像合照的 V 字隊形——自己站最前面中間，其他人往兩側斜後方排，越後面越小（使用者 2026-11-19） */
+[data-mode="6v6"] .party-slot { top:auto; }
+[data-mode="6v6"] .slot-0 { left:39%; width:22%; height:70%; bottom:2%; z-index:6; }
+[data-mode="6v6"] .slot-1 { left:24%; width:19%; height:58%; bottom:11%; z-index:5; }
+[data-mode="6v6"] .slot-2 { left:57%; width:19%; height:58%; bottom:11%; z-index:5; }
+[data-mode="6v6"] .slot-3 { left:11.5%; width:16%; height:48%; bottom:19%; z-index:4; }
+[data-mode="6v6"] .slot-4 { left:73%; width:16%; height:48%; bottom:19%; z-index:4; }
+[data-mode="6v6"] .slot-5 { left:0%; width:11%; height:40%; bottom:26%; z-index:3; }
+[data-mode="6v6"] .slot-3 .party-label, [data-mode="6v6"] .slot-4 .party-label, [data-mode="6v6"] .slot-5 .party-label { font-size:10px; padding:2px 5px; }
+[data-mode="6v6"] .empty-slot button { width:46px; height:56px; font-size:24px; }
 .stage-hint { position:absolute; bottom:0; left:30%; font-size:11px; color:#b7c9be; }
 .match-card { position:absolute; bottom:0; right:0; width:255px; }
 .match-card h2 { margin:8px 0 16px; font-size:25px; color:#E5B869; }
@@ -131,7 +135,7 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 .rb-me { border-top:1px solid #e5b86933; } .rb-me p { margin:10px 18px 14px; color:#c4d1c9; font-size:13px; }
 
 /* 大廳炫技按鈕（角色下方）＋頭上冒出的動作名稱 */
-#lobby-emotes { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:3; display:flex; gap:6px; }
+#lobby-emotes { position:absolute; left:calc(50% + 70px); bottom:18px; z-index:3; display:flex; gap:6px; }
 #lobby-emotes button { width:40px; height:40px; min-height:0; padding:0; font-size:20px; border-radius:50%; background:#06211acc; border:1px solid #e5b86966; }
 #lobby-emotes button:hover { background:#0e3a2f; border-color:#E5B869; }
 .party-emo { position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); white-space:nowrap; padding:3px 10px; border-radius:999px; background:#E5B869; color:#06211A; font-weight:800; font-size:13px; animation:party-emo 1.6s ease-out forwards; pointer-events:none; }
