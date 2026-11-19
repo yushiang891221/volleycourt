@@ -14,7 +14,7 @@ export async function settleRanked({ code, rk, d, present, ratingsOf, reportMatc
   const teams = [[], []];
   for (const id of ids) { const player = rk.byId.get(id); teams[teamOf(id)].push({ player, rating: ratings.get(player)?.rating ?? 1000, id }); }
   const left = ids.filter(id => !present.has(id)).map(id => rk.byId.get(id));
-  const changes = rankedChanges({ teams, n, lv: pl.lv, winner, left, sets: multi ? A : null });
+  const changes = rankedChanges({ teams, n, lv: pl.lv, winner, left, sets: multi ? A : null, sc: multi ? null : A });
   const res = await reportMatch(code, mode, changes, { humans: teams.map(t => t.length), lv: pl.lv, sc: d.sc, sets: d.sets || null, left: left.length });
   const saved = !!(res && res.ratings);
   const idOf = new Map(teams.flat().map(p => [p.player, p.id])), games = p => (ratings.get(p)?.games || 0) + 1;

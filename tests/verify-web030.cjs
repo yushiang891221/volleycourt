@@ -44,6 +44,12 @@ const { pathToFileURL } = require('node:url');
   assert.equal(by(zero, 'a').delta, -50); assert.equal(by(one, 'a').delta, -30); assert.equal(by(one, 'c').delta, 50);
   assert.equal(by(rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sets: [1, 2], left: ['a'] }), 'a').delta, -50);
 
+  // 只打一局：輸得接近少扣（13:15 少扣約 29%、7:15 照扣、平分領先到 24:26 最多少扣約 34%）；贏的一方照加
+  const lose = sc => by(rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sc }), 'a').delta;
+  assert.equal(lose([7, 15]), -50); assert.equal(lose([3, 15]), -50); assert.equal(lose([13, 15]), -35); assert.equal(lose([24, 26]), -33);
+  assert.equal(by(rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sc: [13, 15] }), 'c').delta, 50);
+  assert.equal(by(rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sc: [13, 15], left: ['a'] }), 'a').delta, -50);
+
   // 分數最低 0
   c = rankedChanges({ teams: [[p('a', 20)], [p('c', 20)]], n: 1, lv: 3, winner: 1 });
   assert.equal(by(c, 'a').after, 0);
