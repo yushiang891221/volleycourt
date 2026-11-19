@@ -147,9 +147,8 @@ footer button:hover { background: #0E3A2F; transform: translateY(-2px); }
 #intro::backdrop { background: var(--pl-deep); }
 .intro-content::before { border: 1px solid rgba(229,184,105,.3); box-shadow: 0 0 80px rgba(229,184,105,.08); }
 .intro-kicker { color: var(--pl-deep); background: var(--pl-gold); padding: 3px 12px; border-radius: 3px; font-weight: 900; letter-spacing: .3em; }
-#intro-title { display: inline-flex; align-items: center; gap: 14px; color: #fff; font-family: var(--pl-sport); font-style: normal; font-weight: 700; letter-spacing: .08em; text-shadow: 0 6px 24px rgba(0,0,0,.45); }
+#intro-title { display: inline-flex; align-items: center; gap: 14px; padding-left: .08em; color: #fff; font-family: var(--pl-sport); font-style: normal; font-weight: 700; letter-spacing: .08em; text-shadow: 0 6px 24px rgba(0,0,0,.45); }
 #intro-title .po-one { color: var(--pl-gold); }
-#intro-title .title-ball { width: 1.05em; height: 1.05em; border-radius: 14px; padding: 3px; background: linear-gradient(135deg, var(--pl-gold), #B48236, var(--pl-blue)); }
 #intro-subtitle { color: var(--pl-text-2); font-weight: 700; }
 #intro #start { border-radius: 4px; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); }
 #intro .intro-skip { color: var(--pl-text-2); } #intro .intro-skip:hover { color: var(--pl-gold); background: transparent; }
