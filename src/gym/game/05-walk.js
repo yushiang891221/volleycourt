@@ -181,6 +181,7 @@ function collide(x, z, ignoreCart = null) {
 function updateWalk(dt) {
   const targetFov=walkFov();if(!RP.on && Math.abs(camera.fov-targetFov)>.01){camera.fov+=(targetFov-camera.fov)*(1-Math.exp(-6*dt));camera.updateProjectionMatrix();}
   if (draggedCart) movePracticeCart(dt);
+  xhairTick();   // 準心圈的擊球時機
   const keyMoving = emoKeyWalk();
   if (window.VBTutorial?.active && (walk.spike || walk.sit || VM.on || window.__rkOn || NET.on)) window.VBTutorial.stop();
   const k = walk.keys;

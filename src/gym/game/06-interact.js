@@ -1096,6 +1096,27 @@ function incomingBall(kind) {
   }
   return best && best.b;
 }
+// 準心圈的擊球時機（每一格）：照每顆飛行中的球的軌跡往後推 1.2 秒，最早碰到你擊球點（下手／上手）的時間 → 外圈大小（樣式在 style.css .wk-cross）
+const XH = { el: null };
+function xhairTick() {
+  const el = XH.el || (XH.el = $('wk-cross')); if (!el) return;
+  let best = null;
+  if (walk.on && !walk.hold && !walk.sit && !walk.serve) {
+    const cps = [contactPoint('bump'), contactPoint('set')], near = (x, y, z) => cps.some((c) => Math.hypot(x - c.x, y - c.y, z - c.z) < 0.9);
+    for (const b of balls) {
+      if (b.rest > 0.3 || !b.v || b === walk.hold) continue;
+      const p = b.m.position, v = b.v, g = 9.8 - (b.acc ? b.acc.y : 0);
+      if (p.y < 0.3 || near(p.x, p.y, p.z)) continue;   // 已經在手邊（剛打出去的球）不算
+      for (let t = 0.02; t <= 1.2; t += 0.02) {
+        const y = p.y + v.y * t - 0.5 * g * t * t; if (y < 0.2) break;
+        if (near(p.x + v.x * t, y, p.z + v.z * t)) { const real = t / (VB.ts || 1); if (best == null || real < best) best = real; break; }
+      }
+    }
+  }
+  const k = best == null ? 1 : clamp(best / 0.9, 0, 1);
+  el.classList.toggle('in', best != null); el.classList.toggle('now', best != null && best < 0.1);
+  el.style.setProperty('--k', k.toFixed(3));
+}
 // 面前的隊友：在你面向方向左右 25° 以內、20 m 以內最近的那位
 function facingPeer(maxAng = 0.44) {
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw); let best = null;
