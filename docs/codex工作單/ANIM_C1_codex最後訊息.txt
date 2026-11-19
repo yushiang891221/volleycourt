@@ -1,0 +1,5 @@
+已完成 E 上手接球、按鍵遷移、V 高球懲罰與提示更新。
+
+- 語法檢查通過；新增 8 組測試通過。
+- 6 個既有測試原本即失敗，其餘執行限制已列入[報告](D:/開排球場/volleycourt-c1/docs/codex工作單/ANIM_C1_報告.md)。
+- **尚未 commit**：`git add` 因共用 worktree 的 `index.lock` 寫入權限遭拒。修改完整保留，仍在 `anim-c1-overhead`，未切分支、未推送。

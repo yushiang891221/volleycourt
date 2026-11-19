@@ -39,20 +39,20 @@ await check('migration, defaults, validation, persistence and nickname alias',()
  assert(p.nicknameError('一'));assert(p.nicknameError('ab\n'));assert.equal(p.nicknameError('😀😀'),'');
  for(const raw of ['true','3','[]','null','oops'])assert.equal(settings(new Map([['vb.settings',raw]])).p.values.fov,85);
 });
-await check('v4 upgrade: old default 1-6 set keys move to Q/E/R/1/2/3, custom ones stay',()=>{
+await check('v5 upgrade: front defaults cleared, back row and custom keys stay',()=>{
  const old={controlVersion:3,keys:{q:'KeyC',e:'KeyE',b:'KeyB',1:'Digit1',2:'Digit2',3:'Digit3',4:'Digit4',5:'Digit5',6:'Digit6'}};
  const k=settings(new Map([['vb.settings',JSON.stringify(old)]])).p.values.keys;
- assert.deepEqual([k[1],k[2],k[3],k[6],k[4],k[5]],['KeyQ','KeyE','KeyR','Digit1','Digit2','Digit3']);assert(!('e' in k));
+ assert.deepEqual([k[1],k[2],k[3],k[6],k[4],k[5]],['','','','Digit1','Digit2','Digit3']);assert(!('e' in k));
  const mine={controlVersion:3,keys:{...old.keys,1:'KeyY'}};
  const k2=settings(new Map([['vb.settings',JSON.stringify(mine)]])).p.values.keys;assert.equal(k2[1],'KeyY');assert.equal(k2[4],'Digit4');
 });
 await check('rebind swaps duplicates; old key stops; reset restores every alias',()=>{
  const {p}=settings();const event=(key,code)=>({key,code});
- for(const [a,,code] of p.bindings)assert.equal(p.key(event(a,code)),a);
+ for(const [a,,code] of p.bindings.filter(b=>b[2]))assert.equal(p.key(event(a,code)),a);
  assert(p.bind('w','KeyS'));assert.equal(p.key(event('s','KeyS')),'w');assert.equal(p.key(event('w','KeyW')),'s');
  assert(p.bind('ready','KeyZ'));assert.equal(p.key(event('h','KeyH')),'');assert.equal(p.key(event('z','KeyZ')),'ready');
  assert(!p.bind('ready','Escape'));assert(!p.bind('ready','F5'));assert.equal(p.key(event('Shift','ShiftRight')),'shift');
- p.update(p.defaults());assert.equal(p.key(event('e','KeyE')),'2');assert.equal(p.key(event('q','KeyQ')),'1');assert.equal(p.key(event('1','Digit1')),'6');assert.equal(p.key(event('z','KeyZ')),'');assert.equal(p.key(event('c','KeyC')),'q');
+ p.update(p.defaults());assert.equal(p.key(event('e','KeyE')),'oh');assert.equal(p.key(event('q','KeyQ')),'');assert.equal(p.key(event('1','Digit1')),'6');assert.equal(p.key(event('z','KeyZ')),'');assert.equal(p.key(event('c','KeyC')),'q');
 });
 await check('real gym key handler respects remapping, keyup and settings guard',()=>{
  const {p}=settings(),listeners={},walk={on:true,keys:new Set(),paused:false},calls={interact:0,receive:0};

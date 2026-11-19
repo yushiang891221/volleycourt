@@ -1109,7 +1109,7 @@ export function createGameCore(S = {}) {
   let STA_CFG = { ...STA_DEF };
   const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP: ['spike', 'jump', 'block'], MB: ['block', 'jump', 'spike'] };
   function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
-  function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100 * (VM.on ? 0.7 : 1); return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
+  function staCost(kind, id) { if (kind === 'overhead') kind = 'bump'; const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100 * (VM.on ? 0.7 : 1); return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
   function staGame() { return !!(vmIsPractice() || window.__rkOn || VM.on || VB.npc); }
   function staTick(dt) {
     const on = staGame() && !RP.on, el = $('sta');
@@ -2132,7 +2132,7 @@ export function createGameCore(S = {}) {
         this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
         this.held = null;
       }
-      walk.serve = null; walk.jserve = null; walk.recv = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
+      walk.serve = null; walk.jserve = null; walk.recv = null; walk.ohQ = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
       walk.swing = null; walk.charge = null; walk.chargeArm = null; walk.chargeArmGround = false;
       vbClearAir(); walk.dive = null; walk.down = 0; walk.blkAim = 0; walk.blkShift = 0;
       setMenuClose(false); pose = 'hold'; hands.visible = !!walk.hold;

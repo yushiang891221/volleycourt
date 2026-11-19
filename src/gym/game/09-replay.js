@@ -665,7 +665,7 @@ addEventListener('keydown', (e) => {
   if (k === 'crouch') { e.preventDefault(); if (!walk.paused) { walk.crouch = true; walk.crouchCtrl = e.key === 'Control'; } return; }   // 蹲下（按住）：接重扣比較穩
   if ((k === 'ready' || k === 'start') && !e.repeat && !walk.paused) { e.preventDefault(); if (k === 'ready') roomReady(); else roomStart(); return; }
   if (typeof ROOM_UI !== 'undefined' && ROOM_UI?.picking) return;
-  if (VM.on && roomSpectator() && ['v','q','e','1','2','3','4','5','6','b','f'].includes(k)) { e.preventDefault(); return; }
+  if (VM.on && roomSpectator() && ['v','oh','q','e','1','2','3','4','5','6','b','f'].includes(k)) { e.preventDefault(); return; }
   if (k === 'escape' && RP.on) { e.preventDefault(); closeReplay(); return; }
   if (k === 'escape' && !$('rk-menu').hidden && !window.__rkOn && VM.phase !== 'over') { e.preventDefault(); $('rk-menu').hidden = true; return; }
   if (k === 'escape') { e.preventDefault(); setMenuClose(false); vbManualSetCancel(); if (!$('pcwin').hidden) { if (pc.app) pcClose(); else closePC(); return; } if (walk.paused) { closeModals(); return; } if (document.pointerLockElement) { document.exitPointerLock(); return; } if (performance.now() - pointerLockOffT < 400) return; if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; } return; }   // Esc 不再打開設定（用右上角 ⚙ 設定）   // Esc：先放開滑鼠，再按一次離開全螢幕
@@ -673,6 +673,7 @@ addEventListener('keydown', (e) => {
   if (window.__rkOn && rkKey(k)) { e.preventDefault(); return; }
   if (k === 'interact' && !e.repeat) { e.preventDefault(); if (!VM.on || walk.sit || (walk.focus && walk.focus.kind !== 'ball')) doInteract(); return; }
   if (k === 'q' && !e.repeat) { e.preventDefault(); setWheelOpen(); return; }
+  if (k === 'oh' && !e.repeat && !e.metaKey) { e.preventDefault(); if (walk.setAim) vbManualSetCancel(); vbOverheadReceive(); return; }
   if (k === 'v' && !e.repeat && !e.metaKey) { e.preventDefault(); if (walk.setAim) vbManualSetCancel(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
   if (['1', '2', '3', '4', '5', '6'].includes(k) && !e.repeat) { e.preventDefault(); const n = k === '6' ? 7 : Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse() && locked()) setMenuOpen(n); else vbSet(n); return; }   // 滑鼠沒鎖成準心時拖不動轉盤：直接照預設舉，不會卡住等 2.5 秒   // 1～3：按住出現左右選項
   if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack'); } return; }

@@ -1094,7 +1094,7 @@ function emoKeyStart(key) {
   const now = performance.now(), dir = key === 'langzi' ? 1 : emoKeyDirection();
   walk.emote = { k: key, keyframes: true, t0: now, until: now + emoKeyDuration(key) * 1000, dir, x: walk.x, z: walk.z, yaw: walk.yaw, match: VM.on };
   walk.target = null; targetMark.visible = false; walk.vel = [0, 0];
-  walk.recv = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
+  walk.recv = null; walk.ohQ = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
   if (skill.mode) { skill.mode = null; skill.dip = 0; $('wk-combo').hidden = true; }
   if (SETM.m) setMenuClose(false);
   if (NET.on) NET.tx.publish('emo', { e: 'em', k: key, id: vmMe(), dir, x: walk.x, z: walk.z, yaw: walk.yaw });
@@ -1334,7 +1334,7 @@ function emoPose(k, t) {
   if (k === 'taunt') { const w = Math.sin(t * 9); return { ...AVP.taunt, el: [1.3 + 0.45 * w, 1.3 + 0.45 * w] }; }   // 手掌朝上一勾一勾
   return AVP.hi5Up;
 }
-function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
+function myPoseCode() { if (walk.emote?.keyframes) return 0; if (walk.dive || walk.down > 0) { const sn = Math.sin(walk.diveDir || 0); return walk.diveFish ? 10 : sn < 0 ? 11 : 12; } if (walk.emote && performance.now() < walk.emote.until) return { taunt: 16, slap: 15, gather: 17 }[walk.emote.k] || 14; if (window.__rkOn) { const P = RK.P[RK.my]; return P.swing ? (P.swing.over ? 7 : 8) : 6; } if (walk.air && walk.air.block) return 9; if (walk.spike || walk.serve || walk.swing) return 4; if (walk.ohQ) return 2; if (walk.air) return 5; if (walk.setQ || walk.setAim) return 2; if (walk.recv) return walk.crouch ? 3 : 19; if (skill.mode === 'set' || pose === 'setPush') return 2; if (skill.mode === 'bump' || pose === 'bumpHit') return walk.crouch ? 3 : 19; return walk.hold ? 1 : vbApproachK() > 0.4 ? 13 : walk.crouch && !walk.air ? 18 : 0; }
 // WEB-018 network correction only.
 function netSmoothBall(b, dt, courts) {
   const p = b.m.position, before = p.clone();
