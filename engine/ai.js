@@ -252,7 +252,8 @@ export function createAi(G) {
     return v;
   }
   // 舉球弧線拉高（2026-11-19 使用者：舉出去都太矮；落點、目標高度不變，只拉長飛行時間）：快攻 ×1.25、平快 ×1.2、高球 ×1.3；網頁玩家舉球的 vbSpot 用同一組數字
-  const setArcT = (T) => T * (T < 0.45 ? 1.25 : T < 0.98 ? 1.2 : 1.3);
+  // 2026-11-20 使用者：高球太高（矮一點點點）、修正舉超高超難打 → 高球 ×1.3 改 ×1.22；本來就很長的修正舉（1.4 秒以上）只 ×1.05；平球、快攻不變
+  const setArcT = (T) => T * (T < 0.45 ? 1.25 : T < 0.98 ? 1.2 : T < 1.4 ? 1.22 : 1.05);
   function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose, free = false, backSet = false) {
     if (!vmAiOwnSide(a)) return;
     if (kind === 'set') T = setArcT(T);

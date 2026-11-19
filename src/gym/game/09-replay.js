@@ -703,7 +703,7 @@ addEventListener('contextmenu', () => { if (walk.on) { walk.keys.clear(); walk.c
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
 // 第一人稱的視野（垂直角度）：預設 80 度比較廣、看得到旁邊的隊友和來球；[ 變窄、] 變廣，記在這台電腦
-function walkFov() { return walk.crouch ? 100 : 85; }
+function walkFov() { return typeof tpActive === 'function' && tpActive() ? (walk.crouch ? 100 : 85) : walk.crouch ? 102 : 95; }   // 2026-11-20 使用者：第一人稱廣角一點（90～100）→ 95；第三人稱照舊 85
 const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 // Ctrl＋W 在瀏覽器是「關分頁」：全螢幕時把整個鍵盤交給遊戲（蹲下＝Ctrl、前進＝W 才不會關掉網頁）

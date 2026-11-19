@@ -1097,17 +1097,8 @@ function incomingBall(kind) {
   }
   return best && best.b;
 }
-// 準心的位置：第一人稱在畫面正中間；第三人稱鏡頭在右肩後上方，改畫在「眼睛往瞄準方向 12 m 那一點」投影到畫面的位置（就是球會打過去的方向）
-const XH_V = new THREE.Vector3();
-function xhairPlace() {
-  const el = XH.el || (XH.el = $('wk-cross')); if (!el) return;
-  if (!(TP.saved && TP.av)) { if (el.style.left) { el.style.left = ''; el.style.top = ''; } return; }
-  const cp = Math.cos(walk.pitch), E = TP.saved.p;
-  XH_V.set(E.x - Math.sin(walk.yaw) * cp * 12, E.y + Math.sin(walk.pitch) * 12, E.z - Math.cos(walk.yaw) * cp * 12);
-  camera.updateMatrixWorld(true); XH_V.project(camera);
-  if (XH_V.z > 1) return;
-  el.style.left = `${(clamp(XH_V.x, -0.95, 0.95) * 0.5 + 0.5) * 100}%`; el.style.top = `${(clamp(-XH_V.y, -0.95, 0.95) * 0.5 + 0.5) * 100}%`;
-}
+// 準心固定在畫面正中間（第一、第三人稱都一樣；2026-11-20 使用者：第三人稱準心會一直移動不行，要固定住）
+function xhairPlace() { const el = XH.el || (XH.el = $('wk-cross')); if (el && el.style.left) { el.style.left = ''; el.style.top = ''; } }
 // 準心圈的擊球時機（每一格）：照每顆飛行中的球的軌跡往後推 1.2 秒，最早碰到你擊球點（下手／上手）的時間 → 外圈大小（樣式在 style.css .wk-cross）
 const XH = { el: null };
 function xhairTick() {

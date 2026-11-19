@@ -63,8 +63,10 @@ function roomJoin(ws, name, id, player) {
       if (m.t === 'srv-start') {   // B5：房主請伺服器開賽（伺服器當房主）
         const rk = rankedRooms.get(name);
         if (rk && m.d && typeof m.d === 'object') {   // 積分賽：座位、人數、AI 強度、規則一律用伺服器配好的，不信網頁送來的
-          const pl = rk.plan, n = pl.count;
-          m.d = { ...m.d, six: n !== 2, count: n, seats: [pl.picks.slice(0, n), pl.picks.slice(n)], names: { ...pl.names }, rules: { ...(m.d.rules && typeof m.d.rules === 'object' ? m.d.rules : {}), count: n, lv: pl.lv, to: pl.to, bestOf: pl.bestOf } };
+          const pl = rk.plan, n = pl.count, planT = [pl.picks.slice(0, n), pl.picks.slice(n)];
+          // 2026-11-20：積分賽可以選位置——網頁送來的座位，每一隊的真人都還在配對分好的那一隊、沒有重複，就照它（隊伍不能換）；不合規則才用配對時的座位
+          const cs = m.d.seats, okSeats = Array.isArray(cs) && cs.length === 2 && cs.every((t, k) => Array.isArray(t) && t.length === n && t.every(x => x === null || (typeof x === 'string' && planT[k].includes(x)))) && new Set(cs.flat().filter(Boolean)).size === cs.flat().filter(Boolean).length;
+          m.d = { ...m.d, six: n !== 2, count: n, seats: okSeats ? cs.map(t => t.slice()) : planT, names: { ...pl.names }, rules: { ...(m.d.rules && typeof m.d.rules === 'object' ? m.d.rules : {}), count: n, lv: pl.lv, to: pl.to, bestOf: pl.bestOf } };
           rk.started = Date.now();
         }
         hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留

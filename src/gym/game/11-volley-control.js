@@ -101,8 +101,15 @@ function vbImpact(b, kind, q = 1) {
 // 球身外面套一圈同色光圈（永遠面向鏡頭），光帶在球那一端跟光圈一樣寬，往後收成尾巴。
 // 球落地、停住、被拿起來或收走、再被碰到，舊光帶和光圈就淡出並釋放，不會殘留在場上。
 const TRAIL = { list: [], max: 160, step: 0.12, tex: null, halo: null, haloR: BALL_R * BALL_VIS * 1.45 };
-const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3();
+const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3(), TR_P = new THREE.Vector3();
 function vbTrailAt(p) { const v = p.clone(); v.y += ballLift(p.y); return v; }   /* 跟畫面上的球對齊（貼近地面的球畫的時候有往上抬） */
+// 光帶的點＝畫面上的球（2026-11-20 使用者回報光環破圖、鋸齒）：連線加入者的球位置每收到一次資料會小跳一下、畫的時候再平滑掉（wireVisualError）；碰球時球會被拉到手上（pull）——都算進去
+function vbTrailHead(b) {
+  const v = b.m.position.clone();
+  if (VM.on && VM.wire && !VM.host && b === VM.ball && b.wireVisualError) v.add(b.wireVisualError);
+  const U = b.m.userData; if (U.lock && U.pull) v.set(v.x + U.pull.x, v.y + U.pull.y, v.z + U.pull.z);
+  v.y += ballLift(v.y); return v;
+}
 function vbTrailColor(q) { return new THREE.Color(q >= 0.88 ? '#FFCF33' : q >= 0.6 ? '#45F0A0' : '#FF4560'); }
 function vbTrailTex() {   // 橫切面的柔邊：中間不透明、兩邊漸漸透明
   if (TRAIL.tex) return TRAIL.tex;
@@ -161,7 +168,8 @@ function vbTrailStep(dt) {
       if (!b.m.parent || !balls.includes(b)) vbTrailEnd(T, 6);
       else {
         const last = P[P.length - 1];
-        if (P.length < 2 || last.p.distanceTo(P[P.length - 2].p) >= TRAIL.step) P.push({ p: vbTrailAt(p), t: now }); else { last.p.copy(vbTrailAt(p)); last.t = now; }
+        const hp0 = vbTrailHead(b);
+        if (P.length < 2 || last.p.distanceTo(P[P.length - 2].p) >= TRAIL.step) P.push({ p: hp0, t: now }); else { last.p.copy(hp0); last.t = now; }
         if (P.length > TRAIL.max) P.shift();
         if ((p.y <= BALL_R + 0.03 && now - T.t0 > 150) || b.rest > 0.05 || now - T.t0 > 7000) vbTrailEnd(T, 2.2);   // 落地／停住／飛太久
       }
@@ -180,7 +188,10 @@ function vbTrailBuild(T, m, W, A, white, now, replay) {   // replay＝重播自�
   const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;
   for (let i = 0; i < n; i++) {
     const q = P[i].p; TR_D.subVectors(P[Math.min(n - 1, i + 1)].p, P[Math.max(0, i - 1)].p); TR_V.subVectors(cam, q); TR_S.crossVectors(TR_D, TR_V);
-    const L = TR_S.length(); if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
+    // 寬度方向要連續：球幾乎正對鏡頭飛（外積很小）時沿用上一段的方向；跟上一段相反就翻回來（以前會左右亂翻成鋸齒）
+    const L = TR_S.length(), Lr = L / ((TR_D.length() * TR_V.length()) || 1);
+    if (Lr > 0.12) { TR_S.multiplyScalar(1 / L); if (i > 0 && TR_S.dot(TR_P) < 0) TR_S.negate(); } else if (i > 0) TR_S.copy(TR_P); else if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
+    TR_P.copy(TR_S);
     const u = i / (n - 1), age = (now - P[i].t) / 1000, w = W * (0.3 + 0.7 * Math.pow(u, 0.7)) * (0.7 + 0.3 * T.fade);
     const near = clamp((TR_V.length() - 0.5) / 1.5, 0, 1);   /* 貼著鏡頭的那一段淡掉，第一人稱碰球時不會整個畫面一片色 */
     const al = A * (0.12 + 0.88 * Math.pow(u, 1.1)) * clamp(1 - (age - 1.2) / 0.8, 0, 1) * T.fade * near;
@@ -1098,7 +1109,7 @@ function vbSpot(ct, n, fromLx, fromLz, v = null) {
   if(v === 'line3')sp.lx=sg*3;
   const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
   sp.T = n === 2 && v !== 'high3' ? clamp(0.22 + d * 0.05, 0.24, 0.4) : v === 'flat' ? clamp(0.58 + d * 0.05, 0.7, 0.95) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；平球（長攻、背）又平又快；高球最高點約 4～4.5 m
-  sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : 1.3;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
+  sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : sp.T < 1.4 ? 1.22 : 1.05;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
   return sp;
 }
 function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {

@@ -78,7 +78,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+  Object.assign(VM, { on: true, host: true, srvDone: false, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);

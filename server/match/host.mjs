@@ -38,7 +38,11 @@ export class MatchHost {
     const now = performance.now(); let dt = (now - this.last) / 1000; this.last = now;
     dt = Math.min(0.05, Math.max(0, dt));
     try { this.g.hostStep(dt); } catch (e) { this.log('match error', e && e.stack || e); this.stop(); this.publish('srv-fail', { why: String(e && e.message || e).slice(0, 200) }); }   // 比賽途中出錯：叫大家改回房主電腦裁判
-    if (this.g.VM.phase === 'over' || !this.g.VM.on) this.stop();
+    if (this.g.VM.phase === 'over' || !this.g.VM.on) {
+      // 2026-11-20：每一格是先送狀態、再更新比賽，打完那一格的「結束」以前沒送出去就停了 → 網頁以為伺服器斷線、房主電腦在背景自動開一局。停之前強制送最後一次
+      try { const g = this.g; g.NET.forceSt = true; if (g.VM.wire) g.VM.wire.dirty = true; g.netTick(0, performance.now()); if (g.vmWireTick) g.vmWireTick(); } catch (e) { this.log('final state error', e && e.message); }
+      this.stop();
+    }
   }
   // 房裡的人送來的訊息（擊球請求、位置、量延遲…）
   receive(t, d, from) {

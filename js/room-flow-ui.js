@@ -8,7 +8,7 @@
     if(ranked){
       try { const saved=JSON.parse(sessionStorage.getItem('vb.ranked')); if(saved?.room===new URLSearchParams(location.search).get('room') && saved.me===new URLSearchParams(location.search).get('me'))rankedPlan=saved.plan; } catch (_) {}
       const style=document.createElement('style');
-      style.textContent='#room-ready,#room-start,#w-host,#room-panel,#room-pick{display:none!important}';document.head.append(style);
+      style.textContent='#room-ready,#room-start,#w-host,#room-panel{display:none!important}';   /* 2026-11-20：積分賽也要選位置（#room-pick 不再藏） */document.head.append(style);
     }
     const panel=document.createElement('dialog');panel.id='room-pick';panel.setAttribute('aria-labelledby','pick-title');
     panel.innerHTML='<header><h2 id="pick-title">選擇隊伍與位置</h2><strong id="pick-clock"></strong></header><p>彼此之間必須<strong class="pick-rule">維持正確的前後左右相對位置</strong>，不能隨意變更位置！</p><div class="pick-court"><div class="pick-half" data-team="0"><b>左隊</b></div><div class="pick-half" data-team="1"><b>右隊</b></div></div><p class="pick-foot">先選先鎖定，可以換到空位。倒數結束自動分配，空位由 AI 補上。</p>';
@@ -34,7 +34,7 @@
     function render(){
       const s=getRoom()?.snapshot;if(!s)return;
       const {flow:f,count:n}=s, mine=f.ready.includes(me()), locked=f.phase!=='waiting';
-      if(ranked){
+      if(ranked && f.phase!=='pick'){
         if(panel.open)panel.close();
         const count=rankedPlan?.count||n, humans=(rankedPlan?.picks||[]).filter(Boolean), arrived=humans.filter(id=>s.order.includes(id)).length;
         $('room-title').textContent=`積分賽 ${count} 對 ${count}`;
@@ -82,7 +82,7 @@
           }
         }
         for(const b of half.querySelectorAll('button')){
-          const who=f.picks[Number(b.dataset.slot)], self=who===me();b.disabled=!!who&&!self;b.classList.toggle('mine',self);
+          const who=f.picks[Number(b.dataset.slot)], self=who===me(), myTeam=f.lock&&f.lock[me()]!=null?f.lock[me()]:null;b.disabled=(!!who&&!self)||(myTeam!=null&&Math.floor(Number(b.dataset.slot)/n)!==myTeam);   /* 積分賽：另一隊的位置不能點 */b.classList.toggle('mine',self);
           b.querySelector('.pick-avatar').textContent=who?[...name(who)][0]:'♙＋';
           b.querySelector('.pick-person').textContent=who?name(who)+(self?'（你）':''):'點擊選位';
         }

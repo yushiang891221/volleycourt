@@ -1998,7 +1998,7 @@ function netTextTexture(span, depth, text, band = 4.5) {
   // 2026-11-19 使用者給的樣子：細的無襯線字、字距拉開、整排排滿兩條側邊白帶中間；字高撐滿上下白帶之間，只留一點點空隙
   const TOP = 0.07, BOT = 0.05, SIDE = 0.05, GAP = 0.035;   // 上白帶、下白帶、側邊白帶寬（公尺）、字跟白帶的空隙
   const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
-  const FONT = (px) => `700 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
+  const FONT = (px) => `900 ${px}px "Helvetica Neue", Helvetica, "Arial Black", Arial, "Noto Sans TC", sans-serif`;
   const capH = (depth - TOP - BOT - GAP * 2) * PPM, base = (depth - BOT - GAP) * PPM;
   m.font = FONT(100); const asc = m.measureText('E').actualBoundingBoxAscent || 72, size = 100 * capH / asc; m.font = FONT(size); m.textBaseline = 'alphabetic';
   const chars = [...text], ws = chars.map((ch) => (ch === ' ' ? 0 : m.measureText(ch).width)), sum = ws.reduce((n, w) => n + w, 0);
@@ -2012,8 +2012,8 @@ function netTextTexture(span, depth, text, band = 4.5) {
   grid(c, 'rgba(20,20,20,0.85)', 1.8);
   // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
   const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-  grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-  c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
+  grid(l, 'rgba(255,255,255,0.38)', 6.5);   /* 2026-11-20：再粗一點、淡一點 */ l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.globalAlpha = 0.06; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
   c.drawImage(lit, 0, 0);
   // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
   c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
@@ -7074,17 +7074,8 @@ function incomingBall(kind) {
   }
   return best && best.b;
 }
-// 準心的位置：第一人稱在畫面正中間；第三人稱鏡頭在右肩後上方，改畫在「眼睛往瞄準方向 12 m 那一點」投影到畫面的位置（就是球會打過去的方向）
-const XH_V = new THREE.Vector3();
-function xhairPlace() {
-  const el = XH.el || (XH.el = $('wk-cross')); if (!el) return;
-  if (!(TP.saved && TP.av)) { if (el.style.left) { el.style.left = ''; el.style.top = ''; } return; }
-  const cp = Math.cos(walk.pitch), E = TP.saved.p;
-  XH_V.set(E.x - Math.sin(walk.yaw) * cp * 12, E.y + Math.sin(walk.pitch) * 12, E.z - Math.cos(walk.yaw) * cp * 12);
-  camera.updateMatrixWorld(true); XH_V.project(camera);
-  if (XH_V.z > 1) return;
-  el.style.left = `${(clamp(XH_V.x, -0.95, 0.95) * 0.5 + 0.5) * 100}%`; el.style.top = `${(clamp(-XH_V.y, -0.95, 0.95) * 0.5 + 0.5) * 100}%`;
-}
+// 準心固定在畫面正中間（第一、第三人稱都一樣；2026-11-20 使用者：第三人稱準心會一直移動不行，要固定住）
+function xhairPlace() { const el = XH.el || (XH.el = $('wk-cross')); if (el && el.style.left) { el.style.left = ''; el.style.top = ''; } }
 // 準心圈的擊球時機（每一格）：照每顆飛行中的球的軌跡往後推 1.2 秒，最早碰到你擊球點（下手／上手）的時間 → 外圈大小（樣式在 style.css .wk-cross）
 const XH = { el: null };
 function xhairTick() {
@@ -7403,16 +7394,30 @@ async function netJoin(room) {
     try { saved = JSON.parse(sessionStorage.getItem('vb.ranked')); } catch (_) {}
     const plan = saved?.room === room && saved?.me === NET.me ? saved.plan : null;
     const q = new URLSearchParams(location.search);
-    let since = 0, started = false;
+    let since = 0, started = false, placed = false;
     NET.rankedTimer = setInterval(() => {
       ROOM_UI?.render();
-      if (!ROOM || started || q.get('host') !== '1' || !ROOM.isHost) return;
-      if (!plan || !Array.isArray(plan.picks)) { netStatus('配對資料遺失，請回大廳重新配對', 'warn'); clearInterval(NET.rankedTimer); return; }
-      if (!since) since = Date.now();
-      const present = id => id === NET.me || NET.peers.has(id);
-      if (!plan.picks.every(id => id === null || present(id)) && Date.now() - since < 15000) return;
+      // 2026-11-20 使用者：配對進場不要站在大廳門口——一進來就站到自己隊的半場（自己在配對名單上的那個位置）
       const court = state.items.find(i => i.type === 'vb');
+      if (!placed && plan && Array.isArray(plan.picks) && court && ROOM?.snapshot?.flow?.phase === 'waiting') {
+        const slot = plan.picks.indexOf(NET.me), n = plan.count;
+        if (slot >= 0) { placed = true; const team = Math.floor(slot / n), k = slot % n, sd = team === 0 ? -1 : 1; const [depth, left] = n === 6 ? V6_BASE[k] : n === 2 ? [6, k === 0 ? 2.1 : -2.1] : CourtFormations.home(n, k); [walk.x, walk.z] = toWorldOf(court, sd * depth, sd * left); walk.vel = [0, 0]; walk.keys.clear(); const [nx, nz] = toWorldOf(court, 0, sd * left); walk.yaw = Math.atan2(walk.x - nx, walk.z - nz); }
+      }
+      if (!ROOM || q.get('host') !== '1' || !ROOM.isHost) return;
+      if (!plan || !Array.isArray(plan.picks)) { netStatus('配對資料遺失，請回大廳重新配對', 'warn'); clearInterval(NET.rankedTimer); return; }
+      const present = id => id === NET.me || NET.peers.has(id);
+      if (started) {   // 選位中：晚到的隊友加進來一起選（以前超過 15 秒才進來就變觀眾、站在門口）
+        if (ROOM.snapshot.flow.phase === 'pick' && typeof ROOM.addReady === 'function') for (const id of plan.picks) if (id && present(id) && !ROOM.snapshot.flow.ready.includes(id)) ROOM.addReady(id);
+        return;
+      }
+      if (!since) since = Date.now();
+      if (!plan.picks.every(id => id === null || present(id)) && Date.now() - since < 30000) return;   /* 等所有真人進場：最多 30 秒（載入慢的電腦以前 15 秒會被丟下） */
       if (!court || ROOM.snapshot.flow.phase !== 'waiting') return;
+      if (typeof ROOM.startPlannedPick === 'function') {   /* 先選位置（只能選自己隊上的） */
+        const lock = {}; plan.picks.forEach((id, i) => { if (id) lock[id] = i < plan.count ? 0 : 1; });
+        started = ROOM.startPlannedPick({ lock, court: court.id, count: plan.count, lv: plan.lv, to: plan.to, bestOf: plan.bestOf, secs: 15 });
+        return;
+      }
       const picks = plan.picks.map(id => id && present(id) ? id : null);
       if (typeof ROOM.startPlanned !== 'function') { netStatus('積分賽房間流程尚未更新，請回大廳', 'warn'); clearInterval(NET.rankedTimer); return; }
       started = ROOM.startPlanned({ ...plan, picks, court: court.id });
@@ -8730,7 +8735,7 @@ function vmWireTick() {
   if (!VM.on || !VM.wire || !NET.on) return;
   const w = VM.wire, now = performance.now();
   if (!VM.host) {
-    if (VM.hostId === 'srv' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }
+    if (VM.hostId === 'srv' && !VM.srvDone && VM.phase !== 'over' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }   /* 2026-11-20：打完以後伺服器本來就不再送，不能當成斷線（以前會在背景自動開一局） */
     const p = w.pending;
     if (p && now - p.since > 1000) { w.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
     else if (p && now - p.sent > 200) { p.sent = now; NET.tx.publish('match-claim', p.request); }
@@ -9754,7 +9759,7 @@ addEventListener('contextmenu', () => { if (walk.on) { walk.keys.clear(); walk.c
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
 // 第一人稱的視野（垂直角度）：預設 80 度比較廣、看得到旁邊的隊友和來球；[ 變窄、] 變廣，記在這台電腦
-function walkFov() { return walk.crouch ? 100 : 85; }
+function walkFov() { return typeof tpActive === 'function' && tpActive() ? (walk.crouch ? 100 : 85) : walk.crouch ? 102 : 95; }   // 2026-11-20 使用者：第一人稱廣角一點（90～100）→ 95；第三人稱照舊 85
 const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 // Ctrl＋W 在瀏覽器是「關分頁」：全螢幕時把整個鍵盤交給遊戲（蹲下＝Ctrl、前進＝W 才不會關掉網頁）
@@ -10601,8 +10606,15 @@ function vbImpact(b, kind, q = 1) {
 // 球身外面套一圈同色光圈（永遠面向鏡頭），光帶在球那一端跟光圈一樣寬，往後收成尾巴。
 // 球落地、停住、被拿起來或收走、再被碰到，舊光帶和光圈就淡出並釋放，不會殘留在場上。
 const TRAIL = { list: [], max: 160, step: 0.12, tex: null, halo: null, haloR: BALL_R * BALL_VIS * 1.45 };
-const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3();
+const TR_V = new THREE.Vector3(), TR_S = new THREE.Vector3(), TR_D = new THREE.Vector3(), TR_P = new THREE.Vector3();
 function vbTrailAt(p) { const v = p.clone(); v.y += ballLift(p.y); return v; }   /* 跟畫面上的球對齊（貼近地面的球畫的時候有往上抬） */
+// 光帶的點＝畫面上的球（2026-11-20 使用者回報光環破圖、鋸齒）：連線加入者的球位置每收到一次資料會小跳一下、畫的時候再平滑掉（wireVisualError）；碰球時球會被拉到手上（pull）——都算進去
+function vbTrailHead(b) {
+  const v = b.m.position.clone();
+  if (VM.on && VM.wire && !VM.host && b === VM.ball && b.wireVisualError) v.add(b.wireVisualError);
+  const U = b.m.userData; if (U.lock && U.pull) v.set(v.x + U.pull.x, v.y + U.pull.y, v.z + U.pull.z);
+  v.y += ballLift(v.y); return v;
+}
 function vbTrailColor(q) { return new THREE.Color(q >= 0.88 ? '#FFCF33' : q >= 0.6 ? '#45F0A0' : '#FF4560'); }
 function vbTrailTex() {   // 橫切面的柔邊：中間不透明、兩邊漸漸透明
   if (TRAIL.tex) return TRAIL.tex;
@@ -10661,7 +10673,8 @@ function vbTrailStep(dt) {
       if (!b.m.parent || !balls.includes(b)) vbTrailEnd(T, 6);
       else {
         const last = P[P.length - 1];
-        if (P.length < 2 || last.p.distanceTo(P[P.length - 2].p) >= TRAIL.step) P.push({ p: vbTrailAt(p), t: now }); else { last.p.copy(vbTrailAt(p)); last.t = now; }
+        const hp0 = vbTrailHead(b);
+        if (P.length < 2 || last.p.distanceTo(P[P.length - 2].p) >= TRAIL.step) P.push({ p: hp0, t: now }); else { last.p.copy(hp0); last.t = now; }
         if (P.length > TRAIL.max) P.shift();
         if ((p.y <= BALL_R + 0.03 && now - T.t0 > 150) || b.rest > 0.05 || now - T.t0 > 7000) vbTrailEnd(T, 2.2);   // 落地／停住／飛太久
       }
@@ -10680,7 +10693,10 @@ function vbTrailBuild(T, m, W, A, white, now, replay) {   // replay＝重播自�
   const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;
   for (let i = 0; i < n; i++) {
     const q = P[i].p; TR_D.subVectors(P[Math.min(n - 1, i + 1)].p, P[Math.max(0, i - 1)].p); TR_V.subVectors(cam, q); TR_S.crossVectors(TR_D, TR_V);
-    const L = TR_S.length(); if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
+    // 寬度方向要連續：球幾乎正對鏡頭飛（外積很小）時沿用上一段的方向；跟上一段相反就翻回來（以前會左右亂翻成鋸齒）
+    const L = TR_S.length(), Lr = L / ((TR_D.length() * TR_V.length()) || 1);
+    if (Lr > 0.12) { TR_S.multiplyScalar(1 / L); if (i > 0 && TR_S.dot(TR_P) < 0) TR_S.negate(); } else if (i > 0) TR_S.copy(TR_P); else if (L > 1e-6) TR_S.multiplyScalar(1 / L); else TR_S.set(0, 1, 0);
+    TR_P.copy(TR_S);
     const u = i / (n - 1), age = (now - P[i].t) / 1000, w = W * (0.3 + 0.7 * Math.pow(u, 0.7)) * (0.7 + 0.3 * T.fade);
     const near = clamp((TR_V.length() - 0.5) / 1.5, 0, 1);   /* 貼著鏡頭的那一段淡掉，第一人稱碰球時不會整個畫面一片色 */
     const al = A * (0.12 + 0.88 * Math.pow(u, 1.1)) * clamp(1 - (age - 1.2) / 0.8, 0, 1) * T.fade * near;
@@ -11598,7 +11614,7 @@ function vbSpot(ct, n, fromLx, fromLz, v = null) {
   if(v === 'line3')sp.lx=sg*3;
   const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
   sp.T = n === 2 && v !== 'high3' ? clamp(0.22 + d * 0.05, 0.24, 0.4) : v === 'flat' ? clamp(0.58 + d * 0.05, 0.7, 0.95) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；平球（長攻、背）又平又快；高球最高點約 4～4.5 m
-  sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : 1.3;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
+  sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : sp.T < 1.4 ? 1.22 : 1.05;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
   return sp;
 }
 function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {
@@ -12311,7 +12327,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+  Object.assign(VM, { on: true, host: true, srvDone: false, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
@@ -12771,7 +12787,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
+  Object.assign(VM, { on: true, host: true, srvDone: false, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
   // 每隊 6 個號位的角色固定（輪轉表）；真人坐進自己選的角色，重複的就往後排到空的位置，其他 AI 補
   const humans = seats ? [[],[]] : [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
   for (const [id, q] of Object.entries(asg)) if (q && q.team >= 0 && NET.peers.has(id)) humans[q.team].push({ id, role: q.role });
@@ -13076,7 +13092,7 @@ function vmBroadcast(force, msg, pt) {
   if (force) NET.forceSt = true;
 }
 function vmOnNet(d, from) {
-  if (d.e === 'result') { if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
+  if (d.e === 'result') { if (from === 'srv') VM.srvDone = true; /* 伺服器打完了：不要再當成伺服器斷線而改由房主接手開新的一場 */ if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
   if (from === 'srv' && ROOM && ROOM.snapshot?.flow?.phase !== 'playing' && d.e !== 'result') return;   /* 房間已經結束比賽：伺服器晚到的開賽、狀態都不收 */
   if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
   if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
@@ -13084,7 +13100,7 @@ function vmOnNet(d, from) {
     if (VM.on) return;
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
     vmStop(true);
-    Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
+    Object.assign(VM, { on: true, host: false, srvDone: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
     VM.names = { ...VM.names }; for (const id of [...d.team[0], ...d.team[1]]) if (id && !/^ai/.test(id) && NET.peers.get(id)?.n) VM.names[id] = NET.peers.get(id).n;   /* 伺服器開賽時不知道暱稱（名單寫「球友」）：真人一律用自己這邊知道的暱稱 */
     if (d.wire === 2 && globalThis.VBMatchSync) vmWireInit(false, d);
     VM.tactics = d.six?.tactics === 'rotation' ? 'rotation' : 'roles';

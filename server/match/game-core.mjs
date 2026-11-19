@@ -182,7 +182,7 @@ export function createGameCore(S = {}) {
     // 2026-11-19 使用者給的樣子：細的無襯線字、字距拉開、整排排滿兩條側邊白帶中間；字高撐滿上下白帶之間，只留一點點空隙
     const TOP = 0.07, BOT = 0.05, SIDE = 0.05, GAP = 0.035;   // 上白帶、下白帶、側邊白帶寬（公尺）、字跟白帶的空隙
     const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
-    const FONT = (px) => `700 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
+    const FONT = (px) => `900 ${px}px "Helvetica Neue", Helvetica, "Arial Black", Arial, "Noto Sans TC", sans-serif`;
     const capH = (depth - TOP - BOT - GAP * 2) * PPM, base = (depth - BOT - GAP) * PPM;
     m.font = FONT(100); const asc = m.measureText('E').actualBoundingBoxAscent || 72, size = 100 * capH / asc; m.font = FONT(size); m.textBaseline = 'alphabetic';
     const chars = [...text], ws = chars.map((ch) => (ch === ' ' ? 0 : m.measureText(ch).width)), sum = ws.reduce((n, w) => n + w, 0);
@@ -196,8 +196,8 @@ export function createGameCore(S = {}) {
     grid(c, 'rgba(20,20,20,0.85)', 1.8);
     // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
     const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-    grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-    c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
+    grid(l, 'rgba(255,255,255,0.38)', 6.5);   /* 2026-11-20：再粗一點、淡一點 */ l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+    c.globalAlpha = 0.06; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
     c.drawImage(lit, 0, 0);
     // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
     c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
@@ -898,7 +898,7 @@ export function createGameCore(S = {}) {
     if (!VM.on || !VM.wire || !NET.on) return;
     const w = VM.wire, now = performance.now();
     if (!VM.host) {
-      if (VM.hostId === 'srv' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }
+      if (VM.hostId === 'srv' && !VM.srvDone && VM.phase !== 'over' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }   /* 2026-11-20：打完以後伺服器本來就不再送，不能當成斷線（以前會在背景自動開一局） */
       const p = w.pending;
       if (p && now - p.since > 1000) { w.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
       else if (p && now - p.sent > 200) { p.sent = now; NET.tx.publish('match-claim', p.request); }
@@ -1223,7 +1223,7 @@ export function createGameCore(S = {}) {
     if(v === 'line3')sp.lx=sg*3;
     const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
     sp.T = n === 2 && v !== 'high3' ? clamp(0.22 + d * 0.05, 0.24, 0.4) : v === 'flat' ? clamp(0.58 + d * 0.05, 0.7, 0.95) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；平球（長攻、背）又平又快；高球最高點約 4～4.5 m
-    sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : 1.3;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
+    sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : sp.T < 1.4 ? 1.22 : 1.05;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
     return sp;
   }
   function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {
@@ -1437,7 +1437,7 @@ export function createGameCore(S = {}) {
     if (VM.npc || VB.npc) vbNpcToggle();
     vmStop(true);
     STA.v = 1; STA.lock = false;
-    Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+    Object.assign(VM, { on: true, host: true, srvDone: false, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
     VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
     const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
     for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
@@ -1708,7 +1708,7 @@ export function createGameCore(S = {}) {
     if (VM.npc || VB.npc) vbNpcToggle();
     vmStop(true);
     STA.v = 1; STA.lock = false;
-    Object.assign(VM, { on: true, host: true, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
+    Object.assign(VM, { on: true, host: true, srvDone: false, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
     // 每隊 6 個號位的角色固定（輪轉表）；真人坐進自己選的角色，重複的就往後排到空的位置，其他 AI 補
     const humans = seats ? [[],[]] : [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
     for (const [id, q] of Object.entries(asg)) if (q && q.team >= 0 && NET.peers.has(id)) humans[q.team].push({ id, role: q.role });
@@ -1872,7 +1872,7 @@ export function createGameCore(S = {}) {
     if (force) NET.forceSt = true;
   }
   function vmOnNet(d, from) {
-    if (d.e === 'result') { if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
+    if (d.e === 'result') { if (from === 'srv') VM.srvDone = true; /* 伺服器打完了：不要再當成伺服器斷線而改由房主接手開新的一場 */ if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
     if (from === 'srv' && ROOM && ROOM.snapshot?.flow?.phase !== 'playing' && d.e !== 'result') return;   /* 房間已經結束比賽：伺服器晚到的開賽、狀態都不收 */
     if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
     if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
@@ -1880,7 +1880,7 @@ export function createGameCore(S = {}) {
       if (VM.on) return;
       const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
       vmStop(true);
-      Object.assign(VM, { on: true, host: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
+      Object.assign(VM, { on: true, host: false, srvDone: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
       VM.names = { ...VM.names }; for (const id of [...d.team[0], ...d.team[1]]) if (id && !/^ai/.test(id) && NET.peers.get(id)?.n) VM.names[id] = NET.peers.get(id).n;   /* 伺服器開賽時不知道暱稱（名單寫「球友」）：真人一律用自己這邊知道的暱稱 */
       if (d.wire === 2 && globalThis.VBMatchSync) vmWireInit(false, d);
       VM.tactics = d.six?.tactics === 'rotation' ? 'rotation' : 'roles';
@@ -2412,5 +2412,5 @@ export function createGameCore(S = {}) {
   function step(dt) { staTick(dt); vmUpdate(dt); updateBalls(dt); }
   // 伺服器當房主時的一格：跟網頁 drawFrame 的順序一樣（連線送狀態 → 比賽 → 球 → 送比賽畫格）
   function hostStep(dt) { const now = performance.now(); staTick(dt); netTick(dt, now); vmUpdate(dt); updateBalls(dt); vmWireTick(); }
-  return { GAME_RNG, VM, MREC, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, hostStep, netOnMessage, vmApplyRoomRules, get state() { return state; }, setState(v) { state = v; } };
+  return { GAME_RNG, VM, MREC, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, hostStep, netTick, vmWireTick, netOnMessage, vmApplyRoomRules, get state() { return state; }, setState(v) { state = v; } };
 }

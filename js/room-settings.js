@@ -20,7 +20,7 @@
       if(!flow.ready.length){waiting();commit();return;}
       for(const who of flow.ready)if(!flow.picks.includes(who)){
         const totals=[0,1].map(t=>flow.picks.slice(t*count,(t+1)*count).filter(Boolean).length);
-        const team=totals[0]<=totals[1]?0:1;
+        const team=flow.lock&&flow.lock[who]!=null?flow.lock[who]:totals[0]<=totals[1]?0:1;   /* 積分賽：隊伍是配對分好的，只補到自己隊上 */
         const slot=flow.picks.findIndex((x,k)=>!x && Math.floor(k/count)===team);
         if(slot>=0)flow.picks[slot]=who;
       }
@@ -35,6 +35,7 @@
       } else if(d.e==='pick' && flow.phase==='pick' && flow.ready.includes(from)){
         if(Date.now()>=flow.deadline){finishPick();return false;}
         const k=d.slot;if(!Number.isInteger(k)||k<0||k>=count*2||(flow.picks[k] && flow.picks[k]!==from))return false;
+        if(flow.lock&&flow.lock[from]!=null&&Math.floor(k/count)!==flow.lock[from])return false;   /* 積分賽：只能選自己隊上的位置 */
         flow.picks=flow.picks.map(x=>x===from?null:x);flow.picks[k]=from;
         if(flow.ready.every(x=>flow.picks.includes(x))){finishPick();return true;}
       } else return false;
@@ -98,6 +99,18 @@
         if(!ready.length||new Set(ready).size!==ready.length||!ready.every(x=>typeof x==='string'&&order.includes(x)))return false;
         count=n;lv=level;to=points;bestOf=best;
         flow={phase:'playing',ready,picks:[...picks],court,deadline:0,round:flow.round+1};commit();return true;
+      },
+      // 2026-11-20 積分賽：進場後大家站上場、選自己隊上的位置（lock＝每個真人在哪一隊，配對時分好的）；選位中才到的隊友用 addReady 加進來
+      startPlannedPick({lock,court,count:n,lv:level,to:points,bestOf:best,secs=15}={}){
+        if(!settled||host()!==id||flow.phase!=='waiting'||!Number.isInteger(n)||n<1||n>6||!validLv(level)||!validTo(points)||!validBest(best)||typeof court!=='string'||!court||!lock||typeof lock!=='object')return false;
+        const ready=Object.keys(lock).filter(x=>order.includes(x)&&(lock[x]===0||lock[x]===1));
+        if(!ready.length)return false;
+        count=n;lv=level;to=points;bestOf=best;
+        flow={phase:'pick',ready,picks:Array(n*2).fill(null),court,deadline:Date.now()+secs*1000,round:flow.round+1,lock:{...lock}};commit();return true;
+      },
+      addReady(x){
+        if(!settled||host()!==id||flow.phase!=='pick'||!flow.lock||flow.lock[x]==null||!order.includes(x)||flow.ready.includes(x))return false;
+        flow.ready=[...flow.ready,x];flow.deadline=Math.max(flow.deadline,Date.now()+8000);commit();return true;
       },
       begin(){
         if(!settled||host()!==id||flow.phase!=='waiting')return false;

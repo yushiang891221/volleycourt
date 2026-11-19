@@ -297,7 +297,7 @@ function netTextTexture(span, depth, text, band = 4.5) {
   // 2026-11-19 使用者給的樣子：細的無襯線字、字距拉開、整排排滿兩條側邊白帶中間；字高撐滿上下白帶之間，只留一點點空隙
   const TOP = 0.07, BOT = 0.05, SIDE = 0.05, GAP = 0.035;   // 上白帶、下白帶、側邊白帶寬（公尺）、字跟白帶的空隙
   const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
-  const FONT = (px) => `700 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
+  const FONT = (px) => `900 ${px}px "Helvetica Neue", Helvetica, "Arial Black", Arial, "Noto Sans TC", sans-serif`;
   const capH = (depth - TOP - BOT - GAP * 2) * PPM, base = (depth - BOT - GAP) * PPM;
   m.font = FONT(100); const asc = m.measureText('E').actualBoundingBoxAscent || 72, size = 100 * capH / asc; m.font = FONT(size); m.textBaseline = 'alphabetic';
   const chars = [...text], ws = chars.map((ch) => (ch === ' ' ? 0 : m.measureText(ch).width)), sum = ws.reduce((n, w) => n + w, 0);
@@ -311,8 +311,8 @@ function netTextTexture(span, depth, text, band = 4.5) {
   grid(c, 'rgba(20,20,20,0.85)', 1.8);
   // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
   const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-  grid(l, 'rgba(255,255,255,0.5)', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
-  c.globalAlpha = 0.08; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
+  grid(l, 'rgba(255,255,255,0.38)', 6.5);   /* 2026-11-20：再粗一點、淡一點 */ l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.globalAlpha = 0.06; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層極淡的白（2026-11-19 使用者：太細太深 → 加粗；又說太深 → 字的網線半透明、底更淡）
   c.drawImage(lit, 0, 0);
   // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
   c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);

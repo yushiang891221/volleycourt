@@ -253,16 +253,30 @@ async function netJoin(room) {
     try { saved = JSON.parse(sessionStorage.getItem('vb.ranked')); } catch (_) {}
     const plan = saved?.room === room && saved?.me === NET.me ? saved.plan : null;
     const q = new URLSearchParams(location.search);
-    let since = 0, started = false;
+    let since = 0, started = false, placed = false;
     NET.rankedTimer = setInterval(() => {
       ROOM_UI?.render();
-      if (!ROOM || started || q.get('host') !== '1' || !ROOM.isHost) return;
-      if (!plan || !Array.isArray(plan.picks)) { netStatus('配對資料遺失，請回大廳重新配對', 'warn'); clearInterval(NET.rankedTimer); return; }
-      if (!since) since = Date.now();
-      const present = id => id === NET.me || NET.peers.has(id);
-      if (!plan.picks.every(id => id === null || present(id)) && Date.now() - since < 15000) return;
+      // 2026-11-20 使用者：配對進場不要站在大廳門口——一進來就站到自己隊的半場（自己在配對名單上的那個位置）
       const court = state.items.find(i => i.type === 'vb');
+      if (!placed && plan && Array.isArray(plan.picks) && court && ROOM?.snapshot?.flow?.phase === 'waiting') {
+        const slot = plan.picks.indexOf(NET.me), n = plan.count;
+        if (slot >= 0) { placed = true; const team = Math.floor(slot / n), k = slot % n, sd = team === 0 ? -1 : 1; const [depth, left] = n === 6 ? V6_BASE[k] : n === 2 ? [6, k === 0 ? 2.1 : -2.1] : CourtFormations.home(n, k); [walk.x, walk.z] = toWorldOf(court, sd * depth, sd * left); walk.vel = [0, 0]; walk.keys.clear(); const [nx, nz] = toWorldOf(court, 0, sd * left); walk.yaw = Math.atan2(walk.x - nx, walk.z - nz); }
+      }
+      if (!ROOM || q.get('host') !== '1' || !ROOM.isHost) return;
+      if (!plan || !Array.isArray(plan.picks)) { netStatus('配對資料遺失，請回大廳重新配對', 'warn'); clearInterval(NET.rankedTimer); return; }
+      const present = id => id === NET.me || NET.peers.has(id);
+      if (started) {   // 選位中：晚到的隊友加進來一起選（以前超過 15 秒才進來就變觀眾、站在門口）
+        if (ROOM.snapshot.flow.phase === 'pick' && typeof ROOM.addReady === 'function') for (const id of plan.picks) if (id && present(id) && !ROOM.snapshot.flow.ready.includes(id)) ROOM.addReady(id);
+        return;
+      }
+      if (!since) since = Date.now();
+      if (!plan.picks.every(id => id === null || present(id)) && Date.now() - since < 30000) return;   /* 等所有真人進場：最多 30 秒（載入慢的電腦以前 15 秒會被丟下） */
       if (!court || ROOM.snapshot.flow.phase !== 'waiting') return;
+      if (typeof ROOM.startPlannedPick === 'function') {   /* 先選位置（只能選自己隊上的） */
+        const lock = {}; plan.picks.forEach((id, i) => { if (id) lock[id] = i < plan.count ? 0 : 1; });
+        started = ROOM.startPlannedPick({ lock, court: court.id, count: plan.count, lv: plan.lv, to: plan.to, bestOf: plan.bestOf, secs: 15 });
+        return;
+      }
       const picks = plan.picks.map(id => id && present(id) ? id : null);
       if (typeof ROOM.startPlanned !== 'function') { netStatus('積分賽房間流程尚未更新，請回大廳', 'warn'); clearInterval(NET.rankedTimer); return; }
       started = ROOM.startPlanned({ ...plan, picks, court: court.id });
@@ -1580,7 +1594,7 @@ function vmWireTick() {
   if (!VM.on || !VM.wire || !NET.on) return;
   const w = VM.wire, now = performance.now();
   if (!VM.host) {
-    if (VM.hostId === 'srv' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }
+    if (VM.hostId === 'srv' && !VM.srvDone && VM.phase !== 'over' && now - (w.rxAt || w.startAt || (w.startAt = now)) > 3000) { srvJudgeFailed('超過 3 秒沒收到伺服器的比賽資料'); return; }   /* 2026-11-20：打完以後伺服器本來就不再送，不能當成斷線（以前會在背景自動開一局） */
     const p = w.pending;
     if (p && now - p.since > 1000) { w.pending = null; if (VM.ball) VM.ball.wirePrediction = null; }
     else if (p && now - p.sent > 200) { p.sent = now; NET.tx.publish('match-claim', p.request); }

@@ -125,10 +125,10 @@ export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLose
     try { localStorage.setItem('po.lobby.page', 'home'); sessionStorage.removeItem('vb.ranked'); } catch (_) {}
     location.href = window.VBLobby.home();
   };
-  // 2026-11-19 使用者：打完就該回大廳——按鈕直接寫「回大廳」並倒數 8 秒（以前寫「確定」、要等 20 秒，看起來像留在球館）
-  const btn = d.querySelector('[data-close]'); let left = 8, returnTimer = null;
-  if (ranked) { const tick = () => { btn.textContent = `回大廳（${left}）`; if (left-- <= 0) home(); else returnTimer = setTimeout(tick, 1000); }; tick(); }
-  btn.onclick = () => { d.hidden = true; if (ranked) { clearTimeout(returnTimer); home(); } };
+  // 積分賽：按鈕寫「回大廳」，按了才回（2026-11-20 使用者：打完跳出面板 → 可以先下載精華影片 → 自己按離開才回大廳；不自動倒數，不然影片還沒下載就被帶走）
+  const btn = d.querySelector('[data-close]');
+  if (ranked) btn.textContent = '回大廳';
+  btn.onclick = () => { d.hidden = true; if (ranked) home(); };
 }
 
 // 經驗、金幣、等級條（record_match 回來後）
