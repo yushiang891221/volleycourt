@@ -251,8 +251,11 @@ export function createAi(G) {
     }
     return v;
   }
+  // 舉球弧線拉高（2026-11-19 使用者：舉出去都太矮；落點、目標高度不變，只拉長飛行時間）：快攻 ×1.25、平快 ×1.2、高球 ×1.3；網頁玩家舉球的 vbSpot 用同一組數字
+  const setArcT = (T) => T * (T < 0.45 ? 1.25 : T < 0.98 ? 1.2 : 1.3);
   function vmAiTouch(a, tlx, tlz, ty, T, err, kind, pose, free = false, backSet = false) {
     if (!vmAiOwnSide(a)) return;
+    if (kind === 'set') T = setArcT(T);
     if (!free && (kind === 'set' || (kind === 'bump' && ty > 1)) && tlx * G.vmSide(a.team) < 0.7) tlx = G.vmSide(a.team) * 0.7;   // 傳、舉都留在自己這邊（free＝接過頭撞網那種）
     let targetX = tlx + G.rkGauss() * err * 0.5, targetZ = tlz + G.rkGauss() * err;
     if (kind === 'set' && (backSet || G.vmSmallCount() === 3)) { targetX = G.vmSide(a.team) * G.clamp(targetX * G.vmSide(a.team), 4.2, 8.0); targetZ = G.clamp(targetZ, -3.3, 3.3); }   // 所有人數的後排舉球：誤差也不能把球帶進 3 公尺線

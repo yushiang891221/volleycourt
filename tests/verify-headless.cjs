@@ -12,7 +12,7 @@ execFileSync(process.execPath, [path.join(root, 'tools', 'build-headless.cjs'), 
     const a = runAiMatch({ six, seconds: 180, seed: 4242, every: 30 }), b = runAiMatch({ six, seconds: 180, seed: 4242, every: 30 });
     assert.equal(JSON.stringify(a.log), JSON.stringify(b.log), '同一個種子要算出一樣的比賽');
     const pts = a.sc.split(':').reduce((x, y) => x + +y, 0) + ((a.sets || [0, 0])[0] + (a.sets || [0, 0])[1]) * 25;
-    assert(pts >= 5, `3 分鐘要打出幾分（現在 ${a.sc}）`);
+    assert(pts >= 3, `3 分鐘要打出幾分（現在 ${a.sc}）`);   // 2026-11-19 舉球弧線拉高、回合變長：8 個種子平均從 10 分降到 8.5 分，種子 4242 剛好 4 分，門檻 5→3（只確認真的有得分）
     assert(new Set(a.log.map(l => l.split('|')[1])).size >= 3, '要經過發球、對打、死球');
     console.log(`PASS ${six ? '6 對 6' : '2 對 2'} 全 AI 3 分鐘：比分 ${a.sc}、同種子兩次完全一樣`);
   }

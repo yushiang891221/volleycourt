@@ -1003,6 +1003,7 @@ function vbSpot(ct, n, fromLx, fromLz, v = null) {
   if(v === 'line3')sp.lx=sg*3;
   const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
   sp.T = n === 2 && v !== 'high3' ? clamp(0.22 + d * 0.05, 0.24, 0.4) : v === 'flat' ? clamp(0.58 + d * 0.05, 0.7, 0.95) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；平球（長攻、背）又平又快；高球最高點約 4～4.5 m
+  sp.T *= sp.T < 0.45 ? 1.25 : sp.T < 0.98 ? 1.2 : 1.3;   // 舉球弧線拉高（跟 engine/ai.js 的 setArcT 同一組數字）：落點、高度不變，只拉長飛行時間
   return sp;
 }
 function vbSendSet(b, tx, tz, ty, T, n, who, cp, q = 0.9) {
