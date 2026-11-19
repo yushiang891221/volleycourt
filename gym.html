@@ -464,7 +464,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .vb-fx b { position: absolute; top: -44px; white-space: nowrap; font: 900 20px var(--font-mono); letter-spacing: .06em; color: currentColor; text-shadow: 0 2px 0 rgba(0,0,0,.45), 0 0 10px rgba(0,0,0,.35); animation: fxText .9s ease-out forwards; }
 @keyframes fxRing { from { transform: scale(.5); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
 @keyframes fxText { 0% { transform: translateY(8px) scale(1.3); opacity: 0; } 15% { opacity: 1; transform: translateY(0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
-.walk-ui.tp .wk-cross, .walk-ui.tp .zcard { display: none !important; }
+.walk-ui.tp .zcard { display: none !important; }   /* 第三人稱也要準心（2026-11-19 使用者）：位置由 xhairPlace() 算 */
 /* 回放時不顯示對戰計分列 */
 .walk-ui:has(.rp:not([hidden])) .rk-hud { display: none !important; }
 /* 選角色 */
@@ -7073,6 +7073,17 @@ function incomingBall(kind) {
     if (d < (kind === 'set' ? 1.05 : 1.15) && (!best || d < best.d)) best = { b, d };
   }
   return best && best.b;
+}
+// 準心的位置：第一人稱在畫面正中間；第三人稱鏡頭在右肩後上方，改畫在「眼睛往瞄準方向 12 m 那一點」投影到畫面的位置（就是球會打過去的方向）
+const XH_V = new THREE.Vector3();
+function xhairPlace() {
+  const el = XH.el || (XH.el = $('wk-cross')); if (!el) return;
+  if (!(TP.saved && TP.av)) { if (el.style.left) { el.style.left = ''; el.style.top = ''; } return; }
+  const cp = Math.cos(walk.pitch), E = TP.saved.p;
+  XH_V.set(E.x - Math.sin(walk.yaw) * cp * 12, E.y + Math.sin(walk.pitch) * 12, E.z - Math.cos(walk.yaw) * cp * 12);
+  camera.updateMatrixWorld(true); XH_V.project(camera);
+  if (XH_V.z > 1) return;
+  el.style.left = `${(clamp(XH_V.x, -0.95, 0.95) * 0.5 + 0.5) * 100}%`; el.style.top = `${(clamp(-XH_V.y, -0.95, 0.95) * 0.5 + 0.5) * 100}%`;
 }
 // 準心圈的擊球時機（每一格）：照每顆飛行中的球的軌跡往後推 1.2 秒，最早碰到你擊球點（下手／上手）的時間 → 外圈大小（樣式在 style.css .wk-cross）
 const XH = { el: null };
@@ -13727,7 +13738,7 @@ function drawFrame(force) {
   vbTrailStep(dt);   /* 球的軌跡光帶 */
   if (walk.on) vmWireTick();
   const tp = walk.on && tpBegin(dt);
-  if (walk.on) vbChgPlace();
+  if (walk.on) { vbChgPlace(); xhairPlace(); }
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   vmWireRender(true);
   renderScene();

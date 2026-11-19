@@ -67,7 +67,7 @@ function drawFrame(force) {
   vbTrailStep(dt);   /* 球的軌跡光帶 */
   if (walk.on) vmWireTick();
   const tp = walk.on && tpBegin(dt);
-  if (walk.on) vbChgPlace();
+  if (walk.on) { vbChgPlace(); xhairPlace(); }
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   vmWireRender(true);
   renderScene();

@@ -424,7 +424,7 @@ html.phone-walk .app[data-mode="walk"] .toast { top: calc(max(8px, env(safe-area
 .vb-fx b { position: absolute; top: -44px; white-space: nowrap; font: 900 20px var(--font-mono); letter-spacing: .06em; color: currentColor; text-shadow: 0 2px 0 rgba(0,0,0,.45), 0 0 10px rgba(0,0,0,.35); animation: fxText .9s ease-out forwards; }
 @keyframes fxRing { from { transform: scale(.5); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
 @keyframes fxText { 0% { transform: translateY(8px) scale(1.3); opacity: 0; } 15% { opacity: 1; transform: translateY(0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
-.walk-ui.tp .wk-cross, .walk-ui.tp .zcard { display: none !important; }
+.walk-ui.tp .zcard { display: none !important; }   /* 第三人稱也要準心（2026-11-19 使用者）：位置由 xhairPlace() 算 */
 /* 回放時不顯示對戰計分列 */
 .walk-ui:has(.rp:not([hidden])) .rk-hud { display: none !important; }
 /* 選角色 */
