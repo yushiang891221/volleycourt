@@ -117,6 +117,7 @@ export function createGameCore(S = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 600);
   const perf = { n: 0, sum: 0 };
+  let cols = [];
   let colliders = [];
   const matCache = new Map();
   function mat(color, extra) {
@@ -146,6 +147,7 @@ export function createGameCore(S = {}) {
     g.add(o);
     return o;
   }
+  const PX = 40;
   const PLAY = { vb: [18, 9], bd: [13.4, 6.1], pb: [13.41, 6.1], bk: [15, 11] };
   function extraLayout(kind, fw, fd) {
     const [pw, pd] = PLAY[kind];
@@ -173,8 +175,28 @@ export function createGameCore(S = {}) {
     netTex.wrapS = netTex.wrapT = THREE.RepeatWrapping;
     return netTex;
   }
-  function net(g, span, top, depth, tape = '#FFFFFF') {
-    const t = netTexture().clone(); t.needsUpdate = true; t.repeat.set(span / 2, depth / 0.5);
+  const NET_TEXT_TEX = new Map();
+  function netTextTexture(span, depth, text) {
+    const key = `${span}|${depth}|${text}`; if (NET_TEXT_TEX.has(key)) return NET_TEXT_TEX.get(key);
+    const CELL = 0.0625, PX = 12, cols = Math.round(span / CELL), rows = Math.round(depth / CELL), W = cols * PX, H = rows * PX;
+    const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
+    const th = H * 0.56; m.font = `900 ${th}px "Arial Black", Impact, "Noto Sans TC", sans-serif`; m.textAlign = 'center'; m.textBaseline = 'middle';
+    const tw = m.measureText(text).width, maxW = W * 0.55; if (tw > maxW) m.font = `900 ${th * maxW / tw}px "Arial Black", Impact, "Noto Sans TC", sans-serif`;
+    m.fillStyle = '#fff'; m.fillText(text, W / 2, H * 0.54);
+    const mask = m.getImageData(0, 0, W, H).data, inside = (x, y) => mask[(Math.min(H - 1, Math.max(0, Math.round(y))) * W + Math.min(W - 1, Math.max(0, Math.round(x)))) * 4 + 3] > 100;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+    const seg = (x0, y0, x1, y1, lit) => { c.strokeStyle = lit ? 'rgba(248,248,242,0.85)' : 'rgba(20,20,20,0.85)'; c.lineWidth = lit ? 2.4 : 1.8; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
+    for (let pass = 0; pass < 2; pass++)   // 先畫黑線、再畫白線（白線蓋在上面，交叉點才是白的）
+      for (let i = 0; i <= cols; i++) for (let j = 0; j <= rows; j++) {
+        const x = i * PX, y = j * PX;
+        if (j < rows) { const lit = inside(x, y + PX / 2) || inside(x - PX / 2, y + PX / 2) && inside(x + PX / 2, y + PX / 2); if (lit === !!pass) seg(x, y, x, y + PX, lit); }
+        if (i < cols) { const lit = inside(x + PX / 2, y) || inside(x + PX / 2, y - PX / 2) && inside(x + PX / 2, y + PX / 2); if (lit === !!pass) seg(x, y, x + PX, y, lit); }
+      }
+    const t = new THREE.CanvasTexture(cv); t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); t.colorSpace = THREE.SRGBColorSpace;
+    NET_TEXT_TEX.set(key, t); return t;
+  }
+  function net(g, span, top, depth, tape = '#FFFFFF', text = '') {
+    const t = text ? netTextTexture(span, depth, text) : netTexture().clone(); if (!text) { t.needsUpdate = true; t.repeat.set(span / 2, depth / 0.5); }
     // 網面分格：被球打到時可以讓網子局部鼓起來、晃幾下
     const m = new THREE.Mesh(new THREE.PlaneGeometry(span, depth, 24, 4), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     m.rotation.y = Math.PI / 2;
