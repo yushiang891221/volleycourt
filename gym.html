@@ -7679,16 +7679,48 @@ const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
 // 撲救動作的關鍵格（照實際影片）：[秒, 髖往撲的方向移多少, 髖多高, 往前倒（弧度）, 往撲的那側倒（弧度）, 姿勢]；中間平滑接
 //   魚躍：低弓箭步往前倒 → 貼地平飛、腳往後上翹 → 手撐地（頭比腳低、腳翹高）→ 胸口滑出去 → 趴著準備撐起來
 //   左右滾翻：側弓箭步、雙手往球那側伸到地上 → 坐到球那側屁股上、手伸長 → 側躺 → 腳從肩膀上方翻過去（整個人往球那側翻一圈）→ 跪著雙手撐地 → 站起來
+// 最後一欄＝這一格哪裡貼地（avGroundSolve）：0＝空中（只防穿地）、1＝全身最低點貼地（腳、手撐地、跪）、2＝軀幹貼地（胸口、屁股、背、肩膀），穿進地板的手腳自己轉上來，不會把整個人撐高
 const DIVE_KF = {
-  fwd: [[0, 0, 0.98, 0, 0, 'idle'], [0.15, 0.1, 0.6, 0.75, 0, 'diveLunge'], [0.3, -0.55, 0.42, 1.45, 0, 'diveFly'], [0.45, -0.8, 0.28, 1.8, 0, 'diveCatch'], [0.7, -0.9, 0.04, 1.62, 0, 'diveSlide'], [1.0, -0.95, 0.04, 1.56, 0, 'down']],
-  side: [[0, 0, 0.98, 0, 0, 'idle'], [0.22, 0.12, 0.55, 0.35, 0.35, 'sideLunge'], [0.42, 0.2, 0.1, 0.15, 1.15, 'sideFall'], [0.6, 0.25, 0.04, -0.15, 1.55, 'sideFlat'], [0.8, 0.35, 0.3, 0.0, 3.0, 'sideTuck'], [0.98, 0.45, 0.25, 0.2, 4.6, 'sideTuck'], [1.15, 0.55, 0.3, 0.4, Math.PI * 2, 'kneel']],
-  // 髖的高度故意放低一點：貼地的時候由「不陷進地板」把人剛好抬到貼著地板
+  fwd: [[0, 0, 0.98, 0, 0, 'idle', 1], [0.15, 0.1, 0.6, 0.75, 0, 'diveLunge', 1], [0.3, -0.55, 0.42, 1.45, 0, 'diveFly', 0], [0.45, -0.8, 0.28, 1.8, 0, 'diveCatch', 1], [0.7, -0.9, 0.04, 1.62, 0, 'diveSlide', 2], [1.0, -0.95, 0.04, 1.56, 0, 'down', 1]],
+  side: [[0, 0, 0.98, 0, 0, 'idle', 1], [0.22, 0.12, 0.55, 0.35, 0.35, 'sideLunge', 1], [0.42, 0.2, 0.1, 0.15, 1.15, 'sideFall', 2], [0.6, 0.25, 0.04, -0.15, 1.55, 'sideFlat', 2], [0.8, 0.35, 0.3, 0.0, 3.0, 'sideTuck', 2], [0.98, 0.45, 0.25, 0.2, 4.6, 'sideTuck', 2], [1.15, 0.55, 0.3, 0.4, Math.PI * 2, 'kneel', 1]],
+  // 髖的高度只是大概：真正的高度由 avGroundSolve 照貼地的部位往上抬或往下壓到剛好貼著地板
 };
 function avDiveKey(dir, t) {
   const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, K = side ? DIVE_KF.side : DIVE_KF.fwd, M = (p) => (side && sn > 0 ? avMirror(AVP[p]) : AVP[p]);
   let i = 0; while (i < K.length - 2 && t >= K[i + 1][0]) i++;
   const a = K[i], b = K[i + 1], u0 = clamp((t - a[0]) / (b[0] - a[0]), 0, 1), u = u0 * u0 * (3 - 2 * u0), L = (j) => a[j] + (b[j] - a[j]) * u;
-  return { side, sn, d: L(1), y: L(2), pitch: L(3), roll: L(4), pose: u >= 1 ? M(b[5]) : avMix(M(a[5]), M(b[5]), u) };
+  return { side, sn, d: L(1), y: L(2), pitch: L(3), roll: L(4), pose: u >= 1 ? M(b[5]) : avMix(M(a[5]), M(b[5]), u), ga: a[6] ?? 1, gb: b[6] ?? 1, u };
+}
+// ---- 撲救貼地（2026-11-19 使用者：打滾像離地板一段距離在空中滾）
+//   以前只有「最低點低於地板就整個人往上抬」：側滾時伸直的手、腳撐著，軀幹離地 30～77 cm；也不會往下貼，撲出去前兩格腳浮空
+//   現在照關鍵格指定的部位貼地（往上抬、往下壓都會）；軀幹貼地時，穿進地板的手腳以肩膀／髖為軸轉上來平貼地板，最後才整個人防穿地
+function avGroundChains(av) {
+  const P = av._gp || (av._gp = avGroundPts(av)), pick = (os) => P.map((p, i) => (os.includes(p[0]) ? i : -1)).filter((i) => i >= 0);
+  return { all: P.map((_, i) => i), torso: pick([av.spine, av.root, av.head]), limbs: [0, 1].flatMap((i) => [[av.arms[i], pick([av.arms[i], av.elbows[i], av.hands[i]])], [av.legs[i], pick([av.legs[i], av.knees[i], av.feet[i]].filter(Boolean))]]) };
+}
+function avLowest(av, idx, out) { let m = Infinity; for (const i of idx) { const [o, x, y, z] = av._gp[i]; GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < m) { m = GP_V.y; if (out) out.copy(GP_V); } } return m; }
+// 一隻手／腳穿進地板：整節以肩膀（髖）為軸轉，讓最低點剛好在地板上（水平方向不變，像手腳平貼在地上）
+function avLimbUp(av, bone, idx, gy) {
+  for (let it = 0; it < 3; it++) {
+    const m = avLowest(av, idx, TCH.T); if (m >= gy - 0.003) return;
+    bone.getWorldPosition(TCH.S); const v = TCH.g.copy(TCH.T).sub(TCH.S), len = v.length(), dy = gy - TCH.S.y;
+    if (len < 1e-4 || Math.abs(dy) >= len) return;   // 肩膀／髖本身在地板下：交給最後的整個人往上抬
+    let hx = v.x, hz = v.z, hl = Math.hypot(hx, hz);
+    if (hl < 1e-3) { av.g.getWorldPosition(TCH.V); hx = TCH.S.x - TCH.V.x; hz = TCH.S.z - TCH.V.z; hl = Math.hypot(hx, hz) || 1; }
+    const h = Math.sqrt(len * len - dy * dy); TCH.V.set((hx / hl) * h, dy, (hz / hl) * h);
+    TCH.q.setFromUnitVectors(v.normalize(), TCH.V.normalize());
+    bone.getWorldQuaternion(TCH.qp); TCH.qw.copy(TCH.q).multiply(TCH.qp); bone.parent.getWorldQuaternion(TCH.qp).invert();
+    bone.quaternion.copy(TCH.qp.multiply(TCH.qw)); bone.updateMatrixWorld(true);
+  }
+}
+function avGroundSolve(av, DK, fa) {
+  const R = av.root, sc = av.g.scale.y || 1, gy = av.g.getWorldPosition(GP_V).y + 0.022, C = av._gch || (av._gch = avGroundChains(av));   // 場地表面比 0 高一點（最多約 2.2 cm）
+  const lift = (mode) => (mode === 2 ? gy - avLowest(av, C.torso) : mode === 1 ? gy - avLowest(av, C.all) : Math.max(0, gy - avLowest(av, C.all)));
+  let L = DK.ga === DK.gb ? lift(DK.ga) : lift(DK.ga) * (1 - DK.u) + lift(DK.gb) * DK.u;
+  if (L < 0) L *= fa;   // 剛撲出去／正在起來（fa＜1）只防穿地，不硬往下壓
+  R.position.y += L / sc; R.updateMatrixWorld(true);
+  for (const [bone, idx] of C.limbs) avLimbUp(av, bone, idx, gy);
+  const m = avLowest(av, C.all); if (m < gy) { R.position.y += (gy - m) / sc; R.updateMatrixWorld(true); }
 }
 function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, P = down ? (side ? AVP.downSide : AVP.down) : side ? AVP.sideDive : AVP.dive; return side && sn > 0 ? avMirror(P) : P; }
 // 攔網的姿勢加上雙手往左右移（s＞0＝往人物的右手邊；右手往外張、左手往內收）
@@ -7743,7 +7775,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + B.shy[i];
     a.rotation.y = 0; a.rotation.x = B.sh[i][0] - armG;   /* rotation.y 歸零：avTouch 會把手臂整個轉向球 */ a.rotation.z = sx * (B.sh[i][1] + on * 0.06 * w + (1 - on) * 0.012 * Math.sin(now / 900 + i));
     e.rotation.x = -(B.el[i] + B.arm * on * (0.18 + 1.25 * w) + B.arm * 0.12 * w * Math.max(0, Math.sin(ph + Math.PI)));
-    h.rotation.x = -(B.hip[i] + hipG); kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
+    h.rotation.x = -(B.hip[i] + hipG); h.rotation.y = 0; /* 歸零：撲救貼地（avLimbUp）會把整條腿轉過去 */ kn.rotation.x = B.kn[i] + knG; h.rotation.z = sx * B.hab[i];
     const hh = -h.rotation.x, kk = kn.rotation.x; ext[i] = ((av.L1 || 0.44) * Math.cos(hh) + (av.L2 || 0.46) * Math.cos(hh - kk)) * Math.cos(B.hab[i]);
     if (av.feet) av.feet[i].rotation.z = -h.rotation.z;
     if (av.feet) av.feet[i].rotation.x = air ? 0.45 : -(h.rotation.x + kn.rotation.x) * 0.9 + on * (0.2 + 0.4 * w) * Math.max(0, -s) * (c > 0 ? 1 : 0.35);   // 腳掌貼地；後腳離地前踮腳尖；空中腳尖朝下
@@ -7775,9 +7807,12 @@ function avDrive(av, P, k, sp = 0, air = false) {
   }
   // 不陷進地板（翻滾時身體、跑步時鞋尖鞋跟）：全身最低的點比地板低，就把整個人往上抬
   av.g.updateMatrixWorld(true);
-  const gy = av.g.getWorldPosition(GP_V).y; let minY = Infinity;
-  for (const [o, x, y, z] of av._gp || (av._gp = avGroundPts(av))) { GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < minY) minY = GP_V.y; }
-  if (minY < gy + 0.022) { R.position.y += (gy + 0.022 - minY) / (av.g.scale.y || 1); R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
+  if (DK) avGroundSolve(av, DK, fa);   // 撲救：照關鍵格指定的部位貼地（往上、往下都會），手腳不再把人撐高
+  else {
+    const gy = av.g.getWorldPosition(GP_V).y; let minY = Infinity;
+    for (const [o, x, y, z] of av._gp || (av._gp = avGroundPts(av))) { GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < minY) minY = GP_V.y; }
+    if (minY < gy + 0.022) { R.position.y += (gy + 0.022 - minY) / (av.g.scale.y || 1); R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
+  }
   av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
   if (av._tk) avTouch(av, av._tk);
 }
