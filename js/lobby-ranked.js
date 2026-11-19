@@ -95,23 +95,36 @@ function renderParty() {
   }
   preview?.setParty(mobile.matches ? party.slice(0, 1) : party);
   shown = party;
-  drawEmotes();
 }
-// 大廳炫技（簡化版：跳、轉圈、搖擺＋頭上冒圖示），隊友也看得到
+// 大廳炫技：跟遊戲一樣按住 T 開輪盤、滑鼠往左／右／上／下選、放開就做（動作也是遊戲那一份，js/emote-keys.js）；隊友看得到
 let shown = [];
-const ACT_OF = { taunt: 'sway', yaotou: 'sway', gouxiong: 'sway', shanshen: 'spin', langzi: 'spin', crown: 'spin', fire: 'spin' };
 function bubble(i, e) {
   const label = document.querySelector(`.party-slot.slot-${i} .party-label`); const em = P.EMOTES[e]; if (!label || !em) return;
   const b = document.createElement('span'); b.className = 'party-emo'; b.textContent = `${em.icon} ${em.name}`; label.append(b); setTimeout(() => b.remove(), 1600);
 }
-function playEmote(i, e) { if (!P.EMOTES[e]) return; preview?.playAct(i, ACT_OF[e] || 'jump'); bubble(i, e); }
+function playEmote(i, e) { if (!P.EMOTES[e]) return; preview?.playEmote(i, e, 1); bubble(i, e); }
 api.setRemoteYaw = (id, yaw) => { const i = shown.findIndex((m, n) => n > 0 && m.id === id); if (i > 0) preview?.setYaw(i, yaw); };
 api.playRemoteEmote = (id, e) => { const i = shown.findIndex((m, n) => n > 0 && m.id === id); if (i > 0) playEmote(i, e); };
-function drawEmotes() {
-  let bar = $('lobby-emotes'); if (!bar) { bar = document.createElement('div'); bar.id = 'lobby-emotes'; bar.setAttribute('aria-label', '炫技動作'); $('party-stage').append(bar); }
-  const prog = P.cachedProgress() || {}, wheel = (prog.wheel && prog.wheel.length ? prog.wheel : P.DEFAULT_WHEEL).filter(k => P.EMOTES[k]).slice(0, 4);
-  bar.replaceChildren(...wheel.map(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = P.EMOTES[k].icon; b.title = P.EMOTES[k].name; b.setAttribute('aria-label', `炫技：${P.EMOTES[k].name}`); b.onclick = () => { playEmote(0, k); api.onSelfEmote?.(k); }; return b; }));
+const wheel = { el: null, open: null };
+function wheelOpen() {
+  if (wheel.open || mobile.matches || $('home-page')?.hidden || document.querySelector('dialog[open]') || !shown.length) return;
+  const keys = P.myWheel(); if (!keys.length) return;
+  if (!wheel.el) { wheel.el = document.createElement('div'); wheel.el.id = 'lobby-wheel'; wheel.el.setAttribute('aria-label', '炫技輪盤'); $('party-stage').append(wheel.el); }
+  wheel.el.replaceChildren(...keys.map((k, i) => { const b = document.createElement('button'); b.type = 'button'; b.tabIndex = -1; b.dataset.emo = k; b.dataset.slot = i; b.textContent = `${P.EMOTES[k].icon} ${P.EMOTES[k].name}`; return b; }), Object.assign(document.createElement('i'), { className: 'lw-cur' }));
+  wheel.open = { dx: 0, dy: 0, pick: null, keys }; wheel.el.hidden = false; wheelDraw();
 }
+function wheelMove(dx, dy) {   // 跟遊戲 emoMenuMove 一樣：離中心 25 以內不選，看左右／上下哪個移比較多
+  const m = wheel.open; if (!m) return; m.dx = Math.max(-90, Math.min(90, m.dx + dx)); m.dy = Math.max(-70, Math.min(70, m.dy + dy));
+  const ax = Math.abs(m.dx), ay = Math.abs(m.dy), slot = Math.max(ax, ay) < 25 ? -1 : ax >= ay ? (m.dx < 0 ? 0 : 1) : (m.dy < 0 ? 2 : 3);
+  m.pick = slot >= 0 ? m.keys[slot] || null : null; wheelDraw();
+}
+function wheelDraw() { const m = wheel.open; if (!m) return; wheel.el.querySelector('.lw-cur').style.transform = `translate(${m.dx}px, ${m.dy}px)`; for (const b of wheel.el.querySelectorAll('[data-emo]')) b.classList.toggle('on', b.dataset.emo === m.pick); }
+function wheelClose(ok) { const m = wheel.open; if (!m) return; wheel.open = null; wheel.el.hidden = true; if (ok && m.pick) { playEmote(0, m.pick); api.onSelfEmote?.(m.pick); } }
+const typing = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+addEventListener('keydown', e => { if (e.code !== 'KeyT' || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return; e.preventDefault(); if (!e.repeat) wheelOpen(); });
+addEventListener('keyup', e => { if (e.code === 'KeyT') wheelClose(true); });
+addEventListener('mousemove', e => { if (wheel.open) wheelMove(e.movementX, e.movementY); });
+addEventListener('blur', () => wheelClose(false));
 function summary(prog = P.cachedProgress() || {}) {
   const title = P.ACHIEVEMENTS[prog.title]?.title || '未套用稱號';
   $('my-summary').textContent = `${nick()}　Lv${P.levelOf(prog.exp || 0)}　經驗 ${P.expInLevel(prog.exp || 0)} / ${P.EXP_PER_LEVEL}　🪙 ${prog.coins || 0}　${title}`;

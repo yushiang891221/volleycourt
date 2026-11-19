@@ -3,6 +3,7 @@ import { makeToyAvatar, decodeLook, preloadAvatars, EQUIP, OPTIONS } from './ava
 import { openCreator } from './creator.js';
 import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, BASIC_JERSEYS, wearBasicJersey, readTeamWear, wearTeamJersey } from './appearance.js';
 import { decodeJersey, PALETTE, CUTS } from './jersey.js';
+import { AVP, EMO_KEYS, avMix, emoKeyDuration, emoKeySample, emoPose } from './emote-keys.js';   // T 輪盤動作：跟遊戲同一份（tools/build-emote-keys.cjs 產生）
 
 let editing = false;
 export function editAppearance(mode = 'edit') {
@@ -77,6 +78,31 @@ async function fillShots(d, items) {
   }
 }
 
+// 跟遊戲 avDrive 站著不動時一樣的套法（src/gym/game/07-net.js）：肩、手肘、髖、膝、外展、腳踝、上身前彎／側倒／扭轉、頭，最後不陷進地板
+const GROUND_V = new THREE.Vector3();
+function emoteDrive(av, P) {
+  if (!av?.rig) return;
+  const ext = [0, 0], hab = P.hab || [0, 0], shy = P.shy || [0, 0], ankle = P.ankle || [0, 0], head = P.head || [0, 0];
+  for (let i = 0; i < 2; i++) {
+    const sx = i === 0 ? -1 : 1, a = av.arms[i], h = av.legs[i], kn = av.knees[i];
+    if (a.userData.y0 == null) a.userData.y0 = a.position.y; a.position.y = a.userData.y0 + shy[i];
+    a.rotation.set(P.sh[i][0], 0, sx * P.sh[i][1]); av.elbows[i].rotation.x = -P.el[i];
+    h.rotation.set(-P.hip[i], 0, sx * hab[i]); kn.rotation.x = P.kn[i];
+    ext[i] = ((av.L1 || 0.44) * Math.cos(P.hip[i]) + (av.L2 || 0.46) * Math.cos(P.hip[i] - P.kn[i])) * Math.cos(hab[i]);
+    if (av.feet) av.feet[i].rotation.set(-(h.rotation.x + kn.rotation.x) * 0.9 + ankle[i], 0, -h.rotation.z);
+  }
+  av.root.rotation.set(0, 0, 0);
+  av.spine.rotation.set(P.sp, P.tw || 0, P.lean || 0);
+  av.head.rotation.set(-P.sp * 0.6 + head[0], head[1], 0);
+  av.root.position.set(0, -Math.max(0, (av.hipH || 0.9) - Math.max(ext[0], ext[1])), 0);
+  // 不陷進地板：鞋底四角、膝蓋、手最低的點低於地板就整個人抬上來（遊戲的 avGroundPts 精簡版）
+  av.g.updateMatrixWorld(true);
+  const gy = av.g.getWorldPosition(GROUND_V).y; let minY = Infinity;
+  const pts = av._lobbyGp || (av._lobbyGp = [...(av.feet || []).flatMap(f => [-0.052, 0.052].flatMap(x => [-0.08, 0.17].map(z => [f, x, -0.062, z]))), ...av.knees.flatMap(k => [[k, 0, 0, 0.075], [k, 0, 0, -0.05]]), ...av.hands.map(h => [h, 0, -0.08, 0])]);
+  for (const [o, x, y, z] of pts) { GROUND_V.set(x, y, z); o.localToWorld(GROUND_V); if (GROUND_V.y < minY) minY = GROUND_V.y; }
+  if (minY < gy) { av.root.position.y += (gy - minY) / (av.g.scale.y || 1); av.root.updateMatrixWorld(true); }
+}
+
 // 即時預覽（裝備面板）：按住拖曳轉角色、放開停住；換外觀時 rebuild()；面板關掉 dispose() 釋放 WebGL
 export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：大廳共用畫布的角色位置
   // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
@@ -96,17 +122,20 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   if (partyHalo) { partyHalo.rotation.x = -Math.PI / 2; partyHalo.position.y = .01; scene.add(partyHalo); }
   let party = [];
   // 大廳（slots）：拖曳轉「自己的角色」，鏡頭固定（不再繞著轉、也不縮放，角色不會跑出名牌位置）；方向和炫技同步給隊友（onSelfYaw）
-  const yaws = [], acts = [];   // 每個站位角色的方向、正在做的炫技 { kind, t0 }
+  const yaws = [], acts = [];   // 每個站位角色的方向、正在做的炫技 { key, t0, dir }
   let actRaf = 0;
-  const actPose = (i, now) => {   // 簡化版炫技：整個角色跳、轉、搖（大廳的角色沒有遊戲裡的骨架動畫）
+  const actPose = (i, now) => {   // 跟遊戲一樣：有關鍵影格的（浪子、狗熊、搖頭晃腦、閃身）照影格播；擊掌、嘲諷、其他表情用遊戲的同一個姿勢
     const a = party[i], act = acts[i]; if (!a) return false;
-    const base = yaws[i] || 0; a.g.position.y = 0; a.g.rotation.set(0, base, 0);
-    if (!act) return false;
-    const t = (now - act.t0) / 1000, dur = act.kind === 'spin' ? 0.9 : act.kind === 'sway' ? 1.4 : 1.1;
-    if (t >= dur) { acts[i] = null; return false; }
-    if (act.kind === 'spin') { a.g.rotation.y = base + Math.PI * 2 * (1 - (1 - t / dur) ** 2); a.g.position.y = Math.sin(Math.PI * t / dur) * 0.12; }
-    else if (act.kind === 'sway') a.g.rotation.z = Math.sin(t * 9) * 0.18 * (1 - t / dur);
-    else a.g.position.y = Math.abs(Math.sin(t * Math.PI * 2.7)) * 0.22 * (1 - t / dur);   // 跳
+    const ry = yaws[i] || 0; a.g.rotation.set(0, ry, 0); a.g.position.set(0, 0, 0);
+    if (!act) { emoteDrive(a, AVP.idle); return false; }
+    const t = (now - act.t0) / 1000;
+    if (t >= act.dur) { acts[i] = null; emoteDrive(a, AVP.idle); return false; }
+    if (EMO_KEYS[act.key]) {
+      emoteDrive(a, emoKeySample(act.key, t, act.dir).pose);   // 只播姿勢、不位移（遊戲裡鏡頭跟著自己；大廳站位固定，走出去會被切掉）
+    } else {
+      const w = Math.max(0, Math.min(1, t / 0.15, (act.dur - t) / 0.25));   // 遊戲裡姿勢是平滑靠過去的：頭尾各淡入淡出一下
+      emoteDrive(a, avMix(AVP.idle, act.key === 'taunt' ? emoPose('taunt', t) : AVP.hi5Up, w));
+    }
     return true;
   };
   const animate = () => { actRaf = 0; const now = performance.now(); let busy = false; party.forEach((_, i) => { busy = actPose(i, now) || busy; }); draw(); if (busy) actRaf = requestAnimationFrame(animate); };
@@ -117,7 +146,10 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
     renderer.autoClear = false; renderer.setScissorTest(false); renderer.clear(); renderer.setScissorTest(true);
     const bounds = canvas.getBoundingClientRect();
     const order = [...slots().entries()].filter(([i, el]) => party[i] && el).map(([i, el]) => [i, el, el.getBoundingClientRect()]).sort((a, b) => a[2].bottom - b[2].bottom || b[0] - a[0]);
-    for (const [i, , r] of order) {
+    for (const [i, el, r0] of order) {
+      // 站位很高很窄時（視窗比較高）角色不要跟著放大：畫的高度最多是寬度的 2 倍、貼齊底部；名牌往下移到頭上（--head）
+      const vh = Math.min(r0.height, r0.width / 0.5), r = { left: r0.left, bottom: r0.bottom, width: r0.width, height: vh };
+      const head = Math.round(r0.height - vh) + 'px'; if (el.parentElement && el.parentElement.style.getPropertyValue('--head') !== head) el.parentElement.style.setProperty('--head', head);
       const x = r.left - bounds.left, y = bounds.bottom - r.bottom;
       renderer.clearDepth();
       party.forEach((a, n) => { a.g.visible = i === n; });
@@ -140,7 +172,7 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   return Object.assign(api, {
     setYaw(i, v) { if (!Number.isFinite(v)) return; yaws[i] = v; actPose(i, performance.now()); ask(); },
-    playAct(i, kind) { if (!party[i]) return; acts[i] = { kind, t0: performance.now() }; if (!actRaf) actRaf = requestAnimationFrame(animate); },
+    playEmote(i, key, dir = 1) { if (!party[i]) return; acts[i] = { key, dir, t0: performance.now(), dur: EMO_KEYS[key] ? emoKeyDuration(key) : key === 'taunt' ? 1.6 : key === 'hi5' ? 2.5 : 1.1 }; if (!actRaf) actRaf = requestAnimationFrame(animate); },
     setParty(members) {
       // 模型資源可能由 avatar-toy 共用；移除舊節點，避免誤 dispose 共用材質。
       party.forEach(a => scene.remove(a.g));

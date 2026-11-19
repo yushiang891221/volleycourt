@@ -41,3 +41,15 @@ assert(Math.abs(S[0][0] + S[0][1] / 2 - 60) < 1e-9, '自己對齊大廳正中間
 const panel = fs.readFileSync('js/character-panel.js', 'utf8');
 assert(panel.includes('renderer.clearDepth()') && panel.includes('a[2].bottom - b[2].bottom'), '後面的人先畫、前面的人蓋上去');
 console.log('WEB-027B 入口、留言板切換、站位與尺寸比例檢查通過。');
+// 大廳炫技（使用者 2026-11-19）：不要按鈕列、改按住 T 開輪盤；動作跟遊戲同一份（js/emote-keys.js 由遊戲程式產生）
+assert(!js.includes('lobby-emotes') && !css.includes('#lobby-emotes'), '炫技按鈕列拿掉');
+assert(js.includes("e.code !== 'KeyT'") && js.includes("e.code === 'KeyT'") && js.includes('P.myWheel()'), '按住 T 開輪盤、放開做動作，輪盤內容跟遊戲一樣');
+assert(panel.includes("from './emote-keys.js'") && !panel.includes("'sway'"), '大廳用遊戲的動作，不再是簡化版跳／轉／搖');
+require('node:child_process').execFileSync(process.execPath, ['tools/build-emote-keys.cjs', '--check'], { stdio: 'inherit' });
+import('../js/emote-keys.js').then(m => {
+  for (const k of Object.keys(m.EMO_KEYS)) for (const dir of [1, -1]) for (let t = 0; t <= m.emoKeyDuration(k) + 0.1; t += 0.05) {   // 左右都要測（往左鏡像曾當掉）
+    const p = m.emoKeySample(k, t, dir).pose; for (const f of ['sh', 'el', 'hip', 'kn', 'hab', 'ankle', 'head']) assert(p[f].flat().every(Number.isFinite), `${k} ${dir} ${t} ${f}`);
+    assert([p.sp, p.tw, p.lean].every(Number.isFinite), `${k} ${dir} ${t}`);
+  }
+  console.log('大廳炫技：T 輪盤、遊戲動作、左右鏡像檢查通過。');
+}).catch(e => { console.error(e); process.exit(1); });

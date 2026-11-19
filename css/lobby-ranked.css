@@ -32,12 +32,14 @@ body { min-width: 0; }
 .party-slot { position:absolute; width:38%; height:calc(90% - 10px); bottom:5%; left:18%; }
 .party-slot.slot-1 { left:60%; width:32%; height:72%; }
 .party-view { position:absolute; inset:40px 0 0; }
-.party-label { position:relative; margin:0 auto; width:max-content; max-width:100%; box-sizing:border-box; text-align:center; display:flex; flex-direction:column; gap:1px; padding:3px 7px; font-size:11px; line-height:14px; color:#f1ead9; background:#06211acc; border-radius:5px; z-index:2; }
+.party-label { position:relative; top:var(--head,0px); margin:0 auto; width:max-content; max-width:100%; box-sizing:border-box; text-align:center; display:flex; flex-direction:column; gap:1px; padding:3px 7px; font-size:11px; line-height:14px; color:#f1ead9; background:#06211acc; border-radius:5px; z-index:2; }
 .party-label b, .party-label small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .party-label small { font-size:10px; color:#c4d1c9; }
 .is-self .party-label { border:1px solid #E5B869; color:#E5B869; }
 .is-self .party-label small { color:#E5B869; }
 .empty-slot { display:flex; align-items:center; justify-content:center; }
+#party-slots:not(.mobile-party) .empty-slot { align-items:flex-end; container-type:size; }
+#party-slots:not(.mobile-party) .empty-slot button { margin-bottom:min(28cqh, 56cqw); }   /* 「＋」站在角色腰的高度：角色畫的高度＝min(站位高, 寬×2)（character-panel.js），取它的 28% */
 .empty-slot button { pointer-events:auto; position:relative; z-index:2; width:58px; height:70px; font-size:30px; background:#0b362b88; border:1px dashed #E5B86988; }
 /* 分隔上下排整個視窗；自己的角色視窗高度為隊友的 1.25 倍。 */
 /* 6 對 6：像合照的 V 字隊形——自己站最前面（對齊大廳正中間；舞台右邊讓給積分賽面板，所以自己在舞台 60% 的位置），其他人往兩側斜後方排，越後面越小（使用者 2026-11-19） */
@@ -137,8 +139,12 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 .rb-me { border-top:1px solid #e5b86933; } .rb-me p { margin:10px 18px 14px; color:#c4d1c9; font-size:13px; }
 
 /* 大廳炫技按鈕（角色下方）＋頭上冒出的動作名稱 */
-#lobby-emotes { position:absolute; left:calc(60% + 70px); bottom:18px; z-index:3; display:flex; gap:6px; }
-#lobby-emotes button { width:40px; height:40px; min-height:0; padding:0; font-size:20px; border-radius:50%; background:#06211acc; border:1px solid #e5b86966; }
-#lobby-emotes button:hover { background:#0e3a2f; border-color:#E5B869; }
+/* 按住 T 的炫技輪盤（跟遊戲 .emo-menu 同樣的排法：左、右、上、下），出現在自己頭上 */
+#lobby-wheel { position:absolute; left:60%; top:50%; width:0; height:0; z-index:8; pointer-events:none; }
+#lobby-wheel[hidden] { display:none; }
+#lobby-wheel button { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; min-height:0; padding:9px 16px; border-radius:14px; border:2px solid #E5B86966; background:#06211add; color:#f1ead9; font-weight:800; font-size:15px; }
+#lobby-wheel button[data-slot="0"] { left:-110px; top:0; } #lobby-wheel button[data-slot="1"] { left:110px; top:0; } #lobby-wheel button[data-slot="2"] { left:0; top:-72px; } #lobby-wheel button[data-slot="3"] { left:0; top:72px; }
+#lobby-wheel button.on { background:#E5B869; border-color:#E5B869; color:#06211A; transform:translate(-50%,-50%) scale(1.08); }
+#lobby-wheel .lw-cur { position:absolute; left:0; top:0; width:12px; height:12px; margin:-6px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #06211a99; }
 .party-emo { position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); white-space:nowrap; padding:3px 10px; border-radius:999px; background:#E5B869; color:#06211A; font-weight:800; font-size:13px; animation:party-emo 1.6s ease-out forwards; pointer-events:none; }
 @keyframes party-emo { 0% { opacity:0; transform:translate(-50%, 6px); } 15% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -10px); } }
