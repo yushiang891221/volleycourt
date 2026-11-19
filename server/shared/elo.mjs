@@ -5,7 +5,8 @@ export const K = 100, SCALE = 2000, AI_FARM_CAP = 4500;
 
 // teams：[[{ player, rating }…], [{…}]]（只有真人）；n：每隊人數；lv：AI 等級；winner：0／1；left：中途離開的帳號（算輸）
 // 回傳 [{ player, team, before, delta, after, won }]
-export function rankedChanges({ teams, n, lv, winner, left = [] }) {
+// sets：多局時的局數 [a, b]（2026-11-19 使用者：輸了但有贏一局，多少補一點）——輸的一隊每贏一局少扣，贏到差一局就輸（例 1:2、2:3）最多少扣 40%
+export function rankedChanges({ teams, n, lv, winner, left = [], sets = null }) {
   const ai = aiRatingFor(lv);   // 電腦的分數＝它的強度對應的積分
   const avg = t => (teams[t].reduce((s, p) => s + p.rating, 0) + (n - teams[t].length) * ai) / n;   // 隊伍分數＝含 AI 的平均
   const out = [];
@@ -20,7 +21,10 @@ export function rankedChanges({ teams, n, lv, winner, left = [] }) {
         if (moreHumans) delta *= 0.7;                          // 真人比較多的一隊贏了加分打 7 折
         delta = Math.max(1, Math.round(delta));                // 贏了最少 +1
         if (oppAllAI && p.rating >= AI_FARM_CAP) delta = 0;    // 4500 以上打贏全 AI 不加分
-      } else delta = -Math.max(1, Math.round(K * E));        // 輸了扣 K×E；中離的人就算隊伍贏了也算輸
+      } else {
+        const need = Array.isArray(sets) ? Math.max(...sets) : 0, got = need > 1 && !left.includes(p.player) && winner !== t ? Math.min(sets[t], need - 1) : 0;
+        delta = -Math.max(1, Math.round(K * E * (1 - 0.4 * got / Math.max(1, need - 1))));   // 輸了扣 K×E；中離的人就算隊伍贏了也算輸、也不補
+      }
       delta = Math.max(-100, Math.min(100, delta));
       out.push({ player: p.player, team: t, before: p.rating, delta, after: Math.max(0, p.rating + delta), won });
     }

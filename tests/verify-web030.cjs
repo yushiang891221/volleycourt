@@ -38,6 +38,12 @@ const { pathToFileURL } = require('node:url');
   c = rankedChanges({ teams: [[p('a', 1500), p('b', 1500)], [p('c', 1500), p('d', 1500)]], n: 2, lv: 3, winner: 0, left: ['b'] });
   assert.equal(by(c, 'a').won, true); assert.equal(by(c, 'b').won, false); assert.ok(by(c, 'b').delta < 0);
 
+  // 多局輸了但有贏局：少扣一點（三戰兩勝 1:2 少扣 40%）；0:2 照扣；中離的人不補
+  const zero = rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sets: [0, 2] });
+  const one = rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sets: [1, 2] });
+  assert.equal(by(zero, 'a').delta, -50); assert.equal(by(one, 'a').delta, -30); assert.equal(by(one, 'c').delta, 50);
+  assert.equal(by(rankedChanges({ teams: [[p('a', 1500)], [p('c', 1500)]], n: 1, lv: 1.25, winner: 1, sets: [1, 2], left: ['a'] }), 'a').delta, -50);
+
   // 分數最低 0
   c = rankedChanges({ teams: [[p('a', 20)], [p('c', 20)]], n: 1, lv: 3, winner: 1 });
   assert.equal(by(c, 'a').after, 0);

@@ -1994,7 +1994,7 @@ function netTextTexture(span, depth, text, band = 4.5) {
   // 2026-11-19 使用者給的樣子：細的無襯線字、字距拉開、整排排滿兩條側邊白帶中間；字高撐滿上下白帶之間，只留一點點空隙
   const TOP = 0.07, BOT = 0.05, SIDE = 0.05, GAP = 0.035;   // 上白帶、下白帶、側邊白帶寬（公尺）、字跟白帶的空隙
   const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
-  const FONT = (px) => `500 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
+  const FONT = (px) => `700 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
   const capH = (depth - TOP - BOT - GAP * 2) * PPM, base = (depth - BOT - GAP) * PPM;
   m.font = FONT(100); const asc = m.measureText('E').actualBoundingBoxAscent || 72, size = 100 * capH / asc; m.font = FONT(size); m.textBaseline = 'alphabetic';
   const chars = [...text], ws = chars.map((ch) => (ch === ' ' ? 0 : m.measureText(ch).width)), sum = ws.reduce((n, w) => n + w, 0);
@@ -2008,7 +2008,8 @@ function netTextTexture(span, depth, text, band = 4.5) {
   grid(c, 'rgba(20,20,20,0.85)', 1.8);
   // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
   const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
-  grid(l, 'rgba(250,250,245,0.95)', 3.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  grid(l, '#FFFFFF', 4.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.globalAlpha = 0.22; c.drawImage(mk, 0, 0); c.globalAlpha = 1;   // 字裡面的網目鋪一層很淡的白：字看起來比較淺、比較飽滿，還是看得到對面（2026-11-19 使用者：太細太深）
   c.drawImage(lit, 0, 0);
   // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
   c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
@@ -11932,7 +11933,8 @@ function vmRateMatch() {
   const average = total / Math.max(1, VM.team.reduce((sum, ids) => sum + ids.filter(Boolean).length, 0));
   for (const t of [0, 1]) {
     const ids = (VM.team[t] || []).filter(Boolean), n = Math.max(1, ids.length), share = (MREC.tp[t] || 0) / total;
-    const result = winner < 0 ? 50 : t === winner ? Math.max(65, Math.min(100, 65 + (share - 0.5) * 140)) : Math.max(0, Math.min(45, 45 - (0.5 - share) * 150));
+    const setBonus = winner >= 0 && t !== winner && score === VM.sets && score[winner] > 1 ? 24 * Math.min(score[t], score[winner] - 1) / (score[winner] - 1) : 0;   // 多局輸了但有贏局：補一點（三戰兩勝輸 1:2 補 24、五戰三勝輸 1:3 補 12、2:3 補 24），還是比贏的一隊低
+    const result = winner < 0 ? 50 : t === winner ? Math.max(65, Math.min(100, 65 + (share - 0.5) * 140)) : Math.min(60, Math.max(0, Math.min(45, 45 - (0.5 - share) * 150)) + setBonus);
     const touches = ids.reduce((sum, id) => sum + (mrecPf(id).t || 0), 0) || 1;
     for (const id of ids) {
       const P = mrecPf(id), pts = P.k + P.b + P.a;
@@ -11955,7 +11957,7 @@ function vmSendResult() {   // 房主：比賽結束，把結果送給大家（�
   if ((NET.me !== 'srv' && (!ROOM || !ROOM.isHost)) || vmIsPractice() || !MREC.id) return;   /* B5：伺服器當房主時由伺服器送 */
   const RT = vmRateMatch();
   if (!Object.keys(RT.rate).length) return;
-  const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, bo: VM.bestOf || 1, sets: VM.sets ? [...VM.sets] : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+  const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, bo: VM.bestOf || 1, sets: VM.sets ? [...VM.sets] : null, setLog: Array.isArray(VM.setLog) ? VM.setLog.map((x) => [...x]) : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
   if (NET.on) NET.tx.publish('vm', d);
   vmGotResult(d); MREC.id = '';
 }
@@ -11972,7 +11974,7 @@ async function vmGotResult(d) {
   if (d.six && d.team.every(ids => ids.length === 6) && ['OH', 'S', 'MB', 'OPP'].includes(d.roles?.[me])) perf.role = d.roles[me];
   MREC.local = { p: 0, sets: {} };
   const MR = my ? await import('./js/match-result.js').catch(() => null) : null;   // 結算面板（等級、六角圖、長條圖、解說、排名）
-  if (MR) { try { MR.showMatchResult({ won, final: multi ? `局數 ${d.sets[0]}：${d.sets[1]}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
+  if (MR) { try { MR.showMatchResult({ won, final: multi ? `局數 ${d.sets[0]}：${d.sets[1]}${Array.isArray(d.setLog) && d.setLog.length > 1 ? `（${d.setLog.filter((x) => Array.isArray(x) && x.length === 2).map((x) => x.join(':')).join('、')}）` : ''}` : `${d.sc[0]}：${d.sc[1]}`, my, isMvp: mvp, rate: d.rate, mvp: d.mvp, bestLoser: d.bestLoser, teams: d.team, myTeam: team, me, nameOf: vmName, teamLabel: vmTeamLabel, st: { k: hp.k | 0, b: hp.b | 0, a: hp.a | 0, as: hp.as | 0, rc: hp.rc | 0, fs: hp.fs | 0, t: hp.t | 0, e: hp.e | 0, sp: hp.sp | 0, bt: hp.bt | 0, sv: hp.sv | 0, es: hp.es | 0, eb: hp.eb | 0, st: hp.st | 0 } }); unlockMouse(); vmResultHlBtn(); } catch (x) { console.warn('結算面板', x); } }
   try {
     const { recordMatch, ACHIEVEMENTS, cachedProgress, EXP_PER_LEVEL } = await import('./js/progress.js');
     const r = await recordMatch({ id: d.id, level: [3, 4, 5].includes(d.lv) ? d.lv : 3, human: !!d.human, won, sets, points: [15, 20, 25].includes(d.pts) ? d.pts : 25, seconds: clamp(d.sec | 0, 60, 4 * 3600), perf });
@@ -12244,7 +12246,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+  Object.assign(VM, { on: true, host: true, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
@@ -12452,7 +12454,7 @@ function vmPoint(win, why) {
   sfx('whistle', 1);
   if (r.sideOut) { if (VM.six) vm6Rotate(win); else VM.srvIdx[win]++; }   // 拿回發球權：6 對 6 要輪轉
   let fn = vmSetupServe;
-  if (r.setWon) why += `・${vmTeamLabel(win)}拿下第 ${VM.setNo} 局（局數 ${VM.sets[0]}：${VM.sets[1]}）`;
+  if (r.setWon) { why += `・${vmTeamLabel(win)}拿下第 ${VM.setNo} 局（局數 ${VM.sets[0]}：${VM.sets[1]}）`; (VM.setLog || (VM.setLog = [])).push([...VM.sc]); }   // 每局比分：結算面板列出來
   if (r.next === 'over') fn = () => vmOver();
   else if (r.next === 'nextSet') fn = VM.six ? vm6NextSet : vm2NextSet;
   else if (r.next === 'swap') fn = () => { vm6Swap(); vmSetupServe(); vmSay('決勝局 8 分換場', 'srv', 2200); };
@@ -12691,7 +12693,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
+  Object.assign(VM, { on: true, host: true, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
   // 每隊 6 個號位的角色固定（輪轉表）；真人坐進自己選的角色，重複的就往後排到空的位置，其他 AI 補
   const humans = seats ? [[],[]] : [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
   for (const [id, q] of Object.entries(asg)) if (q && q.team >= 0 && NET.peers.has(id)) humans[q.team].push({ id, role: q.role });
