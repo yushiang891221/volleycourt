@@ -571,6 +571,12 @@ export function createGameCore(S = {}) {
     diveFly: { sh: [[-3.05, 0.15], [-3.05, 0.15]], el: [0.05, 0.05], hip: [-0.18, -0.08], kn: [0.12, 0.3], hab: [0.04, 0.04], sp: -0.32, tw: 0, arm: 0, gait: 0 },
     diveCatch: { sh: [[-2.15, 0.45], [-2.15, 0.45]], el: [0.75, 0.75], hip: [-0.12, -0.12], kn: [0.95, 1.15], hab: [0.06, 0.06], sp: -0.5, tw: 0, arm: 0, gait: 0 },
     diveSlide: { sh: [[-2.65, 0.45], [-2.0, 0.6]], el: [0.35, 0.95], hip: [-0.06, 0.08], kn: [1.75, 1.95], hab: [0.08, 0.1], sp: -0.58, tw: 0, arm: 0, gait: 0 },
+    // 魚躍（2026-11-19 使用者給的分解圖）：蹬地飛撲、單手往球伸 → 雙前臂和手肘先著地、抬頭 → 胸口著地、手肘貼地往前滑、雙腿懸空 → 腹部貼地、腿還抬著 → 大腿貼地順勢滑 → 雙手推地起身
+    diveReach: { sh: [[-3.0, 0.05], [-2.3, 0.35]], el: [0.05, 0.45], hip: [-0.15, -0.05], kn: [0.25, 0.5], hab: [0.05, 0.08], sp: -0.25, tw: 0.1, arm: 0, gait: 0, head: [-0.35, 0] },
+    diveForearm: { sh: [[-1.85, 0.32], [-1.85, 0.32]], el: [1.45, 1.45], hip: [-0.5, -0.45], kn: [0.45, 0.6], hab: [0.06, 0.06], sp: -0.45, tw: 0, arm: 0, gait: 0, head: [-0.75, 0] },
+    diveChest: { sh: [[-1.85, 0.34], [-1.85, 0.34]], el: [1.5, 1.5], hip: [-0.55, -0.5], kn: [0.55, 0.7], hab: [0.06, 0.06], sp: -0.5, tw: 0, arm: 0, gait: 0, head: [-0.8, 0] },
+    diveBelly: { sh: [[-1.8, 0.34], [-1.8, 0.34]], el: [1.5, 1.5], hip: [-0.38, -0.34], kn: [0.75, 0.9], hab: [0.06, 0.06], sp: -0.38, tw: 0, arm: 0, gait: 0, head: [-0.7, 0] },
+    diveThigh: { sh: [[-1.75, 0.34], [-1.75, 0.34]], el: [1.45, 1.45], hip: [-0.08, -0.06], kn: [0.95, 1.1], hab: [0.06, 0.06], sp: -0.22, tw: 0, arm: 0, gait: 0, head: [-0.55, 0] },
     // 側接（往右；往左＝鏡像）：右腳往旁邊大跨一步蹲很低、左腳往旁邊伸直，上身往球那邊壓低、雙手併攏往下伸 → 坐到右邊屁股上、右手往球伸長 → 往後滾成仰躺、腳翹起來
     sideLunge: { sh: [[-1.05, -0.1], [-1.05, -0.32]], el: [0.02, 0.02], hip: [1.05, 0.15], kn: [1.85, 0.05], hab: [0.75, 0.65], sp: 0.72, tw: -0.85, arm: 0, gait: 0 },
     sideFall: { sh: [[-3.0, 0.35], [-0.9, 0.65]], el: [0.05, 1.2], hip: [1.05, 0.65], kn: [1.45, 1.05], hab: [0.3, 0.3], sp: 0.22, tw: 0.3, arm: 0, gait: 0 },
@@ -633,12 +639,28 @@ export function createGameCore(S = {}) {
     }
     TCH.P.multiplyScalar(1 / arms.length); return TCH.P.length();
   }
+  const TOUCH_LOG = [];
+  function touchLog(L, src) { if (!window.__gym) return; const kd = L.ev ? L.kind : L.av._tk || L.kind, g = avReachTo(L.av, kd, L.C, 1), r3 = (v) => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; L.av.g.getWorldPosition(TCH.F); TOUCH_LOG.push({ src, kind: kd, gap: +g.toFixed(3), tk: L.av._tk, C: r3(L.C), M: r3(TCH.M), at: r3(TCH.F), off: r3(TCH.P), br: L.av._br ? [+L.av._br.x.toFixed(2), +L.av._br.z.toFixed(2), +L.av._br.dip.toFixed(2), +(L.av._br.up || 0).toFixed(2)] : null, keep: !!L.av._bodyKeep }); if (TOUCH_LOG.length > 400) TOUCH_LOG.shift(); }
+  const TCH_KIND = { spike: 'spike', hit: 'spike', tip: 'spike', serve: 'spike', set: 'set', bump: 'bump', block: 'block' };
+  function touchEvent(m, kind) { if (m && m.userData) m.userData.tev = { t: performance.now(), kind: TCH_KIND[kind] || 'reach' }; }
   function touchPass() {
     const now = performance.now(); if (now - (touchPass.t || 0) < 4) return; touchPass.prev = touchPass.t || 0; touchPass.t = now;
     for (const m of LIVE_BALLS) {
       const U = m.userData;
       if (!m.parent || !ballShown(m)) { U.hp = null; U.hv = null; U.lock = null; continue; }
       const p = TCH.B.setFromMatrixPosition(m.matrixWorld), dtm = U.hp ? (now - U.ht) / 1000 : 0;
+      if (U.tev) {   // A1：遊戲剛擊球——擊球點＝上一格畫面上的球，找離它最近、正在做那個動作的人
+        const E = U.tev; U.tev = null;
+        if (now - E.t < 150 && U.hp && !window.__tchEvOff) {
+          let who = null, wd = Infinity;
+          for (const av of LIVE_AVS) {
+            if (now - av._drv > 150 || !av.g.parent || !ballShown(av.g)) continue;
+            const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - BALL_R * BALL_VIS, sc = d - (av._tk === E.kind ? 0.4 : av._tk || (av._fa || 0) > 0.5 ? 0.2 : 0);
+            if (d < 1.6 && sc < wd) { wd = sc; who = av; }
+          }
+          if (who) { U.lock = { av: who, t0: now, C: U.hp.clone(), kind: (who._fa || 0) > 0.5 ? 'reach' : E.kind, ev: true }; touchLog(U.lock, 'event'); }
+        }
+      }
       if (U.hp && dtm > 0.004 && dtm < 0.25) {
         const v = TCH.Bb.copy(p).sub(U.hp).divideScalar(dtm);
         if (v.lengthSq() > 45 * 45) { U.hv = null; U.hp.copy(p); U.ht = now; U.lock = null; continue; }   // 球被瞬間移走（重新發球、換場）不算擊球
@@ -649,13 +671,13 @@ export function createGameCore(S = {}) {
             const reach = avShoulders(av), d = TCH.M.distanceTo(U.hp) - reach - Rv, lim = av._tk ? 1.4 : 0.6, sc = d - (av._tk ? 0.3 : 0);
             if (d < lim && sc < wd) { wd = sc; who = av; }
           }
-          if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; }
+          if (who) { avShoulders(who); const dy = U.hp.y - TCH.M.y; U.lock = { av: who, t0: now, C: U.hp.clone(), kind: dy > 0.25 ? (sp > 12 ? 'spike' : 'set') : dy < -0.15 ? 'bump' : 'reach' }; touchLog(U.lock, 'detect'); }
         }
         U.hv = (U.hv || new THREE.Vector3()).copy(v);
       }
       U.hp = (U.hp || new THREE.Vector3()).copy(p); U.ht = now;
       const L = U.lock; if (!L) continue;
-      const kd = L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
+      const kd = L.ev ? L.kind : L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
       if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
       const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
       avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));
@@ -1099,7 +1121,7 @@ export function createGameCore(S = {}) {
     b.spinW = vbSpinFor(b, v, kind, q);
     if (NET.on) netBallHit(b, kind, q);   // 別人收到的是「碰到的位置＋出去的速度」
     b.snap = null;
-    vbImpact(b, kind, q);
+    vbImpact(b, kind, q); if (typeof touchEvent === 'function') touchEvent(b.m, kind);   // A1（測試只抽出這個函式時沒有 touchEvent）：告訴動畫這一下是誰、什麼動作（下一格鎖定）
   }
   function vbSpinFor(b, v, kind, q) {
     const h = Math.hypot(v.x, v.z) || 1, top = new THREE.Vector3(v.z / h, 0, -v.x / h);   // 水平、跟飛行方向垂直的轉軸：正轉＝上旋
@@ -1587,6 +1609,7 @@ export function createGameCore(S = {}) {
   }
   const TOUCH_OUT = { outKeep: 0.09, outKeepPow: 0.08, outPast: [0.15, 0.7], outLatMax: [2.6, 1.2], topKeep: 0.14, topKeepPow: 0.14, topVy: [2.0, 1.4], powVy: 1.6 };
   function vbBlockApply(b, kind, lx, lz, hz, plane, sd, ex, ez, nx, nz, pow) {
+    if (typeof touchEvent === 'function') touchEvent(b.m, 'block');   // A1：攔網碰到球，告訴動畫
     const p = b.m.position, vl = b.v.x * nx + b.v.z * nz;
     if (kind === 'stuff') { b.v.x -= 1.5 * vl * nx; b.v.z -= 1.5 * vl * nz; b.v.multiplyScalar(0.55); b.v.y = -Math.abs(b.v.y) * 0.3 - 2; const back = plane - sd * (BALL_R + 0.03) - lx; p.x += nx * back; p.z += nz * back; return '被攔死了！'; }
     if (kind === 'out') {   // 打手出界：球擦到外側那隻手，力道被吃掉大半，往旁邊輕輕彈起、偏出邊線外 0.6～1.8 m

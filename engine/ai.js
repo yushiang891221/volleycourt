@@ -184,16 +184,16 @@ export function createAi(G) {
       if (!pHi && dh < 1.2 && B.y < 1.5 && B.y > 0.35 && B.vy < 0) { const ap = G.vmPos(P.attacker) || { z: 0 }; vmAiTouch(a, sd * 1.2, G.clamp(ap.z, -3.6, 3.6), 2.9, 1.3, G.vmLv(a).setErr * 1.5, 'set', 3); return; }   // 傳得太低：低手墊舉
       const activeCall = a.team === G.vmTeamOf(G.vmMe()) && G.VM.call && G.VM.t - G.VM.call.t < 8 ? G.VM.call : null;
       const qmb = G.VM.six && !G.vmSmallCount() && (!activeCall || (activeCall.n === 2 && activeCall.v !== 'high3')) && !P.fix && (!P.grade || P.grade === 'A') ? vm6AirMB(a.team, a.id) : null, early = !!qmb && dh < 1.45 && B.y < 3.8 && B.y > 1.8;
-      if (early && B.y > 2.9 && a.y <= 0 && a.vy <= 0) { a.vy = aiJump(a, 2.6, 'set'); }   // 球還很高：舉球員跳起來舉
-      if (early || (dh < 1.25 && B.y < 3.1 && B.y > 1.5 && B.vy < 1.5)) {
-        if (G.vmPro(a) && !P.dumpChk && !P.fix && Math.abs(a.x) < 1.8 && (!G.VM.six || G.vm6Front(a.id)) && B.y > 2.0) {   // 企聯技能：舉球員跳起來雙手往右推，貼網吊到對面三米線中間（每波最多想一次）
-          P.dumpChk = true;
-          if (G.gameRandom() < 0.14) {
-            if (a.y <= 0 && a.vy <= 0) a.vy = aiJump(a, 2.6, 'set');
-            const netH = G.NETS[G.state.net].h, f = G.clamp(Math.abs(B.x) / (Math.abs(B.x) + 3), 0.05, 0.95), base = B.y + (G.BALL_R - B.y) * f, T = Math.max(0.55, Math.sqrt(Math.max(0.02, netH + G.BALL_R + 0.12 - base) / (4.9 * f * (1 - f))));
-            vmAiTouch(a, -sd * 3, (G.gameRandom() - 0.5) * 0.6, G.BALL_R, T, 0.05, 'tip', 2, true); return;
-          }
+      if (early && B.y > 2.9 && a.y <= 0 && a.vy <= 0) { a.vy = aiJump(a, 2.6, 'set'); }   // 球還很高：舉球員跳起來舉（跳離地 0.2 m 以上或球掉到 2.6 m 以下才碰球，畫面上手摸得到）
+      if (dh < 1.25 && B.y < 3.1 && B.y > 2.6 && B.vy < 1.5 && G.vmPro(a) && !P.dumpChk && !P.fix && Math.abs(a.x) < 1.8 && (!G.VM.six || G.vm6Front(a.id))) {   /* 吊球維持在球還高（2.6～3.1 m）時跳起來吊，不跟著舉球降到額頭高度，才不會從網子高度往上挑 */   // 企聯技能：舉球員跳起來雙手往右推，貼網吊到對面三米線中間（每波最多想一次）
+        P.dumpChk = true;
+        if (G.gameRandom() < 0.14) {
+          if (a.y <= 0 && a.vy <= 0) a.vy = aiJump(a, 2.6, 'set');
+          const netH = G.NETS[G.state.net].h, f = G.clamp(Math.abs(B.x) / (Math.abs(B.x) + 3), 0.05, 0.95), base = B.y + (G.BALL_R - B.y) * f, T = Math.max(0.55, Math.sqrt(Math.max(0.02, netH + G.BALL_R + 0.12 - base) / (4.9 * f * (1 - f))));
+          vmAiTouch(a, -sd * 3, (G.gameRandom() - 0.5) * 0.6, G.BALL_R, T, 0.05, 'tip', 2, true); return;
         }
+      }
+      if ((early && (B.y < 2.6 || a.y > 0.2)) || (dh < 1.25 && B.y < 2.6 && B.y > 1.5 && B.vy < 1.5))   /* 2026-11-19 使用者：舉球在額頭前上方（2.6 m 以下）碰球，以前 3.1 m 一掉下來就舉，畫面上的人摸不到 */ {
         let ap = G.vmPos(P.attacker) || { z: 0 }, call = a.team === 0 && G.VM.call && G.VM.t - G.VM.call.t < 8 ? G.VM.call.n : 0, pick = null;
         const callV = call ? G.VM.call.v : null, mb3 = callV === 'high3' && G.VM.six ? G.VM.team[a.team].find((id) => id !== a.id && G.VM.role[id] === 'MB' && G.vm6Front(id)) : null;   // 喊平球／3 號位高球
         if (G.VM.six) { pick = mb3 ? { n: 2, id: mb3 } : early ? { n: 2, id: qmb.id } : vm6ChooseSet(a, B); if (mb3) G.VM.call = null; call = pick.n; ap = G.vmPos(pick.id) || ap; if (early && G.VM.call) G.VM.call = null; } else if (call) G.VM.call = null;
