@@ -106,3 +106,33 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 #lobby-shell .chat.is-collapsed { height:40px; box-sizing:border-box; }
 #lobby-shell .chat:not(.is-collapsed) { position:relative; z-index:20; box-sizing:border-box; height:min(62vh, 560px); margin-top:calc(40px - min(62vh, 560px)); display:flex; flex-direction:column; background:rgba(6,33,26,.55); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
 #lobby-shell .chat:not(.is-collapsed) .messages { flex:1; min-height:0; max-height:none; overflow:auto; background:rgba(4,22,17,.35); }
+
+/* WEB-031 天梯排行榜（橫條卡片：大名次、頭像、名稱＋段位、右邊分數；只參考手遊排行榜的排法，顏色照 Play One） */
+#rank-board { width:min(560px, 94vw); max-height:88vh; padding:0; border:1px solid #e5b86955; border-radius:14px; background:#06211A; color:#f1ead9; display:none; }
+#rank-board[open] { display:flex; flex-direction:column; }
+#rank-board header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px 6px; }
+#rank-board h2 { margin:0; color:#E5B869; font-family:Oswald, 'Noto Sans TC', sans-serif; letter-spacing:.08em; }
+#rank-board nav { display:flex; gap:6px; padding:4px 18px; }
+#rank-board nav button { flex:1; min-height:36px; background:#0b362b; color:#c4d1c9; border:1px solid #e5b86933; border-radius:8px; font-weight:700; }
+#rank-board nav button[aria-pressed="true"] { background:#E5B869; color:#06211A; border-color:#E5B869; }
+.rb-hint { margin:4px 18px 0; font-size:11px; color:#8fa59a; }
+.rb-list, .rb-me ul { list-style:none; margin:0; padding:8px 14px; display:flex; flex-direction:column; gap:6px; }
+.rb-list { overflow:auto; flex:1; min-height:120px; }
+.rb-row { display:grid; grid-template-columns:52px 48px minmax(0,1fr) auto; align-items:center; gap:10px; padding:6px 14px 6px 8px; background:linear-gradient(90deg, #0e3a2f, #0b2c24); border:1px solid #e5b86926; clip-path:polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); cursor:context-menu; user-select:none; -webkit-touch-callout:none; }
+.rb-row.me { border-color:#E5B869; background:linear-gradient(90deg, #3a3315, #0e3a2f); }
+.rb-rank { font:700 28px Oswald, sans-serif; text-align:center; color:#c4d1c9; font-style:italic; }
+.rb-rank.top1 { color:#E5B869; } .rb-rank.top2 { color:#d6dde2; } .rb-rank.top3 { color:#d08a4e; }
+.rb-avatar { width:44px; height:55px; object-fit:cover; object-position:50% 15%; border-radius:6px; background:#0B362B; border:1px solid #e5b86933; }
+.rb-who { display:flex; flex-direction:column; min-width:0; }
+.rb-who strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; }
+.rb-who small { color:#E5B869; font-size:12px; }
+.rb-score { font:700 22px Oswald, sans-serif; font-style:normal; color:#f1ead9; }
+.rb-empty { padding:24px 8px; text-align:center; color:#8fa59a; list-style:none; }
+.rb-me { border-top:1px solid #e5b86933; } .rb-me p { margin:10px 18px 14px; color:#c4d1c9; font-size:13px; }
+
+/* 大廳炫技按鈕（角色下方）＋頭上冒出的動作名稱 */
+#lobby-emotes { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:3; display:flex; gap:6px; }
+#lobby-emotes button { width:40px; height:40px; min-height:0; padding:0; font-size:20px; border-radius:50%; background:#06211acc; border:1px solid #e5b86966; }
+#lobby-emotes button:hover { background:#0e3a2f; border-color:#E5B869; }
+.party-emo { position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); white-space:nowrap; padding:3px 10px; border-radius:999px; background:#E5B869; color:#06211A; font-weight:800; font-size:13px; animation:party-emo 1.6s ease-out forwards; pointer-events:none; }
+@keyframes party-emo { 0% { opacity:0; transform:translate(-50%, 6px); } 15% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -10px); } }

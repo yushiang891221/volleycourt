@@ -2339,5 +2339,5 @@ export function createGameCore(S = {}) {
   function step(dt) { staTick(dt); vmUpdate(dt); updateBalls(dt); }
   // 伺服器當房主時的一格：跟網頁 drawFrame 的順序一樣（連線送狀態 → 比賽 → 球 → 送比賽畫格）
   function hostStep(dt) { const now = performance.now(); staTick(dt); netTick(dt, now); vmUpdate(dt); updateBalls(dt); vmWireTick(); }
-  return { GAME_RNG, VM, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, hostStep, netOnMessage, vmApplyRoomRules, get state() { return state; }, setState(v) { state = v; } };
+  return { GAME_RNG, VM, MREC, balls, walk, NET, VB, vmStart, vm6Start, vmUpdate, updateBalls, vmSetupServe, vmMe, step, hostStep, netOnMessage, vmApplyRoomRules, get state() { return state; }, setState(v) { state = v; } };
 }

@@ -27,6 +27,12 @@ export async function ratingsOf(players, mode) {
   return out;
 }
 
+// 中途離開：只記這場已經做到的次數與成就（supabase/027 的 record_partial_for）
+export async function recordPartial(player, match, seconds, perf) {
+  if (!SERVICE || !/^[0-9a-f-]{36}$/i.test(player || '')) return null;
+  return rpc('record_partial_for', { p_player: player, p_match: match, p_seconds: seconds, p_perf: perf }, SERVICE);
+}
+
 export async function reportMatch(match, mode, changes, data) {
   if (!SERVICE) { console.warn('[積分] 伺服器沒有 SUPABASE_SERVICE_ROLE_KEY，這場不寫分數', match); return null; }
   return rpc('ranked_report', { p_match: match, p_mode: mode, p_changes: changes.map(c => ({ player: c.player, delta: c.delta, won: c.won })), p_data: data }, SERVICE);

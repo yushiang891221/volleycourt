@@ -44,7 +44,8 @@ function selectPage(page) {
   document.body.dataset.lobbyPage = page; save('po.lobby.page', page); preview?.redraw();
 }
 document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => selectPage(b.dataset.page));
-$('tab-team').onclick = () => $('team-open').click();   // 球隊放上方分頁；底下的球隊鈕藏起來，沿用它的開啟程式
+$('tab-team').onclick = () => $('team-open').click();
+$('rank-open').onclick = () => import('./leaderboard.js').then(m => m.openLeaderboard(mode)).catch(() => notice('排行榜載入失敗，請重新整理'));   // WEB-031   // 球隊放上方分頁；底下的球隊鈕藏起來，沿用它的開啟程式
 $('start-match').onclick = () => match.state === 'searching' ? api.onCancelMatch(mode) : canLead() && api.onStartMatch(mode);
 $('match-ai').onclick = () => canLead() && api.onStartAI(mode);
 let ratings = null;
@@ -93,6 +94,23 @@ function renderParty() {
     slots.append(el);
   }
   preview?.setParty(mobile.matches ? party.slice(0, 1) : party);
+  shown = party;
+  drawEmotes();
+}
+// 大廳炫技（簡化版：跳、轉圈、搖擺＋頭上冒圖示），隊友也看得到
+let shown = [];
+const ACT_OF = { taunt: 'sway', yaotou: 'sway', gouxiong: 'sway', shanshen: 'spin', langzi: 'spin', crown: 'spin', fire: 'spin' };
+function bubble(i, e) {
+  const label = document.querySelector(`.party-slot.slot-${i} .party-label`); const em = P.EMOTES[e]; if (!label || !em) return;
+  const b = document.createElement('span'); b.className = 'party-emo'; b.textContent = `${em.icon} ${em.name}`; label.append(b); setTimeout(() => b.remove(), 1600);
+}
+function playEmote(i, e) { if (!P.EMOTES[e]) return; preview?.playAct(i, ACT_OF[e] || 'jump'); bubble(i, e); }
+api.setRemoteYaw = (id, yaw) => { const i = shown.findIndex((m, n) => n > 0 && m.id === id); if (i > 0) preview?.setYaw(i, yaw); };
+api.playRemoteEmote = (id, e) => { const i = shown.findIndex((m, n) => n > 0 && m.id === id); if (i > 0) playEmote(i, e); };
+function drawEmotes() {
+  let bar = $('lobby-emotes'); if (!bar) { bar = document.createElement('div'); bar.id = 'lobby-emotes'; bar.setAttribute('aria-label', '炫技動作'); $('party-stage').append(bar); }
+  const prog = P.cachedProgress() || {}, wheel = (prog.wheel && prog.wheel.length ? prog.wheel : P.DEFAULT_WHEEL).filter(k => P.EMOTES[k]).slice(0, 4);
+  bar.replaceChildren(...wheel.map(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = P.EMOTES[k].icon; b.title = P.EMOTES[k].name; b.setAttribute('aria-label', `炫技：${P.EMOTES[k].name}`); b.onclick = () => { playEmote(0, k); api.onSelfEmote?.(k); }; return b; }));
 }
 function summary(prog = P.cachedProgress() || {}) {
   const title = P.ACHIEVEMENTS[prog.title]?.title || '未套用稱號';
@@ -100,7 +118,7 @@ function summary(prog = P.cachedProgress() || {}) {
 }
 if (demo === '2' || demo === '6') members = Array.from({ length: Number(demo) }, (_, i) => ({ id: `demo-${i}`, name: i ? ['小晴', '阿哲', '小宇', '可可', '阿凱'][i - 1] : nick(), rating: 1000 + i * 650, tier: ['新手', '新手', '野場小白', '野場小白', '野場NPC', '野場NPC'][i], isLeader: i === 0, look: myLookCode() }));
 setMode(mode); selectPage(location.hash === '#lobby' ? 'home' : read('po.lobby.page', 'home')); summary();
-try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
+try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); preview.onSelfYaw = (yaw, final) => api.onSelfPose?.(yaw, final); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
 preloadAvatars().then(renderParty, () => {});
 new ResizeObserver(() => preview?.redraw()).observe($('party-stage'));
 mobile.addEventListener('change', renderParty);

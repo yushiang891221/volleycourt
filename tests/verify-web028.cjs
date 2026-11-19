@@ -92,6 +92,14 @@ const { pathToFileURL } = require('node:url');
   e1.open = false; P.bye(e1); t += 61000; P.tick();
   assert.equal(last(b, 'party').members.length, 2);
 
+  // 大廳轉角色、炫技：轉給其他隊友（不回給自己），而且有節流
+  clear(); t += 1000;
+  go(b, { k: 'party-pose', yaw: 1.234 }); assert.deepEqual(last(e2, 'party-pose'), { k: 'party-pose', id: 'conn-b', yaw: 1.234 }); assert.equal(last(b, 'party-pose'), undefined);
+  go(b, { k: 'party-pose', yaw: 2 }); assert.equal(last(e2, 'party-pose').yaw, 1.234, '0.15 秒內第二則丟掉');
+  t += 200; go(b, { k: 'party-pose', yaw: 2 }); assert.equal(last(e2, 'party-pose').yaw, 2);
+  go(b, { k: 'party-emote', e: 'taunt' }); assert.deepEqual(last(e2, 'party-emote'), { k: 'party-emote', id: 'conn-b', e: 'taunt' });
+  go(b, { k: 'party-emote', e: '<script>' }); go(b, { k: 'party-emote', e: 'hi5' }); assert.equal(last(e2, 'party-emote').e, 'taunt', '亂寫的、太密的都不轉');
+
   // partyOf：給之後的配對用
   assert.deepEqual(P.partyOf('B').players, ['B', 'E']);
   P.stop();

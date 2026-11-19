@@ -10,7 +10,7 @@ import { MatchHost, HOST_ID } from '../match/host.mjs';
 import { createParties } from '../shared/party.mjs';
 import { createRanked, planFor } from '../shared/matchmaker.mjs';
 import { settleRanked } from '../shared/ranked-result.mjs';
-import { ratingsOf, reportMatch } from '../shared/ranked-db.mjs';
+import { ratingsOf, reportMatch, recordPartial } from '../shared/ranked-db.mjs';
 import { rankView } from '../../js/ranks.js';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -83,9 +83,22 @@ function roomJoin(ws, name, id, player) {
   ws.on('close', () => {
     set.delete(ws);
     const me = ws.meta;
+    leftMidMatch(name, set, me);
     if (me.d && !me.replaced && ![...set].some(o => o.meta.id === me.id)) cast(set, ws, { k: 'p', a: 'leave', id: me.id, d: {} });
     if (!set.size) { rooms.delete(name); hosts.get(name)?.stop(); hosts.delete(name); }
   });
+}
+
+// 使用者 2026-11-19：比賽打到一半離開（伺服器裁判的比賽），這場已經做到的成就照算（不給經驗、金幣、勝敗）
+function leftMidMatch(name, set, me) {
+  const h = hosts.get(name); if (!h || !h.running || !me || me.replaced || !me.player) return;
+  if ([...set].some(o => o.meta.id === me.id)) return;   /* 同一個人還有別的連線在房間裡 */
+  const g = h.g, M = g.MREC;
+  if (!M || !M.id || g.VM.phase === 'over' || !g.VM.team?.some(t => t.includes(me.id))) return;
+  const perf = M.pf[me.id]; if (!perf) return;
+  h.leftDone = h.leftDone || new Set(); if (h.leftDone.has(me.id)) return; h.leftDone.add(me.id);
+  recordPartial(me.player, (M.id + ':left').slice(-64), Math.round((Date.now() - M.t0) / 1000), { ...perf })
+    .then(r => { if (r) console.log('[成就] 中途離開照算', name, JSON.stringify(r)); }).catch(e => console.warn('[成就] 中途離開記錄失敗', e.message));
 }
 
 // ---- 大廳：照 rt-worker/src/lobby.js 搬過來（資料存在 lobby.json）
@@ -160,7 +173,7 @@ const L = {
       ranked.handle(ws, m); return;
     }
     if (typeof m.k === 'string' && m.k.startsWith('party-')) {   // WEB-028 組隊（server/shared/party.mjs）
-      if (!allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });
+      if (m.k !== 'party-pose' && m.k !== 'party-emote' && !allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });   /* 轉角色、炫技在 party.mjs 自己節流 */
       parties.handle(ws, m); return;
     }
     const room = () => this.data.rooms.find(r => r.no === Number(m.no || p.no));

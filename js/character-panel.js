@@ -95,6 +95,21 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   const partyHalo = slots ? new THREE.Mesh(new THREE.RingGeometry(.28, .38, 64), new THREE.MeshBasicMaterial({ color: '#E5B869', side: THREE.DoubleSide, transparent: true, opacity: .8 })) : null;
   if (partyHalo) { partyHalo.rotation.x = -Math.PI / 2; partyHalo.position.y = .01; scene.add(partyHalo); }
   let party = [];
+  // 大廳（slots）：拖曳轉「自己的角色」，鏡頭固定（不再繞著轉、也不縮放，角色不會跑出名牌位置）；方向和炫技同步給隊友（onSelfYaw）
+  const yaws = [], acts = [];   // 每個站位角色的方向、正在做的炫技 { kind, t0 }
+  let actRaf = 0;
+  const actPose = (i, now) => {   // 簡化版炫技：整個角色跳、轉、搖（大廳的角色沒有遊戲裡的骨架動畫）
+    const a = party[i], act = acts[i]; if (!a) return false;
+    const base = yaws[i] || 0; a.g.position.y = 0; a.g.rotation.set(0, base, 0);
+    if (!act) return false;
+    const t = (now - act.t0) / 1000, dur = act.kind === 'spin' ? 0.9 : act.kind === 'sway' ? 1.4 : 1.1;
+    if (t >= dur) { acts[i] = null; return false; }
+    if (act.kind === 'spin') { a.g.rotation.y = base + Math.PI * 2 * (1 - (1 - t / dur) ** 2); a.g.position.y = Math.sin(Math.PI * t / dur) * 0.12; }
+    else if (act.kind === 'sway') a.g.rotation.z = Math.sin(t * 9) * 0.18 * (1 - t / dur);
+    else a.g.position.y = Math.abs(Math.sin(t * Math.PI * 2.7)) * 0.22 * (1 - t / dur);   // 跳
+    return true;
+  };
+  const animate = () => { actRaf = 0; const now = performance.now(); let busy = false; party.forEach((_, i) => { busy = actPose(i, now) || busy; }); draw(); if (busy) actRaf = requestAnimationFrame(animate); };
   const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
     if (!slots) { renderer.render(scene, camera); return; }
     // 同一個 renderer／scene，以 scissor 畫各站位；手機 slots 只回傳自己。
@@ -112,23 +127,28 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   };
   const ask = () => { if (!raf) raf = requestAnimationFrame(draw); };
   canvas.style.cursor = 'grab'; canvas.style.touchAction = 'none';
-  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
-  canvas.addEventListener('pointermove', (e) => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.012; pitch = Math.max(-1.2, Math.min(1.35, drag.pitch + (e.clientY - drag.y) * 0.01)); ask(); });
-  canvas.addEventListener('dblclick', () => { yaw = 0.1; pitch = 0.08; dist = DIST0; ask(); });   // 點兩下轉回正面、距離還原
-  canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.max(1.2, Math.min(5, dist * Math.exp(e.deltaY * 0.0012))); ask(); }, { passive: false });   // 滾輪拉近拉遠
-  const up = () => { drag = null; canvas.style.cursor = 'grab'; };
+  const api = { onSelfYaw: null };
+  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch, self: yaws[0] || 0 }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
+  canvas.addEventListener('pointermove', (e) => { if (!drag) return;
+    if (slots) { yaws[0] = drag.self + (e.clientX - drag.x) * 0.012; actPose(0, performance.now()); api.onSelfYaw?.(yaws[0], false); ask(); return; }
+    yaw = drag.yaw - (e.clientX - drag.x) * 0.012; pitch = Math.max(-1.2, Math.min(1.35, drag.pitch + (e.clientY - drag.y) * 0.01)); ask(); });
+  canvas.addEventListener('dblclick', () => { if (slots) { yaws[0] = 0; actPose(0, performance.now()); api.onSelfYaw?.(0, true); ask(); return; } yaw = 0.1; pitch = 0.08; dist = DIST0; ask(); });   // 點兩下轉回正面
+  canvas.addEventListener('wheel', (e) => { if (slots) return; e.preventDefault(); dist = Math.max(1.2, Math.min(5, dist * Math.exp(e.deltaY * 0.0012))); ask(); }, { passive: false });   // 滾輪拉近拉遠（大廳不縮放）
+  const up = () => { if (drag && slots) api.onSelfYaw?.(yaws[0] || 0, true); drag = null; canvas.style.cursor = 'grab'; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-  return {
+  return Object.assign(api, {
+    setYaw(i, v) { if (!Number.isFinite(v)) return; yaws[i] = v; actPose(i, performance.now()); ask(); },
+    playAct(i, kind) { if (!party[i]) return; acts[i] = { kind, t0: performance.now() }; if (!actRaf) actRaf = requestAnimationFrame(animate); },
     setParty(members) {
       // 模型資源可能由 avatar-toy 共用；移除舊節點，避免誤 dispose 共用材質。
       party.forEach(a => scene.remove(a.g));
       party = members.map((m, i) => makeToyAvatar(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
-      party.forEach(a => scene.add(a.g)); ask();
+      party.forEach(a => scene.add(a.g)); party.forEach((_, i) => actPose(i, performance.now())); ask();
     },
     rebuild(code) { if (av) scene.remove(av.g); av = makeToyAvatar(decodeLook(code), readWornJersey() || 'orange'); scene.add(av.g); ask(); },
     redraw: ask,
-    dispose() { cancelAnimationFrame(raf); partyHalo?.geometry.dispose(); partyHalo?.material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
-  };
+    dispose() { cancelAnimationFrame(raf); cancelAnimationFrame(actRaf); partyHalo?.geometry.dispose(); partyHalo?.material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
+  });
 }
 // 球衣與裝備（三欄）：左＝角色預覽（可轉）、目前穿戴、玩家資料（可改暱稱）、調整外觀；中＝分類＋物品格；右＝稱號、T 輪盤動作
 //   護膝存在外觀裡（會同步到帳號）；帽子、眼鏡、項鍊、護腕存在這台電腦；球隊球衣要加入球隊才有

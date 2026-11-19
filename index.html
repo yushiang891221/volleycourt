@@ -75,7 +75,7 @@
 
 <section id="home-page">
 <div id="my-summary" aria-label="我的角色資料"></div>
-<div id="party-stage"><canvas aria-label="角色預覽，拖曳旋轉"></canvas><div id="party-slots"></div><span class="stage-hint">拖曳旋轉 · 滾輪縮放</span></div>
+<div id="party-stage"><canvas aria-label="角色預覽，拖曳旋轉"></canvas><div id="party-slots"></div><span class="stage-hint">拖曳轉角色 · 點兩下轉回正面 · 隊友看得到</span></div>
 <section class="match-card panel"><span class="eyebrow">RANKED PLAY</span><h2>積分賽</h2><div class="mode-options"><button data-mode="2v2">2 對 2</button><button data-mode="6v6">6 對 6</button><button disabled>娛樂模式 · 即將推出</button></div><p id="match-note" role="status"></p><button id="start-match" class="orange">開始配對</button><button id="match-ai" hidden>直接用 AI 開打</button></section>
 </section>
   <aside class="players panel" aria-labelledby="players-title">
@@ -97,6 +97,7 @@
     <button id="equip-open"><span data-icon="shirt"></span>球衣與裝備</button>
     <button id="friends-open"><span data-icon="user"></span>好友<b class="fr-badge" id="friends-badge" hidden>0</b></button>
     <button id="team-open" hidden><span data-icon="users"></span>球隊</button>
+    <button id="rank-open"><span data-icon="rank"></span>天梯排行榜</button>
     <button id="feedback-open" aria-haspopup="dialog"><span data-icon="chat"></span>匿名建議</button>
   </nav><span class="muted">一起上場，打好每一球。</span></footer>
 <dialog id="nickname" aria-labelledby="nickname-title"><form id="name-form"><span class="eyebrow">WELCOME TO THE COURT</span><h2 id="nickname-title">準備上場</h2><p>先取一個暱稱，讓球友認識你。暱稱會儲存在這個瀏覽器。</p><label>你的暱稱<input id="name" maxlength="12" required autocomplete="nickname" placeholder="最多 12 個字" autofocus></label><div class="buttons"><button class="orange">進入大廳 →</button></div></form></dialog>

@@ -55,6 +55,14 @@ export function installParty(api, { myLookCode, setMode }) {
   api.onStartMatch = mode => { if (api.canLead()) send({ k:'mm-start', mode }); };
   api.onCancelMatch = () => send({ k:'mm-cancel' });
   api.onStartAI = () => { if (api.canLead()) send({ k:'mm-ai-now' }); };
+  // 大廳轉角色、炫技：同步給隊友（轉的時候最多每 0.2 秒送一次，放開時一定送最後的方向）
+  let poseT = 0, poseLater = 0;
+  api.onSelfPose = (yaw, final) => {
+    if (!party?.id) return; clearTimeout(poseLater);
+    const go = () => { poseT = Date.now(); send({ k:'party-pose', yaw }); };
+    if (final || Date.now() - poseT >= 200) go(); else poseLater = setTimeout(go, 200 - (Date.now() - poseT));
+  };
+  api.onSelfEmote = e => { if (party?.id) send({ k:'party-emote', e }); };
   api.leaveParty = () => send({ k:'party-leave' });
   api.kickMember = id => { if (api.canLead()) send({ k:'party-kick', id }); };
   api.onMode = mode => { if (!api.canLead()) return; if (party?.id) send({ k:'party-mode', mode }); else setMode(mode); };
@@ -98,7 +106,9 @@ export function installParty(api, { myLookCode, setMode }) {
       const url = new URL('index.html', location.href); url.searchParams.set('party', m.code);
       $('party-copy-url').value = url.href;
       if (!await copyLink() && !$('party-copy').open) { $('party-copy').showModal(); $('party-copy-url').select(); }
-    } else if (m.k === 'party-error') notify(m.reason);
+    } else if (m.k === 'party-pose') api.setRemoteYaw?.(m.id, m.yaw);
+    else if (m.k === 'party-emote') api.playRemoteEmote?.(m.id, m.e);
+    else if (m.k === 'party-error') notify(m.reason);
     else if (m.k === 'party-sent') notify(`已邀請 ${m.name}`);
     else if (m.k === 'party-declined') notify(`${m.name} 拒絕了邀請`);
   }

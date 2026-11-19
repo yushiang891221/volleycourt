@@ -15,6 +15,7 @@ export function createParties({ send, sockets, now = Date.now, ratingOf = () => 
   const byPlayer = new Map();   // 帳號 → 隊伍 id
   const invites = new Map();    // `${隊伍}|${被邀帳號}` → { party, to, from, at }
   const cooldown = new Map();   // `${邀請人}>${被邀人}` → 時間
+  const poseAt = new Map(), emoteAt = new Map();   // 大廳轉角色、炫技的節流
 
   const live = player => sockets().filter(ws => ws.meta && ws.meta.player === player && ws.meta.name);
   const toPlayer = (player, obj) => { for (const ws of live(player)) send(ws, obj); };
@@ -72,6 +73,19 @@ export function createParties({ send, sockets, now = Date.now, ratingOf = () => 
       case 'party-sync':
         if (party) send(ws, view(party, p.player)); else send(ws, { k: 'party', id: null, members: [] });
         return true;
+      case 'party-pose': {   // 大廳轉角色的方向：轉給其他隊友（每人最多每 0.15 秒一則，多的丟掉）
+        if (!party || !Number.isFinite(msg.yaw)) return true;
+        const t = now(); if (t - (poseAt.get(p.player) || 0) < 150) return true; poseAt.set(p.player, t);
+        const yaw = Math.max(-1000, Math.min(1000, Math.round(msg.yaw * 1000) / 1000));
+        for (const m of party.members) if (m.player !== p.player) toPlayer(m.player, { k: 'party-pose', id: p.id, yaw });
+        return true;
+      }
+      case 'party-emote': {   // 大廳炫技：轉給其他隊友（每人每 0.8 秒最多一次）
+        if (!party || typeof msg.e !== 'string' || !/^[a-z0-9]{1,12}$/.test(msg.e)) return true;
+        const t = now(); if (t - (emoteAt.get(p.player) || 0) < 800) return true; emoteAt.set(p.player, t);
+        for (const m of party.members) if (m.player !== p.player) toPlayer(m.player, { k: 'party-emote', id: p.id, e: msg.e });
+        return true;
+      }
       case 'party-look': {
         const m = party && party.members.find(x => x.player === p.player); if (!m) return true;
         const look = lookOf(msg.look); if (look !== m.look) { m.look = look; publish(party); }

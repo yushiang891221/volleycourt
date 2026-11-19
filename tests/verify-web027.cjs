@@ -16,7 +16,7 @@ console.log('WEB-027 結構檢查通過；互動與手機畫面由 capture-web02
 assert.equal((h.match(/id="practice"/g) || []).length, 1);
 assert(h.split('</header>')[0].includes('id="practice"'));
 const footer = h.split('<footer')[1].split('</footer>')[0];
-assert(!footer.includes('id="practice"') && !footer.includes('天梯排行榜'));
+assert(!footer.includes('id="practice"') && footer.includes('id="rank-open"'));   /* 2026-11-19 使用者：排行榜放回底下 */
 assert(h.includes('chat panel is-collapsed'));
 assert(h.includes('aria-expanded="false" aria-controls="messages chat"'));
 assert(css.includes('.messages > :not(:last-child)'));
