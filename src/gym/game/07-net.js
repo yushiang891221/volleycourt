@@ -777,7 +777,7 @@ function avKickApply(av, now) {
 //   只動畫面（ballPullOn），物理和判定不變
 const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
 const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
-const HIT_LOCK = { spike: [0.08, 0], block: [0.08, 0], set: [0.12, 0.1], bump: [0.1, 0], reach: [0.1, 0] };   // 擊球後 [球貼在手上、再接回飛行路線的總時間（秒）, 前面幾成時間完全貼著]；扣球貼太久會像黏住
+const HIT_LOCK = { spike: [0.22, 0], block: [0.18, 0], set: [0.2, 0], bump: [0.2, 0], reach: [0.18, 0] };   // 擊球後畫面上的球從手上接回真正飛行路線要多久（秒）、前面幾成完全貼著。2026-11-19 使用者回報球在空中折一下、舉球卡一下：以前 0.08～0.12 秒、舉球先貼一下，手和球差 0.5 m 時接回去會看到明顯轉折 → 不貼、拉長、頭尾平滑
 function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
 // 手臂末端（碰球的點）：手掌＝手腕再往外 5 cm；前臂＝手肘到手腕 6 成的地方（不管哪種骨架都用世界座標算）
 function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
@@ -901,10 +901,11 @@ function touchPass() {
     const kd = L.ev ? L.kind : L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
     if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
     const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-    avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));
+    avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
     // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再慢慢接回真正的位置
-    const hold = TCH.V.copy(L.C).add(TCH.P), s = sm((u - LK[1]) / (1 - LK[1]));
-    hold.lerp(p, s).sub(p); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
+    // 2026-11-19：差距在碰到的那一格記下來，之後照時間平滑縮到 0（以前是從手上固定一點拉回去：球先停在手邊再衝出去、路線彎一下）
+    if (!L.off) L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone();
+    const s = sm((u - LK[1]) / (1 - LK[1])), hold = TCH.V.copy(L.off).multiplyScalar(1 - s); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
   }
 }
 scene.onBeforeRender = touchPass;

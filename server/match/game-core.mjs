@@ -366,7 +366,7 @@ export function createGameCore(S = {}) {
   const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
   function applyPose(dt, snap) {
     camera.updateMatrixWorld(true);
-    const P = POSE[pose], k = snap ? 1 : 1 - Math.exp(-dt * 18);
+    const P = POSE[pose] || POSE.hold, k = snap ? 1 : 1 - Math.exp(-dt * 18);
     for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
       if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
       const c = arm.cur;
@@ -638,7 +638,7 @@ export function createGameCore(S = {}) {
   function avKick(av, kind, speed, now) { if (!av || !['spike', 'bump', 'set', 'block'].includes(kind)) return; av._kick = { kind, t0: now, amp: clamp(speed / 18, 0.35, 1), arms: (TCH_CFG[kind] && TCH_CFG[kind].arms) || [0, 1] }; }
   const TCH = { S: new THREE.Vector3(), M: new THREE.Vector3(), E: new THREE.Vector3(), H: new THREE.Vector3(), F: new THREE.Vector3(), T: new THREE.Vector3(), B: new THREE.Vector3(), Bb: new THREE.Vector3(), n: new THREE.Vector3(), r: new THREE.Vector3(), g: new THREE.Vector3(), P: new THREE.Vector3(), V: new THREE.Vector3(), q: new THREE.Quaternion(), qw: new THREE.Quaternion(), qp: new THREE.Quaternion(), UP: new THREE.Vector3(0, 1, 0) };
   const TCH_CFG = { spike: { arms: [0], band: 0.45, bend: true, maxBend: 0.45 }, set: { arms: [0, 1], band: 0.7, bend: true }, bump: { arms: [0, 1], band: 0.7, bend: false }, block: { arms: [0, 1], band: 0.5, bend: false }, reach: { arms: null, band: 0.4, bend: true, maxBend: 0.6 } };
-  const HIT_LOCK = { spike: [0.08, 0], block: [0.08, 0], set: [0.12, 0.1], bump: [0.1, 0], reach: [0.1, 0] };
+  const HIT_LOCK = { spike: [0.22, 0], block: [0.18, 0], set: [0.2, 0], bump: [0.2, 0], reach: [0.18, 0] };
   function ballShown(m) { for (let o = m; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; }
   function avTouchEnd(av, i, kind, out) { av.elbows[i].getWorldPosition(TCH.E); av.hands[i].getWorldPosition(TCH.H); return kind === 'bump' ? out.lerpVectors(TCH.E, TCH.H, 0.6) : out.copy(TCH.H).sub(TCH.E).normalize().multiplyScalar(0.05 * (av.g.scale.x || 1)).add(TCH.H); }
   function avShoulders(av) { av.arms[0].getWorldPosition(TCH.S); av.arms[1].getWorldPosition(TCH.M); TCH.M.add(TCH.S).multiplyScalar(0.5); av.elbows[0].getWorldPosition(TCH.E); av.hands[0].getWorldPosition(TCH.H); return TCH.S.distanceTo(TCH.E) + TCH.E.distanceTo(TCH.H) + 0.05 * (av.g.scale.x || 1); }
@@ -714,10 +714,11 @@ export function createGameCore(S = {}) {
       const kd = L.ev ? L.kind : L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
       if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
       const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-      avReachTo(L.av, kd, L.C, 1 - sm((u - 0.55) / 0.45));
+      avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
       // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再慢慢接回真正的位置
-      const hold = TCH.V.copy(L.C).add(TCH.P), s = sm((u - LK[1]) / (1 - LK[1]));
-      hold.lerp(p, s).sub(p); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
+      // 2026-11-19：差距在碰到的那一格記下來，之後照時間平滑縮到 0（以前是從手上固定一點拉回去：球先停在手邊再衝出去、路線彎一下）
+      if (!L.off) L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone();
+      const s = sm((u - LK[1]) / (1 - LK[1])), hold = TCH.V.copy(L.off).multiplyScalar(1 - s); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
     }
   }
   function avPoseOf(...a) { return S.avPoseOf ? S.avPoseOf(...a) : undefined; }
@@ -1235,6 +1236,7 @@ export function createGameCore(S = {}) {
   }
   function vbMarkSet(b) { b.setT = performance.now(); const pr = vbPredict(b.m.position, b.v, 2.9); if (pr) VB.setSpot = { x: pr.x, z: pr.z, until: performance.now() + pr.t * 1000 + 1500, b }; }
   function vbBlockTest(b, h) {
+    const BLOCK_HALF = 0.72;   // 攔網雙手中心往左右各算多寬（2026-11-19 使用者：寬一點點，0.62 → 0.72）
     if (b.langzi && VM.on) return; /* WEB-022 裝飾球不觸發攔網。 */
     if (!walk.air || !walk.air.block || (b.mine && performance.now() - b.mineT < 300)) return;
     const ct = vbCourt(); if (!ct || Math.abs(ct.lx) > 1.3) return;
@@ -1242,9 +1244,9 @@ export function createGameCore(S = {}) {
     if (!((l0 - plane) * (lx - plane) <= 0 && (lx - l0) * sg > 0)) return;
     const sh = walk.blkShift || 0, [, hz] = toLocalOf(ct.c, walk.x + Math.cos(walk.yaw) * sh, walk.z - Math.sin(walk.yaw) * sh), off = Math.abs(lz - hz), cy = camera.position.y;   // 雙手的中心：跟著滑鼠往左右移
     const top = cy + 0.95, netH = NETS[state.net].h;
-    if (off > 0.62 + BALL_R || p.y > top + BALL_R || p.y < cy + 0.2) return;   // 從手上面過去＝被打過手（攻擊手跳得比你高、或你跳早跳晚了）
+    if (off > BLOCK_HALF + BALL_R || p.y > top + BALL_R || p.y < cy + 0.2) return;   // 從手上面過去＝被打過手（攻擊手跳得比你高、或你跳早跳晚了）
     const r = (ct.c.rot * Math.PI) / 180, pow = clamp((b.v.length() - 8) / 18, 0, 1), low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);
-    const kind = vbBlockOutcome(off * 1.2, low, pow, 0.8);   // 你的手寬 0.62 m：換算成 0.75 m 的比例
+    const kind = vbBlockOutcome(off * 0.75 / BLOCK_HALF, low, pow, 0.8);   // 你的手寬 BLOCK_HALF：換算成 0.75 m 的比例
     const word = vbBlockApply(b, kind, lx, lz, hz, plane, sg, Math.sin(r), Math.cos(r), Math.cos(r), -Math.sin(r), pow);
     tutEv('block', { kind, aim: walk.blkAim || 0, mate: TUT_COACH.together() }, b);
     vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);

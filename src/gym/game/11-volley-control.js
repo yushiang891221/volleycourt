@@ -664,7 +664,7 @@ function vbOverheadReceive() {
   if (b.m.position.y < H.y-.7) { toast('球太低，用 V 接',1300); return; }
   if (!result.hit) { toast(result.note,1300); return; }
   walk.recv = null;
-  pose = 'setReady'; hands.visible = true;
+  pose = 'set'; hands.visible = true;   /* 第一人稱手的姿勢表（POSE）只有 set；setReady 是全身姿勢表的名字，用了會當掉（2026-11-19 使用者按 E 出錯） */
   const pending = {b,dt,dmin,result,left:Math.max(0,t),vin:b.v.length(),velocity:b.v.clone()};
   if (t > 0) walk.ohQ = pending;
   else vbDoOverheadReceive(pending);
@@ -674,7 +674,7 @@ function vbOverheadStep() {
   const b = o.b;
   if ((!walk.on || walk.paused || walk.emote || walk.setQ || walk.setAim) || walk.dive || walk.down > 0 || walk.hold || walk.serve || walk.spike || !balls.includes(b) || b.rest > .3 || (b.mine && performance.now()-b.mineT < 400) || (VM.on && (roomSpectator() || b.floorHit || !vbOwnSide(b))) || Math.abs(b.v.x-o.velocity.x) > .5 || Math.abs(b.v.z-o.velocity.z) > .5) { vbOverheadCancel(); return; }
   o.left -= (VB.dt || 1/60);
-  if (o.left > 0) { pose = 'setReady'; return; }
+  if (o.left > 0) { pose = 'set'; return; }
   const [fx,fz] = vbFwd(), H = new THREE.Vector3(walk.x+fx*.25,camera.position.y+.25,walk.z+fz*.25);
   /* 用本格前後的軌跡距離容許跨過觸球時刻；不移動球到手的位置。 */
   const near = vbOverheadClosest(b.m.position,b.v,H);
@@ -1174,6 +1174,7 @@ function vbBlockHands(dt) {
   walk.blkShift = (walk.blkShift || 0) + clamp(d, -m, m);
 }
 function vbBlockTest(b, h) {
+  const BLOCK_HALF = 0.72;   // 攔網雙手中心往左右各算多寬（2026-11-19 使用者：寬一點點，0.62 → 0.72）
   if (b.langzi && VM.on) return; /* WEB-022 裝飾球不觸發攔網。 */
   if (!walk.air || !walk.air.block || (b.mine && performance.now() - b.mineT < 300)) return;
   const ct = vbCourt(); if (!ct || Math.abs(ct.lx) > 1.3) return;
@@ -1181,9 +1182,9 @@ function vbBlockTest(b, h) {
   if (!((l0 - plane) * (lx - plane) <= 0 && (lx - l0) * sg > 0)) return;
   const sh = walk.blkShift || 0, [, hz] = toLocalOf(ct.c, walk.x + Math.cos(walk.yaw) * sh, walk.z - Math.sin(walk.yaw) * sh), off = Math.abs(lz - hz), cy = camera.position.y;   // 雙手的中心：跟著滑鼠往左右移
   const top = cy + 0.95, netH = NETS[state.net].h;
-  if (off > 0.62 + BALL_R || p.y > top + BALL_R || p.y < cy + 0.2) return;   // 從手上面過去＝被打過手（攻擊手跳得比你高、或你跳早跳晚了）
+  if (off > BLOCK_HALF + BALL_R || p.y > top + BALL_R || p.y < cy + 0.2) return;   // 從手上面過去＝被打過手（攻擊手跳得比你高、或你跳早跳晚了）
   const r = (ct.c.rot * Math.PI) / 180, pow = clamp((b.v.length() - 8) / 18, 0, 1), low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);
-  const kind = vbBlockOutcome(off * 1.2, low, pow, 0.8);   // 你的手寬 0.62 m：換算成 0.75 m 的比例
+  const kind = vbBlockOutcome(off * 0.75 / BLOCK_HALF, low, pow, 0.8);   // 你的手寬 BLOCK_HALF：換算成 0.75 m 的比例
   const word = vbBlockApply(b, kind, lx, lz, hz, plane, sg, Math.sin(r), Math.cos(r), Math.cos(r), -Math.sin(r), pow);
   tutEv('block', { kind, aim: walk.blkAim || 0, mate: TUT_COACH.together() }, b);
   vbFx(b, kind === 'stuff' ? 1 : 0.7); vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);

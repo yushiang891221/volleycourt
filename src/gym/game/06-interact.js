@@ -534,7 +534,7 @@ let pose = 'hold';
 const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
 function applyPose(dt, snap) {
   camera.updateMatrixWorld(true);
-  const P = POSE[pose], k = snap ? 1 : 1 - Math.exp(-dt * 18);
+  const P = POSE[pose] || POSE.hold, k = snap ? 1 : 1 - Math.exp(-dt * 18);
   for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
     if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
     const c = arm.cur;

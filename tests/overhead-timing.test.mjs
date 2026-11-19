@@ -53,7 +53,7 @@ function fixture(t=.1){
   c.vbDoOverheadReceive=o=>{c.hit=o;};return {c,b};
 }
 test('早按只排一次佇列，時間到才碰球；晚按立即碰球',()=>{
-  const {c,b}=fixture();c.vbOverheadReceive();assert(c.walk.ohQ);assert(!c.hit);assert.equal(c.pose,'setReady');
+  const {c,b}=fixture();c.vbOverheadReceive();assert(c.walk.ohQ);assert(!c.hit);assert.equal(c.pose,'set');   /* 第一人稱手的姿勢表只有 set（setReady 是全身姿勢，用了會當掉） */
   const queued=c.walk.ohQ;c.vbOverheadReceive();assert.equal(c.walk.ohQ,queued);
   c.vbOverheadStep();assert(!c.hit);b.m.position=new V(0,2,.25);c.vbOverheadStep();assert(c.hit);assert.equal(c.walk.ohQ,null);
   for(const t of [-.12,-.3]){const f=fixture(t);f.c.vbOverheadReceive();assert(f.c.hit);assert.equal(f.c.hit.dt,-t);}
