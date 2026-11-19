@@ -4,12 +4,18 @@
 import crypto from 'node:crypto';
 
 export const TEAM_SIZE = { '2v2': 2, '6v6': 6 };
-export const RANKED_RULES = { to: 25, bestOf: 1 };            // 積分賽固定規則（之後要調改這裡）
-export const AI_RATING = { 3: 1500, 4: 2500, 5: 3500 };       // 遊戲 AI 等級：3 高手、4 校隊、5 企聯（越後面越強）
-export function aiLevelFor(rating) {
-  let best = 3; for (const lv of [3, 4, 5]) if (Math.abs(AI_RATING[lv] - rating) < Math.abs(AI_RATING[best] - rating)) best = lv;
-  return best;
+export const RANKED_RULES = { to: 15, bestOf: 1 };            // 積分賽固定規則：一局、15 分（使用者 2026-11-19 定）
+// 積分 → AI 強度（小數＝兩級之間內插）：0 分 0.6 級（比新手還弱）、1000 分新手、3000 球友、5000 高手、8000 校隊、10000 企聯。
+// 一場最多 ±100 分，所以兩邊（含電腦）的強度會跟著分數一點一點往上。
+export const AI_CURVE = [[0, 0.6], [1000, 1], [3000, 2], [5000, 3], [8000, 4], [10000, 5]];
+function interp(x, a, b) {
+  const C = AI_CURVE;
+  if (x <= C[0][a]) return C[0][b];
+  for (let i = 1; i < C.length; i++) if (x <= C[i][a]) { const [p, q] = [C[i - 1], C[i]], k = (x - p[a]) / (q[a] - p[a]); return p[b] + (q[b] - p[b]) * k; }
+  return C[C.length - 1][b];
 }
+export function aiLevelFor(rating) { return Math.round(interp(Number.isFinite(rating) ? rating : 1000, 0, 1) * 20) / 20; }   // 0.05 級一格
+export function aiRatingFor(lv) { return Math.round(interp(Number.isFinite(lv) ? lv : 1, 1, 0)); }   // 電腦算積分時當作幾分
 const windowFor = s => s < 5 ? 500 : s < 10 ? 1000 : s < 15 ? 2000 : Infinity;   // 分數範圍隨等待時間放寬
 const avg = ps => ps.reduce((n, p) => n + (Number.isFinite(p.rating) ? p.rating : 1000), 0) / Math.max(1, ps.length);
 

@@ -291,22 +291,31 @@ function sleevePost(g, x, z, nh, side) {
 // 排球網印字（2026-11-19 使用者：像 FOSSIL 那樣用白色網線排出 PLAY ONE，但要像 VOLLEY 那樣看得到字又不擋視線）
 //   整張網一張貼圖（不重複）：網目 6.25 cm 跟一般網子一樣；字裡面的網線換成白色、稍粗，網目還是空的，看得穿
 const NET_TEXT_TEX = new Map();
-function netTextTexture(span, depth, text) {
-  const key = `${span}|${depth}|${text}`; if (NET_TEXT_TEX.has(key)) return NET_TEXT_TEX.get(key);
-  const CELL = 0.0625, PX = 12, cols = Math.round(span / CELL), rows = Math.round(depth / CELL), W = cols * PX, H = rows * PX;
+function netTextTexture(span, depth, text, band = 4.5) {
+  const key = `${span}|${depth}|${text}|${band}`; if (NET_TEXT_TEX.has(key)) return NET_TEXT_TEX.get(key);
+  const CELL = 0.0625, PX = 12, cols = Math.round(span / CELL), rows = Math.round(depth / CELL), W = cols * PX, H = rows * PX, PPM = W / span;   // PPM＝每公尺幾像素
+  // 2026-11-19 使用者給的樣子：細的無襯線字、字距拉開、整排排滿兩條側邊白帶中間；字高撐滿上下白帶之間，只留一點點空隙
+  const TOP = 0.07, BOT = 0.05, SIDE = 0.05, GAP = 0.035;   // 上白帶、下白帶、側邊白帶寬（公尺）、字跟白帶的空隙
   const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const m = mk.getContext('2d');   // 字的遮罩
-  const th = H * 0.56; m.font = `900 ${th}px "Arial Black", Impact, "Noto Sans TC", sans-serif`; m.textAlign = 'center'; m.textBaseline = 'middle';
-  const tw = m.measureText(text).width, maxW = W * 0.55; if (tw > maxW) m.font = `900 ${th * maxW / tw}px "Arial Black", Impact, "Noto Sans TC", sans-serif`;
-  m.fillStyle = '#fff'; m.fillText(text, W / 2, H * 0.54);
-  const mask = m.getImageData(0, 0, W, H).data, inside = (x, y) => mask[(Math.min(H - 1, Math.max(0, Math.round(y))) * W + Math.min(W - 1, Math.max(0, Math.round(x)))) * 4 + 3] > 100;
+  const FONT = (px) => `500 ${px}px "Helvetica Neue", Helvetica, Arial, "Noto Sans TC", sans-serif`;
+  const capH = (depth - TOP - BOT - GAP * 2) * PPM, base = (depth - BOT - GAP) * PPM;
+  m.font = FONT(100); const asc = m.measureText('E').actualBoundingBoxAscent || 72, size = 100 * capH / asc; m.font = FONT(size); m.textBaseline = 'alphabetic';
+  const chars = [...text], ws = chars.map((ch) => (ch === ' ' ? 0 : m.measureText(ch).width)), sum = ws.reduce((n, w) => n + w, 0);
+  const gaps = chars.length - 1 + chars.filter((ch) => ch === ' ').length * 0.7;   // 空白＝字距的 1.7 倍
+  const total = Math.min(span * 0.86, band * 2 - 0.7) * PPM, gap = Math.max(size * 0.12, (total - sum) / Math.max(1, gaps));
+  let x = (W - (sum + gap * gaps)) / 2;
+  m.fillStyle = '#fff';
+  chars.forEach((ch, i) => { if (ch !== ' ') m.fillText(ch, x, base); x += ws[i] + (i < chars.length - 1 ? gap : 0) + (ch === ' ' ? gap * 0.7 : 0); });
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-  const seg = (x0, y0, x1, y1, lit) => { c.strokeStyle = lit ? 'rgba(248,248,242,0.85)' : 'rgba(20,20,20,0.85)'; c.lineWidth = lit ? 2.4 : 1.8; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
-  for (let pass = 0; pass < 2; pass++)   // 先畫黑線、再畫白線（白線蓋在上面，交叉點才是白的）
-    for (let i = 0; i <= cols; i++) for (let j = 0; j <= rows; j++) {
-      const x = i * PX, y = j * PX;
-      if (j < rows) { const lit = inside(x, y + PX / 2) || inside(x - PX / 2, y + PX / 2) && inside(x + PX / 2, y + PX / 2); if (lit === !!pass) seg(x, y, x, y + PX, lit); }
-      if (i < cols) { const lit = inside(x + PX / 2, y) || inside(x + PX / 2, y - PX / 2) && inside(x + PX / 2, y + PX / 2); if (lit === !!pass) seg(x, y, x + PX, y, lit); }
-    }
+  const grid = (ctx, color, lw) => { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.beginPath(); for (let i = 0; i <= cols; i++) { ctx.moveTo(i * PX, 0); ctx.lineTo(i * PX, H); } for (let j = 0; j <= rows; j++) { ctx.moveTo(0, j * PX); ctx.lineTo(W, j * PX); } ctx.stroke(); };
+  grid(c, 'rgba(20,20,20,0.85)', 1.8);
+  // 字＝印在網線上：只有字經過的那段網線變白（網目一樣是空的，看得到對面）；字裡面的網線畫粗一點，細字也看得出形狀
+  const lit = document.createElement('canvas'); lit.width = W; lit.height = H; const l = lit.getContext('2d');
+  grid(l, 'rgba(250,250,245,0.95)', 3.6); l.globalCompositeOperation = 'destination-in'; l.drawImage(mk, 0, 0);
+  c.drawImage(lit, 0, 0);
+  // 下白帶＋兩條側邊白帶（在邊線正上方、天線下面）：畫在網面上，網子被打到晃的時候一起晃
+  c.fillStyle = '#F7F7F2'; c.fillRect(0, H - BOT * PPM, W, BOT * PPM);
+  for (const z of [-band, band]) c.fillRect(W / 2 + z * PPM - SIDE * PPM / 2, 0, SIDE * PPM, H);
   const t = new THREE.CanvasTexture(cv); t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); t.colorSpace = THREE.SRGBColorSpace;
   NET_TEXT_TEX.set(key, t); return t;
 }

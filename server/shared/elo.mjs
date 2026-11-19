@@ -1,12 +1,12 @@
 // WEB-030 積分加減（規則見 docs/企劃-積分天梯與快速配對.md 第四節）
 // 分數放大 5 倍的 Elo：預期勝率 E = 1/(1+10^((對方−我方)/2000))，加減 K×(結果−E)，K=100（一場最多 ±100）。
-import { AI_RATING } from './matchmaker.mjs';
+import { aiRatingFor } from './matchmaker.mjs';
 export const K = 100, SCALE = 2000, AI_FARM_CAP = 4500;
 
 // teams：[[{ player, rating }…], [{…}]]（只有真人）；n：每隊人數；lv：AI 等級；winner：0／1；left：中途離開的帳號（算輸）
 // 回傳 [{ player, team, before, delta, after, won }]
 export function rankedChanges({ teams, n, lv, winner, left = [] }) {
-  const ai = AI_RATING[lv] ?? AI_RATING[3];
+  const ai = aiRatingFor(lv);   // 電腦的分數＝它的強度對應的積分
   const avg = t => (teams[t].reduce((s, p) => s + p.rating, 0) + (n - teams[t].length) * ai) / n;   // 隊伍分數＝含 AI 的平均
   const out = [];
   for (const t of [0, 1]) {

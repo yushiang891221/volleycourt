@@ -8,7 +8,7 @@
     const copy=v=>JSON.parse(JSON.stringify(v));
     const members=new Map([[id,{at:Date.now(),creator}]]), departed=new Set();
     const validSpeed = n => [.55,.7,1].includes(n);
-    const validLv = n => Number.isInteger(n) && n>=1 && n<=5, validTo = n => [15,20,25].includes(n), validBest = n => [1,3,5].includes(n);
+    const validLv = n => Number.isFinite(n) && n>=0.5 && n<=5 && Math.abs(n*20-Math.round(n*20))<1e-6,   /* 積分賽的 AI 強度照分數內插，可以是 0.05 一格的小數 */ validTo = n => [15,20,25].includes(n), validBest = n => [1,3,5].includes(n);
     const host=()=>order[0] || '';
     const snapshot=()=>({host:host(),isHost:settled && host()===id,speed,count,tactics,lv,to,bestOf,order:[...order],flow:copy(flow)});
     const notify=()=>changed(snapshot());

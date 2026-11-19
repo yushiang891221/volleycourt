@@ -11,8 +11,10 @@ const { pathToFileURL } = require('node:url');
   const step = (mm, sec) => { const out = []; for (let i = 0; i < sec; i++) { t += 1000; out.push(...mm.tick()); } return out; };
   const humans = m => m.teams.map(x => x.length);
 
-  // AI 等級：高手 1500、校隊 2500、企聯 3500，取最接近的
-  assert.equal(M.aiLevelFor(1000), 3); assert.equal(M.aiLevelFor(2600), 4); assert.equal(M.aiLevelFor(9000), 5);
+  // AI 強度照積分內插（2026-11-19）：0 分 0.6 級、1000 新手、3000 球友、5000 高手、8000 校隊、10000 以上企聯；0.05 級一格
+  assert.equal(M.aiLevelFor(0), 0.6); assert.equal(M.aiLevelFor(1000), 1); assert.equal(M.aiLevelFor(2000), 1.5); assert.equal(M.aiLevelFor(9000), 4.5); assert.equal(M.aiLevelFor(20000), 5);
+  assert.equal(M.aiRatingFor(3), 5000); assert.equal(M.aiRatingFor(M.aiLevelFor(6500)), 6500);
+  assert.deepEqual(M.RANKED_RULES, { to: 15, bestOf: 1 });
 
   // 單人 2v2，沒人 → 15 秒後 AI 補位
   t = 0; let mm = mk(); mm.add({ key: 's1', mode: '2v2', players: ppl('a', 1) });

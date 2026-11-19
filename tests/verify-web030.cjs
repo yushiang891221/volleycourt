@@ -18,14 +18,14 @@ const { pathToFileURL } = require('node:url');
   c = rankedChanges({ teams: [[p('a', 9000)], [p('c', 1000)]], n: 1, lv: 3, winner: 0 });
   assert.equal(by(c, 'a').delta, 1); assert.equal(by(c, 'c').delta, -1);
 
-  // 隊伍分數含 AI：1000 分的人＋高手 AI（平均 1250）對兩個高手 AI（1500）→ 預期勝率低、加得多；但真人比較多（1 對 0）打 7 折
-  c = rankedChanges({ teams: [[p('a', 1000)], []], n: 2, lv: 3, winner: 0 });
+  // 隊伍分數含 AI：AI 的分數＝它的強度對應的積分（1.25 級＝1500 分）；1000 分的人＋AI（平均 1250）對兩個 AI（1500）→ 預期勝率低、加得多；但真人比較多（1 對 0）打 7 折
+  c = rankedChanges({ teams: [[p('a', 1000)], []], n: 2, lv: 1.25, winner: 0 });
   const E = 1 / (1 + 10 ** ((1500 - 1250) / 2000));
   assert.equal(by(c, 'a').delta, Math.round(100 * (1 - E) * 0.7));
 
   // 真人比較多的一隊贏了打 7 折
   const fair = rankedChanges({ teams: [[p('a', 1500), p('b', 1500)], [p('c', 1500), p('d', 1500)]], n: 2, lv: 3, winner: 0 });
-  const more = rankedChanges({ teams: [[p('a', 1500), p('b', 1500)], [p('c', 1500)]], n: 2, lv: 3, winner: 0 });
+  const more = rankedChanges({ teams: [[p('a', 1500), p('b', 1500)], [p('c', 1500)]], n: 2, lv: 1.25, winner: 0 });
   assert.equal(by(more, 'a').delta, Math.round(by(fair, 'a').delta * 0.7));
 
   // 4500 以上打贏全 AI 不加分；輸了照扣

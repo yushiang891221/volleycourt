@@ -39,7 +39,7 @@
         const count=rankedPlan?.count||n, humans=(rankedPlan?.picks||[]).filter(Boolean), arrived=humans.filter(id=>s.order.includes(id)).length;
         $('room-title').textContent=`積分賽 ${count} 對 ${count}`;
         $('room-flow-note').textContent=f.phase==='playing'?'比賽中':`積分賽 ${count} 對 ${count}・等待所有球員進場…（已到 ${arrived}/${humans.length}）`;
-        const ai='AI '+({3:'高手',4:'校隊',5:'企聯'}[rankedPlan?.lv]||'高手');
+        const ai='AI '+(['新手','球友','高手','校隊','企聯'][Math.min(4,Math.max(0,Math.round(rankedPlan?.lv??3)-1))]);
         $('room-ready-list').textContent=f.phase==='playing'?'':rankedPlan?.picks?.map((id,i)=>(i===count?'｜ ':'')+(id?(rankedPlan.names?.[id]||'球友'):ai)).join('、')||'正在讀取配對名單…';
         return;
       }

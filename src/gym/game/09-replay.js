@@ -79,6 +79,13 @@ function recAnalyze(frames, events) {
   }
   for (const e of events) if (e.type === 'hit' && (e.v || 0) < 45) { hits.push({ t: e.t, x: e.x, y: e.y, z: e.z, v: e.v, kind: e.kind }); fast = Math.max(fast, e.v || 0); }
   hits.sort((a, b) => a.t - b.t);
+  // 2026-11-19 使用者回報重播扣球「咚咚咚」好幾聲：球被拉到手上、伺服器校正都會讓軌跡在零點幾秒內轉好幾次彎，每個彎都被當成一次擊球。
+  // 0.3 秒內、位置很近的自動抓到的擊球併成一下（有記錄種類的真擊球優先保留；兩個都是真擊球，例如扣球接攔網，就都留著）
+  for (let i = hits.length - 1; i > 0; i--) {
+    const p = hits[i - 1], h = hits[i];
+    if (h.t - p.t >= 0.3 || (p.kind && h.kind) || Math.hypot(h.x - p.x, h.y - p.y, h.z - p.z) > 1.5) continue;
+    const keep = h.kind && !p.kind ? h : p; keep.v = Math.max(p.v || 0, h.v || 0); hits.splice(keep === h ? i - 1 : i, 1);
+  }
   return { tracks, bounces, hits, apex, top, fast, crossings, dur: frames.length ? frames[frames.length - 1].t : 0 };
 }
 // ---- 回放

@@ -9,20 +9,30 @@ const VM_LEVELS = {
   2: { name: '球友', speed: 4.7, react: 0.2, passErr: 0.4, setErr: 0.21, spike: [17, 23], out: 0.055, net: 0.035, tip: 0.22, miss: 0.11, block: 0.8, blockSkill: 0.68, judge: 0.35, serve: { jump: 0.2, jfloat: 0.25, float: 0.3 }, sweet: 0.25, flat: 0.2 },
   3: { name: '高手', speed: 5.2, react: 0.13, passErr: 0.25, setErr: 0.13, spike: [20, 26], out: 0.03, net: 0.018, tip: 0.2, miss: 0.06, block: 0.95, blockSkill: 0.85, judge: 0.18, serve: { jump: 0.35, jfloat: 0.35, float: 0.2 }, sweet: 0.45, flat: 0.35 },
   4: { name: '校隊', speed: 5.6, react: 0.09, passErr: 0.16, setErr: 0.085, spike: [23, 28.5], out: 0.017, net: 0.009, tip: 0.18, miss: 0.03, block: 1, blockSkill: 0.95, judge: 0.09, serve: { jump: 0.45, jfloat: 0.4, float: 0.1 }, sweet: 0.65, flat: 0.45 },
+  5: { name: '企聯', pro: true, speed: 6.1, react: 0.06, passErr: 0.08, setErr: 0.045, spike: [26, 31], out: 0.006, net: 0.003, tip: 0.2, miss: 0.01, block: 1, blockSkill: 1, judge: 0.04, serve: { jump: 0.55, jfloat: 0.35, float: 0.05 }, sweet: 0.8, flat: 0.55 },   /* 寫在表裡面：伺服器版比賽核心只抄宣告，以前另外一行 VM_LEVELS[5] = … 沒被抄過去，伺服器裁判的企聯其實是球友強度 */
 };
 // 企聯（pro）：數值最高、幾乎不失誤；球風自由（誰離舉球點近誰舉、舉球員也會攻擊），而且會用位置技能（舉球員跳起來吊、大砲／舉對超強重扣、中間手滯空）
-VM_LEVELS[5] = { name: '企聯', pro: true, speed: 6.1, react: 0.06, passErr: 0.08, setErr: 0.045, spike: [26, 31], out: 0.006, net: 0.003, tip: 0.2, miss: 0.01, block: 1, blockSkill: 1, judge: 0.04, serve: { jump: 0.55, jfloat: 0.35, float: 0.05 }, sweet: 0.8, flat: 0.55 };
+// 積分賽：AI 強度照分數內插成小數（例如 1.35＝新手和球友之間），在兩級之間逐項內插、低於 1 級往下外推；企聯的位置技能要滿 5 級才有
+function vmLevelAt(lv) {
+  if (!Number.isFinite(lv) || lv < 0.5 || lv > 5) return null;
+  if (VM_LEVELS[lv]) return VM_LEVELS[lv];
+  const lo = Math.max(1, Math.min(4, Math.floor(lv))), A = VM_LEVELS[lo], B = VM_LEVELS[lo + 1], k = lv - lo;
+  const mix = (a, b) => (typeof a === 'number' ? Math.max(0, a + (b - a) * k) : Array.isArray(a) ? a.map((x, i) => mix(x, b[i])) : a && typeof a === 'object' ? Object.fromEntries(Object.keys(a).map((q) => [q, mix(a[q], b[q] ?? a[q])])) : a);
+  const L = mix(A, B); L.name = VM_LEVELS[Math.max(1, Math.min(5, Math.round(lv)))].name; delete L.pro;
+  return (VM_LEVELS[lv] = L);
+}
 const VM_ROOM_LV = [5, 4, 3];   // 開房只能選企聯、校隊、高手；練習模式五級都能選
 // 房主設定：AI 強度（隊友和對手一樣；開房只能企聯／校隊／高手）、每局分數、局數
 function vmApplyRoomRules(rules) {
   mrecReset(vmIsPractice() ? '' : `${NET.room || 'room'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);   // WEB-010：房主開賽＝新的比賽代碼
   VM.langziMatch = MREC.id; /* WEB-022 比賽識別。 */
-  VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = VM_OPT.sets2 = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }   // sets2：2 對 2 開房用的局數（沒開房的 2 對 2 只打一局）
+  VM_OPT.lv = vmLvChoices().includes(rules.lv) ? rules.lv : vmLevelAt(rules.lv) ? rules.lv : 3; VM_OPT.to = VM_OPT.to6 = [15, 20, 25].includes(rules.to) ? rules.to : 25; VM_OPT.sets = VM_OPT.sets2 = [1, 3, 5].includes(rules.bestOf) ? rules.bestOf : 1; }   // sets2：2 對 2 開房用的局數（沒開房的 2 對 2 只打一局）
 const practiceRoom = new URLSearchParams(location.search).has('practice');
 function vmIsPractice() { return practiceRoom; }
 const vmLvChoices = () => (vmIsPractice() ? [1, 2, 3, 4, 5] : VM_ROOM_LV);
 const VM_OPT = { to: 7, lv: 2, mate: 3, mode: '2', role: 'OH', sets: 3, to6: 25 };
 try { Object.assign(VM_OPT, JSON.parse(localStorage.getItem('vb.vmopt') || '{}')); } catch (e) { /* ignore */ }
+if (!Number.isInteger(VM_OPT.lv) || !VM_LEVELS[VM_OPT.lv]) VM_OPT.lv = 2;   // 積分賽的小數強度不要留到練習選單
 const vmLv = (a) => VM_LEVELS[VM_OPT.lv] || VM_LEVELS[2];   // AI 隊友和對手同一級
 const vmPro = (a) => !!vmLv(a).pro;
 const vmProLv = () => !!VM_LEVELS[VM_OPT.lv]?.pro;
