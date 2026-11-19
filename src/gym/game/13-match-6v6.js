@@ -29,7 +29,7 @@ function vm6Menu(c, sg) {
     <p class="rk-sub">正式規則：要贏 2 分、每局換場、決勝局 8 分換場；拿回發球權順時針輪轉、1 號位發球；左上角是輪轉表（藍色＝前排）。完整越位規則：發球那一下，後排要站在對應前排的後面、同一排由右到左照號位（每球開始會自動把你放到站位）；後排不能攔網，後排攻擊要在 3 公尺線後起跳。</p>
     <p class="rk-sub">體力（畫面上的體力條；隊友腳下的圓環是隊友的體力）：每個動作耗多少、做自己專長少耗多少、回多快都可以在「⚙️ 體力設定」改。體力 30% 以下跳得比較矮、跑和扣都比較慢（AI 也一樣），但接、舉、吊永遠做得到——看隊友的體力決定誰接、舉給誰。</p>
     <div class="rk-btns"><button type="button" class="primary" data-vm="go6">開始 6 對 6</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">V 接球、Q 正面舉球／E 背面舉球＋左鍵出手（AI 舉球員要舉時按 1～5＝喊球：4 號位／快攻／2 號位／後排中間／老3（舉對在後排的右邊後排攻擊））、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、R 攔網、拿著球按左鍵發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">V 接球、E 上手接球、C 輪盤舉球、1／2／3 後排舉球、W 助跑＋空白鍵起跳、空中左鍵攻擊、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vm6Start(c, sg, asg = {}, seats = null) {
@@ -707,7 +707,7 @@ const TUT_COACH = {
       this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
       this.held = null;
     }
-    walk.serve = null; walk.jserve = null; walk.recv = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
+    walk.serve = null; walk.jserve = null; walk.recv = null; walk.ohQ = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
     walk.swing = null; walk.charge = null; walk.chargeArm = null; walk.chargeArmGround = false;
     vbClearAir(); walk.dive = null; walk.down = 0; walk.blkAim = 0; walk.blkShift = 0;
     setMenuClose(false); pose = 'hold'; hands.visible = !!walk.hold;

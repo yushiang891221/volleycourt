@@ -86,11 +86,11 @@ function settings(raw) {
 }
 const defaults = settings(null).defaults().keys;
 assert.equal(defaults.start, 'KeyG');
-assert.equal(new Set(Object.values(defaults)).size, Object.keys(defaults).length);
+assert.equal(new Set(Object.values(defaults).filter(Boolean)).size, Object.values(defaults).filter(Boolean).length);
 for (const keys of [{ ...defaults, start: 'Enter' }, { ...defaults, start: 'Enter', w: 'KeyG' }, { start: 'Enter' }]) {
   const migrated = settings({ keys }).values.keys;
   assert.equal(migrated.start, 'KeyG'); assert.ok(!Object.values(migrated).includes('Enter'));
-  assert.equal(new Set(Object.values(migrated)).size, Object.keys(migrated).length);
+  assert.equal(new Set(Object.values(migrated).filter(Boolean)).size, Object.values(migrated).filter(Boolean).length);
 }
 assert.equal(settings(null).bind('start', 'Enter'), false);
 assert.equal(settings({ keys: { ...defaults, start: 'KeyZ' } }).values.keys.start, 'KeyZ');

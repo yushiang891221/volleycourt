@@ -16,7 +16,7 @@ let STA_CFG = { ...STA_DEF }; try { Object.assign(STA_CFG, JSON.parse(localStora
 // 6 對 6 專職：做自己位置專長的動作少耗（spec %）——舉球：舉球、二次球吊；大砲：扣、起跳、接球、撲救；舉對：扣、起跳、攔網；攔中：攔網、起跳（快攻）、扣
 const STA_SPEC = { S: ['set', 'tip'], OH: ['spike', 'jump', 'bump', 'dive'], OPP: ['spike', 'jump', 'block'], MB: ['block', 'jump', 'spike'] };
 function staCfg() { return VM.on && !VM.host && VM.stacfg ? VM.stacfg : STA_CFG; }
-function staCost(kind, id) { const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100 * (VM.on ? 0.7 : 1); return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
+function staCost(kind, id) { if (kind === 'overhead') kind = 'bump'; const c = staCfg(), r = VM.on && VM.six && VM.role ? VM.role[id] : null, base = (+c[kind] || 0) / 100 * (VM.on ? 0.7 : 1); return r && (STA_SPEC[r] || []).includes(kind) ? base * (1 - clamp(+c.spec || 0, 0, 90) / 100) : base; }
 function staEff() { return staGame() ? 0.8 + 0.2 * clamp(STA.v / 0.3, 0, 1) : 1; }   // 這一下的力道比例
 function staPay(kind, mul = 1) { if (!staGame()) return 1; const f = staEff(); STA.v = Math.max(0, STA.v - staCost(kind, vmMe()) * mul); STA.useT = performance.now(); return f; }   // 一定做得到，只是累了比較弱
 function staGame() { return !!(vmIsPractice() || window.__rkOn || VM.on || VB.npc); }
@@ -624,7 +624,83 @@ function vbHitAttack(b, d, tip, chg = null) {
   toast(dump ? dumpNote : tip ? '吊球！' : C && C.zone === 'over' ? zt : note ? `${note}，球偏了一點` : q >= 0.9 ? (air ? (C && C.zone === 'sweet' ? '完美蓄力！重扣' : zt ? `${zt}・漂亮` : '完美扣殺！') : '漂亮的下手攻擊') : zt || (air ? '扣！' : '攻擊'), 1200);
 }
 // ---- 接球（V）：提早按，球進到手臂前面時自動接；看球在不在身體正前方、高度、來球速度、有沒有面向舉球區
+/* 純函式：dt > 0 表示晚按；時機以實際秒計，軌跡另依 VB.ts 換算。 */
+function vbOverheadTiming(dt, speed, roll = 1) {
+  const heavy = speed > 16, perfect = heavy ? 0.03 : 0.06;
+  if (dt < -0.25) return {hit:false, q:0, kind:'early', back:0, rise:0, note:'上手太早了'};
+  if (dt > 0.2) return {hit:true, q:0.2, kind:'spray', back:2 + 3 * Math.min(1, (dt - 0.2) / 0.3), rise:1.5, note:'太晚了，球從手上滑走'};
+  const off = dt > perfect || (heavy && dt < -perfect);
+  let loss = off ? Math.min(1, Math.max(0, (Math.abs(dt) - perfect) / (0.2 - perfect))) : 0;
+  const slipChance = (speed > 12 ? .1 : 0) * (heavy ? 2 : 1);
+  const slip = off || roll < slipChance;
+  if (roll < slipChance) loss = Math.max(loss, .15);
+  return {hit:true, q:1 - loss * 0.65, kind:slip?'slip':'perfect', back:slip?3 * loss:0, rise:slip?1.5 * loss:0, note:slip?(dt < 0 ? '重球沒接穩，球溜手' : '上手晚了，球溜手'):''};
+}
+/* 與 vbNext 相同的重力軌跡；負時間回推剛錯過的球，不追蹤舊回合。 */
+function vbOverheadClosest(p, v, H) {
+  let t = 0, d2 = Infinity;
+  for (let i = -100; i <= 400; i++) {
+    const s = i / 200, x = p.x + v.x*s - H.x, y = p.y + v.y*s - 4.9*s*s - H.y, z = p.z + v.z*s - H.z;
+    const d = x*x + y*y + z*z;
+    if (d < d2) { d2 = d; t = s; }
+  }
+  return {t, dmin:Math.sqrt(d2)};
+}
+function vbOverheadReceive() {
+  if (walk.emote?.keyframes || walk.hold || skill.mode || walk.dive || walk.down > 0 || walk.serve || walk.spike || walk.setQ || walk.ohQ || (VM.on && roomSpectator())) return;
+  const [fx,fz] = vbFwd(), H = new THREE.Vector3(walk.x + fx*.25, camera.position.y + .25, walk.z + fz*.25);
+  let best = null;
+  for (const b of balls) {
+    if (b.rest > .3 || (b.mine && performance.now()-b.mineT < 400) || (VM.on && (b.floorHit || !vbOwnSide(b)))) continue;
+    const near = vbOverheadClosest(b.m.position,b.v,H), distance = b.m.position.distanceTo(H);
+    if (near.dmin <= .6 && (!best || distance < best.distance)) best = {b,...near,t:near.t/VB.ts,distance};
+  }
+  if (!best) { toast('球太遠，上手接不到',1300); return; }
+  const {b,t,dmin} = best, dt = -t, result = vbOverheadTiming(dt,b.v.length(),gameRandom());
+  if (b.m.position.y < H.y-.7) { toast('球太低，用 V 接',1300); return; }
+  if (!result.hit) { toast(result.note,1300); return; }
+  walk.recv = null;
+  pose = 'setReady'; hands.visible = true;
+  const pending = {b,dt,dmin,result,left:Math.max(0,t),vin:b.v.length(),velocity:b.v.clone()};
+  if (t > 0) walk.ohQ = pending;
+  else vbDoOverheadReceive(pending);
+}
+function vbOverheadStep() {
+  const o = walk.ohQ; if (!o) return;
+  const b = o.b;
+  if ((!walk.on || walk.paused || walk.emote || walk.setQ || walk.setAim) || walk.dive || walk.down > 0 || walk.hold || walk.serve || walk.spike || !balls.includes(b) || b.rest > .3 || (b.mine && performance.now()-b.mineT < 400) || (VM.on && (roomSpectator() || b.floorHit || !vbOwnSide(b))) || Math.abs(b.v.x-o.velocity.x) > .5 || Math.abs(b.v.z-o.velocity.z) > .5) { vbOverheadCancel(); return; }
+  o.left -= (VB.dt || 1/60);
+  if (o.left > 0) { pose = 'setReady'; return; }
+  const [fx,fz] = vbFwd(), H = new THREE.Vector3(walk.x+fx*.25,camera.position.y+.25,walk.z+fz*.25);
+  /* 用本格前後的軌跡距離容許跨過觸球時刻；不移動球到手的位置。 */
+  const near = vbOverheadClosest(b.m.position,b.v,H);
+  if (near.dmin > .6 || Math.abs(near.t/VB.ts) > Math.max(.03,VB.dt || 1/60)) { vbOverheadCancel(); toast('球太遠，上手接不到',1300); return; }
+  o.dmin = near.dmin; walk.ohQ = null; vbDoOverheadReceive(o);
+}
+function vbOverheadCancel() {
+  walk.ohQ = null;
+  if (pose === 'setReady') { pose = 'hold'; if (!walk.hold && !(walk.flash > 0)) hands.visible = false; }
+}
+function vbDoOverheadReceive(o) {
+  const {b,dt,dmin,result,vin} = o, cp = b.m.position.clone(), [fx,fz] = vbFwd();
+  let q = result.q * (1 - .5 * clamp((dmin-.25)/.35,0,1));
+  const target = vbReceiveTarget({b,p:cp,fx,fz,q,note:result.note,vin,onLine:true,run:0,overhead:true,overheadResult:result});
+  q = target.q;
+  const {ct,second,tx,tz,ty,T,back} = target, over = ct && ((vmThird() && q >= .32) || back);
+  let note = result.note || target.note;
+  const v = over ? (back ? vbOverVel(cp,ct,false,.6) : vbFacingOverVel(cp,ct,true,1-q)) : new THREE.Vector3((tx-cp.x)/T,(ty-cp.y)/T+4.9*T,(tz-cp.z)/T);
+  vbMine(b); b.spike = null; pose = 'setPush'; hands.visible = true; walk.flash = .45; skill.dip = .05; staPay('overhead');
+  vbLaunch(b,cp,v,'set',q,true);
+  vmOnTouch(b,vmMe(),'set'); vbFx(b,q);
+  if (second && q >= .32 && !over) { vbMarkSet(b); const P2 = VM.host ? VM.poss[vmTeamOf(vmMe())] : null; if (P2) P2.fix = true; note = note || '上手舉高球（修正）'; }
+  recHit({x:cp.x,y:cp.y,z:cp.z,v:b.v.length(),kind:'set'});
+  tutEv('recvOverhead',{q,dt});
+  if (window.__gym) window.__gym.lastOverhead = {q,dt,dmin,note};
+  toast(note || (q >= .88 ? '到位！完美上手接球' : '上手接起來了'),1300);
+}
+
 function vbReceive() {
+  if (walk.ohQ) vbOverheadCancel();
   if (walk.emote?.keyframes) return;
   if (VM.on && walk.hold) { toast('拿著球：到發球區按左鍵發球', 1400); return; }
   if (walk.hold || skill.mode) { skillPress('bump'); return; }
@@ -679,17 +755,7 @@ function vbHardDefl(vin, q, absorb, vzIn, skill = 1, crouch = null) {
   return { kind: 'high', dx: m * 0.7, dz: rkGauss() * 0.6, dy: 1.2 + gameRandom() * 0.8, dT: 0.35 };
 }
 const DEFL_NOTE = { long: '球太重，墊得太衝', side: '球太重，從手臂旁邊噴出去', high: '球太重，彈得又高又後面' };
-function vbDoReceive(o, dive) {
-  const b = o.b, p = b.m.position.clone(), [fx, fz] = vbFwd(), lat = Math.abs(o.dx * -fz + o.dz * fx), front = o.dx * fx + o.dz * fz, vin = b.v.length();
-  // 球路：慢球偏 30 cm 內都算正對，25 m/s 的重扣只剩 15 cm；擊球那一刻腳還在跑＝沒站穩、卸不了力
-  const tol = 0.3 - 0.15 * clamp((vin - 10) / 15, 0, 1), onLine = lat <= tol && front >= 0, run = Math.hypot(...(walk.vel || [0, 0]));
-  let q = 1, note = '';
-  if (lat > tol) { q *= 1 - Math.min(0.55, (lat - tol) * (0.8 + 0.06 * Math.max(0, vin - 12))); note = vin > 15 ? '沒站在球路上' : '球在身體側邊'; }
-  if (front < 0) { q *= 0.6; note = '球跑到身後了'; }
-  if (dive) { q *= 0.8; note = note || '撲救'; }
-  else if (p.y < 0.4) { q *= 0.75; note = note || '太低了'; } else if (p.y > 1.25) { q *= 0.8; note = note || '太高（胸口接的）'; }
-  if (vin > 12) { q *= Math.max(onLine ? 0.75 : 0.45, 1 - (vin - 12) / (onLine ? 55 : 30)); if (vin > 18) note = note || '球太重'; }
-  if (!dive && vin > 10 && run > 1.5) { q *= 1 - Math.min(0.3, (run - 1.5) * 0.12); note = note || '腳還在跑，沒站穩'; }
+function vbReceiveTarget({b, p, fx, fz, q, note, dive = false, vin, onLine, run, overhead = false, overheadResult = null}) {
   // 目標：自己這邊網前 1.1 m、偏右 1.2 m 的舉球區。要面向舉球區接：手臂平台斜一點（30 度內）沒關係，越斜越差（見下面）
   const ct = vbCourt(), pep = vbPep(), second = !pep && vmSecond(); let tx, tz, ty = 2.4, T = 1.25, tilt = 0;   // second＝隊上第二球：下手舉高球（修正球）到 4 號位
   if (pep) { tx = pep.x; tz = pep.z; ty = 2.5; T = clamp(0.8 + Math.hypot(tx - walk.x, tz - walk.z) * 0.1, 1.1, 1.7); }   // 對碰：墊回給陪練（他會舉給你）
@@ -706,7 +772,9 @@ function vbDoReceive(o, dive) {
         if (k1 > 0.3) note = note || (k2 > 0 ? '背對陪練' : '沒有面向陪練');
         const mix = 0.35 * k1 + 0.35 * k2; tx = tx * (1 - mix) + (walk.x + fx * dd) * mix; tz = tz * (1 - mix) + (walk.z + fz * dd) * mix;
       }
-    } else {   // 比賽：球一律往你面向的方向走（距離、高度照目標）——不會自動修到舉球區，要自己面向對的方向
+    } else {
+      if (overhead) q *= (1 - 0.35 * k1) * (1 - 0.45 * k2);
+      /* 球一律依面向傳出；上手品質依面向舉球區的角度扣分。 */
       tx = walk.x + fx * dd; tz = walk.z + fz * dd;
       if (k1 > 0.3) note = note || (k2 > 0 ? (second ? '背對 4 號位' : '背對舉球區') : second ? '沒有面向 4 號位' : '沒有面向舉球區');
     }
@@ -716,7 +784,7 @@ function vbDoReceive(o, dive) {
   if (ct && !pep && !second && q >= 0.32) {
     const sg = Math.sign(ct.lx) || 1;
     if (dive) { const [lx, lz] = toLocalOf(ct.c, walk.x, walk.z), [ax, az] = toWorldOf(ct.c, sg * clamp(Math.abs(lx) - 0.5, 2.2, 7), lz * 0.6), L = Math.hypot(ax - walk.x, az - walk.z); tx = walk.x + fx * L; tz = walk.z + fz * L; ty = 1.0; T = 1.45 + Math.random() * 0.25; note = '撲救：撈高了，隊友來修正'; }   // 撲救也照面向的方向撈
-    else {
+    else if (!overhead) {
       const [, z0] = toLocalOf(ct.c, p.x, p.z), [, z1] = toLocalOf(ct.c, p.x + b.v.x, p.z + b.v.z);
       defl = vbHardDefl(vin, q, onLine && run < 0.8, z1 - z0, 1, vin > 13 ? !!walk.crouch : null);
       if (walk.crouch && vin > 13 && !defl) { ty += RECV_CROUCH.crouchDy; T += RECV_CROUCH.crouchDT; note = note || '蹲低卸力，接得很穩'; }
@@ -724,16 +792,39 @@ function vbDoReceive(o, dive) {
     }
   }
   let intoNet = false;   // 接過頭撞網：很低的機率（接得越差越容易）
-  if (ct && !pep && !second && !dive && !back && q >= 0.32 && Math.random() < 0.015 + 0.06 * (1 - q)) { const sg = Math.sign(ct.lx) || 1, [, lz] = toLocalOf(ct.c, tx, tz); [tx, tz] = toWorldOf(ct.c, sg * 0.05, lz); ty = 1.8; T = 0.8; intoNet = true; note = '接過頭了，撞到網子'; }
-  if (window.__gym) window.__gym.lastRecv = { q: +q.toFixed(2), note, tilt: +tilt.toFixed(2), onLine, defl: defl && defl.kind, back, second, intoNet };
+  if (!overhead && ct && !pep && !second && !dive && !back && q >= 0.32 && Math.random() < 0.015 + 0.06 * (1 - q)) { const sg = Math.sign(ct.lx) || 1, [, lz] = toLocalOf(ct.c, tx, tz); [tx, tz] = toWorldOf(ct.c, sg * 0.05, lz); ty = 1.8; T = 0.8; intoNet = true; note = '接過頭了，撞到網子'; }
+  if (!overhead && window.__gym) window.__gym.lastRecv = { q: +q.toFixed(2), note, tilt: +tilt.toFixed(2), onLine, defl: defl && defl.kind, back, second, intoNet };
   if (intoNet) { /* 撞網：不加亂數 */ }
   else if (q < 0.32) { const a = walk.yaw + (Math.random() - 0.5) * 2.2, L = 3 + Math.random() * 5; tx = walk.x - Math.sin(a) * L; tz = walk.z - Math.cos(a) * L; ty = 0.3; T = 0.9; }
   else { const e = (1 - q) * 2.4 + 0.6 * tilt; tx += rkGauss() * e; tz += rkGauss() * e; T = 1.25 + (1 - q) * 0.35 * (Math.random() - 0.3); }
+  if (overheadResult && overheadResult.kind !== 'perfect') {
+    const r = overheadResult;
+    tx = walk.x - fx*r.back; tz = walk.z - fz*r.back;
+    ty = r.kind === 'spray' ? BALL_R : Math.max(ty, p.y) + r.rise;
+    T = r.kind === 'spray' ? 1.1 : 1.25;
+  }
   // 接球的落點留在自己這邊（離網至少 0.9 m）：偏掉也是偏在自己場上，不會平平的從網子下面飄過去
   if (ct && !pep && !back && !intoNet) { const sg = Math.sign(ct.lx) || 1, [lx, lz] = toLocalOf(ct.c, tx, tz); if (lx * sg < 0.9 && lx * sg > 0) {   /* 落點太靠網才往後推；面向對面接過網的就讓它過去 */ [tx, tz] = toWorldOf(ct.c, sg * (0.9 + Math.random() * 0.8), lz); if (ty < 1.5) { ty = 1.8; T = 1.1; } } }
   // Keep the rescue arc after quality/noise adjustments.
   if(dive){T=Math.max(T,1.8);ty=Math.max(ty,1.5);}
-  if(b.tutorialHeavy && !dive && !walk.crouch){tx=walk.x+fx*10;tz=walk.z+fz*10;ty=.4;T=.8;note='重扣需要蹲低卸力';}
+  if(b.tutorialHeavy && !overhead && !dive && !walk.crouch){tx=walk.x+fx*10;tz=walk.z+fz*10;ty=.4;T=.8;note='重扣需要蹲低卸力';}
+  return {q, note, ct, second, tx, tz, ty, T, back, defl};
+}
+function vbDoReceive(o, dive) {
+  const b = o.b, p = b.m.position.clone(), [fx, fz] = vbFwd(), lat = Math.abs(o.dx * -fz + o.dz * fx), front = o.dx * fx + o.dz * fz, vin = b.v.length();
+  // 球路：慢球偏 30 cm 內都算正對，25 m/s 的重扣只剩 15 cm；擊球那一刻腳還在跑＝沒站穩、卸不了力
+  const tol = 0.3 - 0.15 * clamp((vin - 10) / 15, 0, 1), onLine = lat <= tol && front >= 0, run = Math.hypot(...(walk.vel || [0, 0]));
+  let q = 1, note = '', chestSpray = false;
+  if (lat > tol) { q *= 1 - Math.min(0.55, (lat - tol) * (0.8 + 0.06 * Math.max(0, vin - 12))); note = vin > 15 ? '沒站在球路上' : '球在身體側邊'; }
+  if (front < 0) { q *= 0.6; note = '球跑到身後了'; }
+  if (dive) { q *= 0.8; note = note || '撲救'; }
+  else if (p.y < 0.4) { q *= 0.75; note = note || '太低了'; } else if (p.y > 1.45) { if (gameRandom() < 0.5) { chestSpray = true; q = 0.2; note = '太高了，打到胸口噴掉（高球用 E 上手）'; } else { q *= 0.55; note = note || '太高了，高球用 E 上手'; } } else if (p.y > 1.25) { q *= 0.75; note = note || '太高了，高球用 E 上手'; }
+  if (vin > 12) { q *= Math.max(onLine ? 0.75 : 0.45, 1 - (vin - 12) / (onLine ? 55 : 30)); if (vin > 18) note = note || '球太重'; }
+  if (!dive && vin > 10 && run > 1.5) { q *= 1 - Math.min(0.3, (run - 1.5) * 0.12); note = note || '腳還在跑，沒站穩'; }
+  if (chestSpray) q = .2;
+  const target = vbReceiveTarget({b, p, fx, fz, q, note, dive, vin, onLine, run});
+  ({q, note} = target);
+  const {ct, second, tx, tz, ty, T, back, defl} = target;
   const plat = new THREE.Vector3(walk.x + fx * (dive ? 0.95 : 0.42), dive ? Math.max(0.15, p.y) : 0.72 + (walk.air ? walk.air.y : 0), walk.z + fz * (dive ? 0.95 : 0.42)), cp = p.clone().lerp(plat, 0.6);   // 前臂平台
   b.spike = null; vbMine(b);
   pose = 'bumpHit'; hands.visible = true; walk.flash = 0.45; skill.dip = 0.05; staPay('bump');
@@ -745,7 +836,7 @@ function vbDoReceive(o, dive) {
   if (second && q >= 0.32 && !over) { vbMarkSet(b); const P2 = VM.host ? VM.poss[vmTeamOf(vmMe())] : null; if (P2) P2.fix = true; note = '下手舉高球（修正）'; }
   recHit({ x: p.x, y: p.y, z: p.z, v: b.v.length(), kind: 'bump' });
   if (VM.on && q >= 0.88 && !defl && !dive && !second) MREC.local.p++;   // WEB-010 戰績：完美接球
-  toast(b.thirdReturn ? '第三下：自動送回對面' : q >= 0.88 && !defl && !dive && !second ? '到位！完美接球' : q < 0.32 ? `接噴了（${note || '沒接正'}）` : note ? `接起來了（${note}）` : '接起來了', 1300);
+  toast(chestSpray ? '太高了，打到胸口噴掉（高球用 E 上手）' : b.thirdReturn ? '第三下：自動送回對面' : q >= 0.88 && !defl && !dive && !second ? '到位！完美接球' : q < 0.32 ? `接噴了（${note || '沒接正'}）` : note ? `接起來了（${note}）` : '接起來了', 1300);
 }
 // ---- 舉球（1／2／3）：提早按，球掉到額頭前上方時自動舉；舉出去一定會經過那個攻擊點
 // 這一下是不是我們隊的第三次觸球（只能送過網了）
@@ -793,15 +884,15 @@ function vbFacingOverVel(cp, ct, high, err = 0) {
   const L = high ? 6 : 5, T = high ? 1.55 : 0.9;   // 沒面向對面：照面向的方向送出去（不會過網）
   return new THREE.Vector3((fx * L) / T, (BALL_R - cp.y) / T + 4.9 * T, (fz * L) / T);
 }
-// 比賽中按 E：身邊的球用雙手推平送過網（算一次觸球）
+// 舊版推球：身邊的球用雙手推平送過網（算一次觸球）
 function vmFreeBall() {
   if (walk.emote?.keyframes) return;
   if (walk.hold) { toast('拿著球：到發球區按左鍵發球', 1400); return; }
   const b = VM.ball && balls.includes(VM.ball) ? VM.ball : null, ct = vbCourt();
-  if (!b || b.floorHit || !ct) { toast('E：球在身邊時，把球推過網', 1400); return; }
+  if (!b || b.floorHit || !ct) { toast('球在身邊時才能把球推過網', 1400); return; }
   if (!vbOwnSide(b)) { toast('球還在對面：等它過網再碰', 1200); return; }
   const p = b.m.position, dh = Math.hypot(p.x - walk.x, p.z - walk.z);
-  if (dh > 1.2 || p.y < 0.25 || p.y > camera.position.y + 1.1) { toast('球太遠了：靠近一點再按 E', 1200); return; }
+  if (dh > 1.2 || p.y < 0.25 || p.y > camera.position.y + 1.1) { toast('球太遠了：靠近一點再用 C 輪盤舉球', 1200); return; }
   // 雙手在額頭前把球推平過去：剛好過網、比下手送的低又快
   const cp = p.clone().lerp(new THREE.Vector3(walk.x, Math.max(p.y, camera.position.y + 0.2), walk.z), 0.3);
   vbMine(b); b.spike = null; pose = 'setPush'; hands.visible = true; walk.flash = 0.4; staPay('set');
@@ -1467,11 +1558,11 @@ function vbKeyCue(cue, touch) {
   const rows = [], k = cue && cue[0];
   if (!touch && (VM.on || VB.npc) && !walk.paused) {
     const ct = vbCourt(), net = ct && Math.abs(ct.lx) < 4.5 && vbIsSetter();   // 舉球員：右鍵＝貼網吊到對面三米線中間
+    if (VB.target && !walk.hold && !walk.recv && !walk.ohQ) rows.push([kn('v'), '接球'], [kn('oh'), '上手接球']);
     if (k === 'jump') rows.push([kn(' '), '跳']);
     else if (k === 'hit') rows.push(['Left', '攻擊'], ['Right', '吊球']);
-    else if (k === 'set') { rows.push([kn('q'), '正面舉球'], [kn('e'), '背面舉球']); if (net) rows.push(['Right', '吊球']); }
+    else if (k === 'set') { rows.push([kn('q'), '舉球輪盤']); if (net) rows.push(['Right', '吊球']); }
     else if (k === 'block') rows.push([kn('b'), '攔網']);
-    else if (k !== 'ready' && VB.target && !walk.recv && !walk.hold && !walk.air) rows.push([kn('v'), '接球']);
   }
   if (!rows.length) { el.hidden = true; el.dataset.k = ''; return null; }
   const id = rows.map((r) => r.join('|')).join(',');
@@ -1528,7 +1619,7 @@ function vbOwnSide(b) {
 }
 // 球下一格會在哪裡（比賽中觸球判斷用：最近的那一刻就碰，不等球跑過頭）
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
-function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
+function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbOverheadStep(); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
 function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc || coarse()); }   /* 手機：走到哪都預設第三人稱（設定裡關掉第三人稱就照舊） */
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
@@ -1599,7 +1690,7 @@ function tpEnd() {
   const S0 = TP.saved; if (!S0) return;
   camera.position.copy(S0.p); camera.quaternion.copy(S0.q); hands.visible = S0.hv; if (walk.hold) walk.hold.visible = true; camera.updateMatrixWorld(true); TP.saved = null;
 }
-function vbStop() { vbManualSetCancel(); if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } TP.manual = null; vbClearAir(); walk.swing = null; walk.recv = null; walk.setQ = null; VB.setSpot = null; VB.target = null; if (VB.ringLand) { VB.ringLand.visible = false; VB.ringSet.visible = false; } if (VB.npc) vbNpcToggle(); }
+function vbStop() { vbManualSetCancel(); if (TP.av) { TP.av.g.visible = false; TP.ball.visible = false; } TP.manual = null; vbClearAir(); walk.swing = null; walk.recv = null; walk.ohQ = null; walk.setQ = null; VB.setSpot = null; VB.target = null; if (VB.ringLand) { VB.ringLand.visible = false; VB.ringSet.visible = false; } if (VB.npc) vbNpcToggle(); }
 // ---- 旁觀：別人的羽球／匹克球對戰，球照同一套物理飛給大家看
 const RKV = new Map();
 function rkSpectate(d) {

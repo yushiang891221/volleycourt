@@ -11,8 +11,8 @@ function preferences(raw) {
 }
 {
   const p=preferences().api;
-  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyB',q:'KeyC',1:'KeyQ',2:'KeyE',3:'KeyR',6:'Digit1',4:'Digit2',5:'Digit3',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
-  assert.equal(new Set(Object.values(p.values.keys)).size,p.bindings.length,'every default has a unique key');
+  for(const [a,code] of Object.entries({w:'KeyW',s:'KeyS',a:'KeyA',d:'KeyD',shift:'Shift',crouch:'Control',v:'KeyV',b:'KeyB',q:'KeyC',1:'',2:'',3:'',oh:'KeyE',6:'Digit1',4:'Digit2',5:'Digit3',interact:'KeyF',ready:'KeyH'}))assert.equal(p.values.keys[a],code);
+  assert.equal(new Set(Object.values(p.values.keys).filter(Boolean)).size,p.bindings.filter(b=>b[2]).length,'every default has a unique key');
   const old={...p.values,controlVersion:1,volume:37,keys:{...p.values.keys,w:'KeyI',b:'KeyB',e:'KeyE',q:'KeyQ',f:'KeyF',ready:'KeyR'}};delete old.keys.interact;
   const migrated=preferences(old).api;assert.equal(migrated.values.keys.b,'KeyB');assert.equal(migrated.values.keys.ready,'KeyH');assert.equal(migrated.values.keys.w,'KeyI');assert.equal(migrated.values.volume,37);
   const saved=preferences();saved.api.bind('q','KeyZ');saved.api.update({setFast:13,setSlow:6,setCharge:1.2});

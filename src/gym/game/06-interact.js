@@ -145,7 +145,7 @@ function useItem(it, point, noReach) {
     toast(t === 'referee' ? '爬上裁判椅了：從這裡看得到整面網。按 F 或開始走路就會下來' : '坐下了。按 F 或開始走路就會站起來');
     return;
   }
-  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：E 舉球、Q 墊球、左鍵發球、在網子前起跳按左鍵攻擊'); return; }
+  if (t === 'ballcart' || t === 'ballbasket') { grabBall(); toast('拿到一顆球：C 輪盤舉球、V 接球、E 上手接球、左鍵發球、在網子前起跳按左鍵攻擊'); return; }
   if (['fan', 'floorfan', 'wallfan', 'exhaust', 'aircon', 'standac', 'packac', 'tv'].includes(t)) {
     if (on) walk.off.add(it.id); else walk.off.delete(it.id);
     const ac = ['aircon', 'standac', 'packac'].includes(t);
@@ -437,7 +437,7 @@ function snapCamView() {
   const a = document.createElement('a'); a.href = $('cv-canvas').toDataURL('image/jpeg', 0.92); a.download = '智慧球場.jpg'; document.body.appendChild(a); a.click(); a.remove();
   toast('喀嚓！照片存下來了');
 }
-// ---- 排球：第一人稱雙手。E 舉球、Q 墊球（時機對才接得住）、網前 R 攻擊；點一下丟出去
+// ---- 排球：第一人稱雙手。C 輪盤舉球、V 接球、E 上手接球（時機對才接得住）、網前 R 攻擊；點一下丟出去
 const ballsGroup = new THREE.Group(); scene.add(ballsGroup);
 const balls = [];
 const BALL_R = 0.105;
@@ -599,7 +599,7 @@ function skillPress(kind) {
   if (!walk.hold) return;
   if (!skill.mode) {
     skill.mode = kind; skill.h = 0; skill.v = SKV[kind]; skill.n = 0; skill.since = 0; skill.kick = 0.16; pose = kind === 'set' ? 'setPush' : 'bumpHit';
-    toast(kind === 'set' ? '舉球：手在額頭前，球掉回手上（球亮起來）時按 E' : '墊球：雙手交握、手臂伸直，球掉到前臂（球亮起來）時按 Q');
+    toast(kind === 'set' ? '舉球：手在額頭前，球掉回手上（球亮起來）時用 C 輪盤舉球' : '墊球：雙手交握、手臂伸直，球掉到前臂（球亮起來）時按 V');
     return;
   }
   if (skill.since < 0.22) return;
@@ -630,7 +630,7 @@ function updateSkill(dt) {
   const tp = POSE[skill.mode].pitch; if (tp != null) walk.pitch += (tp - walk.pitch) * (1 - Math.exp(-dt * 4));
   walk.hold.material = inWindow() ? ballHot : ballMat;
   walk.hold.rotation.x += dt * 6;
-  if (skill.h < -0.55) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前按 E）' : '沒接到（墊球要在球掉到前臂時按 Q）');
+  if (skill.h < -0.55) skillMiss(skill.mode === 'set' ? '沒接到（舉球要在球回到額頭前用 C 輪盤舉球）' : '沒接到（墊球要在球掉到前臂時按 V）');
 }
 // ---- 網前攻擊：助跑、起跳、揮臂把舊舉過來的球扣過網、落地
 // ---- 扣球：R 站著扣（手臂揮下去，球從頭上打過網）；按住空白鍵再按 R（或跳起來時按 R）＝助跑起跳扣球
@@ -1081,7 +1081,7 @@ function updateBalls(dt) {
     if (b.squash > 0) { b.squash -= dt; const sq = Math.sin((Math.max(0, b.squash) / 0.12) * Math.PI) * 0.22; b.m.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (b.squash <= 0) b.m.scale.set(1, 1, 1); }
   }
 }
-// ---- 來球：看著球過來，球進到手邊時按 E（舉球）或 Q（墊球）→ 手從下往上斜斜碰到球，球往你面向的方向傳出去；
+// ---- 來球：看著球過來，球進到手邊時按 E（上手接球）或 V（接球）→ 手從下往上斜斜碰到球，球往你面向的方向傳出去；
 //      抬頭往上看（自己往上打）就是手打平往上擊，球直直往上
 function contactPoint(kind) {
   const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw);
@@ -1115,7 +1115,7 @@ function passToFacing() {
   const D = Math.hypot(tx - p0.x, tz - p0.z), T = clamp(0.7 + D * 0.08, 0.8, 1.9);
   releaseBall(new THREE.Vector3((tx - p0.x) / T, (ty - p0.y) / T + 0.5 * 9.8 * T, (tz - p0.z) / T));
   const bt = balls[balls.length - 1]; if (bt) { bt.lk = null; bt.lkNpc = false; }
-  toast(peer && peer.n === '陪練' ? '拋給陪練了' : peer ? `拋給 ${peer.n}：等他用 E（舉球）或 Q（墊球）接` : '拋出去了（面向隊友再按 F 就會拋給他）');
+  toast(peer && peer.n === '陪練' ? '拋給陪練了' : peer ? `拋給 ${peer.n}：等他用 E（上手接球）或 V（接球）接` : '拋出去了（面向隊友再按 F 就會拋給他）');
 }
 function hitWorldBall(b, kind) {
   if (walk.emote?.keyframes) return;

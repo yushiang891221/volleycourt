@@ -4,9 +4,9 @@
   const bindings = [
     ['w','前進','KeyW'],['s','後退','KeyS'],['a','左移','KeyA'],['d','右移','KeyD'],
     ['arrowup','前進（別名）','ArrowUp'],['arrowdown','後退（別名）','ArrowDown'],['arrowleft','左移（別名）','ArrowLeft'],['arrowright','右移（別名）','ArrowRight'],
-    ['shift','衝刺／撲救修飾鍵','Shift'],['crouch','蹲下（按住；接重扣比較穩）','Control'],['q','舉球輪盤','KeyC'],['v','接球','KeyV'],['interact','場景互動','KeyF'],
+    ['shift','衝刺／撲救修飾鍵','Shift'],['crouch','蹲下（按住；接重扣比較穩）','Control'],['q','舉球輪盤','KeyC'],['v','接球','KeyV'],['oh','上手接球','KeyE'],['interact','場景互動','KeyF'],
     [' ','跳／跳發','Space'],['b','攔網','KeyB'],['t','擊掌／嘲諷選單','KeyT'],['p','切換視角','KeyP'],['f','拋給隊友','KeyX'],
-    ['1','直接舉球：4 號位','KeyQ'],['2','直接舉球：快攻','KeyE'],['3','直接舉球：2 號位','KeyR'],['6','直接舉球：後排 5 號位（左後）','Digit1'],['4','直接舉球：後排中間','Digit2'],['5','直接舉球：老三（後排 1 號位）','Digit3'],
+    ['1','直接舉球：4 號位',''],['2','直接舉球：快攻',''],['3','直接舉球：2 號位',''],['6','直接舉球：後排 5 號位（左後）','Digit1'],['4','直接舉球：後排中間','Digit2'],['5','直接舉球：老三（後排 1 號位）','Digit3'],
 
     ['j','羽球／匹克球：軟球','KeyJ'],['k','羽球／匹克球：抽球','KeyK'],['l','羽球／匹克球：挑球','KeyL']
     ,['ready','準備／取消準備','KeyH'],['start','房主開始遊戲','KeyG']
@@ -14,23 +14,30 @@
   const defaultKeys = () => Object.fromEntries(bindings.map(([a,,k]) => [a,k]));
   const defaults = () => ({ assist:true, cameraAssist:true, landing:true, cues:true, third:true, rings:true, showFps:false, nameTags:true, keyPanel:true, bloom:true, gyroLook:true,
     quality: matchMedia('(pointer: coarse)').matches || innerWidth < 900 ? 'low' : 'high', fov:85,
-    sensitivity:1, swap:[false,false,false], volume:100, music:100, mute:false, nickname:'', controlVersion:4, setFast:11, setSlow:5.5, setCharge:.9, keys:defaultKeys() });
+    sensitivity:1, swap:[false,false,false], volume:100, music:100, mute:false, nickname:'', controlVersion:5, setFast:11, setSlow:5.5, setCharge:.9, keys:defaultKeys() });
   const read = key => { try { return localStorage.getItem(key); } catch (_) { return null; } };
   function clean(raw) {
     const v=defaults(); if (!raw || typeof raw !== 'object') return v;
-    if (raw.keys && ![2,3,4].includes(raw.controlVersion)) raw={...raw,keys:{...raw.keys,q:'KeyQ',e:'KeyE',b:'KeyR',interact:'KeyF',f:'KeyX',ready:'KeyH'}};
-    if(raw.keys && raw.controlVersion!==3 && raw.controlVersion!==4) {
+    if (raw.keys && ![2,3,4,5].includes(raw.controlVersion)) raw={...raw,keys:{...raw.keys,q:'KeyQ',e:'KeyE',b:'KeyR',interact:'KeyF',f:'KeyX',ready:'KeyH'}};
+    if(raw.keys && ![3,4,5].includes(raw.controlVersion)) {
       const keys={...raw.keys};
       for(const [action,oldCode,newCode] of [['q','KeyQ','KeyC'],['b','KeyR','KeyB']]) if(keys[action]===oldCode && !Object.values(keys).includes(newCode))keys[action]=newCode;
       raw={...raw,keys};
     }
     // v4（2026-11-16）：直接舉球改成 Q／E／R（前排 4 號位、快攻、2 號位）與 1／2／3（後排 5 號位、後中、老三）；保留鍵 E 拿掉。
     // 只有六個舉球鍵都還是舊預設時才換，玩家自己改過的不動
-    if (raw.keys && raw.controlVersion!==4) {
+    if (raw.keys && ![4,5].includes(raw.controlVersion)) {
       const keys={...raw.keys}; delete keys.e;
       const old={1:'Digit1',2:'Digit2',3:'Digit3',4:'Digit4',5:'Digit5',6:'Digit6'}, now={1:'KeyQ',2:'KeyE',3:'KeyR',6:'Digit1',4:'Digit2',5:'Digit3'};
       const others=Object.entries(keys).filter(([a])=>!(a in old)).map(([,c])=>c);
       if(Object.entries(old).every(([a,c])=>keys[a]===c) && Object.values(now).every(c=>!others.includes(c))) Object.assign(keys,now);
+      raw={...raw,keys};
+    }
+    if(raw.keys && raw.controlVersion!==5) {
+      const keys={...raw.keys}; delete keys.e;
+      for(const [a,c] of [['1','KeyQ'],['2','KeyE'],['3','KeyR']]) if(keys[a]===c) keys[a]='';
+      delete keys.oh;
+      keys.oh=['KeyE',...bindings.map(x=>x[2]),'KeyZ','KeyX','KeyC','KeyG','KeyH','KeyU','KeyI','KeyO'].find(c=>c && !Object.values(keys).includes(c));
       raw={...raw,keys};
     }
     for (const k of ['assist','cameraAssist','landing','cues','third','rings','mute','showFps','nameTags','keyPanel','bloom','gyroLook']) if (typeof raw[k]==='boolean') v[k]=raw[k];
@@ -41,9 +48,9 @@
     if (Array.isArray(raw.swap)) v.swap=v.swap.map((_,i)=>raw.swap[i]===true);
     if (raw.keys) {
       const known=bindings.filter(([a])=>Object.hasOwn(raw.keys,a));
-      if(known.every(([a])=>validCode(raw.keys[a])) && new Set(known.map(([a])=>raw.keys[a])).size===known.length){
+      if(known.every(([a])=>(validCode(raw.keys[a]) || raw.keys[a]==='')) && new Set(known.map(([a])=>raw.keys[a]).filter(Boolean)).size===known.filter(([a])=>raw.keys[a]).length){
         const keys=Object.fromEntries(known.map(([a])=>[a,raw.keys[a]]));
-        for(const [a,,fallback] of bindings)if(!keys[a])keys[a]=[fallback,...bindings.map(x=>x[2]),'KeyZ','KeyX','KeyC','KeyG','KeyH','KeyU','KeyI','KeyO'].find(k=>!Object.values(keys).includes(k));
+        for(const [a,,fallback] of bindings)if(!Object.hasOwn(keys,a))keys[a]=fallback===''?'':[fallback,...bindings.map(x=>x[2]),'KeyZ','KeyX','KeyC','KeyG','KeyH','KeyU','KeyI','KeyO'].find(k=>k && !Object.values(keys).includes(k));
         v.keys=keys;
       }
     }
@@ -66,8 +73,8 @@
   function save() { try { localStorage.setItem('vb.settings',JSON.stringify(values)); localStorage.setItem('vb.mp.name',values.nickname); return true; } catch (_) { return false; } }
   function update(patch) { values=clean({...values,...patch}); const saved=save(); dispatchEvent(new CustomEvent('vb-settings-change',{detail:values})); if(dialog) dialog.querySelector('.settings-note').textContent=saved?'已儲存，立即生效':'已套用；瀏覽器無法儲存設定'; return saved; }
   const code = e => /^Shift/.test(e.code) ? 'Shift' : /^Control/.test(e.code) ? 'Control' : e.code || bindings.find(([a])=>a===e.key.toLowerCase())?.[2];
-  const key = e => e.key==='Escape' ? 'escape' : bindings.find(([a])=>values.keys[a]===code(e))?.[0] || '';
-  const keyName = c => ({Space:'空白鍵',Shift:'Shift',Control:'Ctrl',BracketLeft:'[',BracketRight:']',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'}[c] || (c || '').replace(/^Key|^Digit/,''));
+  const key = e => e.key==='Escape' ? 'escape' : bindings.find(([a])=>values.keys[a] && values.keys[a]===code(e))?.[0] || '';
+  const keyName = c => ({Space:'空白鍵',Shift:'Shift',Control:'Ctrl',BracketLeft:'[',BracketRight:']',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'}[c] || (c || '未綁定').replace(/^Key|^Digit/,''));
   function bind(action,c) { if (c === 'Enter' || !validCode(c) || !Object.hasOwn(values.keys,action)) return false; const keys={...values.keys}, other=bindings.find(([a])=>a!==action && keys[a]===c)?.[0]; if(other) keys[other]=keys[action]; keys[action]=c; update({keys}); return true; }
   function render() {
     for(const el of dialog.querySelectorAll('[data-pref]')) { const val=values[el.dataset.pref]; if(el.type==='checkbox') el.checked=val; else el.value=val; if(el.type==='range') el.nextElementSibling.textContent=val; }
@@ -76,7 +83,7 @@
     for(const b of dialog.querySelectorAll('[data-physical]')) {
       const c=b.dataset.physical, normalized=/^Shift/.test(c)?'Shift':/^Control/.test(c)?'Control':c;
       const binding=bindings.find(([a])=>a!=='e' && values.keys[a]===normalized);
-      const short={q:'舉球輪盤',w:'前進',s:'後退',a:'左移',d:'右移',shift:'衝刺',crouch:'蹲下',v:'接球',b:'攔網',' ':'跳躍',interact:'互動',ready:'準備',start:'開始',t:'表情',p:'切換視角',f:'拋給隊友',j:'軟球',k:'抽球',l:'挑球',arrowup:'前進',arrowdown:'後退',arrowleft:'左移',arrowright:'右移','[':'縮小視野',']':'加大視野'};
+      const short={q:'舉球輪盤',w:'前進',s:'後退',a:'左移',d:'右移',shift:'衝刺',crouch:'蹲下',v:'接球',oh:'上手接球',b:'攔網',' ':'跳躍',interact:'互動',ready:'準備',start:'開始',t:'表情',p:'切換視角',f:'拋給隊友',j:'軟球',k:'抽球',l:'挑球',arrowup:'前進',arrowdown:'後退',arrowleft:'左移',arrowright:'右移','[':'縮小視野',']':'加大視野'};
       b.classList.toggle('assigned',!!binding);b.classList.toggle('capturing',!!binding && capture===binding[0]);b.querySelector('small').textContent=binding?(short[binding[0]] || binding[1].split('：')[0]):c==='Enter'?'聊天':'';
       b.title=binding?binding[1]:'';
     }
@@ -100,11 +107,11 @@
     ];
     const nav=[['PrintScreen','PrtSc'],['ScrollLock','ScrLk'],['Pause','Pause'],['Insert','Ins'],['Home','Home'],['PageUp','PgUp'],['Delete','Del'],['End','End'],['PageDown','PgDn'],['ArrowUp','↑'],['ArrowLeft','←'],['ArrowDown','↓'],['ArrowRight','→']];
     const num=[['NumLock','Num'],['NumpadDivide','/'],['NumpadMultiply','×'],['NumpadSubtract','−'],['Numpad7','7'],['Numpad8','8'],['Numpad9','9'],['NumpadAdd','+'],['Numpad4','4'],['Numpad5','5'],['Numpad6','6'],['Numpad1','1'],['Numpad2','2'],['Numpad3','3'],['NumpadEnter','Enter'],['Numpad0','0'],['NumpadDecimal','.']];
-    const keyboard='<div class="control-keyboard" aria-label="完整鍵盤配置"><div class="keyboard-full"><div class="keyboard-main">'+main.map(row).join('')+'</div><div class="keyboard-nav">'+nav.map(k=>cap(...k)).join('')+'</div><div class="keyboard-num">'+num.map(k=>cap(...k)).join('')+'</div></div><p>亮色鍵顯示目前配置，其他鍵保留完整鍵盤位置。<br>左鍵：空手拿球／攻擊來球；持球扣出；發球區發球。<br>按住 C 開輪盤，移動滑鼠選球路，放開舉球；滾輪切換前／後排，輕點沿用上次球路。</p></div>';
+    const keyboard='<div class="control-keyboard" aria-label="完整鍵盤配置"><div class="keyboard-full"><div class="keyboard-main">'+main.map(row).join('')+'</div><div class="keyboard-nav">'+nav.map(k=>cap(...k)).join('')+'</div><div class="keyboard-num">'+num.map(k=>cap(...k)).join('')+'</div></div><p>亮色鍵顯示目前配置，其他鍵保留完整鍵盤位置。<br>左鍵：空手拿球／攻擊來球；持球扣出；發球區發球。<br>V 接球、E 上手接球；前排按住 C 開輪盤，移動滑鼠選球路，放開舉球；滾輪切換前／後排，輕點沿用上次球路。</p></div>';
     const pages=[
       ['遊戲',check('assist','接球輔助：身體輕輕帶向落點')+check('cameraAssist','視角輔助')+check('landing','落點圈')+check('cues','按鍵提示')+check('third','比賽／陪練預設第三人稱')+check('rings','顯示隊友耐力圈')+check('nameTags','顯示球員名牌')+check('keyPanel','顯示按鍵面板（練習房左下角）')+(matchMedia('(pointer: coarse)').matches?check('gyroLook','轉動手機轉視角（陀螺儀）'):'')],
       ['畫面','<div class="settings-row"><span>顯示模式</span><button data-fullscreen>進入全螢幕</button></div><label class="settings-row"><span>畫質</span><select data-pref="quality"><option value="high">高</option><option value="low">省電</option></select></label>'+check('showFps','顯示 FPS（畫面右上角）')+check('bloom','泛光效果（亮的地方會暈開；關掉畫面比較清楚、不霧）')+'<p>視野固定 85°；蹲下時平滑擴大到 100°。</p>'],
-      ['控制',keyboard+'<div class="hotkey-editor"><strong>熱鍵設置</strong><p>點已配置的鍵後，直接按新鍵；或點鍵盤上的按鍵，選擇動作後套用。重複鍵位會互換。</p><span data-hotkey-target>尚未選擇按鍵</span> <select data-hotkey-action>'+bindings.filter(([a])=>a!=='e').map(([a,label])=>'<option value="'+a+'">'+label+'</option>').join('')+'</select> <button type="button" data-hotkey-apply>套用到選取鍵</button></div>'+slider('sensitivity','滑鼠靈敏度',.1,5,.05)+'<details><summary>進階改鍵與原有球路快捷鍵</summary><p>點按鍵，再按新鍵；重複時互換。Esc 取消。數字鍵仍可使用原有配置球路。</p><div class="settings-bindings">'+bindings.filter(([a])=>!['j','k','l'].includes(a)).map(([a,t])=>`<div class="settings-row"><span>${t}</span><button data-bind="${a}"></button></div>`).join('')+'<div class="settings-row"><span>聊天（房間中，固定按鍵）</span><span>Enter</span></div></div><h3>原有舉球面板左右</h3>'+['4 號位','快攻','2 號位'].map((t,i)=>`<div class="settings-row"><span>${t}</span><button data-swap="${i}"></button></div>`).join('')+'</details><button data-reset-keys>全部還原預設按鍵</button>'],
+      ['控制',keyboard+'<div class="hotkey-editor"><strong>熱鍵設置</strong><p>點已配置的鍵後，直接按新鍵；或點鍵盤上的按鍵，選擇動作後套用。重複鍵位會互換。</p><span data-hotkey-target>尚未選擇按鍵</span> <select data-hotkey-action>'+bindings.filter(([a])=>a!=='e').map(([a,label])=>'<option value="'+a+'">'+label+'</option>').join('')+'</select> <button type="button" data-hotkey-apply>套用到選取鍵</button></div>'+slider('sensitivity','滑鼠靈敏度',.1,5,.05)+'<details><summary>進階改鍵與原有球路快捷鍵</summary><p>點按鍵，再按新鍵；重複時互換。Esc 取消。後排使用 1／2／3，Q、R 預設留空。</p><div class="settings-bindings">'+bindings.filter(([a])=>!['j','k','l'].includes(a)).map(([a,t])=>`<div class="settings-row"><span>${t}</span><button data-bind="${a}"></button></div>`).join('')+'<div class="settings-row"><span>聊天（房間中，固定按鍵）</span><span>Enter</span></div></div><h3>原有舉球面板左右</h3>'+['4 號位','快攻','2 號位'].map((t,i)=>`<div class="settings-row"><span>${t}</span><button data-swap="${i}"></button></div>`).join('')+'</details><button data-reset-keys>全部還原預設按鍵</button>'],
       ['音效',slider('volume','主音量',0,100,1)+slider('music','音樂音量（主畫面、大廳）',0,100,1)+check('mute','靜音')],
       ['其他','<label class="settings-row"><span>暱稱（2～12 字）</span><input data-pref="nickname" maxlength="48" autocomplete="off"></label><button data-reset>還原所有設定</button><div class="settings-account" data-account hidden><h3>帳號</h3><div class="settings-row"><span data-who>目前登入：—</span><button data-switch>切換帳號</button></div><div class="settings-row"><span>登出這個 Google 帳號</span><button data-logout>登出</button></div><div class="settings-row"><span>永久刪除帳號、暱稱和角色外觀（無法復原）・<a href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></span><button data-delete-account class="settings-danger">刪除帳號</button></div><p class="settings-account-err" role="status"></p></div>']
     ];

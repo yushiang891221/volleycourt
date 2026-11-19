@@ -1,0 +1,48 @@
+你在 D:\開排球場\volleycourt-c1（git 分支 anim-c1-overhead）工作。只改這個資料夾，做完在這個分支提交（git commit），不要推送、不要切分支、不要碰 D:\開排球場\volleycourt。
+回報一律用繁體中文。額度快不夠時，先把做到哪裡寫進 docs/codex工作單/ANIM_C1_報告.md 再停。
+
+# 工作單 ANIM_C1：E 上手接球＋拿掉 Q／E／R 直接舉球＋V 接太高的球會噴
+
+## 背景
+遊戲主程式在 gym.html（排球部分：vbReceive、vbRecvStep、vbDoReceive 約 10936～11075 行），按鍵設定在 js/settings.js。
+現在 Q／E／R 是「直接舉球」（settings.js 的動作 '1'、'2'、'3'）。使用者決定：前排舉球只用 C 輪盤（動作 'q'），後排維持 1／2／3（動作 '6'、'4'、'5'）。E 改成「上手接球」，Q、R 先空著。
+
+## 要做的事
+1. 按鍵
+   - settings.js：拿掉動作 '1'、'2'、'3' 的預設按鍵（KeyQ／KeyE／KeyR），新增動作 'oh'「上手接球」預設 KeyE。
+   - controlVersion 升到 5，舊存檔遷移：'1'／'2'／'3' 如果還是 KeyQ／KeyE／KeyR 就清掉；'oh' 設成 KeyE（KeyE 被別的動作占用就找空鍵，照檔案裡現有的找空鍵寫法）。
+   - gym.html keydown：動作 'oh' 呼叫新的 vbOverheadReceive()。動作 '1'～'3' 沒綁鍵時不會觸發，數字鍵後排舉球照舊。
+   - 觀戰者按 'oh' 要擋掉（照 V 的寫法，約 9536 行）。
+   - vbKeyCue（約 11774 行）：有來球時同時顯示 V「接球」和 E「上手接球」。
+   - 遊戲裡寫著「按 Q／E／R 舉球」或把 E 說成舉球的提示文字（toast、教學 js/tutorial.js、設定面板說明）改成新按法。不要改 3D 編輯器自由移動的 Q／E（那是另一個功能）。
+
+2. 上手接球 vbOverheadReceive()（新函式，放在 vbReceive 旁邊）
+   - 跟 V 不同：不自動挑時機，按下去那一刻決定時機好壞。
+   - 理想觸球點 H＝自己位置往面向前方 0.25 m、高度 camera.position.y + 0.25（額頭前上方）。
+   - 按下時找自己這邊最近、正在飛過來的球（排除條件照 vbRecvStep 的寫法：b.rest、b.mine、VM.on 時 floorHit／不在自己這邊）。用 vbPredict 或逐格模擬算出球「最接近 H 的時間」t*（秒，正＝還沒到、負＝已經過了；已經過了可以用目前速度往回推）和最近距離 dmin。
+   - dmin > 0.6 m：沒碰到，toast「球太遠，上手接不到」，什麼都不發生。球高度在 H 以下 0.7 m 還低（胸口以下）：toast「球太低，用 V 接」。
+   - 時機 dt＝−t*（＞0＝按晚了）：
+     • 早按 0～0.25 s：手先舉好，等球到 t* 那一刻才觸球（用 walk.ohQ 記住，在每格 step 裡到時間就觸球，寫法參考 walk.recv／vbRecvStep），算完美時機。
+     • 早按超過 0.25 s：手放下了，算沒接到（toast「上手太早了」）。
+     • 晚按 0～0.06 s：完美。0.06～0.2 s：品質遞減，球「溜手」：出球方向往後、往上偏（越晚偏越多，最多往自己背後 3 m、高度 +1.5 m），toast「上手晚了，球溜手」。超過 0.2 s：接噴，球從頭頂往後飛（落在自己背後 2～5 m），toast「太晚了，球從手上滑走」。晚按的觸球點用按下當下球的位置，馬上觸球。
+   - 品質 q 再乘：偏離 H 的距離（0.25 m 內不扣，0.6 m 扣到 ×0.5）、面向角度（照 vbDoReceive 比賽中的寫法：球往你面向的方向走、面向偏舉球區越多越差）、重球（球速 > 16 m/s 時完美時機窗只剩 ±0.03 s，而且溜手機率加倍）。
+   - 出球目標、第二球修正、第三球過網、接到自己場地網前 0.9 m 內往後推等規則，全部沿用 vbDoReceive 的同一套（最好把 vbDoReceive 裡「算目標」那段抽成共用函式，V 和 E 都用；不要複製一大段）。出球用 vbLaunch(b, cp, v, 'set', q, true)，cp 就用球目前的位置（不要往手的位置挪）。
+   - 要觸發的東西跟 V 一樣：vbMine、staPay（新增 'overhead' 體力花費，數值跟 'bump' 一樣）、vmOnTouch(b, vmMe(), 'set')、vbFx、recHit kind 'set'、tutEv('recvOverhead', {q, dt})、window.__gym.lastOverhead＝{q, dt, dmin, note}（測試用）。
+   - 姿勢：按下到觸球前 pose='setReady'，觸球那一刻 pose='setPush'、walk.flash=0.45（照舉球的寫法）。myPoseCode 在 walk.ohQ 期間回傳 2（舉球姿勢），不要新增連線姿勢代碼。
+
+3. V 接太高的球（vbDoReceive）
+   - 現在球高於 1.25 m 只乘 0.8。改成：1.25～1.45 m 乘 0.75；高於 1.45 m（打到胸口）有 50% 機率直接接噴（q 設成 0.2，toast「太高了，打到胸口噴掉（高球用 E 上手）」），沒噴也乘 0.55。
+   - 撲救（dive）不受這條影響。
+
+## 不能動
+- 舉球輪盤 C、後排 1／2／3、扣球、攔網、撲救、發球的邏輯和數值。
+- 連線訊息格式（不加新的訊息種類、不增加訊息量），伺服器（server/）不改。
+- 動畫系統（avDrive、avTouch、touchPass、AVP 姿勢、DIVE_KF），那部分 Claude 正在改。
+
+## 完成標準
+- node 檢查：把 gym.html 的 <script type="module"> 內容抽出來用 `node --check` 檢查語法沒錯；js/settings.js 也 `node --check`。
+- tests/ 裡現有、你的沙箱跑得動的 node 測試要全過（跑不了的寫在報告裡）。
+- 寫一個 tests/overhead-timing.test.mjs（或照 tests/ 現有格式）：用純函式測時機判斷（早 0.1 s＝完美、晚 0.03 s＝完美、晚 0.12 s＝溜手往後、晚 0.3 s＝接噴、早 0.4 s＝沒接到、重球晚 0.05 s 不是完美）。為了能測，把「時機 → 結果」寫成不依賴畫面的小函式。
+- 一行程式中間的註解用 /* */，不要用 //（會把後面的程式吃掉）。
+- 提交訊息用中文，最後一行加：Co-Authored-By: Codex
+- 寫報告 docs/codex工作單/ANIM_C1_報告.md：改了哪些地方、時機數值、還沒做或沒驗證的地方。
