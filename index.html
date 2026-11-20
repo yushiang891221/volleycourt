@@ -31,6 +31,7 @@
   <script type="module">import { mountServerBadge } from './js/servers.js'; mountServerBadge(document.getElementById('server-pick'));</script>
   <script type="module">import { mountLobbyTicker } from './js/lobby-ticker.js'; if (globalThis.VBIntro?.entered) mountLobbyTicker(); else addEventListener('vb-lobby-enter', mountLobbyTicker, { once: true });</script>
   <script src="js/lobby.js" defer></script>
+  <script src="js/lobby-guide.js" defer></script>
   <script src="js/bgm.js" defer></script>
 </head>
 <body class="intro-active">
@@ -137,7 +138,7 @@
   <h3><span aria-hidden="true">💬</span> 作者想跟大家說的話</h3>
   <p>感謝大家進來遊玩這個遊戲!有任何建議或是發現的蟲子<span aria-hidden="true">🐛</span>都非常期望大家能給予回饋</p>
   <p>目前遊玩伺服器是屬於測試性質的還未上架到功能健全的伺服器，期望大家給予更多支持以向前邁進！</p>
-  <form method="dialog" class="buttons"><button class="orange" autofocus>知道了，進入大廳</button></form>
+  <form method="dialog" class="buttons"><button type="button" id="guide-open">看大廳功能介紹</button><button class="orange" autofocus>知道了，進入大廳</button></form>
 </dialog>
 </body>
 </html>
