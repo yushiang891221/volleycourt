@@ -214,6 +214,31 @@ function vmAiJumpHeight(j, t) {
   const top = j.vy / j.g;
   return Math.max(0, t <= top ? j.vy * t - 0.5 * j.g * t * t : j.vy * j.vy / (2 * j.g) - 0.5 * j.g * j.down * (t - top) ** 2);
 }
+// 碰球前擺手的程度 0～1：球再過多久（真實秒數，房間球速放慢時球的時間比較慢）會掉到碰球高度、那時離這個人夠不夠近
+//   舉球：AI 在球掉到 2.6 m 以下碰（engine/ai.js），擺手看 2.55 m；接球：球掉到 1.5 m 以下碰，看 1.3 m
+const ANTIC = { lead: 0.42, full: 0.12, y: { set: 2.55, bump: 1.3 }, near: 1.7 };
+function vmAnticW(b, at, role) {
+  const p = b.m.position, v = b.v, g = 9.8 - (b.acc ? b.acc.y : 0); if (!v || g <= 0) return 0;
+  const y0 = role === 'set' && vmAnticLow(b) ? ANTIC.y.bump : ANTIC.y[role];   // 傳得太低（到不了舉球高度）：AI 會低手墊舉 → 看墊球高度
+  const d = v.y * v.y + 2 * g * (p.y - y0); if (d < 0) return 0;
+  const tb = (v.y + Math.sqrt(d)) / g; if (tb < 0) return 0;   // 往下掉經過碰球高度的那個時間（球的秒數）
+  const real = tb / (VB.ts || 1), dh = Math.hypot(p.x + v.x * tb - at.x, p.z + v.z * tb - at.z);
+  if (real > ANTIC.lead || dh > ANTIC.near) return 0;
+  const k = clamp((ANTIC.lead - real) / (ANTIC.lead - ANTIC.full), 0, 1); return k * k * (3 - 2 * k);
+}
+// 球的最高點到不了舉球高度（再加 0.1 m）＝傳得太低
+function vmAnticLow(b) { const p = b.m.position, v = b.v, g = 9.8 - (b.acc ? b.acc.y : 0); return p.y + (v.y > 0 ? v.y * v.y / (2 * g) : 0) < ANTIC.y.set + 0.1; }
+// 這一球輪到誰、做什麼：主機有 AI 的回合資料（VM.poss）就照它；加入者沒有 → 用這隊碰了幾下推（對面打過來＝接、自己隊碰過一下＝舉），
+//   再挑球落到碰球高度時離那一點最近的那位 AI
+function vmAnticRole(a, Pa, Bl) {
+  if (Pa) return Pa.setter === a.id && Pa.stage === 1 ? 'set' : Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team) ? 'bump' : null;
+  if (VM.host || !Bl || Math.sign(Bl.vx) !== vmSide(a.team) && VM.touch?.team !== a.team) return null;
+  const T = VM.touch || {}, role = T.team === a.team && T.n === 1 ? 'set' : T.team !== a.team ? 'bump' : null; if (!role) return null;
+  const b = VM.ball, p = b.m.position, v = b.v, g = 9.8 - (b.acc ? b.acc.y : 0), d = v.y * v.y + 2 * g * (p.y - ANTIC.y[role]); if (d < 0 || g <= 0) return null;
+  const tb = (v.y + Math.sqrt(d)) / g, px = p.x + v.x * tb, pz = p.z + v.z * tb; let best = null, bd = Infinity;
+  for (const q of VM.ai.values()) { if (q.team !== a.team) continue; const dd = Math.hypot(q.av.g.position.x - px, q.av.g.position.z - pz); if (dd < bd) { bd = dd; best = q; } }
+  return best === a ? role : null;
+}
 function vmAiPlayback(a, dt, now, ox, oz) {
   const buf = a.netBuf;
   if (!buf?.length) return [ox, oz];
@@ -270,6 +295,15 @@ function vmRenderAi(dt) {
     // AI：只有這一球輪到他接、球正往他那邊來才蹲
     const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && ((Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team)) || (VM.six && Pa.stage === 2 && Pa.attacker && Pa.attacker !== a.id && Pa.setter !== a.id && VM.touch.team === a.team));   // 6 對 6：隊友攻擊時，cover 的人蹲低準備救球
     let pz = P2 ? avPoseOf(P2, pr2) : a.blk ? AVP.blockReady : expect ? AVP.ready : AVP.idle, kk = P2 === 4 ? 0.5 : k;
+    // 碰球前先擺好手（2026-11-20 使用者：舉球的手還沒舉起來球就出去了）：AI 碰到球那一格才切動作，手是球走了才舉。
+    //   這一球輪到他舉／接、球再 ANTIC.lead 秒就到碰球高度 → 先把手擺到位（舉球＝雙手舉到額頭上方等球、接球＝前臂平台）。只改畫面、不加連線訊息。
+    a.antic = 0;
+    if (!P2 && !a.blk && VM.phase === 'rally' && VM.ball && balls.includes(VM.ball)) {
+      const role = vmAnticRole(a, Pa, Bl);
+      const w = role ? vmAnticW(VM.ball, av.g.position, role) : 0;
+      const up = role === 'set' && !vmAnticLow(VM.ball);   // 舉球＝雙手舉到額頭上方；接球、太低的球（低手墊舉）＝前臂平台
+      if (w > 0) { pz = avMix(pz, up ? AVP.setReady : AVP.bump, w); if (w > 0.5) a.antic = up ? 20 : 21; }
+    }
     if (P2 === 9 && a.bs) { const [ox, oz] = vmW(0, a.bs), [cx, cz] = vmW(0, 0), r = av.g.rotation.y; pz = avBlockPose((ox - cx) * -Math.cos(r) + (oz - cz) * Math.sin(r)); }   // 攔網雙手往左右移（換算成人物的右手邊）
     if (P2 === 4 && a.y <= 0.05 && a.swingT > 0.3) pz = avMix(AVP.serveToss, AVP.spikeHit, 0.6);
     av.fall = P2 >= 10 && P2 <= 12 ? { a: 1, d: DIVE_D[P2 - 10], t: VM.host ? 1.25 - a.swingT : a.poseT } : null;   // 撲救：整個人往撲的方向倒

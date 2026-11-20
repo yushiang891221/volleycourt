@@ -913,13 +913,18 @@ function touchPass() {
     U.hp = (U.hp || new THREE.Vector3()).copy(p); U.ht = now;
     const L = U.lock; if (!L) continue;
     const kd = L.ev ? L.kind : L.av._tk || L.kind, LK = HIT_LOCK[kd] || HIT_LOCK.reach, u = (now - L.t0) / 1000 / LK[0];
-    if (u >= 1 || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
+    // 2026-11-20 使用者：球路會飄、不像正常拋物線。原因是下面「畫面上的球接回真正位置」用頭尾平滑（smoothstep）在 0.2 秒內縮完，
+    //   等於在球上多加一段很大的加速度（差 0.5 m 時約 ±25 m/s²），球看起來在空中轉彎。
+    //   改成照「球的時間」等速縮小：差距對時間是直線，二次微分＝0，畫面上的球加速度跟真正的重力完全一樣（只是從手上出發），
+    //   縮完的時間 tau＝球落地前的 8 成（0.15～1.0 球秒）：舉球、接球約 1 秒，扣球約 0.25 秒；差距 0.5 m 時速度只差 0.5～2 m/s，看不出轉折。
+    if (L.tau == null) { const bo = m.userData.ball, v = bo && bo.v, g = 9.8 - (bo && bo.acc ? bo.acc.y : 0); let tf = 0.6; if (v && g > 0) { const y = Math.max(0, p.y - BALL_R); tf = (v.y + Math.sqrt(Math.max(0, v.y * v.y + 2 * g * y))) / g; } L.tau = clamp(tf * 0.8, 0.15, 1.0); }
+    const ub = (now - L.t0) / 1000 * (VB.ts || 1) / L.tau;   // 球的時間（房間球速放慢時球的時間也慢）
+    if ((u >= 1 && ub >= 1) || !LIVE_AVS.has(L.av)) { U.lock = null; continue; }
     const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-    avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
-    // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再慢慢接回真正的位置
-    // 2026-11-19：差距在碰到的那一格記下來，之後照時間平滑縮到 0（以前是從手上固定一點拉回去：球先停在手邊再衝出去、路線彎一下）
+    if (u < 1) avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
+    // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再照球的時間等速接回真正的位置
     if (!L.off) L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone();
-    const s = sm((u - LK[1]) / (1 - LK[1])), hold = TCH.V.copy(L.off).multiplyScalar(1 - s); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
+    const hold = TCH.V.copy(L.off).multiplyScalar(Math.max(0, 1 - ub)); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
   }
 }
 scene.onBeforeRender = touchPass;
@@ -932,6 +937,8 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 4: return t < 0.12 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.12) / 0.45);   // A3：t＝0 就是碰到球（以前先花 0.18 從舉手揮過來，手臂比球晚約 0.06 秒到）
     case 5: return t < 0.28 ? AVP.takeoff : avMix(AVP.takeoff, AVP.airUp, (t - 0.28) / 0.4);
     case 13: return AVP.approach;
+    case 20: return AVP.setReady;   // 舉球前雙手先舉到額頭上方等球（AI 碰球前擺手，重播也照這個畫）
+    case 21: return AVP.bump;       // 接球前先把前臂平台擺好
     case 19: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bumpStand, (t - 0.3) / 0.5);   // 站著接球
     case 18: return AVP.crouch;
     case 6: return AVP.rkReady;

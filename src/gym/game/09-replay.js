@@ -45,7 +45,7 @@ function recFrame(t, idOf) {
   for (const p2 of NET.peers.values()) ppl.push([p2.id, p2.x, p2.z, p2.y, p2.yaw, p2.pose, p2.c, p2.n, p2.ch || null, +(p2.bs || 0), tmOf(p2.id)]);
   const npcRow = (id, g, y, poseC, col, name, ch, bs) => ppl.push([id, +g.position.x.toFixed(3), +g.position.z.toFixed(3), +(y || 0).toFixed(3), +(g.rotation.y - Math.PI).toFixed(3), poseC, col, name, ch || null, +(bs || 0).toFixed(3), tmOf(id)]);
   const aiBs = (a) => { if (!a.bs || a.pose !== 9 || typeof vmW !== 'function') return 0; const [ox, oz] = vmW(0, a.bs), [cx, cz] = vmW(0, 0), r = a.av.g.rotation.y; return (ox - cx) * -Math.cos(r) + (oz - cz) * Math.sin(r); };   /* 同 13-match-6v6.js 畫 AI 攔網手 */
-  if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : 0, a.color, a.name, a.ch, aiBs(a));
+  if (VM.on) for (const a of VM.ai.values()) npcRow(a.id, a.av.g, a.y, a.swingT > 0 || a.y > 0 ? a.pose : a.antic || 0, a.color, a.name, a.ch, aiBs(a));
   if (VB.npc) npcRow('npc', VB.npc.av.g, 0, VB.npc.up > 0 ? 2 : 0, '#30A46C', '陪練', VB.npc.ch);
   if (RK.on) { for (const P of Object.values(RK.P)) if (P.ai && P.av) npcRow('rkai', P.av.g, P.jy, P.swing ? (P.swing.over ? 7 : 8) : 6, '#E5484D', P.name, P.ch); const q = RK.ballM.position; bl.push([recId(RK.ballM), +q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), RK.b.held != null ? 1 : 0, RK.k]); }
   return { t, b: bl, p: ppl };
