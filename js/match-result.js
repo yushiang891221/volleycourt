@@ -91,7 +91,7 @@ function renderRanked() {
 }
 export function setRankedResult(mine, all) { if (!mine) return; rankedPending = { ...mine, saved: !!all?.saved }; renderRanked(); }
 
-export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLoser, teams, myTeam, me, nameOf, teamLabel }) {
+export function showMatchResult({ won, final, scoreLabel = '最終比分', my, isMvp, st, rate, mvp, bestLoser, teams, myTeam, me, nameOf, teamLabel }) {
   css();
   let d = document.getElementById('mr-panel');
   if (!d) { d = document.createElement('div'); d.id = 'mr-panel'; document.body.append(d); }
@@ -99,7 +99,7 @@ export function showMatchResult({ won, final, my, isMvp, st, rate, mvp, bestLose
   const rows = (t) => (teams[t] || []).filter((id) => rate[id]).sort((a, b) => rate[b].rt - rate[a].rt).map((id) => `<div class="row${id === me ? ' me' : ''}"><span class="g" style="color:${GRADE_COL[rate[id].gr]}">${rate[id].gr}</span><span class="n">${esc(nameOf(id))}${id === mvp ? ' ⭐' : ''}${id === bestLoser ? '<span class="mr-best-loser">敗方最佳</span>' : ''}</span><span class="s">${rate[id].rt}</span></div>`).join('');
   d.innerHTML = `<div class="mr-box" role="dialog" aria-modal="true" aria-labelledby="mr-t">
     <div class="mr-head"><div class="mr-grade" style="background:${col}">${g}</div>
-      <div class="mr-ttl"><h3 id="mr-t">${won ? '🏆 贏了！' : '比賽結束'}${isMvp ? '<span class="mr-mvp">⭐ MVP</span>' : ''}${me === bestLoser ? '<span class="mr-best-loser">敗方最佳</span>' : ''}</h3><p>${esc(final)}・這場主要負責：${ROLE[my.m] || '—'}</p></div>
+      <div class="mr-ttl"><h3 id="mr-t">${won ? '🏆 贏了！' : '比賽結束'}${isMvp ? '<span class="mr-mvp">⭐ MVP</span>' : ''}${me === bestLoser ? '<span class="mr-best-loser">敗方最佳</span>' : ''}</h3><p>${esc(scoreLabel)} <b>${esc(final)}</b>・這場主要負責：${ROLE[my.m] || '—'}</p></div>
       <div class="mr-score"><b>${my.rt}</b><small>整場評分（滿分 100）</small></div></div>
     <div class="mr-cols">
       <section class="mr-hex"><h4>戰力六角圖</h4>${hexSvg(my.hx || [])}</section>

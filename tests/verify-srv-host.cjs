@@ -27,6 +27,10 @@ const root = path.resolve(__dirname, '..');
   const res = out2.find(([t, d]) => t === 'vm' && d.e === 'result'); assert(res, '打完要送戰績');
   assert.equal(Object.keys(res[1].rate).length, 4, '四個人都有評分'); assert(Math.max(...res[1].sc) >= 15);
   console.log('PASS 伺服器打完送戰績：' + res[1].sc.join('：'));
+  const beforeSync = out2.length;
+  h2.receive('room-match-sync', {}, 'p1');
+  assert.equal(out2.length, beforeSync + 1, '裁判停止後仍補送結算');
+  assert.deepEqual(out2.at(-1), res, '補送原本的伺服器結果');
   // 1～6 人制都能開賽（2026-11-16 正式站 3～5 人制少了 CourtFormations，開賽失敗、大家卡在沒有裁判的比賽裡）
   for (const count of [1, 3, 4, 5, 6]) {
     const h3 = new MatchHost(() => {}); const seats = [Array(count).fill(null), Array(count).fill(null)]; seats[0][0] = 'p1';

@@ -31,9 +31,10 @@ function roomRulesChanged(rules) {
     [walk.x,walk.z] = toWorldOf(c,sd*depth,sd*left); walk.keys.clear();
   }
   if (rules.isHost && roomLaunched !== f.round && typeof SRV_MODE !== 'undefined' && SRV_MODE && NET.srvDown !== f.round && NET.tx && /^cf/.test(NET.tx.kind || '')) {   /* B5：請伺服器開賽 */
-    roomLaunched = f.round; const round = f.round;
-    setTimeout(() => {   /* 伺服器 4 秒沒開賽（連不上、舊版）：這一場改回房主電腦裁判 */
-      if (VM.on || !ROOM?.isHost || roomLaunched !== round || ROOM.snapshot?.flow?.phase !== 'playing' || ROOM.snapshot.flow.round !== round) return;
+    roomLaunched = f.round; NET.srvFailed = false; const round = f.round;
+    setTimeout(function waitForJudge() {   /* 積分賽持續等伺服器；一般房間才允許本機接手 */
+      if (VM.on || NET.srvFailed || !ROOM?.isHost || roomLaunched !== round || ROOM.snapshot?.flow?.phase !== 'playing' || ROOM.snapshot.flow.round !== round) return;
+      if (netRanked()) { srvJudgeStalled('等待伺服器開賽'); setTimeout(waitForJudge, 1500); return; }
       NET.srvDown = round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器沒回應：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot);   /* 只有這一場；下一場還是先請伺服器 */
     }, 4000);
     const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
@@ -43,6 +44,7 @@ function roomRulesChanged(rules) {
     return;
   }
   if (rules.isHost && roomLaunched !== f.round) {
+    if (netRanked()) { srvJudgeStalled('積分賽需要伺服器裁判'); return; }
     roomLaunched = f.round;
     const seats = [f.picks.slice(0,rules.count),f.picks.slice(rules.count)];
     // Existing host-side assistance expects the host's team at engine index 0.
@@ -54,7 +56,23 @@ function roomRulesChanged(rules) {
   }
 }
 // B5：伺服器裁判出問題（開賽失敗、比賽途中出錯、超過 3 秒沒送比賽資料）→ 停掉這場，房主電腦接手重開這一場
+// 積分賽（網址 ranked=1）：只有伺服器裁判的結果算數，絕對不能改由房主電腦接手——
+//   2026-11-20 使用者回報 5:5 突然判輸：網頁以為伺服器斷線就停掉、改在自己電腦開一場，伺服器那場其實還在打（人站著不動被電腦一直得分），打完照伺服器的結果扣分
+function netRanked() { return typeof location !== 'undefined' && new URLSearchParams(location.search).get('ranked') === '1'; }
+// 積分賽收不到伺服器資料：不停、不接手，顯示「連線中斷」並一直請伺服器重送；資料回來就照常繼續
+function srvJudgeStalled(why) {
+  NET.srvStalled = true;
+  const now = performance.now();
+  if (now - (NET.stallAsk || 0) > 1500) { NET.stallAsk = now; NET.tx?.publish('room-match-sync', {}); }
+  if (now - (NET.stallSay || 0) > 4000) { NET.stallSay = now; netStatus('連線中斷：等伺服器回應中（積分賽不會改由你的電腦裁判）', 'warn'); vmSay('連線不穩：等伺服器回應中', 'warn', 3000); console.warn('[伺服器裁判]', why); }
+}
 function srvJudgeFailed(why) {
+  if (netRanked()) {   // 積分賽：伺服器真的出錯（開賽失敗、比賽途中出錯）就這場不算，回大廳；不在本機重開
+    if (/超過 3 秒/.test(why)) { srvJudgeStalled(why); return; }
+    NET.srvFailed = true;
+    if (VM.on && !VM.host && VM.hostId === 'srv') vmStop(true);
+    netStatus('伺服器出錯：這場積分賽不計分，請回大廳重新配對', 'warn'); toast('伺服器出錯：這場積分賽不計分，請回大廳重新配對', 6000); console.warn('[伺服器裁判]', why); return;
+  }
   if (VM.on && !VM.host && VM.hostId === 'srv') vmStop(true);
   const f = ROOM?.snapshot?.flow;
   if (ROOM?.isHost && f?.phase === 'playing' && NET.srvDown !== f.round) { NET.srvDown = f.round; roomLaunched = -1; NET.tx?.publish('srv-stop', {}); netStatus('伺服器裁判出問題：這場改由房主電腦裁判', 'warn'); roomRulesChanged(ROOM.snapshot); }
@@ -1542,6 +1560,7 @@ function vmWireReceive(d, from) {
   const w = VM.wire, previousRound = w.order.round;
   if (VM.host || from !== VM.hostId || !w.order.accept(d)) return;
   w.rxAt = performance.now();   /* 看門狗：最後一次收到房主（伺服器）的比賽畫格 */
+  if (VM.hostId === 'srv' && NET.srvStalled) { NET.srvStalled = false; netStatus('已恢復連線：比賽由伺服器裁判', 'ok'); }
   if (d.round !== previousRound && d.server !== NET.me) vmDropHeld();
   const now = performance.now();
   if (w.offset == null) w.offset = d.at + netLat(from) * 1000 - now;

@@ -377,6 +377,9 @@ function vmBroadcast(force, msg, pt) {
   if (force) NET.forceSt = true;
 }
 function vmOnNet(d, from) {
+  if (netRanked() && ['start', 'end', 'result'].includes(d.e) && from !== 'srv') return;
+  if (d.e === 'result' && d.id && VM.resultId === d.id) return;
+  if (d.e === 'result' && from === 'srv' && Array.isArray(d.sc) && d.sc.length === 2) { VM.phase = 'over'; VM.resultId = d.id; VM.sc = [...d.sc]; if (Array.isArray(d.sets)) VM.sets = [...d.sets]; try { drawScore(); } catch (_) { /* 計分板還沒建好 */ } }   // 結算以伺服器的比分為準，左上角計分板也改成一樣（2026-11-20 使用者：畫面 5:5、結算卻判輸）
   if (d.e === 'result') { if (from === 'srv') VM.srvDone = true; /* 伺服器打完了：不要再當成伺服器斷線而改由房主接手開新的一場 */ if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
   if (from === 'srv' && ROOM && ROOM.snapshot?.flow?.phase !== 'playing' && d.e !== 'result') return;   /* 房間已經結束比賽：伺服器晚到的開賽、狀態都不收 */
   if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
@@ -435,7 +438,7 @@ function vmHud() {
   if ($('vm-hud').hidden) return;
   if (ROOM) { $('vm-x').hidden = !ROOM.isHost; $('vm-x').textContent = '結束比賽'; }
   vmServeHint();
-  if (!VM.host && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
+  if (!VM.host && !VM.srvDone && VM.hostId !== 'srv' && VM.lastStT && performance.now() - VM.lastStT > 4000 && performance.now() - (VM.stallSayT || 0) > 4000) { VM.stallSayT = performance.now(); vmSay(`主機（${vmName(VM.hostId)}）的遊戲畫面沒有在前景或斷線了：比賽暫停中`, 'warn', 3800); }
   const srv = VM.host ? (VM.phase === 'serve' || VM.phase === 'rally' ? vmServer() : null) : VM.srvId, sTeam = srv ? vmTeamOf(srv) : -1;
   const t = `${VM.sc[0]}：${VM.sc[1]}`, sk = t + '|' + (vmMulti() ? VM.setNo : '');   /* Play One 風格：兩塊大比分、中間黑底局數（只是顯示） */
   if ($('vm-sc').dataset.k !== sk) { $('vm-sc').dataset.k = sk; $('vm-sc').innerHTML = `<i class="sa">${VM.sc[0]}</i><b>${vmMulti() ? `<small>第</small>${VM.setNo}<small>局</small>` : '：'}</b><i class="sb">${VM.sc[1]}</i>`; $('vm-sc').setAttribute('aria-label', t); }

@@ -47,6 +47,7 @@ function roomJoin(ws, name, id, player) {
   if (others.length >= MAX_PEOPLE || others.filter(o => o.meta.player === player).length >= 2) return ws.close(4029, 'room full');
   if (duplicate) { duplicate.meta.replaced = true; set.delete(duplicate); duplicate.close(4001, 'replaced'); }
   ws.meta = { id, player, d: null, t: 0, n: 0 }; set.add(ws);
+  if (rk && hosts.get(name)?.running) { const g = hosts.get(name).g; console.log('[積分]', name, '比賽中重新連線', id, JSON.stringify({ at: new Date().toISOString(), sc: g.VM.sc, ph: g.VM.phase })); }
   ws.send(JSON.stringify({ k: 'hello', members: others.map(o => o.meta).filter(a => a.d).map(a => ({ id: a.id, ...a.d })) }));
   ws.on('message', (raw, binary) => {
     if (binary) return;
@@ -62,6 +63,7 @@ function roomJoin(ws, name, id, player) {
     if (m.k === 'm' && typeof m.t === 'string') {
       if (m.t === 'srv-start') {   // B5：房主請伺服器開賽（伺服器當房主）
         const rk = rankedRooms.get(name);
+        if (rk && rk.started) { hosts.get(name)?.receive('room-match-sync', {}, me.id); return; }
         if (rk && m.d && typeof m.d === 'object') {   // 積分賽：座位、人數、AI 強度、規則一律用伺服器配好的，不信網頁送來的
           const pl = rk.plan, n = pl.count, planT = [pl.picks.slice(0, n), pl.picks.slice(n)];
           // 2026-11-20：積分賽可以選位置——網頁送來的座位，每一隊的真人都還在配對分好的那一隊、沒有重複，就照它（隊伍不能換）；不合規則才用配對時的座位
@@ -70,21 +72,26 @@ function roomJoin(ws, name, id, player) {
           rk.started = Date.now();
         }
         hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留
-        const h = new MatchHost((t, d) => { cast(set, null, { k: 'm', t, d, f: HOST_ID }); if (rk && t === 'vm' && d && d.e === 'result') rankedResult(name, rk, d, set); }, (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
+        const h = new MatchHost((t, d) => { cast(set, null, { k: 'm', t, d, f: HOST_ID }); if (rk && !rk.reported && t === 'vm' && d && d.e === 'result') { console.log('[積分]', name, '比賽結束', JSON.stringify({ at: new Date().toISOString(), reason: 'score-limit', sc: d.sc, sets: d.sets, sec: Math.round((Date.now() - rk.started) / 1000), inRoom: [...set].filter(o => o.readyState === 1).map(o => o.meta.id) })); rankedResult(name, rk, d, set); } }, (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
         try { h.start(m.d); } catch (e) {
           console.warn('[比賽] 開賽失敗', name, e && e.stack || e); h.stop(); hosts.delete(name);
           cast(set, null, { k: 'm', t: 'srv-fail', d: { why: String(e && e.message || e).slice(0, 200) }, f: HOST_ID });   // 叫大家這一場改回房主電腦裁判
         }
         return;
       }
-      if (m.t === 'srv-stop') { hosts.get(name)?.stop(); hosts.delete(name); return; }
+      if (m.t === 'srv-stop') {
+        // 2026-11-20：積分賽只認伺服器的結果——網頁以為伺服器斷線送來的停止一律不理（以前會被停掉、網頁改在自己電腦打，比分就對不上）
+        if (rankedRooms.has(name)) { console.log('[積分]', name, '不理會網頁送來的 srv-stop', me.id); return; }
+        hosts.get(name)?.stop(); hosts.delete(name); return;
+      }
       cast(set, ws, { k: 'm', t: m.t, d: m.d, f: me.id });
-      const h = hosts.get(name); if (h && h.running) h.receive(m.t, m.d, me.id);
+      const h = hosts.get(name); if (h && (h.running || m.t === 'room-match-sync')) h.receive(m.t, m.d, me.id);
     }
   });
-  ws.on('close', () => {
+  ws.on('close', (code) => {
     set.delete(ws);
     const me = ws.meta;
+    if (rankedRooms.get(name) && hosts.get(name)?.running && !me.replaced) { const g = hosts.get(name).g; console.log('[積分]', name, '比賽中斷線', me.id, code, JSON.stringify({ at: new Date().toISOString(), sc: g.VM.sc, ph: g.VM.phase })); }
     leftMidMatch(name, set, me);
     if (me.d && !me.replaced && ![...set].some(o => o.meta.id === me.id)) cast(set, ws, { k: 'p', a: 'leave', id: me.id, d: {} });
     if (!set.size) { rooms.delete(name); hosts.get(name)?.stop(); hosts.delete(name); }

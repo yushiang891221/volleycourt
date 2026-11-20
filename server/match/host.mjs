@@ -10,7 +10,9 @@ const TICK = 1000 / 60;
 export class MatchHost {
   // publish(t, d)：把訊息送給房間裡所有人（寄件人是 srv）
   constructor(publish, log = () => {}) {
-    this.publish = publish; this.log = log; this.timer = null; this.last = 0;
+    this.result = null;
+    this.publish = (t, d) => { if (t === 'vm' && d?.e === 'result') this.result = structuredClone(d); publish(t, d); };
+    this.log = log; this.timer = null; this.last = 0;
     const g = this.g = createGameCore();
     g.setState(JSON.parse(VENUE));
     g.NET.on = true; g.NET.me = HOST_ID; g.NET.name = '伺服器裁判';
@@ -19,6 +21,7 @@ export class MatchHost {
   }
   // d：{ c: {id, x, z, rot}, sg, six, count, seats: [[id|null…],[…]], rules: {speed, …} }
   start(d) {
+    this.result = null;
     const g = this.g, st = g.state;
     if (!d || !d.c || !Array.isArray(d.seats) || d.seats.length !== 2) throw new Error('開賽資料不完整');
     let c = st.items.find(i => i.id === d.c.id);
@@ -47,7 +50,7 @@ export class MatchHost {
   // 房裡的人送來的訊息（擊球請求、位置、量延遲…）
   receive(t, d, from) {
     if (from === HOST_ID) return;
-    if (t === 'room-match-sync') { if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; } return; }
+    if (t === 'room-match-sync') { if (this.result) { this.publish('vm', this.result); return; } if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; } return; }
     if (t === 'match-claim' && process.env.DEBUG_CLAIM === '1') this.debugClaim(d, from);
     const seen = t === 'match-claim' && d && this.g.VM.wire ? this.g.VM.wire.seen.has(`${from}:${d.id}`) : true;
     try { this.g.netOnMessage(t, d, from); } catch (e) { this.log('receive error', t, e && e.message); }
