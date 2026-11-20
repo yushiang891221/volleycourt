@@ -559,7 +559,7 @@ export function createGameCore(S = {}) {
   function srvJudgeStalled(why) {
     NET.srvStalled = true;
     const now = performance.now();
-    if (now - (NET.stallAsk || 0) > 1500) { NET.stallAsk = now; NET.tx?.publish('room-match-sync', {}); }
+    if (now - (NET.stallAsk || 0) > 1500) { NET.stallAsk = now; const w = VM.wire; NET.tx?.publish('room-match-sync', { stalled: true, session: w?.session, frame: w?.order.frame, received: w?.received, rejected: w?.rejected, rxAge: w?.rxAt == null ? null : Math.round(now - w.rxAt) }); }
     if (now - (NET.stallSay || 0) > 4000) { NET.stallSay = now; netStatus('連線中斷：等伺服器回應中（積分賽不會改由你的電腦裁判）', 'warn'); vmSay('連線不穩：等伺服器回應中', 'warn', 3000); console.warn('[伺服器裁判]', why); }
   }
   function srvJudgeFailed(why) {
@@ -863,7 +863,9 @@ export function createGameCore(S = {}) {
   }
   function vmWireReceive(d, from) {
     const w = VM.wire, previousRound = w.order.round;
-    if (VM.host || from !== VM.hostId || !w.order.accept(d)) return;
+    if (VM.host || from !== VM.hostId) return;
+    w.received = (w.received || 0) + 1;
+    if (!w.order.accept(d)) { w.rejected = (w.rejected || 0) + 1; return; }
     w.rxAt = performance.now();   /* 看門狗：最後一次收到房主（伺服器）的比賽畫格 */
     if (VM.hostId === 'srv' && NET.srvStalled) { NET.srvStalled = false; netStatus('已恢復連線：比賽由伺服器裁判', 'ok'); }
     if (d.round !== previousRound && d.server !== NET.me) vmDropHeld();

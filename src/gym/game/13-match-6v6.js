@@ -290,7 +290,6 @@ function vmRenderAi(dt) {
     let dr = ry - av.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); av.g.rotation.y += dr * Math.min(1, dt * 8);
     av.phase += dt * Math.min(12, sp * 5.5);
     // AI：碰球那一下照動作做（swingT 從 0.35～0.4 倒數＝動作進度）；攔網的人在網前雙手舉在肩前；球在場上時低重心準備
-    if (VM.host && (a.y > 0 || ((VM.poss[a.team] || {}).attacker !== a.id && (VM.poss[a.team] || {}).qk !== a.id))) a.appr = false;
     const P2 = !VM.host ? a.pose : a.swingT > 0 || a.y > 0 ? a.pose : a.appr ? 13 : 0, pr2 = !VM.host ? a.poseT / 0.45 : P2 === 5 ? clamp(1 - (a.vy - 1.5) / 3, 0, 1) : 1 - clamp(a.swingT / (P2 === 4 ? 0.35 : 0.4), 0, 1);
     // AI：只有這一球輪到他接、球正往他那邊來才蹲
     const Pa = VM.poss[a.team], Bl = VM.ball && balls.includes(VM.ball) ? vmBallL(VM.ball) : null, expect = VM.phase === 'rally' && Pa && ((Pa.passer === a.id && Pa.stage === 0 && Bl && Math.sign(Bl.vx) === vmSide(a.team)) || (VM.six && Pa.stage === 2 && Pa.attacker && Pa.attacker !== a.id && Pa.setter !== a.id && VM.touch.team === a.team));   // 6 對 6：隊友攻擊時，cover 的人蹲低準備救球

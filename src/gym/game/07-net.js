@@ -63,7 +63,7 @@ function netRanked() { return typeof location !== 'undefined' && new URLSearchPa
 function srvJudgeStalled(why) {
   NET.srvStalled = true;
   const now = performance.now();
-  if (now - (NET.stallAsk || 0) > 1500) { NET.stallAsk = now; NET.tx?.publish('room-match-sync', {}); }
+  if (now - (NET.stallAsk || 0) > 1500) { NET.stallAsk = now; const w = VM.wire; NET.tx?.publish('room-match-sync', { stalled: true, session: w?.session, frame: w?.order.frame, received: w?.received, rejected: w?.rejected, rxAge: w?.rxAt == null ? null : Math.round(now - w.rxAt) }); }
   if (now - (NET.stallSay || 0) > 4000) { NET.stallSay = now; netStatus('連線中斷：等伺服器回應中（積分賽不會改由你的電腦裁判）', 'warn'); vmSay('連線不穩：等伺服器回應中', 'warn', 3000); console.warn('[伺服器裁判]', why); }
 }
 function srvJudgeFailed(why) {
@@ -170,13 +170,14 @@ function localTransport(room, cid = NET.me) {
 // Cloudflare 房間伺服器（rt-worker/）：WebSocket 直接連，伺服器只轉發；斷線自動重連（最多 8 次、約 20 秒），重連後重新報到、補上這段時間進出的人
 async function cfTransport(room, cid, base) {
   const url = base + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(cid), members = new Map(), mainNet = cid === NET.me;
-  let ws = null, onMsg = null, onPres = null, mine = null, closed = false, tries = 0, ping = 0;
+  let ws = null, onMsg = null, onPres = null, mine = null, closed = false, tries = 0, ping = 0, lastMessage = Date.now();
   const open = async () => {
     const token = typeof DEV_LOCAL !== 'undefined' && DEV_LOCAL ? 'dev.local.token' : await gameAccount.accessToken();   /* 本機開發（localhost＋&dev）用測試通行證，只有開了 ALLOW_DEV_TOKEN 的本機伺服器收 */
     return new Promise((ok, bad) => {
     const w = new WebSocket(url, ['volleycourt', token]); let done = false;
     const to = setTimeout(() => { if (!done) { done = true; try { w.close(); } catch (e) { /* ignore */ } bad(new Error('timeout')); } }, 6000);
     w.onmessage = (e) => {
+      lastMessage = Date.now();
       if (e.data === 'pong') return;
       let m; try { m = JSON.parse(e.data); } catch (er) { return; }
       if (m.k === 'm') { onMsg && onMsg(m.t, m.d, m.f); return; }
@@ -188,7 +189,7 @@ async function cfTransport(room, cid, base) {
       }
     };
     w.onclose = (e) => {
-      if (e.code === 4001) {
+      if (e.code === 4001 && w === ws) {
         closed = true; clearInterval(ping);
         if (mainNet) { NET.srvFailed = true; if (VM.on) vmStop(true); netStatus('已在其他分頁連線，這個分頁已停止重連；請使用最新開啟的遊戲分頁', 'warn'); }
       }
@@ -206,13 +207,23 @@ async function cfTransport(room, cid, base) {
     if (closed) return;
     try { ws = await open(); if (closed) { ws.close(1000, 'bye'); return; } tries = 0; keepAlive(); if (mine) ws.send(JSON.stringify({ k: 'enter', d: mine })); ws.send(JSON.stringify({ k: 'm', t: 'room-match-sync', d: {} })); if (mainNet && NET.on) renderMpList(); } catch (e) { reconnect(); }
   };
-  const keepAlive = () => { clearInterval(ping); ping = setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 25000); };   // 25 秒一次，免得被中間的網路設備斷掉
+  const keepAlive = () => {
+    clearInterval(ping); lastMessage = Date.now();
+    ping = setInterval(() => {
+      if (!ws || closed) return;
+      if (Date.now() - lastMessage > 12000) {
+        // TCP 可能仍顯示 OPEN，資料卻卡在重傳；不能只等瀏覽器的 close 事件。
+        const stale = ws; ws = null; stale.close(4000, 'heartbeat timeout'); reconnect(); return;
+      }
+      if (ws.readyState === 1) ws.send('ping');
+    }, 4000);
+  };
   ws = await open(); keepAlive();
   return {
     kind: 'cf',
-    publish: (t, d) => { netCount(); if (ws.readyState === 1) ws.send(JSON.stringify({ k: 'm', t, d })); },
+    publish: (t, d) => { netCount(); if (!closed && ws?.readyState === 1) ws.send(JSON.stringify({ k: 'm', t, d })); },
     subscribe: (fn) => { onMsg = fn; },
-    enter: async (info) => { mine = info; if (ws.readyState === 1) ws.send(JSON.stringify({ k: 'enter', d: info })); },
+    enter: async (info) => { mine = info; if (!closed && ws?.readyState === 1) ws.send(JSON.stringify({ k: 'enter', d: info })); },
     members: async () => [...members.values()],
     onPresence: (fn) => { onPres = fn; },
     close: () => { closed = true; clearInterval(ping); try { ws.close(1000, 'bye'); } catch (e) { /* ignore */ } },
@@ -1565,7 +1576,9 @@ function vmWireClaim(d, from) {
 }
 function vmWireReceive(d, from) {
   const w = VM.wire, previousRound = w.order.round;
-  if (VM.host || from !== VM.hostId || !w.order.accept(d)) return;
+  if (VM.host || from !== VM.hostId) return;
+  w.received = (w.received || 0) + 1;
+  if (!w.order.accept(d)) { w.rejected = (w.rejected || 0) + 1; return; }
   w.rxAt = performance.now();   /* 看門狗：最後一次收到房主（伺服器）的比賽畫格 */
   if (VM.hostId === 'srv' && NET.srvStalled) { NET.srvStalled = false; netStatus('已恢復連線：比賽由伺服器裁判', 'ok'); }
   if (d.round !== previousRound && d.server !== NET.me) vmDropHeld();

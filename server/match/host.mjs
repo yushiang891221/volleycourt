@@ -50,7 +50,16 @@ export class MatchHost {
   // 房裡的人送來的訊息（擊球請求、位置、量延遲…）
   receive(t, d, from) {
     if (from === HOST_ID) return;
-    if (t === 'room-match-sync') { if (this.result) { this.publish('vm', this.result); return; } if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; } return; }
+    if (t === 'room-match-sync') {
+      if (d?.stalled && (!this.lastStallLog || Date.now() - this.lastStallLog > 10000)) {
+        this.lastStallLog = Date.now();
+        const w = this.g.VM.wire;
+        this.log('client stalled', JSON.stringify({ from, running: this.running, sc: this.g.VM.sc, phase: this.g.VM.phase, serverFrame: w?.frame, sameSession: d.session === w?.session, clientFrame: d.frame, received: d.received, rejected: d.rejected, rxAge: d.rxAge }));
+      }
+      if (this.result) { this.publish('vm', this.result); return; }
+      if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; if (this.g.VM.wire) this.g.VM.wire.dirty = true; }
+      return;
+    }
     if (t === 'match-claim' && process.env.DEBUG_CLAIM === '1') this.debugClaim(d, from);
     const seen = t === 'match-claim' && d && this.g.VM.wire ? this.g.VM.wire.seen.has(`${from}:${d.id}`) : true;
     try { this.g.netOnMessage(t, d, from); } catch (e) { this.log('receive error', t, e && e.message); }

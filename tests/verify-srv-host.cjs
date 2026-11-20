@@ -16,6 +16,15 @@ const root = path.resolve(__dirname, '..');
   const start = out.find(([t, d]) => t === 'vm' && d.e === 'start'); assert(start && start[1].wire === 2, '開賽要用畫格同步');
   assert.deepEqual(h.g.VM.team[0].slice(0, 1), ['p1'], '真人坐進指定的位置');
   assert.equal(h.g.VM.names.p1, '小明', '伺服器用房主給的暱稱'); assert.equal(h.g.VM.startData.names.p1, '小明', '補送開賽資料也帶暱稱');
+  // 沒有畫面的伺服器也必須收掉中斷的助跑姿勢，不能一直傳 pose 13。
+  const teammate = [...h.g.VM.ai.values()][0];
+  h.g.VM.phase = 'dead'; h.g.VM.next = null;
+  Object.assign(teammate, { appr: true, y: 0, vy: 0, swingT: 0 });
+  h.g.VM.poss[teammate.team] = { stage: 2, attacker: teammate.id };
+  h.g.hostStep(1 / 60);
+  assert.equal(teammate.appr, false, '死球時取消未完成的助跑姿勢');
+  h.g.NET.forceSt = true; h.g.hostStep(1 / 60);
+  assert.equal(out.filter(([t]) => t === 'st').at(-1)[1].vm.ai.find(row => row[0] === teammate.id)[4], 0, '伺服器送出正常站姿');
   const src = fs.readFileSync(path.join(root, 'server/rt/server.mjs'), 'utf8');
   assert(src.includes("if (!id || id === HOST_ID) return reject(400, 'Bad Request');"), '不能用 srv 代號連進來');
   console.log('PASS 伺服器當房主：' + JSON.stringify(types));

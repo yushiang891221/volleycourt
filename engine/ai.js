@@ -81,6 +81,9 @@ export function createAi(G) {
         if (G.VM.touch.team !== a.team) G.VM.poss[a.team] = null;
       }
     }
+    // 動作狀態由引擎收尾，不能依賴網頁繪圖（伺服器不執行 vmRenderAi）。
+    const possession = G.VM.poss[a.team];
+    if (!live || a.y > 0 || !possession || possession.stage !== 2 || (possession.attacker !== a.id && possession.qk !== a.id)) a.appr = false;
     // AI 球員急停、急轉：球鞋吱一聲
     { const ps = Math.hypot(a.pvx || 0, a.pvz || 0), cs = Math.hypot(a.vx, a.vz), cosA = ps > 0.1 && cs > 0.1 ? ((a.pvx || 0) * a.vx + (a.pvz || 0) * a.vz) / (ps * cs) : 1;
       if (a.y <= 0 && ((ps > 2 && (cs < ps * 0.55 || cosA < 0.6)) || (ps < 1 && cs > 3.2)) && G.VM.t - (a.sqT || 0) > 0.5) { a.sqT = G.VM.t; const [wx, wz] = G.vmW(a.x, a.z); G.sfx('squeak', 0.6 + G.gameRandom() * 0.3, new G.THREE.Vector3(wx, 0.05, wz)); }
