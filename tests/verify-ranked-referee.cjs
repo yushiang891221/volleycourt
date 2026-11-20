@@ -44,3 +44,23 @@ function client(ranked) {
   assert.equal(c.localStarts, 1); assert(sent.some(([t]) => t === 'srv-stop'));
 }
 console.log('PASS ranked startup timeout, stalled referee, authoritative score, duplicate result, casual fallback');
+(async () => {
+  for (const code of [4001, 1006]) {
+    const sockets = [], timers = [], sent = [];
+    class Socket {
+      constructor() { this.readyState = 1; sockets.push(this); queueMicrotask(() => this.onmessage({ data: JSON.stringify({ k: 'hello', members: [] }) })); }
+      send(s) { sent.push(JSON.parse(s)); }
+      close() {}
+    }
+    const c = { NET: { me: 'p', on: true }, VM: { on: true }, DEV_LOCAL: true, WebSocket: Socket,
+      setTimeout: (fn, ms) => { if (ms !== 6000) timers.push(fn); return 1; }, clearTimeout() {},
+      setInterval: () => 1, clearInterval() {}, netStatus() {}, vmStop() { c.VM.on = false; }, renderMpList() {}, netCount() {} };
+    vm.createContext(c); vm.runInContext(functions('src/gym/game/07-net.js', ['cfTransport']), c);
+    const tx = await c.cfTransport('room', 'p', 'ws://test');
+    sockets[0].onclose({ code });
+    if (code === 4001) { assert.equal(timers.length, 0); assert.equal(c.VM.on, false); assert.equal(sockets.length, 1); }
+    else { assert.equal(timers.length, 1); timers.shift()(); await new Promise(setImmediate); assert.equal(sockets.length, 2); assert(sent.some(m => m.t === 'room-match-sync')); }
+    tx.close();
+  }
+  console.log('PASS replaced connection stops retrying; ordinary disconnect reconnects and requests match sync');
+})().catch(e => { console.error(e); process.exitCode = 1; });

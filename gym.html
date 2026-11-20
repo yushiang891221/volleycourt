@@ -7328,7 +7328,14 @@ async function cfTransport(room, cid, base) {
         if (onPres) { for (const id of before) if (!members.has(id)) onPres('leave', id, {}); for (const x of m.members) onPres('enter', x.id, x); }   // 重連：斷線那段時間有人進出
       }
     };
-    w.onclose = () => { if (!done) { done = true; clearTimeout(to); bad(new Error('closed')); return; } if (w === ws && !closed) reconnect(); };
+    w.onclose = (e) => {
+      if (e.code === 4001) {
+        closed = true; clearInterval(ping);
+        if (mainNet) { NET.srvFailed = true; if (VM.on) vmStop(true); netStatus('已在其他分頁連線，這個分頁已停止重連；請使用最新開啟的遊戲分頁', 'warn'); }
+      }
+      if (!done) { done = true; clearTimeout(to); bad(new Error('closed')); return; }
+      if (w === ws && !closed) reconnect();
+    };
   });
   };
   const reconnect = async () => {
@@ -7338,7 +7345,7 @@ async function cfTransport(room, cid, base) {
     tries++; if (mainNet) netStatus('連線中斷，重新連線中…', 'busy');
     await new Promise((r) => setTimeout(r, Math.min(5000, 600 * tries)));
     if (closed) return;
-    try { ws = await open(); tries = 0; keepAlive(); if (mine) ws.send(JSON.stringify({ k: 'enter', d: mine })); if (mainNet && NET.on) renderMpList(); } catch (e) { reconnect(); }
+    try { ws = await open(); if (closed) { ws.close(1000, 'bye'); return; } tries = 0; keepAlive(); if (mine) ws.send(JSON.stringify({ k: 'enter', d: mine })); ws.send(JSON.stringify({ k: 'm', t: 'room-match-sync', d: {} })); if (mainNet && NET.on) renderMpList(); } catch (e) { reconnect(); }
   };
   const keepAlive = () => { clearInterval(ping); ping = setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 25000); };   // 25 秒一次，免得被中間的網路設備斷掉
   ws = await open(); keepAlive();
