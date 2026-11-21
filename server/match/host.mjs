@@ -11,7 +11,16 @@ export class MatchHost {
   // publish(t, d)：把訊息送給房間裡所有人（寄件人是 srv）
   constructor(publish, log = () => {}) {
     this.result = null;
-    this.publish = (t, d) => { if (t === 'vm' && d?.e === 'result') this.result = structuredClone(d); publish(t, d); };
+    this.frameTimes = new Map(); this.frameAcks = null; this.paused = false;
+    this.publish = (t, d) => {
+      if (t === 'vm' && d?.e === 'result') this.result = structuredClone(d);
+      if (t === 'match-frame' && this.frameAcks) {
+        this.frameTimes.set(d.frame, performance.now());
+        while (this.frameTimes.size > 128) this.frameTimes.delete(this.frameTimes.keys().next().value);
+        d = { ...d, paused: this.paused };
+      }
+      publish(t, d);
+    };
     this.log = log; this.timer = null; this.last = 0;
     const g = this.g = createGameCore();
     g.setState(JSON.parse(VENUE));
@@ -29,6 +38,8 @@ export class MatchHost {
     Object.assign(c, { x: +d.c.x || 0, z: +d.c.z || 0, rot: +d.c.rot || 0 });   // 用網頁那邊的球場位置
     if (d.rules) { if (Number.isFinite(d.rules.speed)) g.VB.ts = d.rules.speed; if (g.vmApplyRoomRules) g.vmApplyRoomRules(d.rules); }
     const seats = d.seats.map(t => t.map(id => (typeof id === 'string' && id ? id : null)));
+    this.frameAcks = d.requireFrameAck ? new Map(seats.flat().filter(Boolean).map(id => [id, performance.now()])) : null;
+    this.frameTimes.clear(); this.paused = false;
     if (d.six) g.vm6Start(c, d.sg === 1 ? 1 : -1, {}, seats); else g.vmStart(c, d.sg === 1 ? 1 : -1, null, [], seats);
     // 真人暱稱（房主開賽時給的）：播報（例如「發球超過 8 秒（小明）」）、結算才不會寫「球友」
     const names = d.names && typeof d.names === 'object' ? d.names : {};
@@ -40,6 +51,24 @@ export class MatchHost {
   tick() {
     const now = performance.now(); let dt = (now - this.last) / 1000; this.last = now;
     dt = Math.min(0.05, Math.max(0, dt));
+    if (this.frameAcks && this.g.VM.on && this.g.VM.phase !== 'over') {
+      const missing = [...this.frameAcks].filter(([, at]) => now - at > 3000).map(([id]) => id);
+      if (missing.length) {
+        if (!this.paused) { this.paused = true; this.pauseAt = now; this.log('match paused', JSON.stringify({ missing, sc: this.g.VM.sc })); }
+        // 暫停物理、AI 和比賽時間，但持續送畫格以確認玩家恢復接收。
+        if (now - (this.pauseSent || 0) > 400) {
+          this.pauseSent = now; this.g.NET.forceSt = true; this.g.VM.wire.dirty = true;
+          this.g.netTick(0, now); this.g.vmWireTick();
+        }
+        return;
+      }
+      if (this.paused) {
+        const elapsed = now - this.pauseAt;
+        for (const key of ['whT', 'srvDl']) if (Number.isFinite(this.g.VM[key])) this.g.VM[key] += elapsed;
+        this.paused = false; this.g.VM.wire.dirty = true;
+        this.log('match resumed', JSON.stringify({ ms: Math.round(elapsed), sc: this.g.VM.sc }));
+      }
+    }
     try { this.g.hostStep(dt); } catch (e) { this.log('match error', e && e.stack || e); this.stop(); this.publish('srv-fail', { why: String(e && e.message || e).slice(0, 200) }); }   // 比賽途中出錯：叫大家改回房主電腦裁判
     if (this.g.VM.phase === 'over' || !this.g.VM.on) {
       // 2026-11-20：每一格是先送狀態、再更新比賽，打完那一格的「結束」以前沒送出去就停了 → 網頁以為伺服器斷線、房主電腦在背景自動開一局。停之前強制送最後一次
@@ -50,6 +79,11 @@ export class MatchHost {
   // 房裡的人送來的訊息（擊球請求、位置、量延遲…）
   receive(t, d, from) {
     if (from === HOST_ID) return;
+    if (t === 'match-frame-ack') {
+      const sent = this.frameTimes.get(d?.frame), now = performance.now();
+      if (this.frameAcks?.has(from) && d?.session === this.g.VM.wire?.session && sent != null && now - sent < 2500) this.frameAcks.set(from, now);
+      return;
+    }
     if (t === 'room-match-sync') {
       if (d?.stalled && (!this.lastStallLog || Date.now() - this.lastStallLog > 10000)) {
         this.lastStallLog = Date.now();
@@ -60,6 +94,7 @@ export class MatchHost {
       if (this.g.VM.on && this.g.VM.startData) { this.publish('vm', this.g.VM.startData); this.g.NET.forceSt = true; if (this.g.VM.wire) this.g.VM.wire.dirty = true; }
       return;
     }
+    if (this.paused && !['st', 'ping', 'pong'].includes(t)) return;
     if (t === 'match-claim' && process.env.DEBUG_CLAIM === '1') this.debugClaim(d, from);
     const seen = t === 'match-claim' && d && this.g.VM.wire ? this.g.VM.wire.seen.has(`${from}:${d.id}`) : true;
     try { this.g.netOnMessage(t, d, from); } catch (e) { this.log('receive error', t, e && e.message); }

@@ -48,6 +48,30 @@ const root = path.resolve(__dirname, '..');
     assert.equal(h3.g.VM.team[0].length, count, count + ' 人制開賽');
   }
   console.log('PASS 1～6 人制都能由伺服器開賽');
+  {
+    const frames = [], guarded = new MatchHost((t, d) => { if (t === 'match-frame') frames.push(d); });
+    guarded.start({ c: { id: 'guard', x: 0, z: 0 }, seats: [['p1', null], ['p2', null]], requireFrameAck: true }); guarded.stop();
+    const time = guarded.g.VM.t, score = [...guarded.g.VM.sc], deadline = guarded.g.VM.srvDl;
+    guarded.frameAcks.set('p1', -Infinity); guarded.frameAcks.set('p2', -Infinity);
+    guarded.tick(); guarded.tick();
+    guarded.receive('vm', { e: 'srvMiss' }, 'p1');
+    assert.equal(guarded.paused, true); assert.equal(guarded.g.VM.t, time); assert.deepEqual(guarded.g.VM.sc, score);
+    const f = frames.at(-1); assert(f.paused, '暫停時仍發畫格供玩家重新同步');
+    guarded.receive('match-frame-ack', { session: f.session, frame: f.frame }, 'spectator');
+    assert.equal(guarded.frameAcks.has('spectator'), false);
+    guarded.receive('match-frame-ack', { session: 'wrong', frame: f.frame }, 'p1');
+    assert.equal(guarded.frameAcks.get('p1'), -Infinity);
+    guarded.frameTimes.set(f.frame, performance.now() - 4000);
+    guarded.receive('match-frame-ack', { session: f.session, frame: f.frame }, 'p1');
+    assert.equal(guarded.frameAcks.get('p1'), -Infinity, '延遲到達的舊畫格不能恢復比賽');
+    guarded.frameTimes.set(f.frame, performance.now());
+    guarded.receive('match-frame-ack', { session: f.session, frame: f.frame }, 'p1'); guarded.tick();
+    assert(guarded.paused, '所有真人恢復接收後才繼續');
+    guarded.pauseAt -= 5000;
+    guarded.receive('match-frame-ack', { session: f.session, frame: f.frame }, 'p2'); guarded.tick();
+    assert.equal(guarded.paused, false); assert(guarded.g.VM.srvDl >= deadline + 5000, '發球期限補回暫停時間');
+    console.log('PASS ranked missing-frame pause, live recovery frames, validated acknowledgements, all-player resume, serve deadline');
+  }
   const srvSrc = fs.readFileSync(path.join(root, 'server/rt/server.mjs'), 'utf8'), hostSrc = fs.readFileSync(path.join(root, 'server/match/host.mjs'), 'utf8');
   assert(srvSrc.includes("t: 'srv-fail'") && hostSrc.includes("this.publish('srv-fail'"), '開賽失敗、比賽途中出錯都要通知大家改回房主電腦');
   assert(fs.readFileSync(path.join(root, 'server/rt/deploy.sh'), 'utf8').includes('js/court-formations.js'), '部署要帶站位程式');

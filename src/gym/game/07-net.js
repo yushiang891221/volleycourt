@@ -39,7 +39,7 @@ function roomRulesChanged(rules) {
     }, 4000);
     const seats = [f.picks.slice(0, rules.count), f.picks.slice(rules.count)].map(t => t.map(id => id || null));
     const names = {}; for (const id of seats.flat()) if (id) names[id] = id === vmMe() ? NET.name : NET.peers.get(id)?.n || '';   /* 伺服器不知道暱稱：開賽時一起給（播報、結算才不會寫「球友」） */
-    NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, names, rules: JSON.parse(JSON.stringify(rules)) });
+    NET.tx.publish('srv-start', { c: { id: c.id, x: c.x, z: c.z, rot: c.rot }, sg: -1, six: rules.count !== 2, count: rules.count, seats, names, frameAck: 1, rules: JSON.parse(JSON.stringify(rules)) });
     netStatus('比賽由台北伺服器裁判', 'ok');
     return;
   }
@@ -1525,6 +1525,7 @@ function vmWireGetBall() {
   VM.ball = b; return b;
 }
 function vmWireHit(b, kind, quality) {
+  if (VM.netPaused) return;
   const w = VM.wire;
   if (vmTeamOf(vmMe()) < 0 && !VM.host) return;
   if (!['serve', 'bump', 'set', 'spike', 'hit', 'tip', 'block'].includes(kind)) return;
@@ -1580,7 +1581,10 @@ function vmWireReceive(d, from) {
   w.received = (w.received || 0) + 1;
   if (!w.order.accept(d)) { w.rejected = (w.rejected || 0) + 1; return; }
   w.rxAt = performance.now();   /* 看門狗：最後一次收到房主（伺服器）的比賽畫格 */
-  if (VM.hostId === 'srv' && NET.srvStalled) { NET.srvStalled = false; netStatus('已恢復連線：比賽由伺服器裁判', 'ok'); }
+  if (from === 'srv' && (w.ackAt == null || w.rxAt - w.ackAt >= 800)) { w.ackAt = w.rxAt; NET.tx?.publish('match-frame-ack', { session: d.session, frame: d.frame }); }
+  if (!!d.paused !== !!VM.netPaused) { VM.netPaused = !!d.paused; netStatus(VM.netPaused ? '比賽已暫停：等待玩家恢復連線' : '連線已恢復：比賽繼續', VM.netPaused ? 'warn' : 'ok'); }
+  if (VM.netPaused && w.rxAt - (w.pauseSay || 0) > 2500) { w.pauseSay = w.rxAt; vmSay('比賽已暫停：等待連線恢復', 'warn', 3000); }
+  if (VM.hostId === 'srv' && NET.srvStalled) { NET.srvStalled = false; netStatus(VM.netPaused ? '比賽已暫停：等待玩家恢復連線' : '已恢復連線：比賽由伺服器裁判', VM.netPaused ? 'warn' : 'ok'); }
   if (d.round !== previousRound && d.server !== NET.me) vmDropHeld();
   const now = performance.now();
   if (w.offset == null) w.offset = d.at + netLat(from) * 1000 - now;
@@ -1598,7 +1602,7 @@ function vmWireReceive(d, from) {
   b.wireRemote = true;
   if (!w.pending && !(d.ball.floor && b.wireLocal)) {   /* 已經落地、本機在算彈跳：同一個落地的球路不要再把球拉回落點 */
     b.wirePrediction = null; vmWireApply(b, d.ball);
-    const age = clamp((now + w.offset - d.at) / 1000, 0, .35), flight = VBMatchSync.sample(d.ball, age * VB.ts, BALL_R, age);
+    const age = VM.netPaused ? 0 : clamp((now + w.offset - d.at) / 1000, 0, .35), flight = VBMatchSync.sample(d.ball, age * VB.ts, BALL_R, age);
     const error = before.sub(new THREE.Vector3(...flight.p));
     b.m.position.set(...flight.p); b.v.set(...flight.v);   /* 球的轉向在本機自己轉（vmWireRemoteStep），不用伺服器的：伺服器那邊球不會轉 */
     b.wireVisualError = hadFrame && !d.ball.floor && error.length() < 2 ? error : null;
@@ -1616,7 +1620,7 @@ function vmWireRemoteStep(b, dt) {
   const frame = b.wireFrame || w.latest;
   if (!prediction && !frame?.ball) return;
   const ball = prediction ? prediction.ball : frame.ball;
-  const age = clamp((prediction ? now - prediction.at : now + (w.offset || 0) - frame.at) / 1000, 0, .35);
+  const age = VM.netPaused ? 0 : clamp((prediction ? now - prediction.at : now + (w.offset || 0) - frame.at) / 1000, 0, .35);
   const flight = VBMatchSync.sample(ball, age * VB.ts, BALL_R, age);
   b.m.position.set(...flight.p); b.v.set(...flight.v);
   {   /* 旋轉：照主機給的轉速在本機轉（以前每次收到都把轉向拉回伺服器的值，扣球看起來不會轉） */
@@ -1628,7 +1632,7 @@ function vmWireRemoteStep(b, dt) {
     b.m.position.set(ball.p[0], Math.max(BALL_R, ball.p[1]), ball.p[2]); b.v.set(...ball.v); b.acc = null; b.float = null;
     if (!b.wireLocal && typeof vbFloorImpact === 'function') vbFloorImpact(b, b.m.position, Math.abs(b.v.y) / 0.62); b.floorHit = ball.floor.slice(); b.floorReport = true; b.waitFloor = null; b.wireLocal = true; b.wireCatchup = age; b.wireVisualError = null;
   }
-  if (!prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
+  if (!VM.netPaused && !prediction && !ball.floor && vmTeamOf(vmMe()) >= 0) vbBlockTest(b, dt * VB.ts);
 }
 function vmWireRender(begin) {
   const b = VM.on && VM.wire && !VM.host && VM.ball;

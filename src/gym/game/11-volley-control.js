@@ -1534,6 +1534,7 @@ function vmSendResult() {   // 房主：比賽結束，把結果送給大家（�
   const RT = vmRateMatch();
   if (!Object.keys(RT.rate).length) return;
   const d = { e: 'result', roles: mrecLongestRoles(), rate: RT.rate, mvp: RT.mvp, bestLoser: RT.bestLoser, id: MREC.id, six: !!VM.six, bo: VM.bestOf || 1, sets: VM.sets ? [...VM.sets] : null, setLog: Array.isArray(VM.setLog) ? VM.setLog.map((x) => [...x]) : null, sc: [...VM.sc], team: VM.team, perf: MREC.pf, cb: [...MREC.cb], lv: VM_OPT.lv, human: VM.ai.size === 0, pts: VM.to, sec: Math.round((Date.now() - MREC.t0) / 1000) };
+  if (VM.wire) d.session = VM.wire.session;
   if (NET.on) NET.tx.publish('vm', d);
   vmGotResult(d); MREC.id = '';
 }

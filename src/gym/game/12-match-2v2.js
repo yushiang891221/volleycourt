@@ -78,7 +78,7 @@ function vmStart(c, sg, mateId, opps = [], seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, srvDone: false, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
+  Object.assign(VM, { on: true, host: true, hostId: vmMe(), srvDone: false, six: false, c, sg, to: VM_OPT.to, bestOf: VM_OPT.sets2 || 1, sets: [0, 0], setLog: [], setNo: 1, firstSrv: 0, sc: [0, 0], call: null, phase: 'idle', srvTeam: 0, srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {} });
   VM.team = [[vmMe(), mateId || 'aiT'], [opps[0] || 'ai1', opps[1] || 'ai2']];
   const used = new Set([myChar()]); VM.role = {}; VM.chars = {};
   for (const id of ['aiT', 'ai1', 'ai2']) VM.chars[id] = vmPickChar(used);
@@ -113,6 +113,7 @@ function vmMkAi(id, team, name, color, ch) {
 }
 function vmStop(silent) {
   if (!silent && ROOM) { if (ROOM.isHost) ROOM.end(); return; }
+  VM.netPaused = false;
   if (!VM.on) return;
   if (VM.watchBall) { VM.watchBall.m.removeFromParent(); const i = balls.indexOf(VM.watchBall); if (i >= 0) balls.splice(i, 1); }
   VM.wire = null;
@@ -166,6 +167,7 @@ function vmWhistle() {
 // 輪到你發球時：吹哨前提示等一下，吹哨後倒數 8 秒（在計分板下面）
 function vmServeHint() {
   const el = $('vm-cd'); if (!el) return;
+  if (VM.netPaused) { el.hidden = true; return; }
   const me = vmMe(), mine = VM.on && VM.phase === 'serve' && (VM.host ? vmServer() === me : VM.srvId === me) && !walk.serve && !walk.jserve, now = performance.now();
   if (!mine) { el.hidden = true; return; }
   const txt = !(now >= VM.whT) ? '等裁判吹哨…' : `發球倒數 ${Math.max(0, Math.ceil((VM.srvDl - now) / 1000))} 秒`;
@@ -173,6 +175,7 @@ function vmServeHint() {
 }
 // 拿著球按發球：吹哨前、超過 8 秒都不行
 function vmServeOK() {
+  if (VM.netPaused) { toast('比賽暫停中，等待連線恢復', 1000); return false; }
   if (!VM.on) return true;
   if (VM.phase !== 'serve') { toast('還沒輪到發球', 1000); return false; }
   const now = performance.now();

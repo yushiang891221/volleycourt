@@ -73,7 +73,7 @@ function roomJoin(ws, name, id, player) {
         }
         hosts.get(name)?.stop();   // 每次開賽都用全新的一份比賽，不沿用上一場（或上一次失敗）的殘留
         const h = new MatchHost((t, d) => { cast(set, null, { k: 'm', t, d, f: HOST_ID }); if (rk && !rk.reported && t === 'vm' && d && d.e === 'result') { console.log('[積分]', name, '比賽結束', JSON.stringify({ at: new Date().toISOString(), reason: 'score-limit', sc: d.sc, sets: d.sets, sec: Math.round((Date.now() - rk.started) / 1000), inRoom: [...set].filter(o => o.readyState === 1).map(o => o.meta.id) })); rankedResult(name, rk, d, set); } }, (...a) => console.log('[比賽]', name, ...a)); hosts.set(name, h);
-        try { h.start(m.d); } catch (e) {
+        try { h.start({ ...m.d, requireFrameAck: !!rk && m.d?.frameAck === 1 }); } catch (e) {
           console.warn('[比賽] 開賽失敗', name, e && e.stack || e); h.stop(); hosts.delete(name);
           cast(set, null, { k: 'm', t: 'srv-fail', d: { why: String(e && e.message || e).slice(0, 200) }, f: HOST_ID });   // 叫大家這一場改回房主電腦裁判
         }
@@ -84,7 +84,7 @@ function roomJoin(ws, name, id, player) {
         if (rankedRooms.has(name)) { console.log('[積分]', name, '不理會網頁送來的 srv-stop', me.id); return; }
         hosts.get(name)?.stop(); hosts.delete(name); return;
       }
-      cast(set, ws, { k: 'm', t: m.t, d: m.d, f: me.id });
+      if (m.t !== 'match-frame-ack') cast(set, ws, { k: 'm', t: m.t, d: m.d, f: me.id });
       const h = hosts.get(name); if (h && (h.running || m.t === 'room-match-sync')) h.receive(m.t, m.d, me.id);
     }
   });
@@ -94,7 +94,13 @@ function roomJoin(ws, name, id, player) {
     if (rankedRooms.get(name) && hosts.get(name)?.running && !me.replaced) { const g = hosts.get(name).g; console.log('[積分]', name, '比賽中斷線', me.id, code, JSON.stringify({ at: new Date().toISOString(), sc: g.VM.sc, ph: g.VM.phase })); }
     leftMidMatch(name, set, me);
     if (me.d && !me.replaced && ![...set].some(o => o.meta.id === me.id)) cast(set, ws, { k: 'p', a: 'leave', id: me.id, d: {} });
-    if (!set.size) { rooms.delete(name); hosts.get(name)?.stop(); hosts.delete(name); }
+    if (!me.replaced && hosts.get(name)?.frameAcks?.has(me.id)) hosts.get(name).frameAcks.set(me.id, -Infinity);
+    if (!set.size) {
+      const h = hosts.get(name);
+      const cleanup = () => { if (!set.size && rooms.get(name) === set && hosts.get(name) === h) { rooms.delete(name); h?.stop(); hosts.delete(name); } };
+      if (rk && h?.frameAcks && h.running) setTimeout(cleanup, 60000).unref();
+      else cleanup();
+    }
   });
 }
 

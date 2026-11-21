@@ -44,6 +44,19 @@ function client(ranked) {
   assert.equal(c.localStarts, 1); assert(sent.some(([t]) => t === 'srv-stop'));
 }
 console.log('PASS ranked startup timeout, stalled referee, authoritative score, duplicate result, casual fallback');
+{
+  const { c } = client(false);
+  c.VM = { on: true, host: true, hostId: 'p', sc: [5, 5], phase: 'rally', wire: { session: 'local' } };
+  const oldResult = { e: 'result', id: 'old-server', sc: [5, 25], sets: [0, 1], session: 'old' };
+  c.vmOnNet(oldResult, 'srv');
+  assert.equal(c.results, 0); assert.equal(c.VM.sc.join(':'), '5:5'); assert.equal(c.VM.phase, 'rally');
+  let resets = 0; c.mrecReset = () => resets++;
+  c.vmOnNet({ e: 'start' }, 'srv'); assert.equal(resets, 0, '忽略的重送開賽資料不清除統計');
+  c.VM.host = false; c.VM.hostId = 'srv'; c.VM.wire.session = 'current';
+  c.vmOnNet(oldResult, 'srv'); assert.equal(c.results, 0, '同裁判的舊場次結算也不接受');
+  c.vmOnNet({ ...oldResult, id: 'current-result', session: 'current' }, 'srv'); assert.equal(c.results, 1);
+  console.log('PASS stale referee and old-session results ignored; duplicate starts preserve match stats');
+}
 (async () => {
   for (const code of [4001, 1006, 'silent']) {
     const sockets = [], timers = [], sent = []; let now = 0, heartbeat;

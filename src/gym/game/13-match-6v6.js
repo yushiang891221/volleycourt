@@ -38,7 +38,7 @@ function vm6Start(c, sg, asg = {}, seats = null) {
   if (VM.npc || VB.npc) vbNpcToggle();
   vmStop(true);
   STA.v = 1; STA.lock = false;
-  Object.assign(VM, { on: true, host: true, srvDone: false, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
+  Object.assign(VM, { on: true, host: true, hostId: vmMe(), srvDone: false, six: true, c, sg, sg0: sg, asg0: asg, to: VM_OPT.to6, bestOf: VM_OPT.sets, sets: [0, 0], setLog: [], setNo: 1, swap8: false, sc: [0, 0], call: null, phase: 'idle', srvIdx: [0, 0], ball: null, touch: { team: -1, n: 0, last: null }, poss: [null, null], t: 0, next: null, srvSeq: 0, names: {}, formC: {}, rotN: [1, 1] });
   // 每隊 6 個號位的角色固定（輪轉表）；真人坐進自己選的角色，重複的就往後排到空的位置，其他 AI 補
   const humans = seats ? [[],[]] : [[{ id: vmMe(), role: VM_OPT.role }], []], clash = [];
   for (const [id, q] of Object.entries(asg)) if (q && q.team >= 0 && NET.peers.has(id)) humans[q.team].push({ id, role: q.role });
@@ -240,6 +240,7 @@ function vmAnticRole(a, Pa, Bl) {
   return best === a ? role : null;
 }
 function vmAiPlayback(a, dt, now, ox, oz) {
+  if (VM.netPaused) return [ox, oz];
   const buf = a.netBuf;
   if (!buf?.length) return [ox, oz];
   if (VM.watchFrames) {
@@ -377,15 +378,17 @@ function vmBroadcast(force, msg, pt) {
 }
 function vmOnNet(d, from) {
   if (netRanked() && ['start', 'end', 'result'].includes(d.e) && from !== 'srv') return;
+  // 結算只收目前這場的裁判；本機接手後，舊伺服器的結果不能結束新比賽。
+  if (d.e === 'result' && (VM.host || from !== VM.hostId || (d.session && d.session !== VM.wire?.session))) return;
   if (d.e === 'result' && d.id && VM.resultId === d.id) return;
   if (d.e === 'result' && from === 'srv' && Array.isArray(d.sc) && d.sc.length === 2) { VM.phase = 'over'; VM.resultId = d.id; VM.sc = [...d.sc]; if (Array.isArray(d.sets)) VM.sets = [...d.sets]; try { drawScore(); } catch (_) { /* 計分板還沒建好 */ } }   // 結算以伺服器的比分為準，左上角計分板也改成一樣（2026-11-20 使用者：畫面 5:5、結算卻判輸）
   if (d.e === 'result') { if (from === 'srv') VM.srvDone = true; /* 伺服器打完了：不要再當成伺服器斷線而改由房主接手開新的一場 */ if (!ROOM || from === ROOM.host || from === 'srv') vmGotResult(d); return; }   // WEB-010 戰績（B5：伺服器裁判的也收）   // WEB-010 戰績
   if (from === 'srv' && ROOM && ROOM.snapshot?.flow?.phase !== 'playing' && d.e !== 'result') return;   /* 房間已經結束比賽：伺服器晚到的開賽、狀態都不收 */
-  if (d.e === 'start' && (!ROOM || from === ROOM.host || from === 'srv')) mrecReset('');   // WEB-010 戰績：新比賽，自己的接球／舉球重新算
   if (ROOM && (d.e === 'start' || d.e === 'end') && from !== ROOM.host && from !== 'srv') return;   /* B5：伺服器（srv）開的比賽也收 */
   if (d.e === 'start') {
     if (VM.on) return;
     const c = state.items.find((i) => i.id === d.c) || (d.cw ? { id: d.c, type: 'vb', x: d.cw[0], z: d.cw[1], rot: d.cw[2] } : null); if (!c) return;
+    mrecReset('');   // 真正接受新比賽才清統計，重送開賽資料不清。
     vmStop(true);
     Object.assign(VM, { on: true, host: false, srvDone: false, hostId: from, c, sg: d.sg, to: d.to, sc: [0, 0], phase: 'serve', team: d.team, names: d.names || {}, t: 0, chars: d.chars || {}, six: !!d.six, rot: d.six ? d.six.rot : null, role: d.six ? d.six.role : {}, bestOf: d.six ? d.six.bestOf : 1, sets: [0, 0], setNo: 1, rotN: [1, 1], stacfg: d.stacfg || null });
     VM.names = { ...VM.names }; for (const id of [...d.team[0], ...d.team[1]]) if (id && !/^ai/.test(id) && NET.peers.get(id)?.n) VM.names[id] = NET.peers.get(id).n;   /* 伺服器開賽時不知道暱稱（名單寫「球友」）：真人一律用自己這邊知道的暱稱 */
