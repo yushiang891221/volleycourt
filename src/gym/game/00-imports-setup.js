@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { preloadAvatars, makeToyAvatar, decodeLook } from './js/avatar-toy.js';
+import { preloadAvatars, makeToyAvatar, decodeLook, kitOf, OPTIONS as LOOK_OPTIONS } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey, readWornJersey } from './js/appearance.js';
-import { decodeJersey } from './js/jersey.js';
+import { decodeJersey, CUT_TOP } from './js/jersey.js';
 import { pickServer } from './js/servers.js';   // 選伺服器：房間連哪一台   // 個人球衣 J4：別人送來的球衣代碼
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
 import { getAccountService } from './js/auth.js';
@@ -31,6 +31,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

@@ -683,7 +683,7 @@ addEventListener('keydown', (e) => {
   if (k === 'oh' && !e.repeat && !e.metaKey) { e.preventDefault(); if (walk.setAim) vbManualSetCancel(); vbOverheadReceive(); return; }
   if (k === 'v' && !e.repeat && !e.metaKey) { e.preventDefault(); if (walk.setAim) vbManualSetCancel(); vbReceive(); return; }   // 接球：V（按住 Shift＝撲救）
   if (['1', '2', '3', '4', '5', '6'].includes(k) && !e.repeat) { e.preventDefault(); const n = k === '6' ? 7 : Number(k); if (SETM.m && SETM.m.n === n) { setMenuClose(true); return; } if (n <= 3 && !walk.hold && !skill.mode && !coarse() && locked()) setMenuOpen(n); else vbSet(n); return; }   // 滑鼠沒鎖成準心時拖不動轉盤：直接照預設舉，不會卡住等 2.5 秒   // 1～3：按住出現左右選項
-  if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack'); } return; }
+  if (k === ' ') { e.preventDefault(); walk.keys.add(' '); if (!e.repeat) { if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack', true); } return; }
   if (k === 'b' && !e.repeat) { e.preventDefault(); if (walk.setAim) vbManualSetCancel(); vbJump('block'); return; }
   if (k === 't') { e.preventDefault(); if (!e.repeat) emoMenuOpen(); return; }   // 互動選單：按住 T，游標往左擊掌、往右嘲諷，放開確定
   if (k === 'p' && !e.repeat) { e.preventDefault(); TP.manual = !tpActive(); toast(TP.manual ? '第三人稱：看得到自己和球（P 換回第一人稱）' : '第一人稱（P 換成第三人稱）', 1800); return; }
@@ -692,8 +692,9 @@ addEventListener('keydown', (e) => {
   if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { e.preventDefault(); walk.keys.add(k); }
 }, true);
 addEventListener('blur', () => { walk.crouch = false; vbManualSetCancel(); });
-addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (walk.setAim && !walk.setAim.shot && k === (walk.setAim.back ? 'e' : 'q')) vbManualSetCancel(); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === (SETM.m.all ? 'q' : String(SETM.m.n))) setMenuClose(true); /* 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個 */ walk.keys.delete(k); });
+addEventListener('keyup', (e) => { const k = VBSettings.key(e); if (walk.setAim && !walk.setAim.shot && k === (walk.setAim.back ? 'e' : 'q')) vbManualSetCancel(); if (k === 'crouch' || e.key === 'Control') walk.crouch = false; if (k === 't') emoMenuClose(true); if (SETM.m && k === (SETM.m.all ? 'q' : String(SETM.m.n))) setMenuClose(true); /* 放開數字鍵就舉：點一下＝預設、按住拖滑鼠再放開＝選的那個 */ if (k === 'v' && typeof vbReceiveEnd === 'function') vbReceiveEnd(); if (k === ' ' && typeof vbJumpRelease === 'function') vbJumpRelease(); walk.keys.delete(k); });
 addEventListener('blur', () => walk.keys.clear());
+addEventListener('blur', () => vbReceiveEnd());   // 視窗失焦：當作放開 V
 // 按鍵、滑鼠鍵卡住的保險（2026-11-18 使用者：Ctrl＋右鍵卡住後角色自己一直往右走）
 //   瀏覽器的快捷鍵視窗、右鍵選單、切到別的視窗、滑鼠鎖定被放開時，「放開按鍵」的訊息可能收不到 → 當作全部放開；還按著的鍵會再送按下
 document.addEventListener('visibilitychange', () => { if (document.hidden) { walk.keys.clear(); walk.crouch = false; } });
@@ -703,7 +704,7 @@ addEventListener('contextmenu', () => { if (walk.on) { walk.keys.clear(); walk.c
 // 手機用手指拖。往右移就往右看、往上移就往上看。
 const LOOK_SENS = 0.0022;
 // 第一人稱的視野（垂直角度）：預設 80 度比較廣、看得到旁邊的隊友和來球；[ 變窄、] 變廣，記在這台電腦
-function walkFov() { return typeof tpActive === 'function' && tpActive() ? (walk.crouch ? 100 : 85) : walk.crouch ? 102 : 95; }   // 2026-11-20 使用者：第一人稱廣角一點（90～100）→ 95；第三人稱照舊 85
+function walkFov() { return typeof tpActive === 'function' && tpActive() ? (walk.crouch ? 100 : 85) : VBSettings.values.lens !== false ? (walk.crouch ? 118 : 112) : walk.crouch ? 102 : 95; }   // 2026-11-23 使用者：攔網／接球／舉球／攻擊畫面都要更廣角 → 廣角鏡頭開著時畫 112 度、再收邊（中間看起來還是 95 度）   // 2026-11-20 使用者：第一人稱廣角一點（90～100）→ 95；第三人稱照舊 85
 const coarse = () => matchMedia('(pointer: coarse)').matches;
 const locked = () => document.pointerLockElement === renderer.domElement;
 // Ctrl＋W 在瀏覽器是「關分頁」：全螢幕時把整個鍵盤交給遊戲（蹲下＝Ctrl、前進＝W 才不會關掉網頁）
@@ -742,6 +743,7 @@ document.addEventListener('mousemove', (e) => {
   e = { movementX: md[0], movementY: md[1] };
   if (EMO.menu) { emoMenuMove(e.movementX, e.movementY); return; }   // 互動選單開著：滑鼠移動的是選單游標，不轉頭
   if (setMenuHolds()) { if (SETM.m) setMenuMove(e.movementX, e.movementY); return; }   // 舉球轉盤開著：滑鼠移動的是轉盤游標，視角不轉；往選項方向拖一下就舉
+  if (walk.recv && walk.recv.hold) { vbRecvTilt(e.movementX * 0.004 * VBSettings.values.sensitivity); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1); return; }   // 按住 V：滑鼠左右轉手臂平台（頭不轉）
   if (walk.air && walk.air.block) { walk.blkAim = clamp((walk.blkAim || 0) + e.movementX * 0.003 * VBSettings.values.sensitivity, -0.5, 0.5); walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1); return; }   // 攔網：左右移動雙手（封直線或斜線），頭不轉
   walk.lookT = performance.now(); walk.yaw -= e.movementX * LOOK_SENS * VBSettings.values.sensitivity; walk.pitch = clamp(walk.pitch - e.movementY * LOOK_SENS * VBSettings.values.sensitivity, -1.2, 1.1);
 });

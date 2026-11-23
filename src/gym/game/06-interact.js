@@ -487,11 +487,29 @@ function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.cas
 if (!camera.parent) scene.add(camera);
 const hands = new THREE.Group(); hands.visible = false; camera.add(hands);
 const skinM = new THREE.MeshStandardMaterial({ color: '#D9A57E', roughness: 0.6 }), sleeveM = new THREE.MeshStandardMaterial({ color: '#F2B705', roughness: 0.7 });
+const trimM = new THREE.MeshStandardMaterial({ color: '#1C1C21', roughness: 0.7 }), wristM = new THREE.MeshStandardMaterial({ color: '#F4F4F0', roughness: 0.85 });
+for (const m of [skinM, sleeveM, trimM, wristM]) m.envMapIntensity = 0.45;   // 手貼著鏡頭，環境光照滿會整片發白：調暗一點，膚色、球衣顏色才看得出來
+// 第一人稱的整隻手（2026-11-23 使用者：手要完整、照自己的角色）：肩膀在鏡頭後下方（畫面外）→ 上臂 → 手肘 → 前臂 → 手
+//   手肘位置用兩段手臂的長度自己算（姿勢表的 e 只當作手肘往哪邊彎的提示），所以手臂長度固定、一路延伸到畫面邊緣
+const FP_UA = 0.34, FP_FA = 0.32;   // 上臂、前臂長（鏡頭座標，公尺）
+const FP_SH = [0.19, -0.27, 0.06];   // 右肩（左肩 x 相反）：眼睛往右 19 cm、往下 27 cm、往後 6 cm
+const unitCyl = (rTop, rBot, seg = 16) => { const g = new THREE.CylinderGeometry(rTop, rBot, 1, seg, 1, true); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.5); return g; };   // 長 1、沿 +z（0＝起點、1＝終點）
 function mkArm(side) {
   // side：-1 左手、1 右手
+  // 前臂：手肘（z=0）→ 手腕（z=1），整段長度用 scale.z 拉
   const fore = new THREE.Group(); hands.add(fore);
-  const fm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.3, 14), skinM); fm.rotation.x = Math.PI / 2; fm.position.z = 0.15; fore.add(fm);
-  const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.07, 14), sleeveM); sl.rotation.x = Math.PI / 2; sl.position.z = 0.01; fore.add(sl);
+  const fm = new THREE.Mesh(unitCyl(0.042, 0.034), skinM); fore.add(fm);
+  const foreSl = new THREE.Mesh(unitCyl(0.05, 0.043), sleeveM); foreSl.scale.set(1, 1, 0.93); fore.add(foreSl);   // 長袖：蓋住前臂
+  const cuff = new THREE.Mesh(unitCyl(0.045, 0.045), trimM); cuff.position.z = 0.89; cuff.scale.set(1, 1, 0.07); fore.add(cuff);   // 長袖袖口
+  const band = new THREE.Mesh(unitCyl(0.04, 0.038), wristM); band.position.z = 0.8; band.scale.set(1, 1, 0.16); fore.add(band);   // 護腕
+  // 上臂：手肘（z=0）→ 肩膀（z=1）
+  const upper = new THREE.Group(); hands.add(upper);
+  const um = new THREE.Mesh(unitCyl(0.052, 0.044), skinM); upper.add(um);
+  const upSl = new THREE.Mesh(unitCyl(0.064, 0.058), sleeveM); upper.add(upSl);   // 袖子：從肩膀往手肘蓋（長度看袖型）
+  const upCuff = new THREE.Mesh(unitCyl(0.06, 0.06), trimM); upper.add(upCuff);   // 短袖袖口
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), skinM); hands.add(elbow);   // 手肘關節：前臂、上臂接起來不會有缺口
+  [fore, upper, elbow].forEach((o) => o.traverse((q) => { q.userData.noPick = true; q.castShadow = false; }));
+  const parts = { fm, foreSl, cuff, band, um, upSl, upCuff, elbow };
   // 手：+z 是手指的方向，+y 是掌心
   const hand = new THREE.Group(); hands.add(hand);
   const palm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.024, 0.088), skinM); palm.position.z = 0.044; hand.add(palm);
@@ -505,10 +523,29 @@ function mkArm(side) {
   // 拇指在手的內側（掌心朝上、手指朝前時：右手拇指在右、左手在左 → 本地 -x／+x）
   const th = new THREE.Group(); th.position.set(-side * 0.04, 0.004, 0.026); th.rotation.y = -side * 0.85; hand.add(th);
   const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.011, 0.058, 8), skinM); tm.rotation.x = Math.PI / 2; tm.position.z = 0.029; th.add(tm);
-  [fore, hand].forEach((o) => o.traverse((q) => { q.userData.noPick = true; }));
-  return { side, fore, hand, fingers, th, cur: null };
+  hand.traverse((q) => { q.userData.noPick = true; });
+  return { side, fore, upper, hand, fingers, th, parts, cur: null };
 }
 const armL = mkArm(-1), armR = mkArm(1);
+// 手的外觀照自己的角色：膚色、袖型（無袖／短袖／長袖／短版）、球衣顏色、袖口、護腕；換了角色或隊服就跟著換
+const FP_LOOK = { key: '', t: 0 };
+function fpArmLook() {
+  const now = performance.now(); if (now - FP_LOOK.t < 500) return; FP_LOOK.t = now;
+  const code = myChar(), team = VM.on ? teamKit(vmTeamOf(vmMe())) : readWornJersey() || teamKit(-1), key = code + '|' + JSON.stringify(team);
+  if (key === FP_LOOK.key) return; FP_LOOK.key = key;
+  const L = decodeLook(code), kit = kitOf(team); let top = L.top;
+  if (kit.design && CUT_TOP[kit.design.cut] != null) top = CUT_TOP[kit.design.cut];
+  skinM.color.set(LOOK_OPTIONS.skin[L.skin] || '#F7D2B4'); sleeveM.color.set(kit.sleeve || kit.body); trimM.color.set(kit.trim);
+  const wr = L.eq && L.eq.wrist; if (wr) wristM.color.set(wr === 1 ? '#F4F4F0' : '#22252B');
+  const slLen = { 0: 0, 1: 0.42, 2: 1.02, 3: 0.26 }[top] ?? 0.42;   // 袖子從肩膀往下蓋到上臂的幾成
+  for (const arm of [armL, armR]) {
+    const P = arm.parts;
+    P.upSl.visible = slLen > 0; P.upSl.position.z = 1 - slLen; P.upSl.scale.z = slLen + 0.02;
+    P.upCuff.visible = slLen > 0 && slLen < 1; P.upCuff.position.z = 1 - slLen; P.upCuff.scale.z = 0.05;
+    P.foreSl.visible = P.cuff.visible = top === 2; P.elbow.material = top === 2 ? sleeveM : skinM;
+    P.band.visible = !!wr && top !== 2;
+  }
+}
 const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 // 姿勢（鏡頭座標：x 右、y 上、z 往後；鏡頭看 -z）。e 手肘、w 手腕、f 手指方向、n 掌心方向、c 手指彎曲
 const mir = (p) => ({ e: [-p.e[0], p.e[1], p.e[2]], w: [-p.w[0], p.w[1], p.w[2]], f: [-p.f[0], p.f[1], p.f[2]], n: [-p.n[0], p.n[1], p.n[2]], c: p.c });
@@ -520,36 +557,74 @@ const POSE = {
   set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.2, -0.55], 0.38),
   // 舉球出手：手臂往球的方向伸直、手腕送出、手指朝上
   setPush: pair({ e: [-0.19, 0.0, -0.3], w: [-0.08, 0.2, -0.47], f: [-0.08, 0.96, -0.25], n: [0.3, 0.55, -0.78], c: 0.12 }, [0, 0.3, -0.52], 0.38),
-  // 低手墊球預備：兩臂伸直在身體前下方併攏，雙手交握（拇指平行朝下前），前臂內側形成平台
-  bump: pair({ e: [-0.12, -0.36, -0.16], w: [-0.03, -0.27, -0.5], f: [0.02, -0.35, -0.94], n: [1, 0, 0], c: 1.35 }, [0, -0.14, -0.42], -0.3),
-  // 墊球觸球：用腿把平台往上送，手臂不揮
-  bumpHit: pair({ e: [-0.12, -0.31, -0.2], w: [-0.03, -0.19, -0.52], f: [0.02, -0.15, -0.99], n: [1, 0, 0], c: 1.35 }, [0, -0.07, -0.45], -0.3),
 };
+// 低手墊球（2026-11-23 使用者照片：疊掌式）：兩臂打直併攏（手腕貼在一起、手肘不彎），掌心朝上、右手疊在左手掌心裡，
+//   兩根大拇指併排放在上面、朝前下方；前臂內側形成平台。hs＝手掌往中間／往上挪（兩手疊起來），tb＝大拇指併排
+function bumpPose(wy, wz, fy) {
+  const f = [0.12, fy, -0.97], n = [0, 0.96, -0.28];
+  return {
+    L: { e: [-0.1, wy - 0.04, wz * 0.45], w: [-0.02, wy, wz], f, n, c: 0.45, hs: [0.012, 0, 0], tb: 1 },   // 兩隻前臂貼近（手腕幾乎碰在一起）
+    R: { e: [0.1, wy - 0.04, wz * 0.45], w: [0.02, wy, wz], f: [-f[0], f[1], f[2]], n, c: 0.45, hs: [-0.012, 0.021, 0.006], tb: 1 },
+    ball: [0, wy + 0.13, wz + 0.08], pitch: -0.3,
+  };
+}
+POSE.bump = bumpPose(-0.34, -0.6, -0.3);
+POSE.bumpHit = bumpPose(-0.26, -0.62, -0.12);   // 觸球：用腿把平台往上送，手臂不揮
 // 攻擊：左手指向球、右手拉弓到頭後上方，再揮下扣球
 POSE.cock = { L: { e: [-0.2, -0.12, -0.25], w: [-0.12, 0.14, -0.5], f: [0.05, 0.75, -0.65], n: [0.2, 0, -1], c: 0.15 }, R: { e: [0.25, 0.0, 0.02], w: [0.2, 0.28, -0.04], f: [0, 1, 0.15], n: [0, 0.15, -1], c: 0.1 }, ball: [0, 0.4, -0.9] };
 POSE.swing = { L: { e: [-0.2, -0.4, -0.1], w: [-0.15, -0.52, -0.32], f: [0, -0.6, -0.8], n: [1, 0, 0], c: 0.5 }, R: { e: [0.16, -0.05, -0.3], w: [0.08, -0.15, -0.6], f: [0, -0.35, -1], n: [0, -0.7, -0.7], c: 0.25 }, ball: [0, 0.2, -1.2] };
+// 起跳擺臂（第一人稱）：先在身體後下方（畫面外），再一起往前上方甩過畫面
+POSE.jumpBack = pair({ e: [-0.26, -0.42, 0.02], w: [-0.24, -0.62, 0.1], f: [0, -0.6, 0.8], n: [1, 0, 0], c: 0.3 });
+POSE.jumpUp = pair({ e: [-0.24, -0.04, -0.28], w: [-0.17, 0.26, -0.42], f: [0, 1, -0.2], n: [0.3, 0, -1], c: 0.15 });
 // 攔網：兩手往上往前伸、手掌朝前（手在畫面上緣看得到）
 POSE.block = { L: { e: [-0.25, 0.0, -0.32], w: [-0.19, 0.2, -0.48], f: [0.02, 1, -0.15], n: [0, 0.15, -1], c: 0.05 }, R: { e: [0.25, 0.0, -0.32], w: [0.19, 0.2, -0.48], f: [-0.02, 1, -0.15], n: [0, 0.15, -1], c: 0.05 } };
 let pose = 'hold';
 const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
+const _ikD = new THREE.Vector3(), _ikP = new THREE.Vector3();
+const FP_PIV = new THREE.Vector3(0, -0.27, 0.06), _tiltQ = new THREE.Quaternion(), _tiltE = new THREE.Euler();   // 轉平台的軸心：兩肩中間
+function fpElbow(arm, c) {
+  const shP = arm.sh || (arm.sh = new THREE.Vector3(FP_SH[0] * arm.side, FP_SH[1], FP_SH[2])), E = arm.el || (arm.el = new THREE.Vector3());
+  _ikD.copy(c.w).sub(shP); let d = _ikD.length(); _ikD.divideScalar(d || 1);
+  const k = Math.max(1, d / ((FP_UA + FP_FA) * 0.995)), ua = FP_UA * k, fa = FP_FA * k;   // 手伸得比手臂還遠：整隻等比例拉長一點點（不會斷開）
+  d = Math.max(d, Math.abs(ua - fa) + 1e-3);
+  const a = (ua * ua - fa * fa + d * d) / (2 * d), h = Math.sqrt(Math.max(0, ua * ua - a * a));
+  _ikP.copy(c.e).sub(shP); _ikP.addScaledVector(_ikD, -_ikP.dot(_ikD));   // 手肘往哪邊彎：姿勢表的手肘位置（扣掉沿手臂方向的部分）
+  if (_ikP.lengthSq() < 1e-6) _ikP.set(arm.side, -1, 0.2).addScaledVector(_ikD, -_ikD.dot(_ikP.set(arm.side, -1, 0.2)));
+  _ikP.normalize();
+  E.copy(shP).addScaledVector(_ikD, a).addScaledVector(_ikP, h);
+}
 function applyPose(dt, snap) {
   camera.updateMatrixWorld(true);
   const P = POSE[pose] || POSE.hold, k = snap ? 1 : 1 - Math.exp(-dt * 18);
   for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
     if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
     const c = arm.cur;
-    c.e.lerp(V3(tgt.e), k); c.w.lerp(V3(tgt.w), k); c.f.lerp(V3(tgt.f).normalize(), k).normalize(); c.n.lerp(V3(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
-    // 前臂：手肘 → 手腕
-    arm.fore.position.copy(c.e);
-    hands.localToWorld(_w1.copy(c.w)); arm.fore.lookAt(_w1);
-    arm.fore.scale.set(1, 1, c.e.distanceTo(c.w) / 0.3);
+    // 按住 V 轉手臂平台（照參考圖：球在哪一側就壓低那一側的肩膀）：整個上半身連肩膀一起轉（往那側轉＋那側肩膀往下），
+    //   兩隻手臂跟著整組轉、長度不變（2026-11-23 使用者：轉角度時手不能變短；滑鼠往右＝右肩高、左肩低，手被帶到右邊）
+    const rt = (pose === 'bump' || pose === 'bumpHit') && walk.recv && walk.recv.hold ? Math.sin(((walk.recvTilt || 0) / 0.8) * Math.PI / 2) : 0;
+    arm.tilt = (arm.tilt || 0) + (rt - (arm.tilt || 0)) * k;
+    const tl = arm.tilt; _tiltE.set(0, -tl * 0.55, tl * 0.32, 'YXZ'); _tiltQ.setFromEuler(_tiltE);   /* 往右轉（手到右邊）＋右肩往上 */
+    const rotP = (a) => V3(a).sub(FP_PIV).applyQuaternion(_tiltQ).add(FP_PIV), rotD = (a) => V3(a).applyQuaternion(_tiltQ);
+    (arm.sh || (arm.sh = new THREE.Vector3())).copy(rotP([FP_SH[0] * arm.side, FP_SH[1], FP_SH[2]]));
+    c.e.lerp(rotP(tgt.e), k); c.w.lerp(rotP(tgt.w), k); c.f.lerp(rotD(tgt.f).normalize(), k).normalize(); c.n.lerp(rotD(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
+    // 手肘：肩膀和手腕固定，兩段手臂長度固定，往姿勢表的 e 那一側彎
+    fpElbow(arm, c);
+    // 前臂：手肘 → 手腕；上臂：手肘 → 肩膀（肩膀在畫面外，所以手臂一路延伸到畫面邊緣）
+    arm.fore.position.copy(arm.el); arm.parts.elbow.position.copy(arm.el); arm.upper.position.copy(arm.el);
+    hands.localToWorld(_w1.copy(c.w)); arm.fore.lookAt(_w1); arm.fore.scale.set(1, 1, arm.el.distanceTo(c.w));
+    hands.localToWorld(_w1.copy(arm.sh)); arm.upper.lookAt(_w1); arm.upper.scale.set(1, 1, arm.el.distanceTo(arm.sh));
     // 手：在手腕，手指朝 f，掌心朝 n
-    arm.hand.position.copy(c.w);
+    c.hs = (c.hs || new THREE.Vector3()).lerp(_w0.set(...(tgt.hs || [0, 0, 0])).applyQuaternion(_tiltQ), k); c.tb = (c.tb || 0) + ((tgt.tb || 0) - (c.tb || 0)) * k;
+    arm.hand.position.copy(c.w).add(c.hs);
     hands.localToWorld(_w0.set(0, 0, 0)); hands.localToWorld(_w2.copy(c.n));
     arm.hand.up.copy(_w2.sub(_w0)).normalize();
     hands.localToWorld(_w1.copy(c.w).add(c.f)); arm.hand.lookAt(_w1);
     for (const g of arm.fingers) { g.rotation.set(-c.c, g.userData.spread * (1 - Math.min(1, c.c)), 0); }
-    arm.th.rotation.x = -c.c * 0.6;
+    // 大拇指：平常往外張；墊球時併排放在手背上、跟手指同方向（tb 0→1 漸變）
+    // 墊球：兩根大拇指貼在一起，放在疊好的手上面、朝前（照手掌本地 x 軸實際朝向，往兩手中間那一側放）
+    const tb = c.tb || 0, inX = _w2.set(1, 0, 0).applyQuaternion(arm.hand.quaternion).x, toC = (arm.side < 0 ? 1 : -1) * (inX >= 0 ? 1 : -1);
+    const tx0 = -arm.side * 0.04, tx1 = toC * 0.006, ty1 = arm.side < 0 ? 0.046 : 0.025;   // 下面那隻手（左手）的拇指要高過上面那隻手
+    arm.th.position.set(tx0 + (tx1 - tx0) * tb, 0.004 + (ty1 - 0.004) * tb, 0.026 + 0.012 * tb); arm.th.rotation.set(-c.c * 0.6 * (1 - tb) + 0.1 * tb, -arm.side * 0.85 * (1 - tb), 0);
   }
 }
 const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0 };
@@ -619,7 +694,7 @@ function skillMiss(why) {
 }
 function updateSkill(dt) {
   // 碰完來球：手亮一下就收起來
-  if (walk.flash > 0) { walk.flash -= dt; skill.dip = skill.mode ? skill.dip : 0.05 * Math.max(0, walk.flash) / 0.45; if (walk.flash <= 0 && !walk.hold && !reachState && !walk.serve) { hands.visible = false; pose = 'hold'; } }
+  if (walk.flash > 0) { walk.flash -= dt; skill.dip = skill.mode ? skill.dip : 0.05 * Math.max(0, walk.flash) / 0.45; if (walk.flash <= 0 && !walk.hold && !reachState && !walk.serve) { if (walk.recv && walk.recv.hold) pose = 'bump'; else { hands.visible = false; pose = 'hold'; } } }   /* 按住 V：接完手回到接球姿勢 */
   else if (!skill.mode) skill.dip = 0;
   if (!skill.mode || !walk.hold) return;
   skill.since += dt;

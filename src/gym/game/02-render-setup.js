@@ -71,6 +71,30 @@ const smaa = new SMAAPass(1, 1);
 composer.addPass(new RenderPass(scene, camera));
 composer.addPass(gtao);
 composer.addPass(bloom);
+// 第一人稱廣角鏡頭（像運動攝影機）：先用更大的視角畫，再把畫面往中間收——中間的大小跟原本一樣、邊緣看得更多又不會被拉長
+//   四個角維持在原位（不會出現黑邊）；LENS.k＝收的程度，0＝關（每一格在 14-loop 依視角算）
+const LENS = { k: 0, base: 95 };   // base＝中間要看起來像幾度的一般鏡頭
+const lensPass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, k: { value: 0 }, aspect: { value: 1 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D tDiffuse; uniform float k; uniform float aspect; varying vec2 vUv; ' +
+    'void main(){ vec2 p = vUv * 2.0 - 1.0; float r2 = (p.x * p.x * aspect * aspect + p.y * p.y) / (aspect * aspect + 1.0); ' +
+    '  vec2 s = p * (1.0 + k * r2) / (1.0 + k); gl_FragColor = texture2D(tDiffuse, s * 0.5 + 0.5); }',
+});
+lensPass.enabled = false;
+composer.addPass(lensPass);
+// 一般鏡頭算出來的螢幕座標（-1～1）→ 廣角鏡頭畫出來的位置（名牌、球的提示圈、蓄力條用）
+function lensNdc(v) {
+  const k = LENS.k; if (k <= 0) return v;
+  const a = camera.aspect, R = Math.sqrt(a * a + 1), rs = Math.hypot(v.x * a, v.y) / R; if (rs < 1e-6) return v;
+  let r = rs; for (let i = 0; i < 6; i++) r -= (r + k * r * r * r - rs * (1 + k)) / (1 + 3 * k * r * r);   // 解 r(1+k r²)=rs(1+k)
+  v.x *= r / rs; v.y *= r / rs; return v;
+}
+function lensUpdate() {
+  const fp = walk.on && !window.__rkOn && (RP.on ? RP.view === 'cam' : !(typeof tpActive === 'function' && tpActive())) && VBSettings.values.lens !== false;
+  const half = (camera.fov * Math.PI) / 360, k = fp && camera.fov > LENS.base ? Math.tan(half) / Math.tan((LENS.base * Math.PI) / 360) - 1 : 0;
+  LENS.k = k; lensPass.enabled = k > 0.005; lensPass.uniforms.k.value = k; lensPass.uniforms.aspect.value = camera.aspect;
+}
 composer.addPass(new OutputPass());
 composer.addPass(smaa);
 function renderScene() { composer.render(); }

@@ -128,10 +128,10 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
       },
     },
     jump: {
-      down() { walk.keys.add(' '); if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack'); },
-      up() { walk.keys.delete(' '); },
+      down() { walk.keys.add(' '); if (walk.hold && vbAtServeLine()) startJumpServe(); else vbJump('attack', true); },
+      up() { walk.keys.delete(' '); vbJumpRelease(); },   // 放開跳躍鈕：提早落下
     },
-    bump: { down() { if (walk.setAim) vbManualSetCancel(); vbReceive(); } },
+    bump: { down(p) { if (walk.setAim) vbManualSetCancel(); vbReceive(); p.rt = 0; }, move(p, dx) { if (walk.recv && walk.recv.hold) walk.recvTilt = clamp(p.rt + dx * 0.006, -0.8, 0.8); }, up() { vbReceiveEnd(); } },   // 按住接球鈕；按著左右拖＝轉手臂平台
     block: {
       down(p) { if (walk.setAim) vbManualSetCancel(); vbJump('block'); p.blk = walk.blkAim || 0; },
       move(p, dx) { if (walk.air && walk.air.block) walk.blkAim = clamp(p.blk + dx * 0.004, -0.5, 0.5); },

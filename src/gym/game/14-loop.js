@@ -11,6 +11,17 @@ if (new URLSearchParams(location.search).has('practice')) {
   };
   document.head.append(tutorialScript);
 }
+// 廣角鏡頭開著時，名牌這類網頁文字也要移到畫面上實際的位置（CSS2DRenderer 照一般鏡頭算，這裡照同樣的格式改寫）
+const _lensV = new THREE.Vector3();
+function lensLabels() {
+  if (LENS.k <= 0) return;
+  const w = renderer.domElement.clientWidth / 2, h = renderer.domElement.clientHeight / 2;
+  scene.traverseVisible((o) => {
+    if (!o.isCSS2DObject || o.element.style.display === 'none') return;
+    _lensV.setFromMatrixPosition(o.matrixWorld).project(camera); lensNdc(_lensV);
+    o.element.style.transform = `translate(${-100 * o.center.x}%,${-100 * o.center.y}%)translate(${_lensV.x * w + w}px,${-_lensV.y * h + h}px)`;
+  });
+}
 function resize() {
   const w = CREATOR_SHOT ? innerWidth : host.clientWidth || 1, h = CREATOR_SHOT ? innerHeight : host.clientHeight || 1;
   renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
@@ -67,13 +78,14 @@ function drawFrame(force) {
   vbTrailStep(dt);   /* 球的軌跡光帶 */
   if (walk.on) vmWireTick();
   const tp = walk.on && tpBegin(dt);
-  if (walk.on) { vbChgPlace(); xhairPlace(); }
+  if (walk.on) { vbChgPlace(); xhairPlace(); if (hands.visible) fpArmLook(); }   /* 第一人稱的手照自己的角色（只在畫面端做，伺服器不需要） */
   hideOccluders(window.__rkOn && RK.P[RK.my] && RK.P[RK.my].av ? RK.P[RK.my].av.g.position : tp && TP.av ? TP.av.g.position : null);
   vmWireRender(true);
+  lensUpdate();
   renderScene();
   vmWireRender(false);
   chatBubbleStep();
-  labelRenderer.render(scene, camera);
+  labelRenderer.render(scene, camera); lensLabels();
   if (walk.on) vbDomFx();
   if (tp) tpEnd();
 }

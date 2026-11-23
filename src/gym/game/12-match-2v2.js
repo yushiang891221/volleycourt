@@ -70,7 +70,7 @@ function vmOpenMenu(c) {
     <p class="rk-sub">AI 強度（隊友和對手一樣）</p><div class="rk-seg">${vmLvChoices().map((k) => `<button type="button" data-vmlv="${k}" aria-pressed="${VM_OPT.lv === k}">${VM_LEVELS[k].name}</button>`).join('')}</div>
     <p class="rk-sub">要贏 2 分，最多打到 ${VM_OPT.to + 2} 分。球落在哪一邊的場內那一邊失分；打出界是最後碰球的那一隊失分（攔網碰到出界＝打手出界，攻擊方得分）；同一隊最多碰 3 次。高手以上的 AI 會上網攔網。</p>
     <div class="rk-btns">${mates[0] || opps.length ? `<button type="button" class="primary" data-vm="go">開始：你＋${mates[0] ? esc(mates[0].n) : 'AI'} 對 ${oppTxt}</button>` : ''}<button type="button"${mates[0] || opps.length ? '' : ' class="primary"'} data-vm="goai">開始：你＋AI 對 AI 隊</button><button type="button" data-vm="sta">⚙️ 體力設定</button><button type="button" data-vm="close">取消</button></div>
-    <p class="rk-sub" style="margin-top:10px">V 接球、C 按住開輪盤、放開舉球（滾輪換前／後排）（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中按住滑鼠左鍵蓄力、放開扣球（金色格最強最準）、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
+    <p class="rk-sub" style="margin-top:10px">按住 V 接球（滑鼠左右轉手臂）、C 按住開輪盤、放開舉球（滾輪換前／後排）（AI 隊友要舉球時按 1～4＝喊球：4 號位／快攻／2 號位／後排中間）、W 助跑＋空白鍵起跳、空中按住滑鼠左鍵蓄力、放開扣球（金色格最強最準）、右鍵吊球、B 攔網、拿著球按左鍵發球</p></div>`;
   m.hidden = false; unlockMouse();
 }
 function vmStart(c, sg, mateId, opps = [], seats = null) {

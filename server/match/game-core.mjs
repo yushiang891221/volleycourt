@@ -325,11 +325,26 @@ export function createGameCore(S = {}) {
   function newBallMesh(decor) { const m = new THREE.Mesh(BALL_GEO, ballMat); m.castShadow = true; m.rotation.set(fxRandom() * 6, fxRandom() * 6, fxRandom() * 6); if (!decor) { m.onBeforeRender = ballLiftBefore; m.onAfterRender = ballLiftAfter; } return m; }
   const hands = new THREE.Group();
   const skinM = new THREE.MeshStandardMaterial({ color: '#D9A57E', roughness: 0.6 }), sleeveM = new THREE.MeshStandardMaterial({ color: '#F2B705', roughness: 0.7 });
+  const trimM = new THREE.MeshStandardMaterial({ color: '#1C1C21', roughness: 0.7 }), wristM = new THREE.MeshStandardMaterial({ color: '#F4F4F0', roughness: 0.85 });
+  const FP_UA = 0.34, FP_FA = 0.32;
+  const FP_SH = [0.19, -0.27, 0.06];
+  const unitCyl = (rTop, rBot, seg = 16) => { const g = new THREE.CylinderGeometry(rTop, rBot, 1, seg, 1, true); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.5); return g; };
   function mkArm(side) {
     // side：-1 左手、1 右手
+    // 前臂：手肘（z=0）→ 手腕（z=1），整段長度用 scale.z 拉
     const fore = new THREE.Group(); hands.add(fore);
-    const fm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.3, 14), skinM); fm.rotation.x = Math.PI / 2; fm.position.z = 0.15; fore.add(fm);
-    const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.07, 14), sleeveM); sl.rotation.x = Math.PI / 2; sl.position.z = 0.01; fore.add(sl);
+    const fm = new THREE.Mesh(unitCyl(0.042, 0.034), skinM); fore.add(fm);
+    const foreSl = new THREE.Mesh(unitCyl(0.05, 0.043), sleeveM); foreSl.scale.set(1, 1, 0.93); fore.add(foreSl);   // 長袖：蓋住前臂
+    const cuff = new THREE.Mesh(unitCyl(0.045, 0.045), trimM); cuff.position.z = 0.89; cuff.scale.set(1, 1, 0.07); fore.add(cuff);   // 長袖袖口
+    const band = new THREE.Mesh(unitCyl(0.04, 0.038), wristM); band.position.z = 0.8; band.scale.set(1, 1, 0.16); fore.add(band);   // 護腕
+    // 上臂：手肘（z=0）→ 肩膀（z=1）
+    const upper = new THREE.Group(); hands.add(upper);
+    const um = new THREE.Mesh(unitCyl(0.052, 0.044), skinM); upper.add(um);
+    const upSl = new THREE.Mesh(unitCyl(0.064, 0.058), sleeveM); upper.add(upSl);   // 袖子：從肩膀往手肘蓋（長度看袖型）
+    const upCuff = new THREE.Mesh(unitCyl(0.06, 0.06), trimM); upper.add(upCuff);   // 短袖袖口
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), skinM); hands.add(elbow);   // 手肘關節：前臂、上臂接起來不會有缺口
+    [fore, upper, elbow].forEach((o) => o.traverse((q) => { q.userData.noPick = true; q.castShadow = false; }));
+    const parts = { fm, foreSl, cuff, band, um, upSl, upCuff, elbow };
     // 手：+z 是手指的方向，+y 是掌心
     const hand = new THREE.Group(); hands.add(hand);
     const palm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.024, 0.088), skinM); palm.position.z = 0.044; hand.add(palm);
@@ -343,8 +358,8 @@ export function createGameCore(S = {}) {
     // 拇指在手的內側（掌心朝上、手指朝前時：右手拇指在右、左手在左 → 本地 -x／+x）
     const th = new THREE.Group(); th.position.set(-side * 0.04, 0.004, 0.026); th.rotation.y = -side * 0.85; hand.add(th);
     const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.011, 0.058, 8), skinM); tm.rotation.x = Math.PI / 2; tm.position.z = 0.029; th.add(tm);
-    [fore, hand].forEach((o) => o.traverse((q) => { q.userData.noPick = true; }));
-    return { side, fore, hand, fingers, th, cur: null };
+    hand.traverse((q) => { q.userData.noPick = true; });
+    return { side, fore, upper, hand, fingers, th, parts, cur: null };
   }
   const armL = mkArm(-1), armR = mkArm(1);
   const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
@@ -357,31 +372,54 @@ export function createGameCore(S = {}) {
     set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.2, -0.55], 0.38),
     // 舉球出手：手臂往球的方向伸直、手腕送出、手指朝上
     setPush: pair({ e: [-0.19, 0.0, -0.3], w: [-0.08, 0.2, -0.47], f: [-0.08, 0.96, -0.25], n: [0.3, 0.55, -0.78], c: 0.12 }, [0, 0.3, -0.52], 0.38),
-    // 低手墊球預備：兩臂伸直在身體前下方併攏，雙手交握（拇指平行朝下前），前臂內側形成平台
-    bump: pair({ e: [-0.12, -0.36, -0.16], w: [-0.03, -0.27, -0.5], f: [0.02, -0.35, -0.94], n: [1, 0, 0], c: 1.35 }, [0, -0.14, -0.42], -0.3),
-    // 墊球觸球：用腿把平台往上送，手臂不揮
-    bumpHit: pair({ e: [-0.12, -0.31, -0.2], w: [-0.03, -0.19, -0.52], f: [0.02, -0.15, -0.99], n: [1, 0, 0], c: 1.35 }, [0, -0.07, -0.45], -0.3),
   };
   let pose = 'hold';
   const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
+  const _ikD = new THREE.Vector3(), _ikP = new THREE.Vector3();
+  const FP_PIV = new THREE.Vector3(0, -0.27, 0.06), _tiltQ = new THREE.Quaternion(), _tiltE = new THREE.Euler();
+  function fpElbow(arm, c) {
+    const shP = arm.sh || (arm.sh = new THREE.Vector3(FP_SH[0] * arm.side, FP_SH[1], FP_SH[2])), E = arm.el || (arm.el = new THREE.Vector3());
+    _ikD.copy(c.w).sub(shP); let d = _ikD.length(); _ikD.divideScalar(d || 1);
+    const k = Math.max(1, d / ((FP_UA + FP_FA) * 0.995)), ua = FP_UA * k, fa = FP_FA * k;   // 手伸得比手臂還遠：整隻等比例拉長一點點（不會斷開）
+    d = Math.max(d, Math.abs(ua - fa) + 1e-3);
+    const a = (ua * ua - fa * fa + d * d) / (2 * d), h = Math.sqrt(Math.max(0, ua * ua - a * a));
+    _ikP.copy(c.e).sub(shP); _ikP.addScaledVector(_ikD, -_ikP.dot(_ikD));   // 手肘往哪邊彎：姿勢表的手肘位置（扣掉沿手臂方向的部分）
+    if (_ikP.lengthSq() < 1e-6) _ikP.set(arm.side, -1, 0.2).addScaledVector(_ikD, -_ikD.dot(_ikP.set(arm.side, -1, 0.2)));
+    _ikP.normalize();
+    E.copy(shP).addScaledVector(_ikD, a).addScaledVector(_ikP, h);
+  }
   function applyPose(dt, snap) {
     camera.updateMatrixWorld(true);
     const P = POSE[pose] || POSE.hold, k = snap ? 1 : 1 - Math.exp(-dt * 18);
     for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
       if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
       const c = arm.cur;
-      c.e.lerp(V3(tgt.e), k); c.w.lerp(V3(tgt.w), k); c.f.lerp(V3(tgt.f).normalize(), k).normalize(); c.n.lerp(V3(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
-      // 前臂：手肘 → 手腕
-      arm.fore.position.copy(c.e);
-      hands.localToWorld(_w1.copy(c.w)); arm.fore.lookAt(_w1);
-      arm.fore.scale.set(1, 1, c.e.distanceTo(c.w) / 0.3);
+      // 按住 V 轉手臂平台（照參考圖：球在哪一側就壓低那一側的肩膀）：整個上半身連肩膀一起轉（往那側轉＋那側肩膀往下），
+      //   兩隻手臂跟著整組轉、長度不變（2026-11-23 使用者：轉角度時手不能變短；滑鼠往右＝右肩高、左肩低，手被帶到右邊）
+      const rt = (pose === 'bump' || pose === 'bumpHit') && walk.recv && walk.recv.hold ? Math.sin(((walk.recvTilt || 0) / 0.8) * Math.PI / 2) : 0;
+      arm.tilt = (arm.tilt || 0) + (rt - (arm.tilt || 0)) * k;
+      const tl = arm.tilt; _tiltE.set(0, -tl * 0.55, tl * 0.32, 'YXZ'); _tiltQ.setFromEuler(_tiltE);   /* 往右轉（手到右邊）＋右肩往上 */
+      const rotP = (a) => V3(a).sub(FP_PIV).applyQuaternion(_tiltQ).add(FP_PIV), rotD = (a) => V3(a).applyQuaternion(_tiltQ);
+      (arm.sh || (arm.sh = new THREE.Vector3())).copy(rotP([FP_SH[0] * arm.side, FP_SH[1], FP_SH[2]]));
+      c.e.lerp(rotP(tgt.e), k); c.w.lerp(rotP(tgt.w), k); c.f.lerp(rotD(tgt.f).normalize(), k).normalize(); c.n.lerp(rotD(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
+      // 手肘：肩膀和手腕固定，兩段手臂長度固定，往姿勢表的 e 那一側彎
+      fpElbow(arm, c);
+      // 前臂：手肘 → 手腕；上臂：手肘 → 肩膀（肩膀在畫面外，所以手臂一路延伸到畫面邊緣）
+      arm.fore.position.copy(arm.el); arm.parts.elbow.position.copy(arm.el); arm.upper.position.copy(arm.el);
+      hands.localToWorld(_w1.copy(c.w)); arm.fore.lookAt(_w1); arm.fore.scale.set(1, 1, arm.el.distanceTo(c.w));
+      hands.localToWorld(_w1.copy(arm.sh)); arm.upper.lookAt(_w1); arm.upper.scale.set(1, 1, arm.el.distanceTo(arm.sh));
       // 手：在手腕，手指朝 f，掌心朝 n
-      arm.hand.position.copy(c.w);
+      c.hs = (c.hs || new THREE.Vector3()).lerp(_w0.set(...(tgt.hs || [0, 0, 0])).applyQuaternion(_tiltQ), k); c.tb = (c.tb || 0) + ((tgt.tb || 0) - (c.tb || 0)) * k;
+      arm.hand.position.copy(c.w).add(c.hs);
       hands.localToWorld(_w0.set(0, 0, 0)); hands.localToWorld(_w2.copy(c.n));
       arm.hand.up.copy(_w2.sub(_w0)).normalize();
       hands.localToWorld(_w1.copy(c.w).add(c.f)); arm.hand.lookAt(_w1);
       for (const g of arm.fingers) { g.rotation.set(-c.c, g.userData.spread * (1 - Math.min(1, c.c)), 0); }
-      arm.th.rotation.x = -c.c * 0.6;
+      // 大拇指：平常往外張；墊球時併排放在手背上、跟手指同方向（tb 0→1 漸變）
+      // 墊球：兩根大拇指貼在一起，放在疊好的手上面、朝前（照手掌本地 x 軸實際朝向，往兩手中間那一側放）
+      const tb = c.tb || 0, inX = _w2.set(1, 0, 0).applyQuaternion(arm.hand.quaternion).x, toC = (arm.side < 0 ? 1 : -1) * (inX >= 0 ? 1 : -1);
+      const tx0 = -arm.side * 0.04, tx1 = toC * 0.006, ty1 = arm.side < 0 ? 0.046 : 0.025;   // 下面那隻手（左手）的拇指要高過上面那隻手
+      arm.th.position.set(tx0 + (tx1 - tx0) * tb, 0.004 + (ty1 - 0.004) * tb, 0.026 + 0.012 * tb); arm.th.rotation.set(-c.c * 0.6 * (1 - tb) + 0.1 * tb, -arm.side * 0.85 * (1 - tb), 0);
     }
   }
   const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0 };
@@ -648,6 +686,10 @@ export function createGameCore(S = {}) {
     rkSideFollow: { sh: [[-1.5, -0.6], [-0.6, 0.3]], el: [0.6, 0.9], hip: [0.5, 0.5], kn: [0.9, 0.9], sp: 0.3, tw: -0.6, arm: 0 },
   };
   const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
+  function avRecvPose(P, t) {
+    if (!t) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
+    return { ...P, sh: [[P.sh[0][0], P.sh[0][1] + k * 0.45], [P.sh[1][0], P.sh[1][1] - k * 0.45]], shy: [0.06 * k, -0.06 * k], tw: (P.tw || 0) - k * 0.35, hab: [(P.hab || [0, 0])[0] + k * 0.12, (P.hab || [0, 0])[1] - k * 0.05] };
+  }
   function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }
   function avDrive(...a) { return S.avDrive ? S.avDrive(...a) : undefined; }
   function avKick(av, kind, speed, now) { if (!av || !['spike', 'bump', 'set', 'block'].includes(kind)) return; av._kick = { kind, t0: now, amp: clamp(speed / 18, 0.35, 1), arms: (TCH_CFG[kind] && TCH_CFG[kind].arms) || [0, 1] }; }
@@ -737,7 +779,7 @@ export function createGameCore(S = {}) {
       const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
       if (u < 1) avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
       // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再照球的時間等速接回真正的位置
-      if (!L.off) L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone();
+      if (!L.off) { L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone(); if (L.off.length() > 0.08) L.off.setLength(0.08); }   // 2026-11-23：畫面上最多把球挪 8 cm 貼到手上，不會看到球被硬拉過去
       const hold = TCH.V.copy(L.off).multiplyScalar(Math.max(0, 1 - ub)); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
     }
   }
@@ -795,6 +837,10 @@ export function createGameCore(S = {}) {
     buf.push(row);
     while (buf.length > 2 && (buf[1].t < t - 1000 || buf.length > 30)) buf.shift();
     p2.last = { ...row, t: now };
+    if (d.jp && d.jp.s !== p2.jpS && d.jp.y0 != null && p2.jump && p2.jump.vy != null) {   // 對方放開空白鍵提早落下：從他現在的高度接著算
+      p2.jpS = d.jp.s; const L = netLat(p2.id), g = d.jp.g || JUMP_G;
+      Object.assign(p2.jump, { g, vy: d.jp.vy - g * L, y: d.jp.y0 + d.jp.vy * L - 0.5 * g * L * L });
+    }
     if (d.jp && d.jp.s !== p2.jpS) {
       const first = p2.jpS == null; p2.jpS = d.jp.s;
       if (!first || hadState || row.y > 0) {
@@ -986,7 +1032,7 @@ export function createGameCore(S = {}) {
       if ((d.tt || '') !== (p2.tt || '')) { p2.tt = String(d.tt || '').slice(0, 12); p2.tag.element.textContent = peerTag(p2); }   // WEB-010 稱號
       if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
       p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
-      p2.tossing = !!d.ts; p2.bs = d.bs || 0;   // 攔網雙手往哪邊移
+      p2.tossing = !!d.ts; p2.bs = d.bs || 0; p2.rt = d.rt || 0;   /* 接球平台的角度 */   // 攔網雙手往哪邊移
       if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
       else if (p2.ball) p2.ball.visible = false;
     } else if (t === 'ball') {
@@ -1083,10 +1129,10 @@ export function createGameCore(S = {}) {
     const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
     const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
     let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-    const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+    const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rt: walk.recv && walk.recv.hold && walk.recvTilt ? +walk.recvTilt.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
     // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
     if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
-    const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
+    const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs((st.rt || 0) - (L.rt || 0)) > 0.1 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
     // 球衣（比賽以外）：換了衣服、或每 4 秒才帶一次（新進來的人也拿得到），平常不帶，訊息比較小
     if (!VM.on) { const wv = myWornForNet(now), wk = JSON.stringify(wv); if (wk !== NET.tjKey || now - (NET.tjAt || 0) > 4000) st.tj = wv; }
     if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
@@ -1118,7 +1164,7 @@ export function createGameCore(S = {}) {
       // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
       if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
       av.fall = p2.pose >= 10 && p2.pose <= 12 ? { a: 1, d: DIVE_D[p2.pose - 10], t: p2.poseT } : null;   // 撲救：整個人往撲的方向倒
-      avDrive(av, p2.keyPose || (p2.pose === 9 ? avBlockPose(p2.bs) : avPoseOf(p2.pose, p2.poseT / 0.45)), p2.keyPose ? 1 : Math.min(1, k * 1.3), p2.keyPose ? 0 : sp, y > 0.08);   /* 攔網偏移與關鍵影格姿勢 */
+      avDrive(av, p2.keyPose || (p2.pose === 9 ? avBlockPose(p2.bs) : p2.rt && [3, 18, 19, 21].includes(p2.pose) ? avRecvPose(avPoseOf(p2.pose, p2.poseT / 0.45), p2.rt) : avPoseOf(p2.pose, p2.poseT / 0.45)), p2.keyPose ? 1 : Math.min(1, k * 1.3), p2.keyPose ? 0 : sp, y > 0.08);   /* 攔網偏移與關鍵影格姿勢 */
       if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
       if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
     }
@@ -1173,7 +1219,7 @@ export function createGameCore(S = {}) {
   const SPIN_AX = new THREE.Vector3();
   function vbLaunch(b, cp, v, kind, q = 1, localReturn = false) {
     const from = b.m.position.clone(); b.acc = null; b.float = null;   // 被碰到：上旋、飄的效果就沒了
-    if (from.distanceTo(cp) > 0.2) cp = from.clone().add(cp.clone().sub(from).setLength(0.2));
+    if (from.distanceTo(cp) > 0.06) cp = from.clone().add(cp.clone().sub(from).setLength(0.06));   // 2026-11-23 使用者：球不要被拉過去——碰到球時球最多只挪 6 cm（以前 20 cm）
     for (const c of vbNetCourts()) { const [a0, z0] = toLocalOf(c, from.x, from.z), [a1] = toLocalOf(c, cp.x, cp.z); if (Math.sign(a0) !== Math.sign(a1) && Math.abs(z0) < 5.3) cp = from.clone(); }
     b.thirdReturn = !!(localReturn && vmThird() && (kind === 'bump' || kind === 'set') && vbCourt());
     if (b.thirdReturn) v = vbThirdOverVel(cp, vbCourt(), q);
@@ -1245,7 +1291,7 @@ export function createGameCore(S = {}) {
   function setMenuClose(...a) { return S.setMenuClose ? S.setMenuClose(...a) : undefined; }
   function vbManualSetCancel(...a) { return S.vbManualSetCancel ? S.vbManualSetCancel(...a) : undefined; }
   function vbSpot(ct, n, fromLx, fromLz, v = null) {
-    const sg = Math.sign(ct.lx) || 1, sp = n === 2 && v === 'high3' ? { lx: sg * 1.0, lz: 0, y: 2.95 } : n === 2 ? { lx: sg * 0.7, lz: 0, y: 2.85 } : n === 1 ? { lx: sg * 1.0, lz: sg * 3.3, y: 2.95 } : n === 4 ? { lx: sg * 3.6, lz: 0, y: 3.0 } : n === 5 ? { lx: sg * 3.6, lz: -sg * 3.0, y: 3.0 } : n === 7 ? { lx: sg * 3.6, lz: sg * 3.0, y: 3.0 } : { lx: sg * 1.0, lz: -sg * 3.3, y: 2.95 };   // 7＝後排 5 號位（左邊後排，按 6）   // 5＝老3：右邊後排攻擊
+    const sg = Math.sign(ct.lx) || 1, sp = n === 2 && v === 'high3' ? { lx: sg * 1.0, lz: 0, y: 2.95 } : n === 2 ? { lx: sg * 0.7, lz: 0, y: 3.05 } : n === 1 ? { lx: sg * 1.0, lz: sg * 3.3, y: 2.95 } : n === 4 ? { lx: sg * 3.6, lz: 0, y: 3.0 } : n === 5 ? { lx: sg * 3.6, lz: -sg * 3.0, y: 3.0 } : n === 7 ? { lx: sg * 3.6, lz: sg * 3.0, y: 3.0 } : { lx: sg * 1.0, lz: -sg * 3.3, y: 2.95 };   // 7＝後排 5 號位（左邊後排，按 6）   // 5＝老3：右邊後排攻擊
     if(v === 'line3')sp.lx=sg*3;
     const d = Math.hypot(sp.lx - fromLx, sp.lz - fromLz);
     sp.T = n === 2 && v !== 'high3' ? clamp(0.22 + d * 0.05, 0.24, 0.4) : v === 'flat' ? clamp(0.58 + d * 0.05, 0.7, 0.95) : clamp(0.75 + d * 0.09, 0.95, 1.3);   // 快攻又低又快；平球（長攻、背）又平又快；高球最高點約 4～4.5 m
@@ -1262,7 +1308,7 @@ export function createGameCore(S = {}) {
   }
   function vbMarkSet(b) { b.setT = performance.now(); const pr = vbPredict(b.m.position, b.v, 2.9); if (pr) VB.setSpot = { x: pr.x, z: pr.z, until: performance.now() + pr.t * 1000 + 1500, b }; }
   function vbBlockTest(b, h) {
-    const BLOCK_HALF = 0.72;   // 攔網雙手中心往左右各算多寬（2026-11-19 使用者：寬一點點，0.62 → 0.72）
+    const BLOCK_HALF = 0.45;   // 攔網雙手中心往左右各算多寬（2026-11-19 使用者：寬一點點，0.62 → 0.72）
     if (b.langzi && VM.on) return; /* WEB-022 裝飾球不觸發攔網。 */
     if (!walk.air || !walk.air.block || (b.mine && performance.now() - b.mineT < 300)) return;
     const ct = vbCourt(); if (!ct || Math.abs(ct.lx) > 1.3) return;
@@ -2190,7 +2236,7 @@ export function createGameCore(S = {}) {
         this.held.removeFromParent(); if (walk.hold === this.held) walk.hold = null;
         this.held = null;
       }
-      walk.serve = null; walk.jserve = null; walk.recv = null; walk.ohQ = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
+      walk.serve = null; walk.jserve = null; walk.recv = null; walk.jumpPrep = null; walk.ohQ = null; walk.setQ = null; if (walk.setAim) vbManualSetCancel();
       walk.swing = null; walk.charge = null; walk.chargeArm = null; walk.chargeArmGround = false;
       vbClearAir(); walk.dive = null; walk.down = 0; walk.blkAim = 0; walk.blkShift = 0;
       setMenuClose(false); pose = 'hold'; hands.visible = !!walk.hold;

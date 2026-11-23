@@ -701,6 +701,11 @@ function avGroundSolve(av, DK, fa) {
 }
 function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) > 0.6, P = down ? (side ? AVP.downSide : AVP.down) : side ? AVP.sideDive : AVP.dive; return side && sn > 0 ? avMirror(P) : P; }
 // 攔網的姿勢加上雙手往左右移（s＞0＝往人物的右手邊；右手往外張、左手往內收）
+// 接球轉平台（全身，第三人稱和別人看到的你）：t＞0＝右肩抬高、左肩壓低，身體往右轉、兩隻手臂一起被帶到右邊；t＜0 反過來
+function avRecvPose(P, t) {
+  if (!t) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
+  return { ...P, sh: [[P.sh[0][0], P.sh[0][1] + k * 0.45], [P.sh[1][0], P.sh[1][1] - k * 0.45]], shy: [0.06 * k, -0.06 * k], tw: (P.tw || 0) - k * 0.35, hab: [(P.hab || [0, 0])[0] + k * 0.12, (P.hab || [0, 0])[1] - k * 0.05] };
+}
 function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }
 // 套用姿勢：姿勢本身（接球、舉球…）每個關節平滑靠過去；走路／跑步的步伐另外疊上去（不會被平滑吃掉，步伐才有力）
 //   步伐：照速度在走路和跑步之間漸變——擺腿幅度、膝蓋在擺盪期收起來、支撐腳微彎緩衝、腳掌貼地／後腳蹬地踮腳尖
@@ -959,7 +964,7 @@ function touchPass() {
     const sm = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
     if (u < 1) avReachTo(L.av, kd, L.C, 1 - sm(((now - L.t0) / 1000 / 0.1 - 0.55) / 0.45));   // 手只在擊球點停 0.1 秒（跟以前一樣），之後交給跟隨動作（avKick）
     // 球心：先在「剛好貼著手」的位置（擊球點＋手還差的距離），再照球的時間等速接回真正的位置
-    if (!L.off) L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone();
+    if (!L.off) { L.off = TCH.V.copy(L.C).add(TCH.P).sub(p).clone(); if (L.off.length() > 0.08) L.off.setLength(0.08); }   // 2026-11-23：畫面上最多把球挪 8 cm 貼到手上，不會看到球被硬拉過去
     const hold = TCH.V.copy(L.off).multiplyScalar(Math.max(0, 1 - ub)); U.pull = { x: hold.x, y: hold.y, z: hold.z, w: 1, t: now };
   }
 }
@@ -1173,7 +1178,7 @@ function emoKeyStart(key) {
   const now = performance.now(), dir = key === 'langzi' ? 1 : emoKeyDirection();
   walk.emote = { k: key, keyframes: true, t0: now, until: now + emoKeyDuration(key) * 1000, dir, x: walk.x, z: walk.z, yaw: walk.yaw, match: VM.on };
   walk.target = null; targetMark.visible = false; walk.vel = [0, 0];
-  walk.recv = null; walk.ohQ = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
+  walk.recv = null; walk.jumpPrep = null; walk.ohQ = null; walk.setQ = null; walk.swing = null; walk.charge = null; walk.chargeArm = null;
   if (skill.mode) { skill.mode = null; skill.dip = 0; $('wk-combo').hidden = true; }
   if (SETM.m) setMenuClose(false);
   if (NET.on) NET.tx.publish('emo', { e: 'em', k: key, id: vmMe(), dir, x: walk.x, z: walk.z, yaw: walk.yaw });
@@ -1450,6 +1455,10 @@ function netPeerSnapshot(p2, d, now) {
   buf.push(row);
   while (buf.length > 2 && (buf[1].t < t - 1000 || buf.length > 30)) buf.shift();
   p2.last = { ...row, t: now };
+  if (d.jp && d.jp.s !== p2.jpS && d.jp.y0 != null && p2.jump && p2.jump.vy != null) {   // 對方放開空白鍵提早落下：從他現在的高度接著算
+    p2.jpS = d.jp.s; const L = netLat(p2.id), g = d.jp.g || JUMP_G;
+    Object.assign(p2.jump, { g, vy: d.jp.vy - g * L, y: d.jp.y0 + d.jp.vy * L - 0.5 * g * L * L });
+  }
   if (d.jp && d.jp.s !== p2.jpS) {
     const first = p2.jpS == null; p2.jpS = d.jp.s;
     if (!first || hadState || row.y > 0) {
@@ -1706,7 +1715,7 @@ function netOnMessage(t, d, from) {
     if ((d.tt || '') !== (p2.tt || '')) { p2.tt = String(d.tt || '').slice(0, 12); p2.tag.element.textContent = peerTag(p2); }   // WEB-010 稱號
     if (d.n && p2.n !== d.n) { p2.n = String(d.n).slice(0, 24); p2.tag.element.textContent = peerTag(p2); renderMpList(); }
     p2.pose = d.p; p2.rk = d.rk || null; rkPeerAi(p2, d.ai); p2.sta = d.sta ?? null;
-    p2.tossing = !!d.ts; p2.bs = d.bs || 0;   // 攔網雙手往哪邊移
+    p2.tossing = !!d.ts; p2.bs = d.bs || 0; p2.rt = d.rt || 0;   /* 接球平台的角度 */   // 攔網雙手往哪邊移
     if (d.b) { if (!p2.ball) { p2.ball = newBallMesh(); scene.add(p2.ball); } if (d.ts && !p2.ball.visible) p2.ball.position.set(...d.b); p2.ballT = d.b; p2.ball.visible = true; }
     else if (p2.ball) p2.ball.visible = false;
   } else if (t === 'ball') {
@@ -1815,10 +1824,10 @@ function netTick(dt, now) {
   const kv = 1 - Math.exp(-dt * 10); NET.vx = (NET.vx || 0) + (((walk.x - (NET.px ?? walk.x)) / Math.max(dt, 1e-3)) - (NET.vx || 0)) * kv; NET.vz = (NET.vz || 0) + (((walk.z - (NET.pz ?? walk.z)) / Math.max(dt, 1e-3)) - (NET.vz || 0)) * kv; NET.px = walk.x; NET.pz = walk.z;
   const toss = walk.jserve && !walk.jserve.hit ? walk.jserve.ball : walk.serve && !walk.serve.hit ? walk.serve.ball : null;   // 正在拋球發球
   let bp = null; if (walk.hold || toss) { const v = new THREE.Vector3(); (toss || walk.hold).getWorldPosition(v); bp = v.toArray().map((q) => +q.toFixed(2)); }
-  const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
+  const st = { tm: +(now / 1000).toFixed(2), sta: staGame() ? +STA.v.toFixed(2) : undefined, x: +walk.x.toFixed(2), z: +walk.z.toFixed(2), y: +(window.__rkOn ? RK.P[RK.my].jy || 0 : Math.max(0, camera.position.y - EYE)).toFixed(2), yaw: +walk.yaw.toFixed(3), p: myPoseCode(), n: NET.name, tt: myTitle() || undefined, c: NET.color, ch: myChar() || 'none', b: bp, bs: walk.air && walk.air.block && walk.blkShift ? +walk.blkShift.toFixed(2) : undefined, rt: walk.recv && walk.recv.hold && walk.recvTilt ? +walk.recvTilt.toFixed(2) : undefined, rk: window.__rkOn ? RK.k : undefined, ai: window.__rkOn ? rkAiState() : undefined, vx: +NET.vx.toFixed(2), vz: +NET.vz.toFixed(2), jp: NET.jp || undefined };
   // 2 對 2 的主機：比分、階段、AI 位置一起放在自己的狀態裡送（不另外送）；有事（得分、換發球、觸球數變了）馬上送
   if (VM.on && VM.host) { st.vm = vmStatePayload(); if (NET.vmPend) { Object.assign(st.vm, NET.vmPend); NET.vmPend = null; } }
-  const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
+  const L = NET.lastSent, poseChanged = !L || st.p !== L.p, moved = !L || JSON.stringify(st.ai) !== JSON.stringify(L.ai) || Math.hypot(st.x - L.x, st.z - L.z) > 0.05 || Math.hypot(st.vx - L.vx, st.vz - L.vz) > 0.4 || Math.abs(st.yaw - L.yaw) > 0.07 || Math.abs((st.rt || 0) - (L.rt || 0)) > 0.1 || Math.abs(st.y - L.y) > 0.05 || !!st.b !== !!L.b || (VM.on && VM.host);
   // 球衣（比賽以外）：換了衣服、或每 4 秒才帶一次（新進來的人也拿得到），平常不帶，訊息比較小
   if (!VM.on) { const wv = myWornForNet(now), wk = JSON.stringify(wv); if (wk !== NET.tjKey || now - (NET.tjAt || 0) > 4000) st.tj = wv; }
   if (toss) st.ts = 1;   // 拋球中：主機知道你正在發，不會在拋球途中判 8 秒
@@ -1850,7 +1859,7 @@ function netTick(dt, now) {
     // 姿勢代碼換了就從頭做一次那個動作（扣球揮臂、舉球推出去…）
     if (p2.pose !== p2.poseC) { p2.poseC = p2.pose; p2.poseT = 0; } p2.poseT = (p2.poseT || 0) + dt;
     av.fall = p2.pose >= 10 && p2.pose <= 12 ? { a: 1, d: DIVE_D[p2.pose - 10], t: p2.poseT } : null;   // 撲救：整個人往撲的方向倒
-    avDrive(av, p2.keyPose || (p2.pose === 9 ? avBlockPose(p2.bs) : avPoseOf(p2.pose, p2.poseT / 0.45)), p2.keyPose ? 1 : Math.min(1, k * 1.3), p2.keyPose ? 0 : sp, y > 0.08);   /* 攔網偏移與關鍵影格姿勢 */
+    avDrive(av, p2.keyPose || (p2.pose === 9 ? avBlockPose(p2.bs) : p2.rt && [3, 18, 19, 21].includes(p2.pose) ? avRecvPose(avPoseOf(p2.pose, p2.poseT / 0.45), p2.rt) : avPoseOf(p2.pose, p2.poseT / 0.45)), p2.keyPose ? 1 : Math.min(1, k * 1.3), p2.keyPose ? 0 : sp, y > 0.08);   /* 攔網偏移與關鍵影格姿勢 */
     if (p2.ball && p2.ballT) p2.ball.position.lerp(new THREE.Vector3(...p2.ballT), k);
     if (p2.aiAv && p2.aiT) { const A = p2.aiAv, T = p2.aiT; A.g.position.lerp(new THREE.Vector3(T[0], 0, T[1]), k); A.g.rotation.y = T[2]; avDrive(A, avPoseOf(T[3], 0.5), k, 0); }
   }
