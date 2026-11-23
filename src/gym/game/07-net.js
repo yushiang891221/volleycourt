@@ -703,7 +703,7 @@ function avDivePose(dir, down) { const sn = Math.sin(dir), side = Math.abs(sn) >
 // 攔網的姿勢加上雙手往左右移（s＞0＝往人物的右手邊；右手往外張、左手往內收）
 // 接球轉平台（全身，第三人稱和別人看到的你）：t＞0＝右肩抬高、左肩壓低，身體往右轉、兩隻手臂一起被帶到右邊；t＜0 反過來
 function avRecvPose(P, t) {
-  if (!t) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
+  if (!t || !P || !P.sh) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
   return { ...P, sh: [[P.sh[0][0], P.sh[0][1] + k * 0.45], [P.sh[1][0], P.sh[1][1] - k * 0.45]], shy: [0.06 * k, -0.06 * k], tw: (P.tw || 0) - k * 0.35, hab: [(P.hab || [0, 0])[0] + k * 0.12, (P.hab || [0, 0])[1] - k * 0.05] };
 }
 function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }

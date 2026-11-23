@@ -687,7 +687,7 @@ export function createGameCore(S = {}) {
   };
   const DIVE_D = [0, -Math.PI / 2, Math.PI / 2];
   function avRecvPose(P, t) {
-    if (!t) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
+    if (!t || !P || !P.sh) return P; const k = Math.sin(clamp(t / 0.8, -1, 1) * Math.PI / 2);
     return { ...P, sh: [[P.sh[0][0], P.sh[0][1] + k * 0.45], [P.sh[1][0], P.sh[1][1] - k * 0.45]], shy: [0.06 * k, -0.06 * k], tw: (P.tw || 0) - k * 0.35, hab: [(P.hab || [0, 0])[0] + k * 0.12, (P.hab || [0, 0])[1] - k * 0.05] };
   }
   function avBlockPose(s) { if (!s) return AVP.block; const k = s * 1.1; return { ...AVP.block, sh: [[-2.78, 0.08 + k], [-2.78, 0.08 - k]], tw: -k * 0.3 }; }
