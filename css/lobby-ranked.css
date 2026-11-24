@@ -173,3 +173,5 @@ html.m-touch #lobby-shell .chat.is-collapsed .chat-heading h2, html.m-touch #lob
 html.m-touch #lobby-shell .chat .messages { flex:1; min-height:0; max-height:none !important; overflow:auto; padding:revert; border:revert; background:revert; }
 html.m-touch #lobby-shell .chat.is-collapsed .messages > * { display:revert !important; white-space:normal; }
 html.m-touch #chat-toggle { display:none; }
+/* 2026-11-25 使用者：大廳畫面不在正中間——視窗比 1100 窄時整頁被撐寬、左右被切掉；球館大廳不設最小寬度，面板跟著縮 */
+body.lobby-gym { min-width:0 !important; overflow:hidden; }

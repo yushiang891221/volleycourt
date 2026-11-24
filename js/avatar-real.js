@@ -389,8 +389,13 @@ function patchLit(root) {
 }
 // ---------- 對外 ----------
 let loading = null;
+const BUMP_POSE = {};   // 定案墊球手型：每根骨頭的局部旋轉（男、女各一份）
+async function loadBumpPose() {
+  try { const j = await (await fetch(asset('assets/models/bump_pose.json'))).json(); for (const s of ['m', 'f']) { if (!j[s]) continue; BUMP_POSE[s] = {}; for (const [n, a] of Object.entries(j[s])) BUMP_POSE[s][n] = new THREE.Quaternion().fromArray(a); } }
+  catch (e) { console.warn('[real] 墊球手型載入失敗', e); }
+}
 export function preloadReal() {
-  if (!loading) loading = Promise.all(['m', 'f'].map(async s => { try { TPL[s] = await loadTpl(s); } catch (e) { console.warn('[real] 模型載入失敗', s, e); } })).then(() => !!(TPL.m && TPL.f));
+  if (!loading) loading = Promise.all([loadBumpPose(), ...['m', 'f'].map(async s => { try { TPL[s] = await loadTpl(s); } catch (e) { console.warn('[real] 模型載入失敗', s, e); } })]).then(() => !!(TPL.m && TPL.f));
   return loading;
 }
 export const realReady = () => !!(TPL.m && TPL.f);
@@ -467,7 +472,7 @@ export function driveReal(av, dt) {
   const cur = wpos(B.thigh_l).add(wpos(B.thigh_r)).multiplyScalar(0.5);
   root.position.add(g.worldToLocal(want.clone()).sub(g.worldToLocal(cur.clone()))); root.updateMatrixWorld(true);
   // 3. 碰球時手對準公仔的手（公仔的手已經對到球上）
-  const tk = av._tk, w = R.ikW = (R.ikW || 0) + ((tk ? 1 : 0) - (R.ikW || 0)) * Math.min(1, dt * 14);
+  const tk = av._tk, w = R.ikW = (R.ikW || 0) + ((tk && tk !== 'bump' ? 1 : 0) - (R.ikW || 0)) * Math.min(1, dt * 14);   /* 墊球改用定案手型（下面 4b），不用 IK 拉手 */
   if (w > 0.02) for (const [i, sd] of [[0, 'r'], [1, 'l']]) {
     const q0 = [B['upperarm_' + sd].quaternion.clone(), B['lowerarm_' + sd].quaternion.clone()], hq = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
     ikArm(B, sd, av.hands[i].getWorldPosition(new THREE.Vector3()), av.elbows[i].getWorldPosition(new THREE.Vector3()));
@@ -477,6 +482,28 @@ export function driveReal(av, dt) {
   // 4. 手指
   const hk = TOUCH_HAND[tk] || 'natural';
   for (const sd of ['l', 'r']) { const qs = T.hands[hk][sd]; FINGER_BONES(sd).forEach((n, j) => B[n].quaternion.copy(qs[j])); }
+  // 4b. 墊球：套使用者確認的定案手型（avatar-real.html 的 bumpPose，存在 assets/models/bump_pose.json：雙手掌心朝上並排、手指交疊、大拇指抬起、手腕靠攏）
+  //   手型相對上身固定；整個平台繞兩肩連線轉到公仔手的方向（球的高度），兩隻手的相對位置完全不變
+  { const bp = BUMP_POSE[T.s], bw = R.bumpW = (R.bumpW || 0) + ((tk === 'bump' && bp ? 1 : 0) - (R.bumpW || 0)) * Math.min(1, dt * 12);
+    if (bw > 0.01 && bp) {
+      const names = Object.keys(bp), q0 = names.map(n => B[n].quaternion.clone());
+      names.forEach((n, j) => B[n].quaternion.copy(bp[n]));
+      root.updateMatrixWorld(true);
+      const SL = wpos(B.upperarm_l), SR = wpos(B.upperarm_r), axis = SL.clone().sub(SR).normalize(), S = SL.clone().add(SR).multiplyScalar(0.5);
+      const C = wpos(B.hand_l).add(wpos(B.hand_r)).multiplyScalar(0.5).sub(S);
+      const rS = av.arms[0].getWorldPosition(new THREE.Vector3()).add(av.arms[1].getWorldPosition(V1)).multiplyScalar(0.5);
+      const D = av.hands[0].getWorldPosition(new THREE.Vector3()).add(av.hands[1].getWorldPosition(V1)).multiplyScalar(0.5).sub(rS);
+      C.addScaledVector(axis, -C.dot(axis)); D.addScaledVector(axis, -D.dot(axis));
+      if (C.lengthSq() > 1e-6 && D.lengthSq() > 1e-6) {
+        C.normalize(); D.normalize(); let ang = Math.acos(Math.max(-1, Math.min(1, C.dot(D)))); if (new THREE.Vector3().crossVectors(C, D).dot(axis) < 0) ang = -ang;
+        ang = Math.max(-0.9, Math.min(0.9, ang));
+        rotWorld(B.upperarm_l, axis, ang); rotWorld(B.upperarm_r, axis, ang);
+      }
+      const qb = names.map(n => B[n].quaternion.clone());
+      names.forEach((n, j) => B[n].quaternion.slerpQuaternions(q0[j], qb[j], bw));
+      root.updateMatrixWorld(true);
+    }
+  }
   // 5. 貼地：在地上時最低的部位貼地面（腳用鞋底），空中維持起跳前的高度差
   root.updateMatrixWorld(true);
   const gy = gp.y + 0.022; let low = Infinity;
