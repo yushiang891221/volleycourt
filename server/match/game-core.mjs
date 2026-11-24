@@ -348,30 +348,43 @@ export function createGameCore(S = {}) {
     // 手：+z 是手指的方向，+y 是掌心
     const hand = new THREE.Group(); hands.add(hand);
     const palm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.024, 0.088), skinM); palm.position.z = 0.044; hand.add(palm);
+    // 手指分兩節（指根關節＋中間關節）：彎曲分在兩個關節上，看起來像真的手指；c 彎曲、sp 張開（2026-11-24 舉球手要張開成碗狀）
     const fingers = [];
-    [[-0.03, 0.068], [-0.01, 0.082], [0.01, 0.078], [0.03, 0.062]].forEach(([x, L], i) => {
+    [[-0.03, 0.068, 0.0085], [-0.01, 0.082, 0.0092], [0.01, 0.078, 0.009], [0.03, 0.062, 0.008]].forEach(([x, L, r]) => {
       const g = new THREE.Group(); g.position.set(x * -side, 0, 0.086); hand.add(g);
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0095, L, 8), skinM); m.rotation.x = Math.PI / 2; m.position.z = L / 2; g.add(m);
-      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.0088, 8, 6), skinM); tip.position.z = L; g.add(tip);
-      g.userData.spread = (x / 0.03) * 0.16 * -side; fingers.push(g);
+      const L1 = L * 0.52, L2 = L - L1;
+      const m1 = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.08, L1, 8), skinM); m1.rotation.x = Math.PI / 2; m1.position.z = L1 / 2; g.add(m1);
+      const kn = new THREE.Mesh(new THREE.SphereGeometry(r * 1.02, 8, 6), skinM); kn.position.z = L1; g.add(kn);
+      const j = new THREE.Group(); j.position.z = L1; g.add(j);
+      const m2 = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.9, r, L2, 8), skinM); m2.rotation.x = Math.PI / 2; m2.position.z = L2 / 2; j.add(m2);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(r * 0.92, 8, 6), skinM); tip.position.z = L2; j.add(tip);
+      g.userData.spread = (x / 0.03) * 0.16 * -side; g.userData.j = j; fingers.push(g);
     });
-    // 拇指在手的內側（掌心朝上、手指朝前時：右手拇指在右、左手在左 → 本地 -x／+x）
+    // 拇指在手的內側（掌心朝上、手指朝前時：右手拇指在右、左手在左 → 本地 -x／+x），也分兩節
     const th = new THREE.Group(); th.position.set(-side * 0.04, 0.004, 0.026); th.rotation.y = -side * 0.85; hand.add(th);
-    const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.011, 0.058, 8), skinM); tm.rotation.x = Math.PI / 2; tm.position.z = 0.029; th.add(tm);
+    const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.0098, 0.0115, 0.034, 8), skinM); tm.rotation.x = Math.PI / 2; tm.position.z = 0.017; th.add(tm);
+    const thj = new THREE.Group(); thj.position.z = 0.034; th.add(thj);
+    const tk = new THREE.Mesh(new THREE.SphereGeometry(0.0098, 8, 6), skinM); thj.add(tk);
+    const tm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.0088, 0.0098, 0.028, 8), skinM); tm2.rotation.x = Math.PI / 2; tm2.position.z = 0.014; thj.add(tm2);
+    const tt = new THREE.Mesh(new THREE.SphereGeometry(0.0088, 8, 6), skinM); tt.position.z = 0.028; thj.add(tt);
+    th.userData.j = thj;
     hand.traverse((q) => { q.userData.noPick = true; });
     return { side, fore, upper, hand, fingers, th, parts, cur: null };
   }
   const armL = mkArm(-1), armR = mkArm(1);
   const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
-  const mir = (p) => ({ e: [-p.e[0], p.e[1], p.e[2]], w: [-p.w[0], p.w[1], p.w[2]], f: [-p.f[0], p.f[1], p.f[2]], n: [-p.n[0], p.n[1], p.n[2]], c: p.c });
+  const mir = (p) => ({ ...p, e: [-p.e[0], p.e[1], p.e[2]], w: [-p.w[0], p.w[1], p.w[2]], f: [-p.f[0], p.f[1], p.f[2]], n: [-p.n[0], p.n[1], p.n[2]] });
   function pair(L, ball, pitch) { return { L, R: mir(L), ball, pitch }; }
   const POSE = {
     // 拿著球：兩手托在球的兩側
     hold: pair({ e: [-0.22, -0.42, -0.18], w: [-0.12, -0.25, -0.5], f: [0.05, 0.6, -0.8], n: [1, 0.1, 0], c: 0.3 }, [0, -0.17, -0.56]),
-    // 舉球預備：手在額頭前上方，手肘向外，掌心朝上前方對著球，十指張開微彎，兩手拇指與食指圍成三角形的窗
-    set: pair({ e: [-0.25, -0.13, -0.16], w: [-0.085, 0.05, -0.33], f: [-0.22, 0.88, -0.42], n: [0.45, 0.7, -0.55], c: 0.35 }, [0, 0.2, -0.55], 0.38),
-    // 舉球出手：手臂往球的方向伸直、手腕送出、手指朝上
-    setPush: pair({ e: [-0.19, 0.0, -0.3], w: [-0.08, 0.2, -0.47], f: [-0.08, 0.96, -0.25], n: [0.3, 0.55, -0.78], c: 0.12 }, [0, 0.3, -0.52], 0.38),
+    // 舉球預備（2026-11-24 重做）：兩手在額頭前上方托住球的後下方，掌心朝球、十指張開微彎成碗狀，
+    //   兩根大拇指往臉的方向、和食指圍成三角形的窗；手肘往外。sp＝手指張開幾倍、ts＝大拇指往後朝臉
+    set: pair({ e: [-0.3, -0.06, -0.3], w: [-0.075, 0.085, -0.48], f: [-0.43, 0.86, 0.28], n: [0.62, 0.5, -0.6], c: 0.42, sp: 2.8, ts: 1 }, [0, 0.2, -0.55], 0.38),
+    // 舉球出手：手臂往球的方向伸、手腕送出，手指還是張開但彎得少
+    setPush: pair({ e: [-0.24, 0.02, -0.33], w: [-0.045, 0.2, -0.5], f: [-0.5, 0.8, 0.15], n: [0.5, 0.65, -0.55], c: 0.18, sp: 1.8, ts: 0.8 }, [0, 0.3, -0.52], 0.38),
+    // 背舉出手：手往頭頂上後方推（以前姿勢表沒有這個，背舉時手會跳回拿球的樣子）
+    setBack: pair({ e: [-0.24, 0.05, -0.22], w: [-0.05, 0.3, -0.32], f: [-0.4, 0.6, 0.7], n: [0.5, 0.8, 0.1], c: 0.15, sp: 1.8, ts: 0.8 }, [0, 0.4, -0.2], 0.5),
   };
   let pose = 'hold';
   const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w0 = new THREE.Vector3();
@@ -388,8 +401,15 @@ export function createGameCore(S = {}) {
     _ikP.normalize();
     E.copy(shP).addScaledVector(_ikD, a).addScaledVector(_ikP, h);
   }
+  const _npW = new THREE.Vector3(), _npO = new THREE.Vector3(), _npL = new THREE.Vector3();
+  function fpNetPlane() {
+    const ct = typeof vbCourt === 'function' && vbCourt(); if (!ct || Math.abs(ct.lx) > 1.5) return null;
+    const r = (ct.c.rot * Math.PI) / 180, sg = Math.sign(ct.lx) || 1;
+    return { x: ct.c.x, z: ct.c.z, nx: sg * Math.cos(r), nz: -sg * Math.sin(r), top: NETS[state.net].h };
+  }
   function applyPose(dt, snap) {
     camera.updateMatrixWorld(true);
+    const NP = fpNetPlane();
     const P = POSE[pose] || POSE.hold, k = snap ? 1 : 1 - Math.exp(-dt * 18);
     for (const [arm, tgt] of [[armL, P.L], [armR, P.R]]) {
       if (!arm.cur || snap) arm.cur = { e: V3(tgt.e), w: V3(tgt.w), f: V3(tgt.f).normalize(), n: V3(tgt.n).normalize(), c: tgt.c };
@@ -402,6 +422,16 @@ export function createGameCore(S = {}) {
       const rotP = (a) => V3(a).sub(FP_PIV).applyQuaternion(_tiltQ).add(FP_PIV), rotD = (a) => V3(a).applyQuaternion(_tiltQ);
       (arm.sh || (arm.sh = new THREE.Vector3())).copy(rotP([FP_SH[0] * arm.side, FP_SH[1], FP_SH[2]]));
       c.e.lerp(rotP(tgt.e), k); c.w.lerp(rotP(tgt.w), k); c.f.lerp(rotD(tgt.f).normalize(), k).normalize(); c.n.lerp(rotD(tgt.n).normalize(), k).normalize(); c.c += (tgt.c - c.c) * k;
+      // 網子：指尖（手腕往手指方向 17 cm）離網面至少 6 cm；手腕已經高過網子上緣＝手伸過網上方（攔網本來就可以），不擋
+      if (NP) {
+        hands.localToWorld(_npW.copy(c.w)); const wy = _npW.y;
+        hands.localToWorld(_npW.copy(c.w).addScaledVector(c.f, 0.17));
+        const sd = Math.min((_npW.x - NP.x) * NP.nx + (_npW.z - NP.z) * NP.nz, (hands.localToWorld(_npO.copy(c.w)).x - NP.x) * NP.nx + (_npO.z - NP.z) * NP.nz);
+        if (wy < NP.top + 0.05 && sd < 0.06) {
+          hands.worldToLocal(_npO.set(0, 0, 0)); hands.worldToLocal(_npL.set(NP.nx * (0.06 - sd), 0, NP.nz * (0.06 - sd))).sub(_npO);
+          c.w.add(_npL); c.e.add(_npL);
+        }
+      }
       // 手肘：肩膀和手腕固定，兩段手臂長度固定，往姿勢表的 e 那一側彎
       fpElbow(arm, c);
       // 前臂：手肘 → 手腕；上臂：手肘 → 肩膀（肩膀在畫面外，所以手臂一路延伸到畫面邊緣）
@@ -414,12 +444,13 @@ export function createGameCore(S = {}) {
       hands.localToWorld(_w0.set(0, 0, 0)); hands.localToWorld(_w2.copy(c.n));
       arm.hand.up.copy(_w2.sub(_w0)).normalize();
       hands.localToWorld(_w1.copy(c.w).add(c.f)); arm.hand.lookAt(_w1);
-      for (const g of arm.fingers) { g.rotation.set(-c.c, g.userData.spread * (1 - Math.min(1, c.c)), 0); }
+      c.sp = (c.sp ?? 1) + ((tgt.sp ?? 1) - (c.sp ?? 1)) * k; c.ts = (c.ts || 0) + ((tgt.ts || 0) - (c.ts || 0)) * k;
+      for (const g of arm.fingers) { g.rotation.set(-c.c * 0.55, g.userData.spread * c.sp * (1 - 0.6 * Math.min(1, c.c)), 0); g.userData.j.rotation.x = -c.c * 0.85; }
       // 大拇指：平常往外張；墊球時併排放在手背上、跟手指同方向（tb 0→1 漸變）
       // 墊球：兩根大拇指貼在一起，放在疊好的手上面、朝前（照手掌本地 x 軸實際朝向，往兩手中間那一側放）
       const tb = c.tb || 0, inX = _w2.set(1, 0, 0).applyQuaternion(arm.hand.quaternion).x, toC = (arm.side < 0 ? 1 : -1) * (inX >= 0 ? 1 : -1);
       const tx0 = -arm.side * 0.04, tx1 = toC * 0.006, ty1 = arm.side < 0 ? 0.046 : 0.025;   // 下面那隻手（左手）的拇指要高過上面那隻手
-      arm.th.position.set(tx0 + (tx1 - tx0) * tb, 0.004 + (ty1 - 0.004) * tb, 0.026 + 0.012 * tb); arm.th.rotation.set(-c.c * 0.6 * (1 - tb) + 0.1 * tb, -arm.side * 0.85 * (1 - tb), 0);
+      arm.th.position.set(tx0 + (tx1 - tx0) * tb, 0.004 + (ty1 - 0.004) * tb, 0.026 + 0.012 * tb); arm.th.rotation.set(-c.c * 0.6 * (1 - tb) + 0.1 * tb - 0.35 * c.ts, -arm.side * (0.85 + 0.75 * c.ts) * (1 - tb), 0); arm.th.userData.j.rotation.x = -c.c * 0.5 * (1 - tb) - 0.25 * c.ts;
     }
   }
   const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0 };

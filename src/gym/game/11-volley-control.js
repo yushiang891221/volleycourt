@@ -485,6 +485,8 @@ function vbAirStep(dt) {
   }
   const a = walk.air; if (!a) return 0;
   a.t += dt; a.vy -= (a.g || JUMP_G) * dt; a.y += a.vy * dt;
+  // 攔網貼著網子起跳：身體在剛離地這 0.25 秒往後退到離網 32 cm（真人也不會貼網攔；貼太近手只能往上收、畫面看不到手）（2026-11-24）
+  if (a.block && a.t < 0.25) { const ct = vbCourt(); if (ct && Math.abs(ct.lx) < 0.32) { const r = (ct.c.rot * Math.PI) / 180, sg = Math.sign(ct.lx) || 1, m = Math.min(0.32 - Math.abs(ct.lx), 1.6 * dt); walk.x += sg * Math.cos(r) * m; walk.z -= sg * Math.sin(r) * m; } }
   if (a.arms) { if (walk.charge || walk.swing || walk.hold) a.arms = false; else pose = a.t < 0.2 ? 'jumpUp' : 'cock'; }   // 往上甩 0.2 秒 → 空中拉弓（左手指球、右手肘往後上方拉開），等你按左鍵揮下去
   if (a.y <= 0) { if (a.arms && !walk.swing && !walk.charge && !walk.hold) { pose = 'hold'; if (!(walk.flash > 0)) hands.visible = false; } vbClearAir(); walk.landT = performance.now(); if (staGame()) sfx('land', 0.6); if (a.block && !walk.hold && !walk.swing) { hands.visible = false; pose = 'hold'; } return 0; }
   const off = walk.swing || walk.charge || performance.now() < (walk.contactUntil || 0) ? (a.camOff || 0) : !a.block && !a.serve && a.camK && VBSettings.values.cameraAssist ? -CAM_SPIKE_MAX * a.camK * Math.sin(Math.PI * Math.min(1, a.t / a.camT)) : 0;
