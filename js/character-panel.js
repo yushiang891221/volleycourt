@@ -37,15 +37,21 @@ export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝�
   previewQ = previewQ.then(() => previewNow(img, code, opt)).catch((e) => console.warn('[角色預覽]', e));
   return previewQ;
 }
+// 預覽畫面的燈：跟建角色畫面一樣（AgX＋柔和燈）。新角色材質本身有補亮（REAL_LIGHT，給較暗的球館用），用原本的強燈會過曝成一片白
+const toneOf = (r) => { r.toneMapping = THREE.AgXToneMapping; r.toneMappingExposure = 1.05; };
+function previewLights(scene) {
+  scene.add(new THREE.HemisphereLight('#FFF6EA', '#A98458', 1.5));
+  const sun = new THREE.DirectionalLight('#FFFFFF', 2.3); sun.position.set(2.5, 6, 4); scene.add(sun);
+  const fill = new THREE.DirectionalLight('#FFE6CC', 0.8); fill.position.set(-3, 2, 3); scene.add(fill);
+}
 async function previewNow(img, code, opt) {
   if (!img.isConnected && !opt.offscreen) return;
   await Promise.all([preloadAvatars(), preloadReal()]).catch(() => {});
   const W = opt.w || 240, H = opt.h || 300;
-  if (!previewR) { previewR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); previewR.outputColorSpace = THREE.SRGBColorSpace; }
+  if (!previewR) { previewR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); previewR.outputColorSpace = THREE.SRGBColorSpace; toneOf(previewR); }
   previewR.setSize(W, H);
   const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#0B362B');   /* Play One 風格：深綠底 */
-  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
-  const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
+  previewLights(scene);
   const av = makePlayer(decodeLook(code), opt.jersey === undefined ? readWornJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
   syncReal(av); await realReadyOf(av); syncReal(av);
   const camera = new THREE.PerspectiveCamera(32, W / H, .05, 20);
@@ -66,9 +72,9 @@ async function renderShot(shot) {
   else if (shot.item === 'knee') look.knee = shot.value;
   else look.eq = { ...(look.eq || {}), [shot.item]: shot.value };
   const key = JSON.stringify([shot, look, kit]); if (SHOT_CACHE.has(key)) return SHOT_CACHE.get(key);
-  if (!shotR) { shotR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); shotR.setSize(200, 200); shotR.outputColorSpace = THREE.SRGBColorSpace; }
+  if (!shotR) { shotR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); shotR.setSize(200, 200); shotR.outputColorSpace = THREE.SRGBColorSpace; toneOf(shotR); }
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0B2E25');
-  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.6); sun.position.set(2, 4, 4); scene.add(sun);
+  previewLights(scene);
   const av = makePlayer(look, kit); scene.add(av.g); syncReal(av); await realReadyOf(av); syncReal(av);
   const [p, t] = SHOT_CAM[shot.at] || SHOT_CAM.torso, cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); cam.position.set(...p); cam.lookAt(...t);
   shotR.render(scene, cam); const url = shotR.domElement.toDataURL('image/png');
@@ -114,10 +120,9 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   // 每次都換一個新的畫布：關面板時釋放過的畫布不能再拿來畫（第二次打開會載入失敗）
   const canvas = document.createElement('canvas'); canvas.className = old.className; canvas.setAttribute('aria-label', old.getAttribute('aria-label') || ''); old.replaceWith(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: bg === null });
-  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); toneOf(renderer);
   const scene = new THREE.Scene(); scene.background = bg === null ? null : new THREE.Color(bg);
-  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
-  const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
+  previewLights(scene);
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
   // 鏡頭繞著角色轉：左右拖＝繞一圈、上下拖＝從上面／下面看（不會翻過頭頂）
   let lastCode = null, av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
