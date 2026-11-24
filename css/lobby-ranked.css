@@ -111,9 +111,9 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 }
 
 /* 留言板展開：往上長高、半透明疊在大廳上面；佔的格子高度跟收合時一樣，中間的人物不會被擠小 */
-#lobby-shell .chat.is-collapsed { height:40px; box-sizing:border-box; }
-#lobby-shell .chat:not(.is-collapsed) { position:relative; z-index:20; box-sizing:border-box; height:min(62vh, 560px); margin-top:calc(40px - min(62vh, 560px)); display:flex; flex-direction:column; background:rgba(6,33,26,.55); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
-#lobby-shell .chat:not(.is-collapsed) .messages { flex:1; min-height:0; max-height:none; overflow:auto; background:rgba(4,22,17,.35); }
+html:not(.m-touch) #lobby-shell .chat.is-collapsed { height:40px; box-sizing:border-box; }
+html:not(.m-touch) #lobby-shell .chat:not(.is-collapsed) { position:relative; z-index:20; box-sizing:border-box; height:min(62vh, 560px); margin-top:calc(40px - min(62vh, 560px)); display:flex; flex-direction:column; background:rgba(6,33,26,.55); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+html:not(.m-touch) #lobby-shell .chat:not(.is-collapsed) .messages { flex:1; min-height:0; max-height:none; overflow:auto; background:rgba(4,22,17,.35); }
 
 /* WEB-031 天梯排行榜（橫條卡片：大名次、頭像、名稱＋段位、右邊分數；只參考手遊排行榜的排法，顏色照 Play One） */
 #rank-board { width:min(560px, 94vw); max-height:88vh; padding:0; border:1px solid #e5b86955; border-radius:14px; background:#06211A; color:#f1ead9; display:none; }
@@ -167,3 +167,9 @@ html.m-touch body.lobby-gym #party-stage { inset:40px auto auto 56px !important;
 /* 點擊穿透：網頁本體、主區不攔點擊（點到的就是底下的球館）；上方列、跑馬燈、功能列、面板、視窗、手機把手照常可以點 */
 body.lobby-gym { pointer-events:none; }
 body.lobby-gym > :not(main):not(#lobby-shell), body.lobby-gym #lobby-shell > :not(main), body.lobby-gym dialog { pointer-events:auto; }
+/* 手機：留言板是右邊滑出的抽屜，固定完整一片（不套電腦版的收合／往上長高；2026-11-24 使用者：手機聊天整個往上延伸） */
+html.m-touch #lobby-shell .chat.is-collapsed { display:flex !important; flex-direction:column; padding:12px; }
+html.m-touch #lobby-shell .chat.is-collapsed .chat-heading h2, html.m-touch #lobby-shell .chat.is-collapsed #chat { display:flex !important; }
+html.m-touch #lobby-shell .chat .messages { flex:1; min-height:0; max-height:none !important; overflow:auto; padding:revert; border:revert; background:revert; }
+html.m-touch #lobby-shell .chat.is-collapsed .messages > * { display:revert !important; white-space:normal; }
+html.m-touch #chat-toggle { display:none; }
