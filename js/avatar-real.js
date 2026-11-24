@@ -5,7 +5,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
-import { REAL_HEADS, realRenderLook } from './real-look.js';
+import { REAL_HEADS, REAL_FACES, REAL_HAIRS, headRef, realRenderLook } from './real-look.js';
+import { VROID_MORPHS } from './vroid-morphs.js';
 import { makeToyAvatar, kitOf, OPTIONS as TOY_OPTIONS } from './avatar-toy.js';
 
 const asset = (p) => new URL('../' + p, import.meta.url).href;
@@ -248,50 +249,117 @@ function loadVroid(url) {
   if (VROID[url]) return VROID[url];
   return (VROID[url] = (async () => {
     const g = await new GLTFLoader().loadAsync(asset(url)); const s = g.scene; s.updateMatrixWorld(true);
-    const face = [], groups = new Map(), skinBox = new THREE.Box3();
+    const face = [], groups = new Map(), caps = [], skinBox = new THREE.Box3();
     s.traverse(o => {
       if (!o.isMesh) return; const mn = o.material.name || '';
       if (/^Facebaked/.test(o.name)) {
-        face.push({ geo: o.geometry, mat: o.material, kind: /SKIN/.test(mn) ? 'skin' : /FaceBrow/.test(mn) ? 'brow' : /EyeWhite/.test(mn) ? 'white' : /EyeIris/.test(mn) ? 'iris' : /Highlight/.test(mn) ? 'hl' : 'line' });
+        face.push({ geo: o.geometry, mat: o.material, mn, kind: /SKIN/.test(mn) ? 'skin' : /FaceBrow/.test(mn) ? 'brow' : /EyeWhite/.test(mn) ? 'white' : /EyeIris/.test(mn) ? 'iris' : /Highlight/.test(mn) ? 'hl' : 'line' });
         if (/Face_00_SKIN/.test(mn) && o.geometry.index) { const p = o.geometry.attributes.position, ix = o.geometry.index.array, v = new THREE.Vector3(); for (let k = 0; k < ix.length; k++) skinBox.expandByPoint(v.fromBufferAttribute(p, ix[k])); }
-      } else if (/HAIR/i.test(mn) && o.geometry.index) { const key = o.geometry.attributes.position; let gp = groups.get(key); if (!gp) groups.set(key, gp = { src: o, idx: [] }); gp.idx.push(...o.geometry.index.array); }
+      } else if (/HAIR/i.test(mn) && o.geometry.index) {
+        if (/HairBack/.test(mn)) { caps.push(o); return; }   // 頭皮那層（髮型的底）：混搭時算「後面」
+        const key = o.geometry.attributes.position; let gp = groups.get(key); if (!gp) groups.set(key, gp = { src: o, parts: [] }); gp.parts.push({ mn, idx: [...o.geometry.index.array] });
+      }
     });
-    const hair = [...groups.values()].map(({ src, idx }) => { const hg = new THREE.BufferGeometry(); for (const k of ['position', 'normal', 'uv']) if (src.geometry.attributes[k]) hg.setAttribute(k, src.geometry.attributes[k]); hg.setIndex(idx); return { geo: hg, mat: src.material, mname: src.material.name || '' }; });
+    const mkGeo = (src, idx) => { const hg = new THREE.BufferGeometry(); for (const k of ['position', 'normal', 'uv']) if (src.geometry.attributes[k]) hg.setAttribute(k, src.geometry.attributes[k]); hg.setIndex(idx); return hg; };
+    const hair = [];
+    for (const { src, parts } of groups.values()) for (const p of parts) hair.push({ geo: mkGeo(src, p.idx), mat: src.material, mname: p.mn, idx: p.idx });
+    for (const o of caps) hair.push({ geo: o.geometry, mat: o.material, mname: o.material.name || '', cap: true });
     return { face, hair, skinBox };
   })());
 }
-// 頭放在哪裡（相對頭骨頭）：跟原本的頭一樣大、一樣中心；VRM 0.x 朝 -Z，轉過來
-function headMatrix(T, i, Vd) {
-  if (T.heads[i]) return T.heads[i];
+// 頭髮拆成「前面瀏海」和「後面」：一撮一撮（相連的三角形，位置相同的點當同一點）照重心分；VRoid 頭朝 -Z
+function splitHair(D) {
+  if (D.split) return D.split;
+  const sb = D.skinBox, cz = (sb.min.z + sb.max.z) / 2, dz = sb.max.z - sb.min.z, eyeY = sb.min.y + (sb.max.y - sb.min.y) * 0.42;
+  const front = [], back = [];
+  for (const h of D.hair) {
+    if (h.cap) { back.push(h); continue; }
+    const pos = h.geo.attributes.position, idx = h.idx, n = pos.count, par = new Int32Array(n); for (let k = 0; k < n; k++) par[k] = k;
+    const find = (x) => { while (par[x] !== x) x = par[x] = par[par[x]]; return x; }, uni = (a, b) => { a = find(a); b = find(b); if (a !== b) par[a] = b; };
+    const weld = new Map(); for (let k = 0; k < n; k++) { const key = Math.round(pos.getX(k) * 2e4) + ',' + Math.round(pos.getY(k) * 2e4) + ',' + Math.round(pos.getZ(k) * 2e4); const w = weld.get(key); if (w == null) weld.set(key, k); else uni(k, w); }
+    for (let t = 0; t < idx.length; t += 3) { uni(idx[t], idx[t + 1]); uni(idx[t], idx[t + 2]); }
+    const acc = new Map(); for (let t = 0; t < idx.length; t++) { const k = idx[t], r = find(k); let A = acc.get(r); if (!A) acc.set(r, A = { z: 0, y: 0, c: 0 }); A.z += pos.getZ(k); A.y += pos.getY(k); A.c++; }
+    const isFront = (r) => { const A = acc.get(r), z = A.z / A.c, y = A.y / A.c; return z < cz - dz * HAIR_SPLIT.z && y > eyeY - dz * HAIR_SPLIT.y; };
+    const fi = [], bi = []; for (let t = 0; t < idx.length; t += 3) (isFront(find(idx[t])) ? fi : bi).push(idx[t], idx[t + 1], idx[t + 2]);
+    const mk = (ix) => { const g = new THREE.BufferGeometry(); for (const k of ['position', 'normal', 'uv']) if (h.geo.attributes[k]) g.setAttribute(k, h.geo.attributes[k]); g.setIndex(ix); return { ...h, geo: g, idx: ix }; };
+    if (fi.length) front.push(mk(fi)); if (bi.length) back.push(mk(bi));
+  }
+  return (D.split = { front, back });
+}
+export const HAIR_SPLIT = { z: 0.18, y: 0.1 };   // 瀏海判斷：重心比臉中心前面多少（臉深度的比例）、比眼睛高
+// 頭放在哪裡（相對頭骨頭）：跟原本的頭一樣大、一樣中心；VRM 0.x 朝 -Z，轉過來。混搭時前、後髮各用自己那顆頭的位置
+function headMatrix(T, key, Vd) {
+  if (T.heads[key]) return T.heads[key];
   const mb = T.headBox, sb = Vd.skinBox, s = (mb.max.y - mb.min.y) / (sb.max.y - sb.min.y);
   const cm = mb.getCenter(new THREE.Vector3()), cv = sb.getCenter(new THREE.Vector3());
   const rq = T.root.getWorldQuaternion(new THREE.Quaternion()).multiply(new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), Math.PI));
   const D = new THREE.Matrix4().compose(cm, rq, V(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-cv.x, -cv.y, -cv.z));
   T.B.head.updateMatrixWorld(true);
-  return (T.heads[i] = T.B.head.matrixWorld.clone().invert().multiply(D));
+  return (T.heads[key] = T.B.head.matrixWorld.clone().invert().multiply(D));
+}
+// ---------- 臉型：五官特徵（眼睛大小/形狀/眼距/眼尾、眉毛粗細/眉尾/高低、下巴寬窄），改頂點；同一款臉型只做一次 ----------
+const FACE_GEO = new Map();
+const isEyePart = (f) => f.kind === 'white' || f.kind === 'iris' || f.kind === 'hl' || /Eyeline|Eyelash|EyeExtra/.test(f.mn);
+function faceGeos(D, url, p) {
+  const key = url + JSON.stringify(p || {}); if (FACE_GEO.has(key)) return FACE_GEO.get(key);
+  const out = new Map(); FACE_GEO.set(key, out);
+  if (!p || !['es', 'ew', 'eh', 'eg', 'ey', 'et', 'bh', 'bt', 'by', 'jaw'].some(k => p[k])) return out;
+  const cen = (kind) => { const c = { 1: V(0, 0, 0), '-1': V(0, 0, 0) }, n = { 1: 0, '-1': 0 }, v = new THREE.Vector3(); for (const f of D.face) if (f.kind === kind) { const a = f.geo.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1; c[sd].add(v); n[sd]++; } } for (const sd of [1, -1]) c[sd].multiplyScalar(1 / Math.max(1, n[sd])); return c; };
+  const eyeC = cen('white'), browC = cen('brow'), eyeY = (eyeC[1].y + eyeC[-1].y) / 2, chinY = D.skinBox.min.y;
+  const es = p.es || 1, ew = (p.ew || 1) * es, eh = (p.eh || 1) * es, eg = p.eg || 0, ey = p.ey || 0, et = p.et || 0;
+  const bh = p.bh || 1, bt = p.bt || 0, by = p.by || 0, jaw = p.jaw || 0;
+  // 線性部分（表情形狀的位移量也照同樣變形，眨眼、笑才對得上）
+  const eyeLin = (d, sd) => { d.y += et * sd * d.x; d.x *= ew; d.y *= eh; };
+  const browLin = (d, sd) => { d.y *= bh; d.y += bt * sd * d.x; };
+  const jawK = (y) => { const t = Math.max(0, Math.min(1, (eyeY - 0.012 - y) / (eyeY - 0.012 - chinY))); return 1 + jaw * t * t; };
+  for (const f of D.face) {
+    const eye = isEyePart(f), brow = f.kind === 'brow'; if (!eye && !brow && !jaw) continue;
+    const g = f.geo.clone(), a = f.geo.attributes.position, v = new THREE.Vector3(), d = new THREE.Vector3(), pos = new Float32Array(a.count * 3);
+    for (let k = 0; k < a.count; k++) {
+      v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1;
+      if (eye) { const c = eyeC[sd]; d.copy(v).sub(c); eyeLin(d, sd); v.copy(c).add(d); v.x += sd * eg; v.y += ey; v.z -= Math.max(0, es - 1) * 0.012; }
+      else if (brow) { const c = browC[sd]; d.copy(v).sub(c); browLin(d, sd); v.copy(c).add(d); v.x += sd * eg * 0.6; v.y += by + ey * 0.5; }
+      if (jaw && !brow && !eye) v.x *= jawK(v.y);
+      pos[k * 3] = v.x; pos[k * 3 + 1] = v.y; pos[k * 3 + 2] = v.z;
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const ms = f.geo.morphAttributes.position;
+    if (ms) g.morphAttributes.position = ms.map(m => { const o = new Float32Array(m.count * 3); for (let k = 0; k < m.count; k++) { d.fromBufferAttribute(m, k); const sd = a.getX(k) >= 0 ? 1 : -1; if (eye) eyeLin(d, sd); else if (brow) browLin(d, sd); else d.x *= jawK(a.getY(k)); o[k * 3] = d.x; o[k * 3 + 1] = d.y; o[k * 3 + 2] = d.z; } return new THREE.BufferAttribute(o, 3); });
+    out.set(f, g);
+  }
+  return out;
 }
 const VMAT = (m) => { const t = toon({ map: m.map || null, color: 0xffffff, transparent: !!m.transparent, alphaTest: m.alphaTest || 0, depthWrite: !m.transparent, side: m.side }); if (t.map) t.map.colorSpace = THREE.SRGBColorSpace; return t; };
+// L.vhead＝臉型編號（REAL_FACES）、L.vhair＝髮型編號（REAL_HAIRS）
+const faceOf = (s, i) => REAL_FACES[s][i] || REAL_FACES[s].find(Boolean);
+const hairOf = (s, i) => REAL_HAIRS[s][i] || REAL_HAIRS[s][0];
+const headUrls = (s, L) => { const H = hairOf(s, L.vhair); return [REAL_HEADS[s][faceOf(s, L.vhead).head].url, ...(H.a ? [H.a] : [H.f, H.b]).map(r => headRef(r).url)]; };
 async function attachHead(R, L) {
-  const T = R.T, list = REAL_HEADS[T.s], fi = L.vhead, hi = L.vhair, Hf = list[fi], Hh = list[hi];
-  const [Df, Dh] = await Promise.all([loadVroid(Hf.url), loadVroid(Hh.url)]);
+  const T = R.T, F = faceOf(T.s, L.vhead), Hf = REAL_HEADS[T.s][F.head], H = hairOf(T.s, L.vhair);
+  const heads = (H.a ? [H.a] : [H.f, H.b]).map(headRef);
+  const [Df, ...Dhs] = await Promise.all([loadVroid(Hf.url), ...heads.map(h => loadVroid(h.url))]);
   if (R.dead) return;
-  const mk = (i, D) => { const g = new THREE.Group(); g.matrixAutoUpdate = false; g.matrix.copy(headMatrix(T, i, D)); R.B.head.add(g); return g; };
-  const gf = mk(fi, Df), gh = hi === fi ? gf : mk(hi, Dh);
-  const skinW = new THREE.Color(L.skin), base = new THREE.Color('#F7E2CE');
+  const groups = new Map(), grp = (url, D) => { if (!groups.has(url)) { const g = new THREE.Group(); g.matrixAutoUpdate = false; g.matrix.copy(headMatrix(T, url, D)); R.B.head.add(g); groups.set(url, g); } return groups.get(url); };
+  const gf = grp(Hf.url, Df);
+  const skinW = new THREE.Color(L.skin), base = new THREE.Color('#F7E2CE'), geos = faceGeos(Df, Hf.url, F.p), mo = (F.p && F.p.mo) || {}, MI = VROID_MORPHS[Hf.url.replace(/^.*\/|\.glb$/g, '')] || {};
   for (const f of Df.face) {
-    const m = new THREE.Mesh(f.geo, VMAT(f.mat)); if (f.geo.morphAttributes.position) m.morphTargetInfluences = new Array(f.geo.morphAttributes.position.length).fill(0); m.renderOrder = 10 + ({ skin: 0, white: 1, iris: 2, brow: 3, line: 3, hl: 4 })[f.kind]; m.frustumCulled = false; m.userData.kind = f.kind;
+    const geo = geos.get(f) || f.geo, m = new THREE.Mesh(geo, VMAT(f.mat));
+    if (geo.morphAttributes.position) { m.morphTargetInfluences = new Array(geo.morphAttributes.position.length).fill(0); for (const k in mo) if (MI[k] != null && MI[k] < m.morphTargetInfluences.length) m.morphTargetInfluences[MI[k]] = mo[k]; }
+    m.renderOrder = 10 + ({ skin: 0, white: 1, iris: 2, brow: 3, line: 3, hl: 4 })[f.kind]; m.frustumCulled = false; m.userData.kind = f.kind;
     if (f.kind === 'skin') m.material.color.setRGB(skinW.r / base.r, skinW.g / base.g, skinW.b / base.b);
-    if (f.kind === 'brow') { m.material.map = grayDetail(f.mat.map); m.material.color.set(L.hairC).multiplyScalar(0.9); }
+    if (f.kind === 'brow') { m.material.map = grayDetail(f.mat.map); m.material.color.set(L.browC || L.hairC).multiplyScalar(0.9); }
     if (f.kind === 'iris') { m.material.map = grayDetail(f.mat.map); m.material.color.set(L.eyeC).multiplyScalar(1.6); }
     gf.add(m);
   }
   const hairMat = (mat) => { const t = VMAT(mat); t.map = grayDetail(mat.map); t.color.set(L.hairC); return t; };
-  const addHair = (D, g, wantEars, earsKey) => { for (const h of D.hair) { const ears = !!(earsKey && h.mname.includes(earsKey)); if (ears !== wantEars) continue; const m = new THREE.Mesh(h.geo, hairMat(h.mat)); m.frustumCulled = false; m.castShadow = true; g.add(m); makeOutline(m, 0.0016); } };
-  addHair(Dh, gh, false, Hh.ears);   // 髮型（不含貓耳）
-  if (Hf.ears) addHair(Df, gf, true, Hf.ears);   // 貓耳跟著臉
+  const addList = (list, g, skipEars) => { for (const h of list) { if (skipEars && h.mname.includes(skipEars)) continue; const m = new THREE.Mesh(h.geo, hairMat(h.mat)); m.frustumCulled = false; m.castShadow = true; g.add(m); makeOutline(m, 0.0016); } };
+  let gh;
+  if (H.a) { gh = grp(heads[0].url, Dhs[0]); addList(Dhs[0].hair, gh, heads[0].ears); }   // 整頂（貓耳那片不算頭髮）
+  else { addList(splitHair(Dhs[0]).front, grp(heads[0].url, Dhs[0]), heads[0].ears); gh = grp(heads[1].url, Dhs[1]); addList(splitHair(Dhs[1]).back, gh, heads[1].ears); }
+  if (Hf.ears) addList(Df.hair.filter(h => h.mname.includes(Hf.ears)), gf, null);   // 貓耳跟著臉
   R.headF = gf; R.headH = gh;
-  headAcc(R, L, Df, Dh, gf, gh);
-  patchLit(gf); if (gh !== gf) patchLit(gh);
+  headAcc(R, L, Df, Dhs[Dhs.length - 1], gf, gh, heads[heads.length - 1].ears);
+  for (const g of groups.values()) patchLit(g);
   if (typeof window !== 'undefined' && window.wakeRender) window.wakeRender(300);   // 遊戲只在有變化時重畫：頭比較晚載完，叫它畫一次
 }
 
@@ -338,7 +406,7 @@ function bodyAcc(R, eq) {
 }
 const TAG_GEO = new THREE.CylinderGeometry(0.012, 0.012, 0.0035, 20);
 // 眼鏡掛在臉那款、帽子照頭髮那款的大小（VRoid 自己的座標：朝 -Z）
-function headAcc(R, L, Df, Dh, gf, gh) {
+function headAcc(R, L, Df, Dh, gf, gh, earsKey) {
   const eq = L.eq || {}, v = new THREE.Vector3();
   const iris = Df.face.find(f => f.kind === 'iris'), skin = Df.face.find(f => f.kind === 'skin'); if (!iris || !skin) return;
   const p = iris.geo.attributes.position, Le = V(0, 0, 0), Re = V(0, 0, 0); let nl = 0, nr = 0;
@@ -361,7 +429,7 @@ function headAcc(R, L, Df, Dh, gf, gh) {
   }
   if (eq.hat) {
     skin.geo.computeBoundingBox(); const sb = skin.geo.boundingBox, hb = new THREE.Box3(), cy = (sb.min.y + sb.max.y) / 2;
-    for (const h of Dh.hair) { if (REAL_HEADS[R.T.s][L.vhair].ears && h.mname.includes(REAL_HEADS[R.T.s][L.vhair].ears)) continue; const a = h.geo.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); if (v.y > cy) hb.expandByPoint(v); } }
+    for (const h of Dh.hair) { if (earsKey && h.mname.includes(earsKey)) continue; const a = h.geo.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); if (v.y > cy) hb.expandByPoint(v); } }
     if (hb.isEmpty()) hb.copy(sb);
     const hc = hb.getCenter(new THREE.Vector3()), hs = hb.getSize(new THREE.Vector3()), base = ey + (hb.max.y - ey) * 0.38, ch = (hb.max.y - base) * 0.92;
     const g = new THREE.Group(), m = accM(eq.hat === 1 ? 0x1C1C20 : 0xF2F2F0, { side: THREE.DoubleSide });
@@ -467,7 +535,7 @@ export function driveReal(av, dt) {
   const rootQ = av.root.getWorldQuaternion(new THREE.Quaternion()), spQ = av.spine.getWorldQuaternion(new THREE.Quaternion()), hdQ = av.head.getWorldQuaternion(new THREE.Quaternion());
   // 骨盆＝公仔 root、上身三節從 root 漸漸轉到公仔 spine、脖子在 spine 和頭中間
   const mix = (a, b, f, n) => setWorldQ(B[n], a.clone().slerp(b, f).multiply(T.C[n]));
-  mix(rootQ, spQ, 0, 'pelvis'); mix(rootQ, spQ, 1 / 3, 'spine_01'); mix(rootQ, spQ, 2 / 3, 'spine_02'); mix(rootQ, spQ, 1, 'spine_03');
+  mix(rootQ, spQ, 0.12, 'pelvis'); mix(rootQ, spQ, 0.42, 'spine_01'); mix(rootQ, spQ, 0.72, 'spine_02'); mix(rootQ, spQ, 1, 'spine_03');   /* 骨盆也跟著上身轉一點點（2026-11-25 使用者：側身時髖不可能完全正對前面） */
   mix(spQ, hdQ, 0.5, 'neck_01'); mix(spQ, hdQ, 1, 'head');
   for (const [k, i, n] of MAP) setWorldQ(B[n], av[k][i].getWorldQuaternion(new THREE.Quaternion()).multiply(T.C[n]));
   // 2. 髖的位置：公仔髖（扣掉跳躍）離 av.g 原點的位移照比例放大，再加真的跳躍高度
@@ -501,6 +569,23 @@ export function driveReal(av, dt) {
       const mL = new THREE.Matrix4().makeBasis(Rr.fl, Rr.nl, new THREE.Vector3().crossVectors(Rr.fl, Rr.nl)), mT = new THREE.Matrix4().makeBasis(ft, nt, new THREE.Vector3().crossVectors(ft, nt));
       const want = new THREE.Quaternion().setFromRotationMatrix(mT.multiply(mL.transpose())), cur = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
       setWorldQ(B['hand_' + sd], cur.slerp(want, k));
+    }
+  }
+  // 4a2. 攔網、扣球的手掌朝前（2026-11-25 使用者：攔網兩手掌朝內對著彼此、揮臂手掌朝左；要朝網子／朝球）
+  //   照身體面對的方向（不跟著上身轉）；手臂舉越高越照這個方向，手放下來就照姿勢本身
+  { const face = tk === 'block' ? { l: 1, r: 1 } : tk === 'spike' ? { r: 1 } : null, fw = R.faceW = (R.faceW || 0) + ((face ? 1 : 0) - (R.faceW || 0)) * Math.min(1, dt * 14);
+    if (fw > 0.01 && (face || R.faceLast)) { if (face) R.faceLast = face; const F0 = R.faceLast;
+      const gq2 = av.g.getWorldQuaternion(new THREE.Quaternion());
+      for (const sd of ['l', 'r']) { if (!F0[sd]) continue;
+        const l = wpos(B['hand_' + sd]).sub(wpos(B['lowerarm_' + sd])).normalize(), k = fw * Math.max(0, Math.min(1, (l.y - 0.25) / 0.35));
+        if (k < 0.01) continue;
+        const sx = sd === 'l' ? 1 : -1, f = V(sx * 0.08, 1, 0.12).applyQuaternion(gq2).normalize(), n = V(0, 0.1, 1).applyQuaternion(gq2);
+        const Rr = T.handRest[sd], nt = n.addScaledVector(f, -n.dot(f)).normalize();
+        const mL = new THREE.Matrix4().makeBasis(Rr.fl, Rr.nl, new THREE.Vector3().crossVectors(Rr.fl, Rr.nl)), mT = new THREE.Matrix4().makeBasis(f, nt, new THREE.Vector3().crossVectors(f, nt));
+        const want = new THREE.Quaternion().setFromRotationMatrix(mT.multiply(mL.transpose())), cur = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
+        setWorldQ(B['hand_' + sd], cur.slerp(want, k));
+      }
+      if (!face && fw < 0.02) R.faceLast = null;
     }
   }
   // 4b. 墊球：套使用者確認的定案手型（avatar-real.html 的 bumpPose，存在 assets/models/bump_pose.json：雙手掌心朝上並排、手指交疊、大拇指抬起、手腕靠攏）
@@ -598,8 +683,8 @@ export function realLookOf(look, kitArg) {
 }
 // 先把某個外觀要用的頭下載好（自己的頭在載入畫面就準備好，進場不用等）
 export function preloadHeadsFor(look, kitArg) {
-  const L = realLookOf(look, kitArg), list = REAL_HEADS[L.sx];
-  return Promise.all([list[L.vhead], list[L.vhair]].filter(Boolean).map(h => loadVroid(h.url))).catch(() => {});
+  const L = realLookOf(look, kitArg);
+  return Promise.all(headUrls(L.sx, L).map(loadVroid)).catch(() => {});
 }
 export function attachReal(av, look, kitArg, ds = 1) {
   if (!realReady()) return null;

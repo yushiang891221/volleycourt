@@ -1713,7 +1713,7 @@ function myAvPose() {
   if (walk.air && walk.air.block) return [avBlockPose(walk.blkShift || 0), fast];   // 攔網：雙手跟著滑鼠往左右移
   if (walk.swing) {   // 揮臂：還沒碰到球＝拉弓；碰到之後 0.07 秒是擊球那一下、接著收到身體另一側
     const s2 = walk.swing; if (s2.dump) return [s2.done ? AVP.setPush : AVP.setReady, fast];   // 舉球員吊球：雙手在額頭上方準備、碰到就往外推
-    if (!s2.done) return [walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85), fast];
+    if (!s2.done) { const base = walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85); return [walk.air ? avMix(base, AVP.spikeElbow, Math.min(1, s2.t / 0.14)) : base, fast]; }   /* 按下揮臂到碰到球之間：手肘先往前帶（2026-11-25 使用者：手肘先帶、再依序甩出去） */
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
   if (walk.jserve && !walk.jserve.hit && !walk.air) return [AVP.serveToss, 0.5];

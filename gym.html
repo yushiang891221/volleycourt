@@ -7897,11 +7897,12 @@ const AVP = {
   setPush: { sh: [[-2.98, 0.16], [-2.98, 0.16]], el: [0.18, 0.18], hip: [0.1, 0.06], kn: [0.14, 0.1], hab: [0.06, 0.06], sp: -0.14, tw: 0, arm: 0, gait: 0.4 },   // 舉出去：腿、手一起伸直往上推
   setBack: { sh: [[-3.2, 0.12], [-3.2, 0.12]], el: [0.12, 0.12], hip: [-0.05, -0.05], kn: [0.12, 0.12], sp: -0.48, tw: 0, arm: 0, gait: 0.4 },   // 背舉：上身往後仰
   hold: { sh: [[-0.85, -0.1], [-0.85, -0.1]], el: [1.0, 1.0], hip: [0.03, 0.03], kn: [0.08, 0.08], sp: 0.04, tw: 0, arm: 0 },
-  approach: { sh: [[0.95, 0.18], [0.95, 0.18]], el: [0.12, 0.12], hip: [0.8, 0.45], kn: [1.3, 0.95], hab: [0.1, 0.1], sp: 0.62, tw: 0, arm: 0, gait: 0.8 },   // 助跑最後一步：雙手甩到後面、蹲低
+  approach: { sh: [[1.7, 0.18], [1.7, 0.18]],   /* 2026-11-25 照預覽頁：手往後擺約 100° */ el: [0.12, 0.12], hip: [0.8, 0.45], kn: [1.3, 0.95], hab: [0.1, 0.1], sp: 0.62, tw: 0, arm: 0, gait: 0.8 },   // 助跑最後一步：雙手甩到後面、蹲低
   takeoff: { sh: [[-2.75, 0.22], [-2.75, 0.22]], el: [0.35, 0.35], hip: [0.12, 0.08], kn: [0.22, 0.18], sp: 0.02, tw: 0, arm: 0, gait: 0, shy: [0.07, 0.07] },   // 起跳：雙手從後面往上甩（帶著身體往上）、腿蹬直
-  airUp: { sh: [[-2.6, 0.75], [-2.75, 0.12]], el: [2.15, 0.22], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.42, tw: 0.45, arm: 0, gait: 0 },   // 空中拉弓：身體往後彎成弓、右手肘拉高到耳後、左手指球、小腿往後收
-  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: -0.28, arm: 0, gait: 0, shy: [0.1, 0] },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
-  spikeFollow: { sh: [[-0.4, -0.38], [-0.3, 0.28]], el: [0.4, 1.1], hip: [0.7, 0.5], kn: [1.0, 0.8], sp: 0.55, tw: -0.42, arm: 0, gait: 0.3 },   // 收手：手揮到身體另一側
+  airUp: { sh: [[-2.0, 1.45], [-0.8, 2.1]], el: [1.4, 0.1], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.3, tw: -1.35, head: [-0.12, 1.2], arm: 0, gait: 0 },   /* 頭轉回來看前方的球（上身側身、臉朝網子） */   /* 2026-11-25 照預覽頁與使用者給的參考照：上身側身約 80°（右肩往後）、左手往斜上指著球、右手肘抬到肩膀高、前臂直立、手在頭後上方（不貼頭） */
+  spikeElbow: { sh: [[-2.75, 0.55], [-1.0, 0.7]], el: [2.05, 0.9], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.12, tw: -0.55, head: [-0.1, 0.55], arm: 0, gait: 0 },   // 揮臂第一段：上身轉回一半、手肘先往前上帶、前臂和手還留在頭後（蓄力），碰到球才甩出去   // 空中拉弓：身體往後彎成弓、右手肘拉高到耳後、左手指球、小腿往後收
+  spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: 0.25, head: [0, -0.25],   /* 上身從側身一路轉回來再過頭一點＝甩出去；頭看前方 */ arm: 0, gait: 0, shy: [0.1, 0] },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
+  spikeFollow: { sh: [[-0.4, -0.38], [-0.3, 0.28]], el: [0.4, 1.1], hip: [0.7, 0.5], kn: [1.0, 0.8], sp: 0.55, tw: 0.5, head: [0, -0.45], arm: 0, gait: 0.3 },   /* 2026-11-25 上身繼續往前轉（右肩往前） */   // 收手：手揮到身體另一側
   serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35, arm: 0 },
   blockReady: { sh: [[-2.15, 0.28], [-2.15, 0.28]], el: [1.7, 1.7], hip: [0.35, 0.35], kn: [0.7, 0.7], sp: 0.08, tw: 0, arm: 0 },
   block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, arm: 0, gait: 0, shy: [0.08, 0.08] },   // 攔網：雙手伸直往網子對面上方壓
@@ -7944,7 +7945,7 @@ const AVP = {
   rkSideFollow: { sh: [[-1.5, -0.6], [-0.6, 0.3]], el: [0.6, 0.9], hip: [0.5, 0.5], kn: [0.9, 0.9], sp: 0.3, tw: -0.6, arm: 0 },
 };
 // 會碰到球的姿勢：球靠近時手臂自動伸過去（avTouch）。spike＝右手、set＝雙手、bump＝雙手前臂、block＝雙手
-for (const [k, t] of Object.entries({ setReady: 'set', setPush: 'set', setBack: 'set', bump: 'bump', bumpStand: 'bump', bumpHit: 'bump', airUp: 'spike', spikeHit: 'spike', block: 'block' })) AVP[k].touch = t;
+for (const [k, t] of Object.entries({ setReady: 'set', setPush: 'set', setBack: 'set', bump: 'bump', bumpStand: 'bump', bumpHit: 'bump', airUp: 'spike', spikeElbow: 'spike', spikeHit: 'spike', block: 'block' })) AVP[k].touch = t;
 function avMix(a, b, t) {
   t = clamp(t, 0, 1); const L = (x, y) => x + (y - x) * t, ha = a.hab || [0, 0], hb = b.hab || [0, 0];
   return { sh: [0, 1].map((i) => [L(a.sh[i][0], b.sh[i][0]), L(a.sh[i][1], b.sh[i][1])]), el: [0, 1].map((i) => L(a.el[i], b.el[i])), hip: [0, 1].map((i) => L(a.hip[i], b.hip[i])), kn: [0, 1].map((i) => L(a.kn[i], b.kn[i])), hab: [0, 1].map((i) => L(ha[i], hb[i])), ankle: [0, 1].map(i => L(a.ankle?.[i] || 0, b.ankle?.[i] || 0)), head: [0, 1].map(i => L(a.head?.[i] || 0, b.head?.[i] || 0)), lean: L(a.lean || 0, b.lean || 0), sp: L(a.sp, b.sp), tw: L(a.tw || 0, b.tw || 0), arm: L(a.arm ?? 1, b.arm ?? 1), gait: L(a.gait ?? 1, b.gait ?? 1), shy: [0, 1].map((i) => L((a.shy || [0, 0])[i], (b.shy || [0, 0])[i])), touch: t < 0.5 ? a.touch || b.touch : b.touch || a.touch };
@@ -8283,7 +8284,7 @@ function avPoseOf(code, t = 0.5, ready = false) {
     case 1: return AVP.hold;
     case 2: return t < 0.15 ? AVP.setReady : AVP.setPush;
     case 3: return t < 0.3 ? AVP.bumpHit : avMix(AVP.bumpHit, AVP.bump, (t - 0.3) / 0.5);
-    case 4: return t < 0.12 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.12) / 0.45);   // A3：t＝0 就是碰到球（以前先花 0.18 從舉手揮過來，手臂比球晚約 0.06 秒到）
+    case 4: return t < 0.05 ? avMix(AVP.spikeElbow, AVP.spikeHit, t / 0.05) : t < 0.12 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (t - 0.12) / 0.45);   /* 別人看到的你：手肘先帶一下再甩 */   // A3：t＝0 就是碰到球（以前先花 0.18 從舉手揮過來，手臂比球晚約 0.06 秒到）
     case 5: return t < 0.28 ? AVP.takeoff : avMix(AVP.takeoff, AVP.airUp, (t - 0.28) / 0.4);
     case 13: return AVP.approach;
     case 20: return AVP.setReady;   // 舉球前雙手先舉到額頭上方等球（AI 碰球前擺手，重播也照這個畫）
@@ -12446,7 +12447,7 @@ function myAvPose() {
   if (walk.air && walk.air.block) return [avBlockPose(walk.blkShift || 0), fast];   // 攔網：雙手跟著滑鼠往左右移
   if (walk.swing) {   // 揮臂：還沒碰到球＝拉弓；碰到之後 0.07 秒是擊球那一下、接著收到身體另一側
     const s2 = walk.swing; if (s2.dump) return [s2.done ? AVP.setPush : AVP.setReady, fast];   // 舉球員吊球：雙手在額頭上方準備、碰到就往外推
-    if (!s2.done) return [walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85), fast];
+    if (!s2.done) { const base = walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85); return [walk.air ? avMix(base, AVP.spikeElbow, Math.min(1, s2.t / 0.14)) : base, fast]; }   /* 按下揮臂到碰到球之間：手肘先往前帶（2026-11-25 使用者：手肘先帶、再依序甩出去） */
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
   if (walk.jserve && !walk.jserve.hit && !walk.air) return [AVP.serveToss, 0.5];
