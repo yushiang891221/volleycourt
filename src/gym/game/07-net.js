@@ -751,7 +751,11 @@ function avDrive(av, P, k, sp = 0, air = false) {
   if (F) { av._fd = F.d; av._ff = F.fish; av._ft = F.t != null ? F.t : (av._ft || 0) + dt; }
   const fa = av._fa, fd = av._fd || 0, ft = av._ft || 0;
   const DK = fa > 0.01 ? avDiveKey(fd, ft, av._ff) : null;
-  if (DK) { P = fa > 0.995 ? DK.pose : avMix(P, DK.pose, fa); k = Math.max(k, 0.35); }
+  if (DK) {
+    const P0 = P; P = fa > 0.995 ? DK.pose : avMix(P0, DK.pose, fa); k = Math.max(k, 0.35);
+    // 起身（撲救結束、fa 往 0 退）：腿先收回身體下面，不要上身都起來了腿還照撲出去的樣子往後伸直拖在地上（2026-11-24 使用者：撲救站起來腳被拉成很斜）
+    if (!F && fa < 0.995) { const Lg = avMix(P0, DK.pose, fa * fa); P = { ...P, hip: Lg.hip, kn: Lg.kn, hab: Lg.hab, ankle: Lg.ankle }; }
+  }
   const B = av._b || (av._b = { sh: [[P.sh[0][0], P.sh[0][1]], [P.sh[1][0], P.sh[1][1]]], el: [...P.el], hip: [...P.hip], kn: [...P.kn], hab: [...(P.hab || [0, 0])], shy: [...(P.shy || [0, 0])], sp: P.sp, tw: P.tw || 0, arm: P.arm ?? 1, gait: P.gait ?? 1 });
   const L = (a, b) => a + (b - a) * k;
   for (let i = 0; i < 2; i++) { B.sh[i][0] = L(B.sh[i][0], P.sh[i][0]); B.sh[i][1] = L(B.sh[i][1], P.sh[i][1]); B.el[i] = L(B.el[i], P.el[i]); B.hip[i] = L(B.hip[i], P.hip[i]); B.kn[i] = L(B.kn[i], P.kn[i]); B.hab[i] = L(B.hab[i], (P.hab || [0, 0])[i]); B.shy[i] = L(B.shy[i], (P.shy || [0, 0])[i]); }
@@ -788,7 +792,8 @@ function avDrive(av, P, k, sp = 0, air = false) {
   if (DK) {
     const sg = Math.sign(DK.sn) || 1, dRoll = DK.side ? Math.atan2(Math.sin(DK.roll), Math.cos(DK.roll)) : 0;
     const dx = DK.pitch, dz = DK.side ? -dRoll * sg : 0;   /* 魚躍：身體先轉向撲的方向（下面的 rotation.y），再往前倒 */
-    rx = fa > 0.9 ? dx : av._lean * (1 - fa) + dx * fa; rz = fa > 0.9 ? dz : av._bank * (1 - fa) + dz * fa;
+    const fr = F ? fa : fa * fa;   /* 起身時身體的倒向也先回正（不然身體還倒著、腿就斜斜往後拖在地上） */
+    rx = fr > 0.9 ? dx : av._lean * (1 - fr) + dx * fr; rz = fr > 0.9 ? dz : av._bank * (1 - fr) + dz * fr;
   }
   R.rotation.order = 'YXZ'; R.rotation.set(rx, on * (0.08 + 0.06 * w) * Math.sin(av.gp) * (1 - fa) + (DK && !DK.side ? fd * fa : 0), rz);   // YXZ：先轉向、再前傾／側倒（魚躍往斜前方、遠處撲時整個人轉過去面向球）
   av.spine.rotation.x = B.sp + dipA * 0.6 + 0.1 * w * on + idle * 0.014 * Math.sin(now / 650);   // 跑步上身前傾；站著時呼吸
