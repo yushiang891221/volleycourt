@@ -160,3 +160,6 @@ body.lobby-gym .party-slot { position:static; width:auto; height:auto; }
 body.lobby-gym .party-label { top:0; margin:0; }
 body.lobby-gym .empty-slot button { width:28px; height:28px; }
 body.lobby-gym .stage-hint { display:block; position:static; margin-top:6px; max-width:460px; font-size:11px; color:#e8efe9; background:#06211acc; padding:4px 8px; border-radius:6px; }
+
+/* 2026-11-24 新角色比例修長：手機版自己的站位框加高（從上面名牌下方到底下隊友列上方），人才不會小小的 */
+@media (pointer: coarse), (max-width: 819px) { #party-slots.mobile-party .slot-0 { top:12%; bottom:23%; height:auto; left:18%; width:64%; } #party-slots.mobile-party .slot-0 .party-label { transform:translateY(-100%); } }

@@ -8,9 +8,10 @@
   const body = document.body, $ = (id) => document.getElementById(id);
   const STATES = ['m-show-side', 'm-show-menu', 'm-show-players', 'm-show-chat'], foot = document.querySelector('footer');
   const isOn = (c) => body.classList.contains(c);
-  const open = (cls) => { const on = !isOn(cls); for (const c of STATES) body.classList.remove(c); if (on) body.classList.add(cls); sync(); };
+  let openedAt = 0;
+  const open = (cls) => { const on = !isOn(cls); for (const c of STATES) body.classList.remove(c); if (on) { body.classList.add(cls); openedAt = performance.now(); } sync(); };
   const close = () => { for (const c of STATES) body.classList.remove(c); sync(); };
-  const scrim = document.createElement('div'); scrim.className = 'm-scrim'; scrim.addEventListener('click', close); body.appendChild(scrim);
+  const scrim = document.createElement('div'); scrim.className = 'm-scrim'; scrim.addEventListener('click', () => { if (performance.now() - openedAt > 400) close(); });   /* 真手機：點把手打開後把手會移走，手放開那一下的點擊會落在半透明底上 → 剛打開 0.4 秒內不算（2026-11-24 使用者：功能點了又縮回去） */ body.appendChild(scrim);
 
   // 把手：點一下＝開／關；往 dir 方向拉超過 24 px＝打開，反方向＝收起
   const handle = (cls, extra, label, state, dir) => {

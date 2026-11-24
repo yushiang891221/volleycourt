@@ -121,7 +121,7 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
   // 鏡頭繞著角色轉：左右拖＝繞一圈、上下拖＝從上面／下面看（不會翻過頭頂）
   let lastCode = null, av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
-  const target = new THREE.Vector3(0, 0.78, 0), DIST0 = 3.0; let dist = DIST0;   // 滾輪縮放遠近（1.2～5 公尺）
+  const target = new THREE.Vector3(0, 0.77, 0), DIST0 = 2.8; let dist = DIST0;   /* 新角色比例比較修長（頭小）：鏡頭拉近，人在畫面裡大一點 */   // 滾輪縮放遠近（1.2～5 公尺）
   const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   // 自己腳下的香檳金底座，與角色共用鏡頭。
   const partyHalo = slots ? new THREE.Mesh(new THREE.RingGeometry(.28, .38, 64), new THREE.MeshBasicMaterial({ color: '#E5B869', side: THREE.DoubleSide, transparent: true, opacity: .8 })) : null;
@@ -146,7 +146,7 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
     return true;
   };
   const animate = () => { actRaf = 0; const now = performance.now(); let busy = false; party.forEach((_, i) => { busy = actPose(i, now) || busy; }); draw(); if (busy) actRaf = requestAnimationFrame(animate); };
-  const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); for (const a of party) syncReal(a); if (av) syncReal(av); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
+  const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); for (const a of party) syncReal(a); if (av) syncReal(av); target.y = 0.77 + 0.45 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
     if (!slots) { renderer.render(scene, camera); return; }
     // 同一個 renderer／scene，以 scissor 畫各站位；手機 slots 只回傳自己。
     // 後面的人先畫、前面的人後畫（只清深度不清顏色），前面的人才會擋住後面的人（6 對 6 的 V 字隊形會重疊）
