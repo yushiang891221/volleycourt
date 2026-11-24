@@ -12964,9 +12964,9 @@ function vmBlockTest(b, h) {
     const sd = vmSide(a.team), p = b.m.position, [lx, lz] = vmL(p.x, p.z), [l0] = vmL(p.x - b.v.x * h, p.z - b.v.z * h), plane = sd * 0.1;
     if (!((l0 - plane) * (lx - plane) <= 0 && (lx - l0) * sd > 0)) continue;
     const off = Math.abs(lz - (a.z + (a.bs || 0))), top = a.y + 2.7, netH = NETS[state.net].h;   // 雙手的中心跟著左右移
-    if (off > 0.75 + BALL_R || p.y > top + BALL_R || p.y < netH - 0.05) continue;   // 從手上面過去＝打過手；從旁邊過去＝繞過攔網
+    if (off > 0.45 + BALL_R || p.y > top + BALL_R || p.y < netH - 0.05) continue;   /* 從手上面過去＝打過手；從旁邊過去＝繞過攔網。手寬跟玩家一樣 0.45（2026-11-24 使用者：扣球飛到一半沒人碰卻折一下＝以前 AI 手寬 0.75，球離手很遠也算碰到） */
     const L = vmLv(a), pow = clamp((b.v.length() - 8) / 18, 0, 1), low = clamp((top - p.y) / Math.max(0.3, top - netH), 0, 1);
-    const rr = (VM.c.rot * Math.PI) / 180, kind = vbBlockOutcome(off, low, pow, L.blockSkill);
+    const rr = (VM.c.rot * Math.PI) / 180, kind = vbBlockOutcome(off * 0.75 / 0.45, low, pow, L.blockSkill);
     const word = vbBlockApply(b, kind, lx, lz, a.z + (a.bs || 0), plane, sd, Math.sin(rr), Math.cos(rr), Math.cos(rr), -Math.sin(rr), pow);
     b.blkDone = true;
     vbImpact(b, 'block', (kind === 'stuff' ? 1 : kind === 'through' ? 0.3 : 0.7)); netFxHit(VM.c, lz, sd, 0.4, true); vbBlockFx(p.clone(), word === '碰手了！' ? 'touch' : BLK_FX[kind]);
