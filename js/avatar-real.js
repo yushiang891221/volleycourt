@@ -162,6 +162,13 @@ async function loadTpl(s) {
     aimBone(B, 'upperarm_' + sd, 'lowerarm_' + sd, down); aimBone(B, 'lowerarm_' + sd, 'hand_' + sd, down); aimBone(B, 'hand_' + sd, 'middle_01_' + sd, down);
   }
   root.updateMatrixWorld(true);
+  T.handRest = {};
+  for (const sd of ['l', 'r']) {   // 站姿時手指方向、掌心方向（換算到手骨頭自己的座標），orientHand 用
+    const h = wpos(B['hand_' + sd]), fd = wpos(B['middle_01_' + sd]).sub(h).normalize(), across = wpos(B['index_01_' + sd]).sub(wpos(B['pinky_01_' + sd])).normalize();
+    const n = new THREE.Vector3().crossVectors(fd, across).normalize(); if (n.dot(wpos(B['thumb_02_' + sd]).sub(h)) < 0) n.negate();
+    const qi = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion()).invert(), fl = fd.clone().applyQuaternion(qi).normalize(), nl = n.clone().applyQuaternion(qi); nl.addScaledVector(fl, -nl.dot(fl)).normalize();
+    T.handRest[sd] = { fl, nl };
+  }
   T.C = {}; for (const n of ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'head', ...MAP.map(m => m[2])]) T.C[n] = rqi.clone().multiply(B[n].getWorldQuaternion(new THREE.Quaternion()));
   const hipC = wpos(B.thigh_l).add(wpos(B.thigh_r)).multiplyScalar(0.5);
   T.hip0 = hipC.y;   // 站直時髖（兩個大腿根中間）離地高度
@@ -472,7 +479,7 @@ export function driveReal(av, dt) {
   const cur = wpos(B.thigh_l).add(wpos(B.thigh_r)).multiplyScalar(0.5);
   root.position.add(g.worldToLocal(want.clone()).sub(g.worldToLocal(cur.clone()))); root.updateMatrixWorld(true);
   // 3. 碰球時手對準公仔的手（公仔的手已經對到球上）
-  const tk = av._tk, w = R.ikW = (R.ikW || 0) + ((tk && tk !== 'bump' ? 1 : 0) - (R.ikW || 0)) * Math.min(1, dt * 14);   /* 墊球改用定案手型（下面 4b），不用 IK 拉手 */
+  const tk = av._tk, w = R.ikW = (R.ikW || 0) + ((tk && tk !== 'bump' ? (av._reachW ?? 1) : 0) - (R.ikW || 0)) * Math.min(1, dt * 14);   /* 只在公仔真的伸手對準球時才對準（_reachW，球越近越大） */   /* 墊球改用定案手型（下面 4b），不用 IK 拉手 */
   if (w > 0.02) for (const [i, sd] of [[0, 'r'], [1, 'l']]) {
     const q0 = [B['upperarm_' + sd].quaternion.clone(), B['lowerarm_' + sd].quaternion.clone()], hq = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
     ikArm(B, sd, av.hands[i].getWorldPosition(new THREE.Vector3()), av.elbows[i].getWorldPosition(new THREE.Vector3()));
@@ -482,6 +489,20 @@ export function driveReal(av, dt) {
   // 4. 手指
   const hk = TOUCH_HAND[tk] || 'natural';
   for (const sd of ['l', 'r']) { const qs = T.hands[hk][sd]; FINGER_BONES(sd).forEach((n, j) => B[n].quaternion.copy(qs[j])); }
+  // 4a. 舉球：球推出去（手臂快伸直）時手腕往外翻，跟預覽頁 avatar-real.html 的舉球最後一格一樣（手指朝外上、掌心朝前外）
+  { const sw = R.setW = (R.setW || 0) + ((tk === 'set' ? 1 : 0) - (R.setW || 0)) * Math.min(1, dt * 12);
+    if (sw > 0.01) for (const [i, sd] of [[0, 'r'], [1, 'l']]) {
+      const u = wpos(B['lowerarm_' + sd]).sub(wpos(B['upperarm_' + sd])).normalize(), l = wpos(B['hand_' + sd]).sub(wpos(B['lowerarm_' + sd])).normalize();
+      const k = sw * Math.max(0, Math.min(1, (u.dot(l) - 0.8) / 0.17)) * Math.max(0, Math.min(1, (l.y - 0.4) / 0.3));   // 手臂快伸直、往上推
+      if (k < 0.01) continue;
+      const sx = sd === 'l' ? 1 : -1, sq = av.spine.getWorldQuaternion(new THREE.Quaternion());
+      const f = V(sx * 0.4, 0.85, 0.2).applyQuaternion(sq).normalize(), n = V(sx * 0.55, 0.05, 0.85).applyQuaternion(sq);
+      const Rr = T.handRest[sd], ft = f, nt = n.addScaledVector(ft, -n.dot(ft)).normalize();
+      const mL = new THREE.Matrix4().makeBasis(Rr.fl, Rr.nl, new THREE.Vector3().crossVectors(Rr.fl, Rr.nl)), mT = new THREE.Matrix4().makeBasis(ft, nt, new THREE.Vector3().crossVectors(ft, nt));
+      const want = new THREE.Quaternion().setFromRotationMatrix(mT.multiply(mL.transpose())), cur = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
+      setWorldQ(B['hand_' + sd], cur.slerp(want, k));
+    }
+  }
   // 4b. 墊球：套使用者確認的定案手型（avatar-real.html 的 bumpPose，存在 assets/models/bump_pose.json：雙手掌心朝上並排、手指交疊、大拇指抬起、手腕靠攏）
   //   手型相對上身固定；整個平台繞兩肩連線轉到公仔手的方向（球的高度），兩隻手的相對位置完全不變
   { const bp = BUMP_POSE[T.s], bw = R.bumpW = (R.bumpW || 0) + ((tk === 'bump' && bp ? 1 : 0) - (R.bumpW || 0)) * Math.min(1, dt * 12);

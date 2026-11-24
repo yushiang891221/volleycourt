@@ -821,7 +821,7 @@ function avDrive(av, P, k, sp = 0, air = false) {
     for (const [o, x, y, z] of av._gp || (av._gp = avGroundPts(av))) { GP_V.set(x, y, z); o.localToWorld(GP_V); if (GP_V.y < minY) minY = GP_V.y; }
     if (minY < gy + 0.022) { R.position.y += (gy + 0.022 - minY) / (av.g.scale.y || 1); R.updateMatrixWorld(true); }   // 場地表面比 0 高一點（最多約 2.2 cm）
   }
-  av._tk = P.touch && fa < 0.5 ? P.touch : null; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
+  av._tk = P.touch && fa < 0.5 ? P.touch : null; av._reachW = 0; av._drv = performance.now(); LIVE_AVS.add(av);   /* 擊球瞬間鎖定（touchPass）要知道誰在場上、正在做什麼動作 */
   if (av._tk) avTouch(av, av._tk);
   if (avBodyReach(av, dt) && av._tk) avTouch(av, av._tk, true);   // A2：上身傾過去之後手再對準一次
   avKickApply(av, now);
@@ -902,7 +902,7 @@ function avTouch(av, kind, noBody = false) {
     const d = TCH.Bb.distanceTo(TCH.M); if (d < bd) { bd = d; best = m; TCH.B.copy(TCH.Bb); }
   }
   if (!best) return;
-  if (best.userData.lock) { if (best.userData.lock.av === av && av._bodyKeep && !noBody) av._bodyT = av._bodyKeep; return; }   // 擊球瞬間交給 touchPass（身體維持剛剛傾過去的樣子）
+  if (best.userData.lock) { if (best.userData.lock.av === av) { av._reachW = 1; if (av._bodyKeep && !noBody) av._bodyT = av._bodyKeep; } return; }   // 擊球瞬間交給 touchPass（身體維持剛剛傾過去的樣子）
   // 只迎向「飛過來」的球：停在地上、滾動、慢慢飄走的球手不動（2026-11-18 使用者：球停在地上手會亂甩）
   const hv = best.userData.hv; if (!hv || hv.lengthSq() < 1 || TCH.B.y < 0.5 || hv.dot(TCH.g.copy(TCH.M).sub(TCH.B)) <= 0) return;
   const ex = bd - reach - Rv, band = TCH_CFG[kind].band;
@@ -921,6 +921,7 @@ function avTouch(av, kind, noBody = false) {
     }
   }
   let w = clamp(1 - ex / band, 0, 1); w = w * w * (3 - 2 * w); if (w < 0.01) return;
+  av._reachW = Math.max(av._reachW || 0, w);   /* 新角色（js/avatar-real.js）照這個比重把手對準公仔的手；球不在旁邊時手照姿勢本身擺 */
   avReachTo(av, kind, TCH.B, w);   // 擊球前只動手、不把球拉向手（使用者：像手去黏球）
 }
 // A2（2026-11-19）身體去找球（只改畫面，判定不變）：lean＝上身最多傾幾弧度、dip＝最多蹲低幾公尺
