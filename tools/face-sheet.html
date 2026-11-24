@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>臉 髮 一覽（開發用）</title>
+<body style="margin:0;background:#1d1d1d;color:#eee;font:12px sans-serif">
+<div id="out" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { preloadAvatars, lookFromReal } from '../js/avatar-toy.js';
+import { preloadReal, makePlayer, syncReal, realReadyOf } from '../js/avatar-real.js';
+import * as RL from '../js/real-look.js';
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.AgXToneMapping; R.toneMappingExposure = 1.05;
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#EDE6DA');
+scene.add(new THREE.HemisphereLight('#FFF6EA', '#A98458', 1.5)); const sun = new THREE.DirectionalLight('#FFFFFF', 2.3); sun.position.set(2.5, 6, 4); scene.add(sun); const fill = new THREE.DirectionalLight('#FFE6CC', 0.8); fill.position.set(-3, 2, 3); scene.add(fill);
+const CAMS = { face: [[0, 1.43, 0.75], [0, 1.43, 0]], q: [[0.45, 1.43, 0.6], [0, 1.43, 0]], eye: [[0, 1.447, 0.9], [0, 1.447, 0]], brow: [[0, 1.462, 0.9], [0, 1.462, 0]], head: [[0, 1.47, 1.05], [0, 1.43, 0]], side: [[0.95, 1.47, 0.35], [0, 1.43, 0]], back: [[-0.3, 1.47, -1.0], [0, 1.4, 0]] };
+window.RL = RL;
+// sheet([{label, look:{...real}}], cam, w, h)
+window.sheet = async (items, cam = 'face', w = 220, h = 220) => {
+  await preloadAvatars(); await preloadReal();
+  const out = document.getElementById('out'); out.innerHTML = ''; R.setSize(w, h);
+  const c = new THREE.PerspectiveCamera(cam === 'eye' || cam === 'brow' ? 5.5 : cam === 'face' || cam === 'q' ? 22 : 28, w / h, 0.05, 20); c.position.set(...CAMS[cam][0]); c.lookAt(...CAMS[cam][1]);
+  for (const it of items) {
+    const av = makePlayer(lookFromReal(RL.normReal(it.look)), 'orange'); scene.add(av.g); syncReal(av); await realReadyOf(av); syncReal(av);
+    const hp = new THREE.Vector3(); av.real.B.head.getWorldPosition(hp); const o = CAMS[cam]; const dy = hp.y - 1.43; c.position.set(o[0][0], o[0][1] + dy, o[0][2]); c.lookAt(o[1][0], o[1][1] + dy, o[1][2]); R.render(scene, c); const im = new Image(); im.src = R.domElement.toDataURL(); scene.remove(av.g);
+    const d = document.createElement('div'); d.style.cssText = 'text-align:center'; d.append(im, Object.assign(document.createElement('div'), { textContent: it.label })); out.append(d);
+  }
+  return items.length;
+};
+window.ready = true;
+</script>

@@ -18,7 +18,7 @@ const old = run('saveLook({...DEFAULT_LOOK, hair: 3, num: 87})');
 assert.match(old, /^t2[0-9a-z]{9}\d{2}$/);
 assert.equal(run('needsCreator()'), true);   // 舊公仔外觀：要重新建角色
 const code = run('saveLook(lookFromReal({...REAL_DEFAULT, hair: 2, num: 87}))');
-assert.match(code, /^r1[0-9a-z]{9}\d{2}$/);
+assert.match(code, /^r2[0-9a-z]{12}\d{2}$/);
 assert.equal(storage.get('vb.settings.look'), code);
 assert.equal(run('needsCreator()'), false);
 assert.equal(run('decodeLook(readLook()).num'), 87);

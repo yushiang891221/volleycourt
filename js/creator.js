@@ -6,13 +6,16 @@
 import * as THREE from 'three';
 import { preloadAvatars, KITS, PREVIEW_POSES, applyStaticPose, lookFromReal } from './avatar-toy.js';
 import { preloadReal, makePlayer, syncReal, realReadyOf } from './avatar-real.js';
-import { REAL_OPTIONS, REAL_DEFAULT, faceList, hairList, normReal, randomReal } from './real-look.js';
+import { REAL_OPTIONS, REAL_DEFAULT, faceList, hairList, eyeList, browList, normReal, randomReal } from './real-look.js';
 
 const CATS = [
   { k: 'sex', name: '性別', shot: 'bust' },
   { k: 'face', name: '臉型', shot: 'face' },
+  { k: 'eye', name: '眼型', shot: 'eyes' },
+  { k: 'brow', name: '眉型', shot: 'eyes' },
   { k: 'hair', name: '髮型', shot: 'head' },
   { k: 'hairColor', name: '髮色', swatch: true, shot: 'head', names: ['黑', '深棕', '棕', '淺棕', '金棕', '金', '灰', '紅', '藍', '粉紅'] },
+  { k: 'browColor', name: '眉毛顏色', swatch: true, shot: 'face', names: ['跟髮色', '黑', '深棕', '棕', '淺棕', '金棕', '金', '灰', '紅', '藍', '粉紅'] },
   { k: 'skin', name: '膚色', swatch: true, shot: 'head', names: ['很淺', '淺', '自然', '小麥', '深', '很深', '淺粉', '淺小麥'] },
   { k: 'eyeColor', name: '瞳孔', swatch: true, shot: 'face', names: ['棕', '深棕', '琥珀', '灰', '藍', '綠', '紅', '紫'] },
   { k: 'knee', name: '護膝', shot: 'legs' },
@@ -22,9 +25,10 @@ const CATS = [
   { k: 'preview', name: '預覽', shot: 'full' },
 ];
 const OPTS = { sex: REAL_OPTIONS.sex, knee: REAL_OPTIONS.knee, sock: REAL_OPTIONS.sock };
+const swatchOf = (k, i, L) => REAL_OPTIONS[k][i] || REAL_OPTIONS.hairColor[L.hairColor];   // 眉毛 0＝跟髮色
 // 鏡頭：[相機位置, 看的點]（角色站在原點、面向 +z；新角色縮成約 1.45 公尺高，頭在 1.4）
 const SHOTS = {
-  full: [[0, 1.1, 4.2], [0, 0.85, 0]], head: [[0.45, 1.5, 1.4], [0, 1.43, 0]], face: [[0.12, 1.45, 0.9], [0, 1.44, 0]],
+  full: [[0, 1.1, 4.2], [0, 0.85, 0]], head: [[0.45, 1.5, 1.4], [0, 1.43, 0]], face: [[0.12, 1.45, 0.9], [0, 1.44, 0]], eyes: [[0.04, 1.46, 0.5], [0, 1.45, 0]],
   bust: [[0.5, 1.3, 2.3], [0, 1.2, 0]], torso: [[0.6, 1.05, 2.0], [0, 0.98, 0]], legs: [[0.55, 0.45, 1.6], [0, 0.32, 0]],
   shoe: [[0.55, 0.28, 0.95], [0, 0.07, 0.05]], back: [[-0.4, 1.05, -2.4], [0, 0.95, 0]],
 };
@@ -189,10 +193,10 @@ export function openCreator({ look = null, background = 'assets/img/creator-bg.j
   const set = (k, v) => { L = normReal({ ...L, [k]: v }); rebuild(); drawCats(); drawGrid(); };   /* 換性別時臉型、髮型自動換成那個性別有的 */
   function cellsFor(c) {
     if (c.k === 'preview' || c.k === 'num') return null;
-    const list = c.k === 'face' ? faceList(L.sex) : c.k === 'hair' ? hairList(L.sex) : (c.swatch ? REAL_OPTIONS[c.k] : OPTS[c.k]).map((n, i) => [n, i]);
+    const list = c.k === 'face' ? faceList(L.sex) : c.k === 'hair' ? hairList(L.sex) : c.k === 'eye' ? eyeList() : c.k === 'brow' ? browList() : (c.swatch ? REAL_OPTIONS[c.k] : OPTS[c.k]).map((n, i) => [n, i]);
     return list.map(([label, i]) => {
-      const lk = normReal({ ...L, [c.k]: i });
-      return { i, label: c.swatch ? c.names[i] : label, color: c.swatch ? REAL_OPTIONS[c.k][i] : null, img: c.swatch ? null : () => thumbs.shot(lk, kit, c.shot), off: c.k === 'sockColor' && !L.sock };
+      const lk = normReal({ ...L, [c.k]: i, ...(['face', 'eye', 'brow'].includes(c.k) ? { hair: L.sex ? 5 : 1 } : {}) });   /* 臉、眼、眉的小圖用短平頭拍，瀏海才不會擋住 */
+      return { i, label: c.swatch ? c.names[i] : label, color: c.swatch ? swatchOf(c.k, i, L) : null, img: c.swatch ? null : () => thumbs.shot(lk, kit, c.shot), off: c.k === 'sockColor' && !L.sock };
     });
   }
   function drawCats() {
@@ -201,7 +205,7 @@ export function openCreator({ look = null, background = 'assets/img/creator-bg.j
       const el = document.createElement('div'); el.className = 'cc-cat' + (c.k === cat ? ' on' : '');
       if (c.k === 'num') el.innerHTML = `<div class="ic">${L.num}</div>`;
       else if (c.k === 'preview') el.innerHTML = `<div class="ic">▶</div>`;
-      else if (c.swatch) el.innerHTML = `<div class="ic"><div style="width:30px;height:30px;border-radius:50%;background:${REAL_OPTIONS[c.k][L[c.k]]};box-shadow:inset 0 -4px 8px #0002"></div></div>`;
+      else if (c.swatch) el.innerHTML = `<div class="ic"><div style="width:30px;height:30px;border-radius:50%;background:${swatchOf(c.k, L[c.k], L)};box-shadow:inset 0 -4px 8px #0002"></div></div>`;
       else el.appendChild(img(thumbs.shot(L, kit, c.shot)));
       el.append(c.name); el.onclick = () => { cat = c.k; zoom = 0; drawCats(); drawGrid(); };
       catsEl.appendChild(el);
@@ -211,7 +215,7 @@ export function openCreator({ look = null, background = 'assets/img/creator-bg.j
   const label = (t) => { const s = document.createElement('span'); s.textContent = t; return s; };
   function drawGrid() {
     const c = CATS.find((x) => x.k === cat); gridEl.innerHTML = '';
-    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換動作' : c.k === 'face' ? '臉的五官是固定的，髮型另外選' : c.k === 'sockColor' && !L.sock ? '沒穿襪子' : ''}</small>`;
+    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換動作' : c.k === 'face' ? '臉的形狀：下巴、臉頰、眼距；眼型、眉型另外選' : c.k === 'eye' ? '眼睛的畫法和形狀' : c.k === 'brow' ? '眉毛的形狀，顏色在「眉毛顏色」' : c.k === 'hair' ? '男女髮型都能選'  : c.k === 'sockColor' && !L.sock ? '沒穿襪子' : ''}</small>`;
     if (c.k === 'num') {
       const box = document.createElement('div'); box.className = 'cc-num';
       box.innerHTML = `<div class="big">${L.num}</div><div class="cc-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '清除', 0, '⌫'].map((d) => `<b data-d="${d}">${d}</b>`).join('')}</div><div class="cc-sub">背號 0～99，印在球衣前後</div>`;

@@ -18,7 +18,7 @@ export function cleanNickname(value) {
 }
 
 // 外觀只認新角色的代碼（r1）；帳號裡還是舊公仔代碼（t2）的人要重新建角色
-export const validAppearance = code => typeof code === 'string' && /^r1[0-9a-z]{9}[0-9]{2}$/.test(code);
+export const validAppearance = code => typeof code === 'string' && /^(r1[0-9a-z]{9}|r2[0-9a-z]{12})[0-9]{2}$/.test(code);
 export const profileStep = profile => !profile?.nickname ? 'nickname' : !validAppearance(profile.appearance) ? 'creator' : 'lobby';
 
 // 只補空欄位；已存在的雲端資料永遠優先。快取屬於另一帳號時不可帶入。
@@ -78,10 +78,19 @@ export function createAccountService(client) {
       changes.appearance = patch.appearance;
     }
     if (!Object.keys(changes).length) return read();
-    const { data, error } = await client.from('profiles').update(changes).eq('id', id).select(columns).single();
+    const { data, error } = await updateProfile(id, changes);
     if (error || !data) throw publicError(error);
     profile = data;
     return { ...profile };
+  }
+  // 資料庫還沒執行 supabase/029_face_parts.sql（不收 r2 外觀）時：改存 r1（少眉毛顏色、眼型、眉型），這台電腦還是用完整的 r2
+  async function updateProfile(id, changes) {
+    const res = await client.from('profiles').update(changes).eq('id', id).select(columns).single();
+    if (res.error?.code === '23514' && changes.appearance && realToR1(changes.appearance) !== changes.appearance) {
+      console.warn('[帳號] 資料庫還不收 r2 外觀，先存 r1（請執行 supabase/029_face_parts.sql）');
+      return client.from('profiles').update({ ...changes, appearance: realToR1(changes.appearance) }).eq('id', id).select(columns).single();
+    }
+    return res;
   }
   return {
     read, save,
@@ -103,10 +112,10 @@ export function createAccountService(client) {
       // 暱稱撞名仍保存有效外觀，讓畫面只要求重取暱稱。
       const id = current.id;
       if (await userId() !== id) throw new Error('登入帳號已變更，請重試。');
-      const { data, error } = await client.from('profiles').update(patch).eq('id', id).select(columns).single();
+      const { data, error } = await updateProfile(id, patch);
       if (error?.code === '23505' && patch.nickname) {
         if (patch.appearance) {
-          const result = await client.from('profiles').update({ appearance: patch.appearance }).eq('id', id).select(columns).single();
+          const result = await updateProfile(id, { appearance: patch.appearance });
           if (result.error || !result.data) throw publicError(result.error);
           profile = result.data;
         } else profile = current;
@@ -230,3 +239,5 @@ export async function getAccountService() {
   })().catch(() => { servicePromise = null; throw new Error('登入服務載入失敗，請確認網路後重試。'); });
   return servicePromise;
 }
+// r2 → r1（跟 js/real-look.js 的 realToR1 一樣；這個檔案檢查時會單獨載入，不能 import 別的檔）
+function realToR1(code) { return typeof code === 'string' && /^r2[0-9a-z]{12}\d{2}$/.test(code) ? 'r1' + code.slice(2, 11) + code.slice(14, 16) : code; }

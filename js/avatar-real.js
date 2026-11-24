@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
-import { REAL_HEADS, REAL_FACES, REAL_HAIRS, headRef, realRenderLook } from './real-look.js';
+import { REAL_HEADS, REAL_FACES, REAL_HAIRS, REAL_EYES, REAL_BROWS, headRef, realRenderLook } from './real-look.js';
 import { VROID_MORPHS } from './vroid-morphs.js';
 import { makeToyAvatar, kitOf, OPTIONS as TOY_OPTIONS } from './avatar-toy.js';
 
@@ -297,56 +297,85 @@ function headMatrix(T, key, Vd) {
   T.B.head.updateMatrixWorld(true);
   return (T.heads[key] = T.B.head.matrixWorld.clone().invert().multiply(D));
 }
-// ---------- 臉型：五官特徵（眼睛大小/形狀/眼距/眼尾、眉毛粗細/眉尾/高低、下巴寬窄），改頂點；同一款臉型只做一次 ----------
+// ---------- 臉：臉型（臉那顆頭的皮膚＋嘴，改下巴/臉頰/眼距）＋眼型（任一顆頭的眼睛）＋眉型（任一顆頭的眉毛） ----------
+// 別顆頭的眼睛、眉毛：先照兩顆頭的大小換算到臉那顆頭的座標，再把左右各自的中心對準臉那顆頭原本眼睛／眉毛的位置
 const FACE_GEO = new Map();
-const isEyePart = (f) => f.kind === 'white' || f.kind === 'iris' || f.kind === 'hl' || /Eyeline|Eyelash|EyeExtra/.test(f.mn);
-function faceGeos(D, url, p) {
-  const key = url + JSON.stringify(p || {}); if (FACE_GEO.has(key)) return FACE_GEO.get(key);
-  const out = new Map(); FACE_GEO.set(key, out);
-  if (!p || !['es', 'ew', 'eh', 'eg', 'ey', 'et', 'bh', 'bt', 'by', 'jaw'].some(k => p[k])) return out;
-  const cen = (kind) => { const c = { 1: V(0, 0, 0), '-1': V(0, 0, 0) }, n = { 1: 0, '-1': 0 }, v = new THREE.Vector3(); for (const f of D.face) if (f.kind === kind) { const a = f.geo.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1; c[sd].add(v); n[sd]++; } } for (const sd of [1, -1]) c[sd].multiplyScalar(1 / Math.max(1, n[sd])); return c; };
-  const eyeC = cen('white'), browC = cen('brow'), eyeY = (eyeC[1].y + eyeC[-1].y) / 2, chinY = D.skinBox.min.y;
-  const es = p.es || 1, ew = (p.ew || 1) * es, eh = (p.eh || 1) * es, eg = p.eg || 0, ey = p.ey || 0, et = p.et || 0;
-  const bh = p.bh || 1, bt = p.bt || 0, by = p.by || 0, jaw = p.jaw || 0;
-  // 線性部分（表情形狀的位移量也照同樣變形，眨眼、笑才對得上）
-  const eyeLin = (d, sd) => { d.y += et * sd * d.x; d.x *= ew; d.y *= eh; };
-  const browLin = (d, sd) => { d.y *= bh; d.y += bt * sd * d.x; };
-  const jawK = (y) => { const t = Math.max(0, Math.min(1, (eyeY - 0.012 - y) / (eyeY - 0.012 - chinY))); return 1 + jaw * t * t; };
-  for (const f of D.face) {
-    const eye = isEyePart(f), brow = f.kind === 'brow'; if (!eye && !brow && !jaw) continue;
-    const g = f.geo.clone(), a = f.geo.attributes.position, v = new THREE.Vector3(), d = new THREE.Vector3(), pos = new Float32Array(a.count * 3);
-    for (let k = 0; k < a.count; k++) {
-      v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1;
-      if (eye) { const c = eyeC[sd]; d.copy(v).sub(c); eyeLin(d, sd); v.copy(c).add(d); v.x += sd * eg; v.y += ey; v.z -= Math.max(0, es - 1) * 0.012; }
-      else if (brow) { const c = browC[sd]; d.copy(v).sub(c); browLin(d, sd); v.copy(c).add(d); v.x += sd * eg * 0.6; v.y += by + ey * 0.5; }
-      if (jaw && !brow && !eye) v.x *= jawK(v.y);
-      pos[k * 3] = v.x; pos[k * 3 + 1] = v.y; pos[k * 3 + 2] = v.z;
-    }
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const ms = f.geo.morphAttributes.position;
-    if (ms) g.morphAttributes.position = ms.map(m => { const o = new Float32Array(m.count * 3); for (let k = 0; k < m.count; k++) { d.fromBufferAttribute(m, k); const sd = a.getX(k) >= 0 ? 1 : -1; if (eye) eyeLin(d, sd); else if (brow) browLin(d, sd); else d.x *= jawK(a.getY(k)); o[k * 3] = d.x; o[k * 3 + 1] = d.y; o[k * 3 + 2] = d.z; } return new THREE.BufferAttribute(o, 3); });
-    out.set(f, g);
+export let FACE_OUTLINE = 0.0012; export const setFaceOutline = (w) => (FACE_OUTLINE = w);
+const isEyePart = (f) => f.kind === 'white' || f.kind === 'iris' || f.kind === 'hl' || /Eyeline|Eyelash/.test(f.mn);
+const isHiddenPart = (f) => /EyeExtra/.test(f.mn);   // 特效（愛心眼、眼淚…）平常是收起來的，不畫
+function sideCenters(parts, pick) {
+  const c = { 1: V(0, 0, 0), '-1': V(0, 0, 0) }, n = { 1: 0, '-1': 0 }, v = new THREE.Vector3();
+  for (const f of parts) if (pick(f)) { const a = f.geo.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1; c[sd].add(v); n[sd]++; } }
+  for (const sd of [1, -1]) c[sd].multiplyScalar(1 / Math.max(1, n[sd])); return c;
+}
+const PART_KEYS = { face: ['jaw', 'chin', 'cheek', 'eg', 'ey'], eye: ['es', 'ew', 'eh', 'et'], brow: ['bh', 'bl', 'bt', 'by'] };
+// 回傳 [{ f, geo, src }]：要畫的臉部零件（幾何已變形好），同一組合只算一次
+function buildFace(Df, De, Db, key, P) {
+  if (FACE_GEO.has(key)) return FACE_GEO.get(key);
+  const fp = P.face || {}, ep = P.eye || {}, bp = P.brow || {}, out = [];
+  const eyeF = sideCenters(Df.face, f => f.kind === 'white'), browF = sideCenters(Df.face, f => f.kind === 'brow');
+  const eyeY = (eyeF[1].y + eyeF[-1].y) / 2, sb = Df.skinBox, chinY = sb.min.y, mouthY = eyeY - (eyeY - chinY) * 0.62;
+  const scaleOf = (D) => (sb.max.y - sb.min.y) / (D.skinBox.max.y - D.skinBox.min.y);
+  const toF = (D) => { const s = scaleOf(D), cs = D.skinBox.getCenter(new THREE.Vector3()), cf = sb.getCenter(new THREE.Vector3()); return (v) => v.sub(cs).multiplyScalar(s).add(cf); };
+  const jaw = fp.jaw || 0, chin = fp.chin || 0, cheek = fp.cheek || 0, eg = fp.eg || 0, ey = fp.ey || 0;
+  // 臉的皮膚：眼睛以下越往下越照 jaw 變寬窄、嘴巴以下照 chin 拉長縮短、眼睛到嘴巴之間照 cheek 變寬
+  const skinMove = (v) => {
+    const t = Math.max(0, Math.min(1, (eyeY - 0.01 - v.y) / (eyeY - 0.01 - chinY)));
+    const cm = Math.max(0, Math.min(1, (eyeY + 0.01 - v.y) / 0.03)) * Math.max(0, Math.min(1, (v.y - mouthY + 0.02) / 0.03));
+    v.x *= 1 + jaw * t * t + cheek * cm;
+    if (v.y < mouthY) v.y = mouthY - (mouthY - v.y) * (1 + chin);
+  };
+  for (const f of Df.face) {
+    if (isEyePart(f) || f.kind === 'brow' || isHiddenPart(f)) continue;
+    if (!jaw && !chin && !cheek) { out.push({ f, geo: f.geo, D: Df }); continue; }
+    const g = f.geo.clone(), a = f.geo.attributes.position, v = new THREE.Vector3(), pos = new Float32Array(a.count * 3);
+    for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); skinMove(v); pos[k * 3] = v.x; pos[k * 3 + 1] = v.y; pos[k * 3 + 2] = v.z; }
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.morphAttributes = {}; g.computeBoundingSphere(); out.push({ f, geo: g, D: Df });
   }
-  return out;
+  // 眼睛、眉毛：換算座標 → 對準 → 形狀
+  const parts = (D, pick, target, lin, after, morphs) => {
+    const map = toF(D), list = D.face.filter(pick), src = sideCenters(list, () => true), off = {};
+    for (const sd of [1, -1]) off[sd] = target[sd].clone().sub(map(src[sd].clone()));
+    const cen = { 1: target[1], '-1': target[-1] }, s = scaleOf(D);
+    for (const f of list) {
+      const g = f.geo.clone(), a = f.geo.attributes.position, v = new THREE.Vector3(), d = new THREE.Vector3(), pos = new Float32Array(a.count * 3);
+      for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); const sd = v.x >= 0 ? 1 : -1; map(v).add(off[sd]); d.copy(v).sub(cen[sd]); lin(d, sd); v.copy(cen[sd]).add(d); after(v, sd); pos[k * 3] = v.x; pos[k * 3 + 1] = v.y; pos[k * 3 + 2] = v.z; }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const ms = f.geo.morphAttributes.position;
+      if (morphs && ms) g.morphAttributes.position = ms.map(m => { const o = new Float32Array(m.count * 3); for (let k = 0; k < m.count; k++) { d.fromBufferAttribute(m, k).multiplyScalar(s); lin(d, a.getX(k) >= 0 ? 1 : -1); o[k * 3] = d.x; o[k * 3 + 1] = d.y; o[k * 3 + 2] = d.z; } return new THREE.BufferAttribute(o, 3); });
+      else g.morphAttributes = {};
+      g.computeBoundingSphere(); out.push({ f, geo: g, D });
+    }
+  };
+  const es = ep.es || 1, ew = (ep.ew || 1) * es, eh = (ep.eh || 1) * es, et = ep.et || 0;
+  parts(De, isEyePart, eyeF, (d, sd) => { d.y += et * sd * d.x; d.x *= ew; d.y *= eh; }, (v, sd) => { v.x += sd * eg; v.y += ey; v.z -= Math.max(0, es - 1) * 0.012 + 0.0008; }, false);
+  const bh = bp.bh || 1, bl = bp.bl || 1, bt = bp.bt || 0, by = bp.by || 0;
+  parts(Db, f => f.kind === 'brow', browF, (d, sd) => { d.x *= bl; d.y *= bh; d.y += bt * sd * d.x; }, (v, sd) => { v.x += sd * eg * 0.6; v.y += by + ey * 0.6; v.z -= 0.0008; }, true);
+  FACE_GEO.set(key, out); return out;
 }
 const VMAT = (m) => { const t = toon({ map: m.map || null, color: 0xffffff, transparent: !!m.transparent, alphaTest: m.alphaTest || 0, depthWrite: !m.transparent, side: m.side }); if (t.map) t.map.colorSpace = THREE.SRGBColorSpace; return t; };
-// L.vhead＝臉型編號（REAL_FACES）、L.vhair＝髮型編號（REAL_HAIRS）
+// L.vhead 臉型（REAL_FACES）、L.vhair 髮型（REAL_HAIRS）、L.veye 眼型（REAL_EYES）、L.vbrow 眉型（REAL_BROWS）
 const faceOf = (s, i) => REAL_FACES[s][i] || REAL_FACES[s].find(Boolean);
 const hairOf = (s, i) => REAL_HAIRS[s][i] || REAL_HAIRS[s][0];
-const headUrls = (s, L) => { const H = hairOf(s, L.vhair); return [REAL_HEADS[s][faceOf(s, L.vhead).head].url, ...(H.a ? [H.a] : [H.f, H.b]).map(r => headRef(r).url)]; };
+function headSet(s, L) {
+  const F = faceOf(s, L.vhead), Hf = REAL_HEADS[s][F.head], E = REAL_EYES[L.veye | 0] || REAL_EYES[0], Bw = REAL_BROWS[L.vbrow | 0] || REAL_BROWS[0], H = hairOf(s, L.vhair);
+  return { F, Hf, E, Bw, H, He: E.src ? headRef(E.src) : Hf, Hb: Bw.src ? headRef(Bw.src) : Hf, hairHeads: (H.a ? [H.a] : [H.f, H.b]).map(headRef) };
+}
+const headUrls = (s, L) => { const S = headSet(s, L); return [S.Hf, S.He, S.Hb, ...S.hairHeads].map(h => h.url); };
 async function attachHead(R, L) {
-  const T = R.T, F = faceOf(T.s, L.vhead), Hf = REAL_HEADS[T.s][F.head], H = hairOf(T.s, L.vhair);
-  const heads = (H.a ? [H.a] : [H.f, H.b]).map(headRef);
-  const [Df, ...Dhs] = await Promise.all([loadVroid(Hf.url), ...heads.map(h => loadVroid(h.url))]);
+  const T = R.T, S = headSet(T.s, L), { F, Hf, E, Bw, H } = S, heads = S.hairHeads;
+  const [Df, De, Db, ...Dhs] = await Promise.all([Hf, S.He, S.Hb, ...heads].map(h => loadVroid(h.url)));
   if (R.dead) return;
   const groups = new Map(), grp = (url, D) => { if (!groups.has(url)) { const g = new THREE.Group(); g.matrixAutoUpdate = false; g.matrix.copy(headMatrix(T, url, D)); R.B.head.add(g); groups.set(url, g); } return groups.get(url); };
   const gf = grp(Hf.url, Df);
-  const skinW = new THREE.Color(L.skin), base = new THREE.Color('#F7E2CE'), geos = faceGeos(Df, Hf.url, F.p), mo = (F.p && F.p.mo) || {}, MI = VROID_MORPHS[Hf.url.replace(/^.*\/|\.glb$/g, '')] || {};
-  for (const f of Df.face) {
-    const geo = geos.get(f) || f.geo, m = new THREE.Mesh(geo, VMAT(f.mat));
-    if (geo.morphAttributes.position) { m.morphTargetInfluences = new Array(geo.morphAttributes.position.length).fill(0); for (const k in mo) if (MI[k] != null && MI[k] < m.morphTargetInfluences.length) m.morphTargetInfluences[MI[k]] = mo[k]; }
+  const skinW = new THREE.Color(L.skin), base = new THREE.Color('#F7E2CE');
+  const pieces = buildFace(Df, De, Db, [Hf.url, S.He.url, S.Hb.url, JSON.stringify([F.p, E.p, Bw.p])].join('|'), { face: F.p, eye: E.p, brow: Bw.p });
+  const mo = Bw.mo || {}, MI = VROID_MORPHS[S.Hb.url.replace(/^.*\/|\.glb$/g, '')] || {};
+  for (const { f, geo } of pieces) {
+    const m = new THREE.Mesh(geo, VMAT(f.mat));
+    if (f.kind === 'brow' && geo.morphAttributes.position) { m.morphTargetInfluences = new Array(geo.morphAttributes.position.length).fill(0); for (const k in mo) if (MI[k] != null && MI[k] < m.morphTargetInfluences.length) m.morphTargetInfluences[MI[k]] = mo[k]; }
     m.renderOrder = 10 + ({ skin: 0, white: 1, iris: 2, brow: 3, line: 3, hl: 4 })[f.kind]; m.frustumCulled = false; m.userData.kind = f.kind;
-    if (f.kind === 'skin') m.material.color.setRGB(skinW.r / base.r, skinW.g / base.g, skinW.b / base.b);
+    if (f.kind === 'skin') { m.material.color.setRGB(skinW.r / base.r, skinW.g / base.g, skinW.b / base.b); if (FACE_OUTLINE) { gf.add(m); makeOutline(m, FACE_OUTLINE); continue; } }   /* 臉的外框線：下巴形狀看得出來 */
     if (f.kind === 'brow') { m.material.map = grayDetail(f.mat.map); m.material.color.set(L.browC || L.hairC).multiplyScalar(0.9); }
     if (f.kind === 'iris') { m.material.map = grayDetail(f.mat.map); m.material.color.set(L.eyeC).multiplyScalar(1.6); }
     gf.add(m);

@@ -14,7 +14,7 @@ export function saveLook(look) {
   return code;
 }
 // 2026-11-24 起換新角色：存的外觀不是新代碼（r1，舊的公仔是 t2）就要重新建角色
-export const needsCreator = () => !/^r1[0-9a-z]{9}\d{2}$/.test(readLook() || '');
+export const needsCreator = () => !/^(r1[0-9a-z]{9}|r2[0-9a-z]{12})\d{2}$/.test(readLook() || '');
 // 裝備（帽子、眼鏡、項鍊、護腕）：先存在這台電腦；護膝還是外觀的一部分
 export const EQUIP_KEY = 'vb.settings.equip';
 export function readEquip() { try { return decodeEquip(localStorage.getItem(EQUIP_KEY) || '') || {}; } catch { return {}; } }

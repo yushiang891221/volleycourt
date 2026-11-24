@@ -1,6 +1,7 @@
 // 登入閘門與帳號同步。
 // 流程：開始遊戲 → 沒登入顯示 Google 登入 → 登入後把本機暱稱／外觀帶進帳號 → 沒暱稱先取暱稱 → 沒外觀進捏臉 → 大廳
 import { getAccountService, authMode, cleanNickname } from './auth.js';
+import { realToR1 } from './real-look.js';
 import { readLook, saveLook, normalizeLook, readMyJerseys, saveMyJerseys, MY_JERSEYS_KEY, MY_JERSEY_MAX, readTeamWear, wearTeamJersey } from './appearance.js';
 import { decodeJersey } from './jersey.js';
 import { decodeLook } from './avatar-toy.js';
@@ -90,7 +91,7 @@ export async function accountGate() {
       if (!profile.nickname) await nicknameScreen(r.nicknameConflict ? '這個暱稱已有人使用，請換一個。' : '');
       else cacheNickname(profile.nickname);
       // 外觀：帳號有就用帳號的（覆蓋本機），沒有就讓 intro 開捏臉畫面
-      if (profile.appearance) saveLook(decodeLook(profile.appearance));
+      if (profile.appearance && !(realToR1(readLook()) === profile.appearance && readLook() !== profile.appearance)) saveLook(decodeLook(profile.appearance));   // 帳號只存得下 r1（還沒執行 029 SQL）時，這台電腦保留完整的 r2
       else if (owner && owner !== uid) store.del('vb.settings.look');
       watchNickname();
       await syncTeamWear();   // 球隊球衣 T3：照帳號裡「穿球隊第幾件」更新這台電腦（個人設計的球衣已經拿掉，不再同步）

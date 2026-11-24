@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { decodeJersey, normalizeJersey, encodeJersey, jerseyColors, drawJerseyTorso, ensureJerseyFonts, jerseyFontsReady, CUT_TOP } from './jersey.js';
-import { decodeReal, encodeReal, REAL_CODE_RE } from './real-look.js';
+import { decodeReal, encodeReal, REAL_CODE_RE, realBaseLen } from './real-look.js';
 
 export const OPTIONS = {
   sex: ['男', '女'],
@@ -37,7 +37,7 @@ export function encodeLook(L) {
   return 't2' + KEYS.map((k) => L[k].toString(36)).join('') + String(L.num).padStart(2, '0') + equipSuffix(eq);
 }
 export function decodeLook(code) {
-  if (typeof code === 'string' && REAL_CODE_RE.test(code)) return lookFromReal(decodeReal(code.slice(0, 13)), decodeEquip(code.slice(14)));
+  if (typeof code === 'string' && REAL_CODE_RE.test(code)) { const n = realBaseLen(code); return lookFromReal(decodeReal(code.slice(0, n)), decodeEquip(code.slice(n + 1))); }
   if (typeof code !== 'string' || !/^t2[0-9a-z]{9}\d{2}(~e[0-9a-z]{4})?$/.test(code)) return { ...DEFAULT_LOOK };
   const L = {}; KEYS.forEach((k, i) => (L[k] = parseInt(code[2 + i], 36))); L.num = +code.slice(11, 13);
   const o = normLook(L), eq = decodeEquip(code.slice(14)); if (eq) o.eq = eq;
