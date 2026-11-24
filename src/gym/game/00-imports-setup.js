@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook, kitOf, OPTIONS as LOOK_OPTIONS } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey, readWornJersey } from './js/appearance.js';
-import { preloadReal, attachReal, driveReal } from './js/avatar-real.js';   // 新角色（寫實身體＋VRoid 日系頭）
+import { preloadReal, attachReal, driveReal, setRealObstacles } from './js/avatar-real.js';   // 新角色（寫實身體＋VRoid 日系頭）
 import { decodeJersey, CUT_TOP } from './js/jersey.js';
 import { pickServer } from './js/servers.js';   // 選伺服器：房間連哪一台   // 個人球衣 J4：別人送來的球衣代碼
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤

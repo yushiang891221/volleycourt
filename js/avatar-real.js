@@ -486,8 +486,28 @@ export function driveReal(av, dt) {
   if (jy < 0.03) R.offY = R.offY == null || need > R.offY ? need : R.offY + (need - R.offY) * Math.min(1, dt * 20);   /* 穿進地板：馬上推上來；往下貼回地面才慢慢來 */
   else R.offY = Math.max(R.offY ?? 0, need);   // 空中：維持起跳前的差，但不穿進地板
   root.position.y += R.offY / gs; root.updateMatrixWorld(true);
+  if (OBST) netPush(R, g, ds);
   // 6. 衣服下擺、項鍊的慣性
   clothStep(R, dt); neckStep(R, dt);
+}
+// 網子：遊戲擋人只看站的那一點離網多遠（照以前的小公仔設的）；新角色比較高大、跑步前傾手往前擺會伸進網子 →
+//   網子上緣以下，身上任何部位離網面不到 6 cm 就把整個人往自己那側挪（只動畫面，判定不變）。setRealObstacles(() => [[x1, z1, x2, z2, 上緣高], …])
+let OBST = null;
+export function setRealObstacles(fn) { OBST = fn; }
+const NET_PTS = [['head', 0.14], ['neck_01', 0.08], ['spine_03', 0.14], ['spine_01', 0.13], ['pelvis', 0.13], ['middle_03_l', 0.02], ['middle_03_r', 0.02], ['hand_l', 0.04], ['hand_r', 0.04], ['lowerarm_l', 0.045], ['lowerarm_r', 0.045], ['upperarm_l', 0.06], ['upperarm_r', 0.06], ['calf_l', 0.07], ['calf_r', 0.07], ['foot_l', 0.06], ['foot_r', 0.06], ['ball_l', 0.05], ['ball_r', 0.05]];
+function netPush(R, g, ds) {
+  let segs; try { segs = OBST(); } catch (_) { return; } if (!segs || !segs.length) return;
+  const B = R.B, pel = wpos(B.pelvis);
+  for (const [x1, z1, x2, z2, top] of segs) {
+    const dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
+    const along = ((pel.x - x1) * dx + (pel.z - z1) * dz) / L; if (along < -0.6 || along > L + 0.6) continue;
+    const sp = (pel.x - x1) * nx + (pel.z - z1) * nz; if (Math.abs(sp) > 1.8) continue;
+    const sg = Math.sign(sp) || 1; let need = 0;
+    for (const [n, r] of NET_PTS) { const b = B[n]; if (!b) continue; const p = wpos(b, V2); if (p.y - r * ds > top) continue; const sd = ((p.x - x1) * nx + (p.z - z1) * nz) * sg; need = Math.max(need, 0.06 + r * ds - sd); }
+    if (need <= 0) continue;
+    const a = g.worldToLocal(pel.clone()), b2 = g.worldToLocal(pel.clone().add(V1.set(nx * sg * need, 0, nz * sg * need)));
+    R.root.position.add(b2.sub(a)); R.root.updateMatrixWorld(true);
+  }
 }
 const CLOTH = { k: 140, c: 9, gain: 0.3, max: 0.022 };
 function clothStep(R, dt) {

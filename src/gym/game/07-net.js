@@ -574,6 +574,8 @@ function makeAvatar(color, ch, team = -1, tj = null) {   // tj＝球隊球衣（
   if (REAL_ON && attachReal(av, look, kitArg, 1)) REAL_AVS.add(av);   // 新角色：公仔照舊在算（看不見），新角色每一格跟著它擺姿勢（js/avatar-real.js）
   return av;
 }
+// 新角色不要伸進排球網（只動畫面）：每面排球場的網子（場地中線、左右各 5.5 m、上緣 2.43 m）
+setRealObstacles(() => state ? state.items.filter((it) => { const def = CAT[it.type]; return def && def.court && (it.mode === 'lines' ? def.court : it.use || def.court) === 'vb' && !STOW.has(it.id); }).map((it) => [...toWorldOf(it, 0, -5.5), ...toWorldOf(it, 0, 5.5), 2.43]) : []);
 // 畫面要畫之前：場上看得到的新角色都跟著自己的公仔擺好
 function realSync() {
   if (!REAL_ON) return; const now = performance.now();
