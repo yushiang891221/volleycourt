@@ -7062,6 +7062,7 @@ function startServe(type = 'std') {
 }
 // ---- 跳發／跳飄：拿著球按空白鍵＝拋球（往前上方拋高），自動跑兩步起跳；在空中按左鍵＝跳發（重、上旋下墜）、右鍵＝跳飄（不轉、會飄）
 //      球最好打的時候：你跳到最高點、球剛好掉到手的高度（球會發亮）；拋了沒打到＝發球失誤
+const JS_REL = 0.32, JS_GO = 0.62, JS_UP = 1.05;   // 跳發：球出手、開始助跑、起跳的時間（秒）
 function startJumpServe() {
   if (walk.emote?.keyframes) return;
   if (walk.serve || walk.jserve || walk.air || walk.sit || !walk.hold) return;
@@ -7072,28 +7073,33 @@ function startJumpServe() {
   const ball = walk.hold; walk.hold = null; ball.position.copy(p); ball.material = ballMat; ball.visible = true; delete ball.userData.noPick; ballsGroup.add(ball);
   const fwd = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
   // 先算好：助跑多遠（比賽中遇到底線就提早停）、0.72 秒起跳、跳到最高點時手在哪；把球拋到那個時間、那個位置
-  let appr = 0.9; const zs = VM.on ? vbServeSide() : null;
-  if (zs) { const [lx0] = toLocalOf(zs.c, walk.x, walk.z), [lx1] = toLocalOf(zs.c, walk.x + fwd.x, walk.z + fwd.z), dl = (lx1 - lx0) * zs.sg; if (dl < -0.05) appr = clamp((lx0 * zs.sg - 9.12) / -dl, 0, 0.9); }
-  const VY = 3.7, tA = 0.72 + VY / JUMP_G, drift = 0.55 * (VY / JUMP_G), fx = fwd.x, fz = fwd.z, ox = walk.x + fx * (appr + drift), oz = walk.z + fz * (appr + drift);
+  let appr = 1.15; const zs = VM.on ? vbServeSide() : null;
+  if (zs) { const [lx0] = toLocalOf(zs.c, walk.x, walk.z), [lx1] = toLocalOf(zs.c, walk.x + fwd.x, walk.z + fwd.z), dl = (lx1 - lx0) * zs.sg; if (dl < -0.05) appr = clamp((lx0 * zs.sg - 9.12) / -dl, 0, 1.15); }
+  const VY = 3.7, tA = JS_UP + VY / JUMP_G, drift = 0.55 * (VY / JUMP_G), fx = fwd.x, fz = fwd.z, ox = walk.x + fx * (appr + drift), oz = walk.z + fz * (appr + drift);
   const hand = new THREE.Vector3(ox + fx * 0.35 - fz * 0.12, EYE + 0.75 + (VY * VY) / (2 * JUMP_G) - 0.05, oz + fz * 0.35 + fx * 0.12);
-  const v0 = new THREE.Vector3((hand.x - p.x) / tA, (hand.y - p.y + 4.9 * tA * tA) / tA, (hand.z - p.z) / tA);
-  walk.jserve = { t: 0, ball, from: p, fwd, v0, appr, vy: VY, hit: false, swung: false, jumped: false, aim: vbServeAim() };
+  // 2026-11-25 照預覽頁：左手先把球帶到身體中線、往正上方高高拋出去（JS_REL 秒出手），拋完看球才助跑
+  const rel = new THREE.Vector3(walk.x + fx * 0.28, EYE + 0.5, walk.z + fz * 0.28), tF = tA - JS_REL;
+  const v0 = new THREE.Vector3((hand.x - rel.x) / tF, (hand.y - rel.y + 4.9 * tF * tF) / tF, (hand.z - rel.z) / tF);
+  walk.jserve = { t: 0, ball, from: rel, p0: p, fwd, v0, appr, vy: VY, hit: false, swung: false, jumped: false, aim: vbServeAim() };
   hands.visible = true; pose = 'cock';
   toast('拋球——跳起來在空中按住左鍵（跳發）或右鍵（跳飄）蓄力，放開就打；金色甜蜜點最強', 2200);
 }
 function updateJumpServe(dt) {
   const s = walk.jserve; s.t += dt; const t = s.t, b = s.ball;
   if (!s.hit) {
-    b.position.set(s.from.x + s.v0.x * t, s.from.y + s.v0.y * t - 4.9 * t * t, s.from.z + s.v0.z * t); b.rotation.y += dt * 4;
-    // 助跑兩步（0.25～0.72 秒往前約 0.9 m），0.72 秒起跳；這樣跳到最高點時球剛好掉到手的高度
-    if (t > 0.25 && t < 0.72 && !walk.air) { const sp = s.appr / 0.47, [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
-    if (!s.jumped && t >= 0.72) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, serve: true, t: 0 }; staPay('jserve'); if (walk.chargeArm) { const k2 = walk.chargeArm; walk.chargeArm = null; vbChargeStart(k2); } }
+    const tf = t - JS_REL;
+    if (tf < 0) { const u = t / JS_REL, e = u * u * (3 - 2 * u); b.position.lerpVectors(s.p0, s.from, e); }   // 還沒出手：球跟著左手從胸前帶到中線、往上送
+    else b.position.set(s.from.x + s.v0.x * tf, s.from.y + s.v0.y * tf - 4.9 * tf * tf, s.from.z + s.v0.z * tf);
+    b.rotation.y += dt * 4;
+    // 拋完看球，JS_GO 秒才開始助跑（左大步 → 右左很快跟上），JS_UP 秒起跳；這樣跳到最高點時球剛好掉到手的高度
+    if (t > JS_GO && t < JS_UP && !walk.air) { const sp = s.appr / (JS_UP - JS_GO), [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
+    if (!s.jumped && t >= JS_UP) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, serve: true, t: 0 }; staPay('jserve'); if (walk.chargeArm) { const k2 = walk.chargeArm; walk.chargeArm = null; vbChargeStart(k2); } }
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮
     const near = walk.air && b.position.distanceTo(vbHand()) < 0.7; b.material = near ? ballHot : ballMat;
     if (s.pend && walk.air) { if (b.position.distanceTo(vbHand()) <= 1.0) { const tp = s.pend.type, pc = s.pend.chg; s.pend = null; jumpServeHit(tp, pc); return; } if (s.t - s.pend.t > 0.5) { s.pend = null; s.swung = true; toast('揮空了：等球發亮（掉到手邊）再按', 1500); } }
-    if (b.position.y < 1.0) {   // 拋了沒打到：球掉下去，發球失誤
-      b.material = ballMat; const ob = { m: b, v: new THREE.Vector3(s.v0.x, s.v0.y - 9.8 * t, s.v0.z), rest: 0 }; b.userData.ball = ob; balls.push(ob);
+    if (tf > 0 && b.position.y < 1.0) {   // 拋了沒打到：球掉下去，發球失誤
+      b.material = ballMat; const ob = { m: b, v: new THREE.Vector3(s.v0.x, s.v0.y - 9.8 * tf, s.v0.z), rest: 0 }; b.userData.ball = ob; balls.push(ob);
       walk.jserve = null; hands.visible = false; pose = 'hold'; toast('拋了沒打到：發球失誤', 1600);
       if (VM.on && VM.host && VM.phase === 'serve') { const team = vmTeamOf(vmMe()); VM.phase = 'rally'; VM.ball = ob; VM.touch = { team, n: 3, last: vmMe(), serve: true }; vmPoint(1 - team, '發球失誤（拋了沒打到）'); }
       else if (VM.on && !VM.host && NET.on) NET.tx.publish('vm', { e: 'srvMiss', id: NET.me });
@@ -7903,6 +7909,10 @@ const AVP = {
   spikeElbow: { sh: [[-2.75, 0.55], [-1.0, 0.7]], el: [2.05, 0.9], hip: [-0.18, 0.12], kn: [1.3, 0.95], sp: -0.12, tw: -0.55, head: [-0.1, 0.55], arm: 0, gait: 0 },   // 揮臂第一段：上身轉回一半、手肘先往前上帶、前臂和手還留在頭後（蓄力），碰到球才甩出去   // 空中拉弓：身體往後彎成弓、右手肘拉高到耳後、左手指球、小腿往後收
   spikeHit: { sh: [[-3.0, 0.1], [-0.85, 0.3]], el: [0.05, 1.3], hip: [0.5, 0.32], kn: [0.8, 0.6], sp: 0.34, tw: 0.25, head: [0, -0.25],   /* 上身從側身一路轉回來再過頭一點＝甩出去；頭看前方 */ arm: 0, gait: 0, shy: [0.1, 0] },   // 擊球：收腹把弓放掉，右手在最高點往前下壓、左手收到腰
   spikeFollow: { sh: [[-0.4, -0.38], [-0.3, 0.28]], el: [0.4, 1.1], hip: [0.7, 0.5], kn: [1.0, 0.8], sp: 0.55, tw: 0.5, head: [0, -0.45], arm: 0, gait: 0.3 },   /* 2026-11-25 上身繼續往前轉（右肩往前） */   // 收手：手揮到身體另一側
+  // 跳發拋球（2026-11-25 照預覽頁）：左手把球帶到身體中線胸前 → 從中線往正上方伸直高拋、抬頭看球；右手放鬆垂在身側
+  jsPrep: { sh: [[0.15, 0.15], [-0.95, -0.32]], el: [0.35, 0.75], hip: [0.12, 0.3], kn: [0.25, 0.35], sp: 0.12, tw: 0, head: [0.05, 0], arm: 0, gait: 0 },
+  jsToss: { sh: [[0.3, 0.18], [-2.95, -0.14]], el: [0.3, 0.06], hip: [0.02, 0.2], kn: [0.06, 0.2], sp: -0.12, tw: 0, head: [-0.7, 0], arm: 0, gait: 0, shy: [0, 0.08] },
+  jsWatch: { sh: [[0.25, 0.15], [-0.55, 0.05]], el: [0.3, 0.4], hip: [0.1, 0.2], kn: [0.2, 0.3], sp: 0.08, tw: 0, head: [-0.6, 0], arm: 0, gait: 0.6 },
   serveToss: { sh: [[-2.4, 0.6], [-2.9, 0.1]], el: [1.9, 0.1], hip: [0.05, 0.25], kn: [0.12, 0.3], sp: -0.12, tw: 0.35, arm: 0 },
   blockReady: { sh: [[-2.15, 0.28], [-2.15, 0.28]], el: [1.7, 1.7], hip: [0.35, 0.35], kn: [0.7, 0.7], sp: 0.08, tw: 0, arm: 0 },
   block: { sh: [[-2.78, 0.08], [-2.78, 0.08]], el: [0.05, 0.05], hip: [0.12, 0.12], kn: [0.3, 0.3], sp: 0.08, tw: 0, arm: 0, gait: 0, shy: [0.08, 0.08] },   // 攔網：雙手伸直往網子對面上方壓
@@ -12450,7 +12460,10 @@ function myAvPose() {
     if (!s2.done) { const base = walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85); return [walk.air ? avMix(base, AVP.spikeElbow, Math.min(1, s2.t / 0.14)) : base, fast]; }   /* 按下揮臂到碰到球之間：手肘先往前帶（2026-11-25 使用者：手肘先帶、再依序甩出去） */
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
-  if (walk.jserve && !walk.jserve.hit && !walk.air) return [AVP.serveToss, 0.5];
+  if (walk.jserve && !walk.jserve.hit && !walk.air) {   // 跳發：中線高拋 → 看球 → 助跑（雙手往後擺、蹲）
+    const t = walk.jserve.t, ap = { ...AVP.approach, head: [-0.45, 0] };
+    return [t < 0.16 ? avMix(AVP.hold, AVP.jsPrep, t / 0.16) : t < JS_REL ? avMix(AVP.jsPrep, AVP.jsToss, (t - 0.16) / (JS_REL - 0.16)) : t < JS_GO ? avMix(AVP.jsToss, AVP.jsWatch, (t - JS_REL) / (JS_GO - JS_REL)) : avMix(AVP.jsWatch, ap, Math.min(1, (t - JS_GO) / (JS_UP - JS_GO - 0.08))), t < JS_REL ? 0.6 : 0.4];
+  }
   if (walk.serve) { const t2 = walk.serve.t; return [t2 < 0.5 ? AVP.serveToss : t2 < 0.62 ? avMix(AVP.serveToss, AVP.spikeHit, (t2 - 0.5) / 0.12) : avMix(AVP.spikeHit, avMix(AVP.spikeFollow, AVP.idle, 0.3), (t2 - 0.62) / 0.25), 0.5]; }
   if (walk.jumpPrep) return [AVP.approach, fast];   // 第三人稱前搖：蹲低、雙手甩到後面
   if (walk.air) return [vbAirPose(), 0.6];
