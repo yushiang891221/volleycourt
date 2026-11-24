@@ -34,6 +34,8 @@ export function migrationPatch(profile, local = {}) {
 
 function publicError(error) {
   if (error?.code === '23505') return new Error('這個暱稱已有人使用，請換一個。');
+  if (error?.code === '23514') return new Error('帳號資料庫還不收新角色的外觀（請管理員執行 supabase/028_real_appearance.sql）。');
+  if (error) console.warn('[帳號] 儲存失敗', error.code, error.message);
   return new Error('帳號服務暫時無法連線或儲存，請確認網路後重試。');
 }
 

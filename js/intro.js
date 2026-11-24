@@ -28,12 +28,14 @@
           const S = await import('./servers.js');
           if (location.hash !== '#lobby' || !S.savedServerId()) { if ((await S.serverList()).length) await S.openServerSelect(); }
         } catch (e) { console.warn('[選伺服器] 載入失敗，用預設伺服器', e); }
-      } catch {
+      } catch (err) {
+        console.error('[進大廳] 失敗', err);   /* 看得到真正的原因 */
         stage = 'intro'; intro.hidden = false;
         $('intro-content').hidden = false; $('anim3d').hidden = true;
         $('phase').hidden = true; $('skip-playing').hidden = true;
         $('start').disabled = false; $('ball-start').disabled = false;
         $('start').textContent = '載入或儲存失敗，按此重試';
+        { let why = $('start-why'); if (!why) { why = document.createElement('p'); why.id = 'start-why'; why.style.cssText = 'color:#f3d9b0;font-size:13px;margin:8px auto 0;max-width:520px;text-align:center'; $('start').after(why); } why.textContent = '原因：' + String((err && err.message) || err || '未知').slice(0, 160); }
         intro.showModal(); return;
       }
     }
