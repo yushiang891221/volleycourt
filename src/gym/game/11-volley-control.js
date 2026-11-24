@@ -1694,7 +1694,7 @@ function vbOwnSide(b) {
 function vbNext(b) { const h = (VB.dt || 1 / 60) * VB.ts; return new THREE.Vector3(b.m.position.x + b.v.x * h, b.m.position.y + b.v.y * h - 4.9 * h * h, b.m.position.z + b.v.z * h); }
 function vbUpdate(dt) { VB.dt = dt; emoStep(); vbBlockHands(dt); hands.position.x += ((walk.air && walk.air.block ? (walk.blkShift || 0) * 0.7 : 0) - hands.position.x) * 0.4;   /* 第一人稱攔網的雙手跟著左右移 */ vbAimRing(); vbTurn(dt); vbParts(dt); vbSwingStep(dt); vbOverheadStep(); vbRecvStep(); vbSetStep(); vbNpcStep(dt); vbCamAssist(dt); vbRings(); vbCue(); }
 const TP = { manual: null, av: null, ball: null, saved: null };
-function tpActive() { if (!walk.on || window.__rkOn || RP.on || walk.sit || walk.paused) return false; return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc || coarse()); }   /* 手機：走到哪都預設第三人稱（設定裡關掉第三人稱就照舊） */
+function tpActive() { if (!walk.on || window.__rkOn || RP.on || (walk.sit && !LOBBY_MODE) || walk.paused) return false;   /* 大廳：坐下也看得到自己（坐在椅子上） */ return TP.manual != null ? TP.manual : VBSettings.values.third && (VM.on || !!VB.npc || coarse()); }   /* 手機：走到哪都預設第三人稱（設定裡關掉第三人稱就照舊） */
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 // 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
 function vbApproachK() {
@@ -1707,6 +1707,7 @@ function vbAirPose() { const t = walk.air ? walk.air.t : 1; return t < 0.12 ? AV
 function myAvPose() {
   if (walk.emote?.keyframes) return [emoKeySample(walk.emote.k, (performance.now() - walk.emote.t0) / 1000, walk.emote.dir).pose, 1];
   const fast = 0.55, k = 0.3, game = VM.on || VB.npc;
+  if (walk.sit) return [AVP.sit, 0.3];   // 坐下（大廳第三人稱看得到）
   if (walk.dive || walk.down > 0) { const dp = avDivePose(walk.diveDir || 0, !walk.dive); return [!walk.dive && walk.down < 0.3 ? avMix(dp, AVP.ready, 1 - walk.down / 0.3) : dp, fast]; }   // 撲出去→倒地→撐起來
   if (walk.emote && performance.now() < walk.emote.until) return [emoPose(walk.emote.k, (performance.now() - walk.emote.t0) / 1000), k];   // 擊掌、嘲諷
   if (walk.air && walk.air.block) return [avBlockPose(walk.blkShift || 0), fast];   // 攔網：雙手跟著滑鼠往左右移
@@ -1745,7 +1746,8 @@ function tpBegin(dt) {
   if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readWornJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
-  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z); av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, fish: !!walk.diveFish, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
+  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z);
+  av.realSeat = walk.sit ? walk.sit.eye - 0.62 : null;   /* 坐著：新角色的髖放在座位高度（眼睛高度往下約 62 cm） */ av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, fish: !!walk.diveFish, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
   const v = walk.vel || [0, 0], sp = walk.air ? 0 : Math.hypot(v[0], v[1]); av.phase += dt * Math.min(12, sp * 5.5);
   avDrive(av, ...myAvPose(), sp, air > 0.05);
   // 手上的球：第一人稱掛在鏡頭上，第三人稱改畫在人的手上

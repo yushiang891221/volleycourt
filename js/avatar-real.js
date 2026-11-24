@@ -417,7 +417,9 @@ export function makeReal(L) {
   if (L.sock) gear.push([T.socks[L.sock - 1], L.sockC]);
   for (const [G, c] of gear) { const m = new THREE.SkinnedMesh(G.geo, clipToon(G.lo, G.hi, c)); m.bind(skel, H.bindMatrix); m.castShadow = true; m.frustumCulled = false; H.parent.add(m); }
   bodyAcc(R, L.eq || {});
-  R.ready = attachHead(R, L).catch(e => console.warn('[real] 頭載入失敗', e));
+  // 頭（VRoid，每款約 2 MB）比身體晚載好：載好之前整個人先不顯示，不會看到沒有頭的身體（2026-11-25 使用者：每次進新地圖頭先不見）
+  root.visible = false;
+  R.ready = attachHead(R, L).catch(e => console.warn('[real] 頭載入失敗', e)).then(() => { if (!R.dead) root.visible = true; if (typeof window !== 'undefined' && window.wakeRender) window.wakeRender(300); });
   patchLit(root);
   R.handKind = null; R.cloth = null;
   if (typeof location !== 'undefined' && /[?&]debug/.test(location.search)) (window.__realList = window.__realList || []).push(R);   /* 除錯用（網址有 debug 才記） */
@@ -486,6 +488,10 @@ export function driveReal(av, dt) {
   if (jy < 0.03) R.offY = R.offY == null || need > R.offY ? need : R.offY + (need - R.offY) * Math.min(1, dt * 20);   /* 穿進地板：馬上推上來；往下貼回地面才慢慢來 */
   else R.offY = Math.max(R.offY ?? 0, need);   // 空中：維持起跳前的差，但不穿進地板
   root.position.y += R.offY / gs; root.updateMatrixWorld(true);
+  if (av.realSeat != null) {   // 坐著：髖（兩個大腿根中間）放在座位高度，不照地板貼
+    const hy = (wpos(B.thigh_l).y + wpos(B.thigh_r).y) / 2, want = gp.y + av.realSeat * ds;
+    root.position.y += (want - hy) / gs; root.updateMatrixWorld(true); R.offY = null;
+  }
   if (OBST) netPush(R, g, ds);
   // 6. 衣服下擺、項鍊的慣性
   clothStep(R, dt); neckStep(R, dt);
@@ -541,6 +547,11 @@ export function realLookOf(look, kitArg) {
     vhead: f ? [0, 1, 2, 3, 4, 5, 7][(L.eyes | 0) % 7] : 0, vhair: f ? ({ 4: 2, 5: 4, 6: 3, 7: 0 })[h] ?? [1, 5, 6, 7][h % 4] : [0, 2, 1, 0][h % 4], no: L.num ?? 10,
     jersey: k.body || '#F4F4F4', trim: k.trim || '#1F3F8F', num: k.num || '#1F3F8F', shorts: k.shorts || '#1F2A44',
     knee: L.knee !== 2, kneeC: L.knee === 1 ? '#F2F2EE' : '#26262B', sock: 1, sockC: '#F4F4F4', eq: L.eq || {} };
+}
+// 先把某個外觀要用的頭下載好（自己的頭在載入畫面就準備好，進場不用等）
+export function preloadHeadsFor(look, kitArg) {
+  const L = realLookOf(look, kitArg), list = REAL_HEADS[L.sx];
+  return Promise.all([list[L.vhead], list[L.vhair]].filter(Boolean).map(h => loadVroid(h.url))).catch(() => {});
 }
 export function attachReal(av, look, kitArg, ds = 1) {
   if (!realReady()) return null;
