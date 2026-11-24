@@ -149,17 +149,21 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 .party-emo { position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); white-space:nowrap; padding:3px 10px; border-radius:999px; background:#E5B869; color:#06211A; font-weight:800; font-size:13px; animation:party-emo 1.6s ease-out forwards; pointer-events:none; }
 @keyframes party-emo { 0% { opacity:0; transform:translate(-50%, 6px); } 15% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -10px); } }
 
-/* 2026-11-24 大廳背景＝可以走動的球館（js/lobby-gym.js）：球館鋪滿首頁，大廳的面板疊在上面；隊伍改成左上角的名單 */
-body.lobby-gym #home-page { position:relative; background:#06211a; }
-#lobby-gym { position:absolute; inset:0; width:100%; height:100%; border:0; z-index:0; }
-body.lobby-gym #home-page > :not(#lobby-gym) { position:relative; z-index:1; }
-body.lobby-gym #party-stage { position:absolute; inset:auto auto 8px 8px; min-height:0; width:auto; height:auto; background:none; pointer-events:none; }
-body.lobby-gym #party-stage canvas, body.lobby-gym .party-view, body.lobby-gym .empty-slot:not(:first-child) ~ .empty-slot { display:none; }
-body.lobby-gym #party-slots { position:static; width:auto; height:auto; display:flex; flex-direction:column; gap:4px; pointer-events:auto; }
-body.lobby-gym .party-slot { position:static; width:auto; height:auto; }
-body.lobby-gym .party-label { top:0; margin:0; }
-body.lobby-gym .empty-slot button { width:28px; height:28px; }
+/* 2026-11-24 大廳背景＝可以走動的球館（js/lobby-gym.js）：球館鋪滿整個頁面，大廳的面板半透明疊在上面；空白的地方點下去就是點到球館 */
+#lobby-gym { position:fixed; left:0; top:0; width:var(--m-w, 100vw); height:var(--m-h, 100vh); border:0; z-index:-1; display:block; }   /* 墊在最底層：大廳其他東西（含手機的把手、抽屜）位置都不用動 */
+html:has(body.lobby-gym) { background:#06211a !important; } body.lobby-gym { background:transparent !important; }   /* 底色放在 html：body 的底色會蓋住墊在最底層的球館 */
+body.lobby-gym main, body.lobby-gym #home-page, body.lobby-gym #party-stage { pointer-events:none; background:transparent !important; border:0 !important; box-shadow:none !important; }
+body.lobby-gym main .panel, body.lobby-gym #my-summary, body.lobby-gym #party-slots > *, body.lobby-gym .match-card, body.lobby-gym #custom-page:not([hidden]) > *, body.lobby-gym main button, body.lobby-gym main input, body.lobby-gym main select { pointer-events:auto; }
+body.lobby-gym .panel { background:rgba(10,24,30,.78) !important; backdrop-filter:blur(3px); }
+body.lobby-gym #party-stage { position:absolute !important; inset:auto auto 8px 8px !important; min-height:0 !important; width:auto !important; height:auto !important; }
+body.lobby-gym #party-stage canvas, body.lobby-gym .party-view, body.lobby-gym .empty-slot ~ .empty-slot { display:none !important; }
+body.lobby-gym #party-slots { position:static !important; width:auto !important; height:auto !important; display:flex !important; flex-direction:column; gap:4px; padding:0 !important; }
+body.lobby-gym .party-slot, body.lobby-gym #party-slots.mobile-party .party-slot { position:static !important; width:auto !important; height:auto !important; min-height:0 !important; flex:none !important; }
+body.lobby-gym .party-label { top:0 !important; margin:0 !important; transform:none !important; }
+body.lobby-gym .empty-slot button { width:30px; height:30px; }
 body.lobby-gym .stage-hint { display:block; position:static; margin-top:6px; max-width:460px; font-size:11px; color:#e8efe9; background:#06211acc; padding:4px 8px; border-radius:6px; }
-
-/* 2026-11-24 新角色比例修長：手機版自己的站位框加高（從上面名牌下方到底下隊友列上方），人才不會小小的 */
-@media (pointer: coarse), (max-width: 819px) { #party-slots.mobile-party .slot-0 { top:12%; bottom:23%; height:auto; left:18%; width:64%; } #party-slots.mobile-party .slot-0 .party-label { transform:translateY(-100%); } }
+html.m-touch body.lobby-gym .stage-hint { display:none; }
+html.m-touch body.lobby-gym #party-stage { inset:40px auto auto 56px !important; }   /* 手機：隊伍名單放左上，不要壓到左下的搖桿 */
+/* 點擊穿透：網頁本體、主區不攔點擊（點到的就是底下的球館）；上方列、跑馬燈、功能列、面板、視窗、手機把手照常可以點 */
+body.lobby-gym { pointer-events:none; }
+body.lobby-gym > :not(main):not(#lobby-shell), body.lobby-gym #lobby-shell > :not(main), body.lobby-gym dialog { pointer-events:auto; }

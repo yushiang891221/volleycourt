@@ -819,3 +819,4 @@ html.phone-walk .vm-hud { left: 50%; top: env(safe-area-inset-top, 0px); }
 /* 大廳模式（index.html 首頁背景的球館）：練習房的介面都藏起來，大廳自己的介面疊在上面 */
 body.lobby-mode #w-settings, body.lobby-mode #w-exit, body.lobby-mode .room-info, body.lobby-mode #room-flow, body.lobby-mode #wk-lock, body.lobby-mode #wk-cross, body.lobby-mode #game-loading small { display: none !important; }
 body.lobby-mode #app .stage { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; min-height: 0 !important; border: 0 !important; }
+body.lobby-mode #vpad, body.lobby-mode #tmenu, body.lobby-mode #wk-cart, body.lobby-mode .tgyro, body.lobby-mode #trotate, body.lobby-mode .m-rotate { display: none !important; }

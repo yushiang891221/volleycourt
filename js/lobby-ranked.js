@@ -10,8 +10,8 @@ const read = (key, fallback) => { try { return localStorage.getItem(key) || fall
 const save = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
 const mobile = matchMedia('(pointer: coarse), (max-width: 819px)');
 const demo = new URLSearchParams(location.search).get('lobbydemo');
-// 2026-11-24：電腦版的大廳背景是可以走動的球館（js/lobby-gym.js）；手機、或網址 ?lobbygym=0 照舊用照片＋站位角色
-const gymMode = window.top === window && !mobile.matches && new URLSearchParams(location.search).get('lobbygym') !== '0';   /* 被放在框框裡時不要再放球館（不會一層套一層） */
+// 2026-11-24：大廳背景是可以走動的球館，鋪滿整頁（js/lobby-gym.js）；網址 ?lobbygym=0 照舊用照片＋站位角色
+const gymMode = window.top === window && new URLSearchParams(location.search).get('lobbygym') !== '0';   /* 手機也用（2026-11-24 使用者：手機大廳也要是正式打的球館） */   /* 被放在框框裡時不要再放球館（不會一層套一層） */
 let mode = demo === '6' ? '6v6' : demo === '2' ? '2v2' : read('po.lobby.mode', '2v2');
 if (!['2v2', '6v6'].includes(mode)) mode = '2v2';
 let partyId = null;
@@ -134,7 +134,7 @@ function summary(prog = P.cachedProgress() || {}) {
 }
 if (demo === '2' || demo === '6') members = Array.from({ length: Number(demo) }, (_, i) => ({ id: `demo-${i}`, name: i ? ['小晴', '阿哲', '小宇', '可可', '阿凱'][i - 1] : nick(), rating: 1000 + i * 650, tier: ['新手', '新手', '野場小白', '野場小白', '野場NPC', '野場NPC'][i], isLeader: i === 0, look: myLookCode() }));
 setMode(mode); selectPage(location.hash === '#lobby' ? 'home' : read('po.lobby.page', 'home')); summary();
-if (gymMode) { document.body.classList.add('lobby-gym'); const mountGym = () => mountLobbyGym($('home-page')); if (globalThis.VBIntro?.entered) mountGym(); else addEventListener('vb-lobby-enter', mountGym, { once: true });   /* 登入進大廳後才載球館 */ const h = $('party-stage').querySelector('.stage-hint'); if (h) h.textContent = '點一下球館就能走動：WASD 移動 · 滑鼠拖曳轉視角 · 走到沙發、飲水機按 F 互動 · 按住 T 炫技 · 隊友會一起出現'; renderParty(); }
+if (gymMode) { document.body.classList.add('lobby-gym'); const mountGym = () => mountLobbyGym(document.body); if (globalThis.VBIntro?.entered) mountGym(); else addEventListener('vb-lobby-enter', mountGym, { once: true });   /* 登入進大廳後才載球館 */ const h = $('party-stage').querySelector('.stage-hint'); if (h) h.textContent = '點一下球館就能走動：WASD 移動 · 滑鼠拖曳轉視角 · 走到沙發、飲水機按 F 互動 · 按住 T 炫技 · 隊友會一起出現'; renderParty(); }
 else try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); preview.onSelfYaw = (yaw, final) => api.onSelfPose?.(yaw, final); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
 preloadAvatars().then(renderParty, () => {});
 new ResizeObserver(() => preview?.redraw()).observe($('party-stage'));

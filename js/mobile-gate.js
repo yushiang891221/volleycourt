@@ -11,7 +11,8 @@
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname), q = new URLSearchParams(location.search);
   try { if (local && q.get('pwa') === 'skip') sessionStorage.setItem('vb.pwa.skip', '1'); } catch (e) { /* ignore */ }
   let skip = false; try { skip = local && sessionStorage.getItem('vb.pwa.skip') === '1'; } catch (e) { /* ignore */ }
-  const app = navigator.standalone === true || ['fullscreen', 'standalone', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
+  const embedded = (() => { try { return window.top !== window && window.top.location.origin === location.origin; } catch (e) { return false; } })();   // 大廳背景的球館（同網站的框框）：外面的大廳已經過關了
+  const app = embedded || navigator.standalone === true || ['fullscreen', 'standalone', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
   const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const line = /\bLine\//i.test(ua), inApp = line || /FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|Messenger|Threads/i.test(ua);
   if (line && !app && !q.has('openExternalBrowser')) { q.set('openExternalBrowser', '1'); location.replace(location.pathname + '?' + q + location.hash); return; }
