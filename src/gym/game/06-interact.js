@@ -663,7 +663,7 @@ const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0
 const SKV = { set: 4.2, bump: 5.0 };
 // 球在鏡頭座標裡沿這個方向飛出去再回來（舉球往上前方、墊球往上前方高一點）
 const SKDIR = { set: [0, 0.75, -0.66, 0.5], bump: [0, 0.8, -0.6, 0.45] };
-function grabBall() { if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
+function grabBall() { if (typeof LOBBY_MODE !== 'undefined' && LOBBY_MODE) { toast('大廳只能走走逛逛、坐沙發、喝水；打球請開始配對或進練習模式', 1800); return; } if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
 function placeHeld() {
   const m = walk.hold; if (!m) return;
   if (skill.mode) {

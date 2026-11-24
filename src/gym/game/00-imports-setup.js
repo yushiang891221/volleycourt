@@ -18,6 +18,7 @@ const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');
 try { if (!DEV_LOCAL) await gameAccount.accessToken(); } catch {
+  if (new URLSearchParams(location.search).get('lobby') === '1') throw new Error('大廳球館：還沒登入');   /* 放在大廳背景時不要跳頁（不然大廳裡又套一個大廳） */
   location.replace('index.html#lobby');
   throw new Error('請先登入。');
 }
@@ -25,6 +26,7 @@ await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模�
 // 新角色：預設就用（2026-11-24 起全部換新角色）；網址 ?real=0 是開發用的退路（舊公仔）。載入失敗也退回公仔
 const REAL_ON = new URLSearchParams(location.search).get('real') !== '0' && await preloadReal();
 const REAL_AVS = new Set();
+const LOBBY_MODE = new URLSearchParams(location.search).get('lobby') === '1';   // 大廳背景的球館（18-lobby-mode.js）
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

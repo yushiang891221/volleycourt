@@ -101,7 +101,7 @@ const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(),
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
 const NET_MAX = 20;
-window.VBGameLobby?.start(() => ({
+(LOBBY_MODE ? null : window.VBGameLobby)?.start(   /* 大廳模式：上層的大廳已經連著，不要再算一次人 */() => ({
   name: VBSettings.values.nickname || '球友',
   practice: new URLSearchParams(location.search).has('practice'),
   active: NET.on, code: NET.room, isHost: !!ROOM?.isHost,

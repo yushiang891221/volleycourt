@@ -717,8 +717,8 @@ function gameFullscreen() {   // 回傳 Promise：全螢幕切好之後才鎖滑
 document.addEventListener('fullscreenchange', () => { const kb = navigator.keyboard; if (!kb || !kb.lock) return; if (document.fullscreenElement) kb.lock().catch(() => {}); else kb.unlock(); });
 // 沒有全螢幕時：在房間或比賽中按到 Ctrl＋W，先問一次要不要離開
 document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('a[href^=index]')) window.__leavingOk = true; }, true);   // 自己按「回大廳」不用再確認
-addEventListener('beforeunload', (e) => { if (location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
-function lockMouse() { if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
+addEventListener('beforeunload', (e) => { if (!LOBBY_MODE && location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
+function lockMouse() { if (LOBBY_MODE) return;   /* 大廳背景：不全螢幕、不鎖滑鼠（大廳的按鈕要點得到），拖曳轉視角 */ if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
 let pointerLockOffT = 0; document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) pointerLockOffT = performance.now(); });
 // 鎖滑鼠：先用「原始滑鼠輸入」（unadjustedMovement）——Chrome 在 Windows 鎖滑鼠時偶爾會回報一次超大的假移動量，視角瞬間被甩走甚至轉到背後（2026-11-17 玩家錄影）；不支援就退回一般鎖定
 function lockMouseNow() {

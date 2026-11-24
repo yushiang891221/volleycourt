@@ -31,6 +31,7 @@ export function createGameCore(S = {}) {
   const GAME_RNG = { s: 0 };
   function gameRandom() { if (!GAME_RNG.s) return Math.random(); GAME_RNG.s = (GAME_RNG.s * 16807) % 2147483647; return GAME_RNG.s / 2147483647; }
   const fxRandom = (() => { let s = 1234567; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  const LOBBY_MODE = new URLSearchParams(location.search).get('lobby') === '1';
   const $ = S.$ || (() => dummy);
   const NETS = { men: { label: '男網 2.43 m', h: 2.43 }, women: { label: '女網 2.24 m', h: 2.24 }, mixed: { label: '混網 2.35 m', h: 2.35 } };
   const CAT = {
@@ -455,7 +456,7 @@ export function createGameCore(S = {}) {
   }
   const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0 };
   const SKDIR = { set: [0, 0.75, -0.66, 0.5], bump: [0, 0.8, -0.6, 0.45] };
-  function grabBall() { if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
+  function grabBall() { if (typeof LOBBY_MODE !== 'undefined' && LOBBY_MODE) { toast('大廳只能走走逛逛、坐沙發、喝水；打球請開始配對或進練習模式', 1800); return; } if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
   function placeHeld() {
     const m = walk.hold; if (!m) return;
     if (skill.mode) {

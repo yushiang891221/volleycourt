@@ -855,6 +855,10 @@ input, textarea, [contenteditable], [contenteditable] * { -webkit-user-select: t
 .vm-hud { left: 50%; top: 0; transform: translateX(-50%); align-items: center; }
 html.phone-walk .vm-hud { left: 50%; top: env(safe-area-inset-top, 0px); }
 .vm-sb { border-top: 0; border-radius: 0 0 14px 14px; }
+
+/* 大廳模式（index.html 首頁背景的球館）：練習房的介面都藏起來，大廳自己的介面疊在上面 */
+body.lobby-mode #w-settings, body.lobby-mode #w-exit, body.lobby-mode .room-info, body.lobby-mode #room-flow, body.lobby-mode #wk-lock, body.lobby-mode #wk-cross, body.lobby-mode #game-loading small { display: none !important; }
+body.lobby-mode #app .stage { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; min-height: 0 !important; border: 0 !important; }
 </style>
 <style>html,body{margin:0;height:100%;overflow:hidden}.sitebar,#rail,.steps,.stage-top,.stage-hint,.co-badge,#w-plan,#zcard,#costcard,#gen,#insp,#outline,#wallmenu,#camtip{display:none!important}#app{display:block;height:100vh;min-height:0}#stage{width:100%;height:100vh;margin:0;border-radius:0}#canvas-host{width:100%;height:100%}</style>
 </head><body>
@@ -1099,6 +1103,7 @@ const gameAccount = await getAccountService();
 // 開發模式：只有在本機（localhost）網址加 &dev 才能不登入進練習房，方便測試；正式網站一律要登入
 const DEV_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('dev');
 try { if (!DEV_LOCAL) await gameAccount.accessToken(); } catch {
+  if (new URLSearchParams(location.search).get('lobby') === '1') throw new Error('大廳球館：還沒登入');   /* 放在大廳背景時不要跳頁（不然大廳裡又套一個大廳） */
   location.replace('index.html#lobby');
   throw new Error('請先登入。');
 }
@@ -1106,6 +1111,7 @@ await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模�
 // 新角色：預設就用（2026-11-24 起全部換新角色）；網址 ?real=0 是開發用的退路（舊公仔）。載入失敗也退回公仔
 const REAL_ON = new URLSearchParams(location.search).get('real') !== '0' && await preloadReal();
 const REAL_AVS = new Set();
+const LOBBY_MODE = new URLSearchParams(location.search).get('lobby') === '1';   // 大廳背景的球館（18-lobby-mode.js）
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -6669,7 +6675,7 @@ const skill = { mode: null, h: 0, v: 0, n: 0, best: 0, since: 9, kick: 0, dip: 0
 const SKV = { set: 4.2, bump: 5.0 };
 // 球在鏡頭座標裡沿這個方向飛出去再回來（舉球往上前方、墊球往上前方高一點）
 const SKDIR = { set: [0, 0.75, -0.66, 0.5], bump: [0, 0.8, -0.6, 0.45] };
-function grabBall() { if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
+function grabBall() { if (typeof LOBBY_MODE !== 'undefined' && LOBBY_MODE) { toast('大廳只能走走逛逛、坐沙發、喝水；打球請開始配對或進練習模式', 1800); return; } if (walk.hold) return; if (VM.on && !VM.grabOK) { toast('比賽中不能拿球（輪到你發球時球會自動給你）', 1800); return; } walk.hold = newBallMesh(); walk.hold.userData.noPick = true; camera.add(walk.hold); pose = 'hold'; hands.visible = true; applyPose(0, true); placeHeld(); }
 function placeHeld() {
   const m = walk.hold; if (!m) return;
   if (skill.mode) {
@@ -7378,7 +7384,7 @@ const NET = { on: false, room: '', me: '', name: '', tx: null, peers: new Map(),
 // 某個人傳過來的訊息大概晚了幾秒到（量出來的一半來回時間＋一格畫面；還沒量到先當 0.1 秒）
 const netLat = (id) => clamp(((NET.lat.get(id) ?? 100) + 16) / 1000, 0.02, 0.35);
 const NET_MAX = 20;
-window.VBGameLobby?.start(() => ({
+(LOBBY_MODE ? null : window.VBGameLobby)?.start(   /* 大廳模式：上層的大廳已經連著，不要再算一次人 */() => ({
   name: VBSettings.values.nickname || '球友',
   practice: new URLSearchParams(location.search).has('practice'),
   active: NET.on, code: NET.room, isHost: !!ROOM?.isHost,
@@ -9981,8 +9987,8 @@ function gameFullscreen() {   // 回傳 Promise：全螢幕切好之後才鎖滑
 document.addEventListener('fullscreenchange', () => { const kb = navigator.keyboard; if (!kb || !kb.lock) return; if (document.fullscreenElement) kb.lock().catch(() => {}); else kb.unlock(); });
 // 沒有全螢幕時：在房間或比賽中按到 Ctrl＋W，先問一次要不要離開
 document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('a[href^=index]')) window.__leavingOk = true; }, true);   // 自己按「回大廳」不用再確認
-addEventListener('beforeunload', (e) => { if (location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
-function lockMouse() { if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
+addEventListener('beforeunload', (e) => { if (!LOBBY_MODE && location.search && (typeof NET === 'undefined' || NET.on || VM.on) && !window.__leavingOk) { e.preventDefault(); e.returnValue = ''; } });
+function lockMouse() { if (LOBBY_MODE) return;   /* 大廳背景：不全螢幕、不鎖滑鼠（大廳的按鈕要點得到），拖曳轉視角 */ if (!document.fullscreenElement && !coarse() && document.documentElement.requestFullscreen) { gameFullscreen(); return; } lockMouseNow(); }   // 第一下全螢幕，第二下鎖成準心
 let pointerLockOffT = 0; document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement) pointerLockOffT = performance.now(); });
 // 鎖滑鼠：先用「原始滑鼠輸入」（unadjustedMovement）——Chrome 在 Windows 鎖滑鼠時偶爾會回報一次超大的假移動量，視角瞬間被甩走甚至轉到背後（2026-11-17 玩家錄影）；不支援就退回一般鎖定
 function lockMouseNow() {
@@ -14493,6 +14499,56 @@ function touchAimOf(dx, dy) {   // 拖曳量 → 方向偏移（左右各約 35 
   };
   requestAnimationFrame(tick);
 })();
+// ---------------------------------------------------------------- 大廳模式（2026-11-24）
+// index.html 的首頁背景就是這座球館（gym.html?site=bs-shenjing&lobby=1 放在 iframe 裡）：可以走動、坐沙發、到飲水機裝水、按 T 炫技。
+// 組隊的隊友會一起出現在同一座球館：遊戲本來的多人訊息（位置、動作、炫技…）不另外開房間，改走大廳的組隊通道——
+//   這裡把訊息交給上層網頁（postMessage），上層用組隊連線送 party-walk，伺服器轉給隊友，隊友的上層再交回他的球館。
+//   上層送進來的：{ type:'party', me, members:[{ id, n, look }] }（members 不含自己）、{ type:'recv', id, t, d }
+//   送出去的：{ type:'ready' }、{ type:'send', t, d }
+if (LOBBY_MODE) {
+  document.body.classList.add('lobby-mode');
+  TP.manual = true;   // 第三人稱：看得到自己的角色（開場套用個人設定時會被清掉：前 8 秒內再設回來，之後玩家按 P 換第一人稱就照玩家的）
+  { const t0 = performance.now(), keep = setInterval(() => { if (performance.now() - t0 > 8000) clearInterval(keep); else if (TP.manual !== true) TP.manual = true; }, 200); }
+  const up = (m) => { try { parent.postMessage({ vbLobby: 1, ...m }, location.origin); } catch (_) { /* 沒有上層：單獨開也能走 */ } };
+  const subs = [], pres = [];
+  let others = [], me = '';
+  const tx = {
+    kind: 'party',
+    publish: (t, d) => { netCount(); up({ type: 'send', t, d }); },
+    subscribe: (fn) => subs.push(fn),
+    enter: async () => {},
+    members: async () => others.map((m) => ({ id: m.id, n: m.n, c: m.c })),
+    onPresence: (fn) => pres.push(fn),
+    close: () => {},
+  };
+  const colorOf = (id) => { let h = 0; for (const ch of String(id)) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0; return NET_COLORS[h % NET_COLORS.length]; };
+  function lobbyJoin() {
+    NET.me = me; NET.name = [...(VBSettings.values.nickname || '球友')].slice(0, 12).join(''); NET.color = colorOf(me);
+    NET.tx = tx; NET.room = 'lobby'; NET.on = true; NET.peers.clear(); NET.forceSt = true;
+    if (!subs.length) { tx.subscribe(netOnMessage); tx.onPresence((action, id, d) => { if (id === NET.me) return; if (action === 'leave') netDropPeer(id); else netPeer(id, d); renderMpList(); }); }
+    for (const m of others) netPeer(m.id, m);
+  }
+  function lobbyLeave() {
+    for (const id of [...NET.peers.keys()]) netDropPeer(id);
+    NET.on = false; NET.tx = null; NET.ownBall = false;
+  }
+  addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || !e.data.vbLobby) return;
+    const m = e.data;
+    if (m.type === 'party') {
+      const next = (Array.isArray(m.members) ? m.members : []).filter((x) => x && x.id && x.id !== m.me).map((x) => ({ id: String(x.id), n: String(x.n || '球友').slice(0, 12), c: colorOf(x.id), ch: x.look }));
+      if (!m.me || !next.length) { others = []; if (NET.on) lobbyLeave(); return; }   // 沒組隊：自己一個人逛
+      if (!NET.on || me !== m.me) { me = String(m.me); others = next; lobbyJoin(); return; }
+      const gone = others.filter((o) => !next.some((x) => x.id === o.id)), fresh = next.filter((x) => !others.some((o) => o.id === x.id));
+      others = next;
+      for (const o of gone) for (const fn of pres) fn('leave', o.id, o);
+      for (const x of fresh) { for (const fn of pres) fn('enter', x.id, x); NET.forceSt = true; }   // 新隊友進來：馬上送一次自己的位置
+    } else if (m.type === 'recv' && NET.on && typeof m.t === 'string') {
+      for (const fn of subs) fn(m.t, m.d, String(m.id));
+    }
+  });
+  up({ type: 'ready' });
+}
 </script>
 
 <script>

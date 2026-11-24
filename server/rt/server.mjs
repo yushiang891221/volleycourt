@@ -188,7 +188,7 @@ const L = {
       ranked.handle(ws, m); return;
     }
     if (typeof m.k === 'string' && m.k.startsWith('party-')) {   // WEB-028 組隊（server/shared/party.mjs）
-      if (m.k !== 'party-pose' && m.k !== 'party-emote' && !allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });   /* 轉角色、炫技在 party.mjs 自己節流 */
+      if (m.k !== 'party-pose' && m.k !== 'party-emote' && m.k !== 'party-walk' && !allow('party:' + p.player, 60)) return this.send(ws, { k: 'party-error', reason: '操作太頻繁，請稍後再試' });   /* 轉角色、炫技在 party.mjs 自己節流 */
       parties.handle(ws, m); return;
     }
     const room = () => this.data.rooms.find(r => r.no === Number(m.no || p.no));

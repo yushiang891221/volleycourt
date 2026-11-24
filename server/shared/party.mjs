@@ -15,7 +15,7 @@ export function createParties({ send, sockets, now = Date.now, ratingOf = () => 
   const byPlayer = new Map();   // 帳號 → 隊伍 id
   const invites = new Map();    // `${隊伍}|${被邀帳號}` → { party, to, from, at }
   const cooldown = new Map();   // `${邀請人}>${被邀人}` → 時間
-  const poseAt = new Map(), emoteAt = new Map();   // 大廳轉角色、炫技的節流
+  const poseAt = new Map(), emoteAt = new Map(), walkAt = new Map();   // 大廳轉角色、炫技、在大廳球館走動的節流
 
   const live = player => sockets().filter(ws => ws.meta && ws.meta.player === player && ws.meta.name);
   const toPlayer = (player, obj) => { for (const ws of live(player)) send(ws, obj); };
@@ -78,6 +78,16 @@ export function createParties({ send, sockets, now = Date.now, ratingOf = () => 
         const t = now(); if (t - (poseAt.get(p.player) || 0) < 150) return true; poseAt.set(p.player, t);
         const yaw = Math.max(-1000, Math.min(1000, Math.round(msg.yaw * 1000) / 1000));
         for (const m of party.members) if (m.player !== p.player) toPlayer(m.player, { k: 'party-pose', id: p.id, yaw });
+        return true;
+      }
+      case 'party-walk': {   // 大廳球館裡一起走動（2026-11-24）：網頁遊戲的多人訊息原封不動轉給隊友（位置每人最多每 0.06 秒一則、其他每秒 20 則、一則最多 1500 字，多的丟掉）
+        if (!party || party.members.length < 2 || typeof msg.t !== 'string' || !/^[a-z0-9-]{1,24}$/.test(msg.t)) return true;
+        const t = now(), w = walkAt.get(p.player) || { st: 0, win: 0, n: 0 }; walkAt.set(p.player, w);
+        if (msg.t === 'st') { if (t - w.st < 60) return true; w.st = t; }   /* 位置狀態：最多每 0.06 秒一則 */
+        else { if (t - w.win > 1000) { w.win = t; w.n = 0; } if (++w.n > 20) return true; }   /* 其他（炫技、球、聊天）：每秒最多 20 則 */
+        let d; try { d = JSON.stringify(msg.d ?? null); } catch { return true; }
+        if (d.length > 1500) return true;
+        for (const m of party.members) if (m.player !== p.player) toPlayer(m.player, { k: 'party-walk', id: p.id, t: msg.t, d: msg.d ?? null });
         return true;
       }
       case 'party-emote': {   // 大廳炫技：轉給其他隊友（每人每 0.8 秒最多一次）

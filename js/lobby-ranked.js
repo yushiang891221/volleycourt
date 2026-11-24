@@ -4,11 +4,14 @@ import { preloadAvatars } from './avatar-toy.js';
 import { myLookCode } from './appearance.js';
 import * as P from './progress.js';
 import { installParty } from './lobby-party.js';
+import { mountLobbyGym } from './lobby-gym.js';
 const $ = id => document.getElementById(id);
 const read = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } };
 const save = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
 const mobile = matchMedia('(pointer: coarse), (max-width: 819px)');
 const demo = new URLSearchParams(location.search).get('lobbydemo');
+// 2026-11-24：電腦版的大廳背景是可以走動的球館（js/lobby-gym.js）；手機、或網址 ?lobbygym=0 照舊用照片＋站位角色
+const gymMode = window.top === window && !mobile.matches && new URLSearchParams(location.search).get('lobbygym') !== '0';   /* 被放在框框裡時不要再放球館（不會一層套一層） */
 let mode = demo === '6' ? '6v6' : demo === '2' ? '2v2' : read('po.lobby.mode', '2v2');
 if (!['2v2', '6v6'].includes(mode)) mode = '2v2';
 let partyId = null;
@@ -107,7 +110,7 @@ api.setRemoteYaw = (id, yaw) => { const i = shown.findIndex((m, n) => n > 0 && m
 api.playRemoteEmote = (id, e) => { const i = shown.findIndex((m, n) => n > 0 && m.id === id); if (i > 0) playEmote(i, e); };
 const wheel = { el: null, open: null };
 function wheelOpen() {
-  if (wheel.open || mobile.matches || $('home-page')?.hidden || document.querySelector('dialog[open]') || !shown.length) return;
+  if (gymMode || wheel.open || mobile.matches || $('home-page')?.hidden || document.querySelector('dialog[open]') || !shown.length) return;
   const keys = P.myWheel(); if (!keys.length) return;
   if (!wheel.el) { wheel.el = document.createElement('div'); wheel.el.id = 'lobby-wheel'; wheel.el.setAttribute('aria-label', '炫技輪盤'); $('party-stage').append(wheel.el); }
   wheel.el.replaceChildren(...keys.map((k, i) => { const b = document.createElement('button'); b.type = 'button'; b.tabIndex = -1; b.dataset.emo = k; b.dataset.slot = i; b.textContent = `${P.EMOTES[k].icon} ${P.EMOTES[k].name}`; return b; }), Object.assign(document.createElement('i'), { className: 'lw-cur' }));
@@ -131,7 +134,8 @@ function summary(prog = P.cachedProgress() || {}) {
 }
 if (demo === '2' || demo === '6') members = Array.from({ length: Number(demo) }, (_, i) => ({ id: `demo-${i}`, name: i ? ['小晴', '阿哲', '小宇', '可可', '阿凱'][i - 1] : nick(), rating: 1000 + i * 650, tier: ['新手', '新手', '野場小白', '野場小白', '野場NPC', '野場NPC'][i], isLeader: i === 0, look: myLookCode() }));
 setMode(mode); selectPage(location.hash === '#lobby' ? 'home' : read('po.lobby.page', 'home')); summary();
-try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); preview.onSelfYaw = (yaw, final) => api.onSelfPose?.(yaw, final); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
+if (gymMode) { document.body.classList.add('lobby-gym'); const mountGym = () => mountLobbyGym($('home-page')); if (globalThis.VBIntro?.entered) mountGym(); else addEventListener('vb-lobby-enter', mountGym, { once: true });   /* 登入進大廳後才載球館 */ const h = $('party-stage').querySelector('.stage-hint'); if (h) h.textContent = '點一下球館就能走動：WASD 移動 · 滑鼠拖曳轉視角 · 走到沙發、飲水機按 F 互動 · 按住 T 炫技 · 隊友會一起出現'; renderParty(); }
+else try { preview = livePreview($('party-stage').querySelector('canvas'), null, () => [...document.querySelectorAll('.party-view')]); preview.onSelfYaw = (yaw, final) => api.onSelfPose?.(yaw, final); renderParty(); } catch { notice('角色預覽載入失敗，請重新整理'); }
 preloadAvatars().then(renderParty, () => {});
 new ResizeObserver(() => preview?.redraw()).observe($('party-stage'));
 mobile.addEventListener('change', renderParty);

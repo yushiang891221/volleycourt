@@ -148,3 +148,15 @@ html.m-touch #lobby-shell .chat.is-collapsed { align-content:start; }
 #lobby-wheel .lw-cur { position:absolute; left:0; top:0; width:12px; height:12px; margin:-6px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #06211a99; }
 .party-emo { position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); white-space:nowrap; padding:3px 10px; border-radius:999px; background:#E5B869; color:#06211A; font-weight:800; font-size:13px; animation:party-emo 1.6s ease-out forwards; pointer-events:none; }
 @keyframes party-emo { 0% { opacity:0; transform:translate(-50%, 6px); } 15% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -10px); } }
+
+/* 2026-11-24 大廳背景＝可以走動的球館（js/lobby-gym.js）：球館鋪滿首頁，大廳的面板疊在上面；隊伍改成左上角的名單 */
+body.lobby-gym #home-page { position:relative; background:#06211a; }
+#lobby-gym { position:absolute; inset:0; width:100%; height:100%; border:0; z-index:0; }
+body.lobby-gym #home-page > :not(#lobby-gym) { position:relative; z-index:1; }
+body.lobby-gym #party-stage { position:absolute; inset:auto auto 8px 8px; min-height:0; width:auto; height:auto; background:none; pointer-events:none; }
+body.lobby-gym #party-stage canvas, body.lobby-gym .party-view, body.lobby-gym .empty-slot:not(:first-child) ~ .empty-slot { display:none; }
+body.lobby-gym #party-slots { position:static; width:auto; height:auto; display:flex; flex-direction:column; gap:4px; pointer-events:auto; }
+body.lobby-gym .party-slot { position:static; width:auto; height:auto; }
+body.lobby-gym .party-label { top:0; margin:0; }
+body.lobby-gym .empty-slot button { width:28px; height:28px; }
+body.lobby-gym .stage-hint { display:block; position:static; margin-top:6px; max-width:460px; font-size:11px; color:#e8efe9; background:#06211acc; padding:4px 8px; border-radius:6px; }

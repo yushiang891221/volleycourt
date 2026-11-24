@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>大廳球館測試</title>
+<style>html,body{margin:0;height:100%;background:#111;color:#fff;font:14px sans-serif}.row{display:flex;height:calc(100% - 30px)}iframe{flex:1;border:0;border-right:2px solid #333}</style></head><body>
+<div style="height:30px;line-height:30px;padding:0 8px">開發用：兩個球館（大廳模式）互相轉送訊息，模擬兩個人組隊（不經過伺服器）</div>
+<div class="row"><iframe id="A" src="../gym.html?site=bs-shenjing&lobby=1&dev&debug"></iframe><iframe id="B" src="../gym.html?site=bs-shenjing&lobby=1&dev&debug"></iframe></div>
+<script>
+const F = { A: document.getElementById('A'), B: document.getElementById('B') }, ready = {}, log = window.__log = { A: 0, B: 0 };
+const party = { A: { me: 'pA', members: [{ id: 'pB', n: '乙', look: 'r111001011012' }] }, B: { me: 'pB', members: [{ id: 'pA', n: '甲', look: 'r101000101007' }] } };
+addEventListener('message', (e) => {
+  const m = e.data; if (!m || !m.vbLobby) return;
+  const who = e.source === F.A.contentWindow ? 'A' : e.source === F.B.contentWindow ? 'B' : null; if (!who) return;
+  const other = who === 'A' ? 'B' : 'A';
+  if (m.type === 'ready') { ready[who] = 1; F[who].contentWindow.postMessage({ vbLobby: 1, type: 'party', ...party[who] }, location.origin); }
+  else if (m.type === 'send') { log[who]++; F[other].contentWindow.postMessage({ vbLobby: 1, type: 'recv', id: party[who].me, t: m.t, d: m.d }, location.origin); }
+});
+</script></body></html>
