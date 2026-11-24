@@ -17,8 +17,9 @@ export function cleanNickname(value) {
   return nickname;
 }
 
-export const validAppearance = code => typeof code === 'string' && /^t2[0-9a-z]{9}[0-9]{2}$/.test(code);
-export const profileStep = profile => !profile?.nickname ? 'nickname' : !profile.appearance ? 'creator' : 'lobby';
+// 外觀只認新角色的代碼（r1）；帳號裡還是舊公仔代碼（t2）的人要重新建角色
+export const validAppearance = code => typeof code === 'string' && /^r1[0-9a-z]{9}[0-9]{2}$/.test(code);
+export const profileStep = profile => !profile?.nickname ? 'nickname' : !validAppearance(profile.appearance) ? 'creator' : 'lobby';
 
 // 只補空欄位；已存在的雲端資料永遠優先。快取屬於另一帳號時不可帶入。
 export function migrationPatch(profile, local = {}) {
@@ -27,7 +28,7 @@ export function migrationPatch(profile, local = {}) {
   if (!profile.nickname && local.nickname) {
     try { patch.nickname = cleanNickname(local.nickname); } catch { /* 改由取暱稱畫面處理 */ }
   }
-  if (!profile.appearance && validAppearance(local.appearance)) patch.appearance = local.appearance;
+  if (!validAppearance(profile.appearance) && validAppearance(local.appearance)) patch.appearance = local.appearance;
   return patch;
 }
 

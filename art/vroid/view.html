@@ -1,0 +1,31 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VRoid 頭部預覽</title>
+<style>html,body{margin:0;height:100%;background:#E6EAF0;font-family:sans-serif}#c{display:block}#lab{position:fixed;left:10px;top:8px;font-size:14px;color:#333}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body><div id="lab">VRoid CC0 男生（左：Base_Male、右：HairSample_Male）</div>
+<script type="module">
+// 開發用：看 VRoid CC0 模型套上動畫風上色的樣子。網址 ?f=base_male 只看一個
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(devicePixelRatio); R.setSize(innerWidth, innerHeight); R.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xE6EAF0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.8); sun.position.set(1.5, 2.5, 3); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(22, innerWidth / innerHeight, 0.05, 50);
+const RAMP = (() => { const d = new Uint8Array([178, 168, 172, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 2, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toonOf = m => { const t = new THREE.MeshToonMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, gradientMap: RAMP, transparent: m.transparent, alphaTest: m.alphaTest || (m.transparent ? 0.5 : 0), side: m.side });
+  if (t.map) t.map.colorSpace = THREE.SRGBColorSpace; return t; };
+const L = new GLTFLoader(), files = new URLSearchParams(location.search).get('f')?.split(',') || ['base_male', 'hair_male'];
+const info = {};
+for (const [i, f] of files.entries()) {
+  const g = await L.loadAsync(f + '.glb');
+  const root = g.scene; root.position.x = (i - (files.length - 1) / 2) * 0.7;
+  root.traverse(o => { if (o.isMesh) { o.material = Array.isArray(o.material) ? o.material.map(toonOf) : toonOf(o.material); o.frustumCulled = false; } });
+  scene.add(root);
+  const meshes = []; root.traverse(o => { if (o.isMesh) meshes.push(o.name + ':' + o.geometry.attributes.position.count); });
+  info[f] = { meshes, morphs: Object.keys((root.getObjectByProperty('isMesh', true) || {}).morphTargetDictionary || {}).length };
+}
+window.__info = info; window.__R = { R, scene, cam, THREE };
+window.__look = (yaw = 0, h = 1.42, d = 1.6) => { cam.position.set(Math.sin(yaw) * d, h + 0.02, Math.cos(yaw) * d); cam.lookAt(0, h, 0); R.render(scene, cam); return 'ok'; };
+__look(0);
+addEventListener('resize', () => { R.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); __look(0); });
+</script></body></html>

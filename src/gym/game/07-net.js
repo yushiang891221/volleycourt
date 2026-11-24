@@ -567,10 +567,23 @@ function myWornForNet(now) {
   return NET.worn.v;
 }
 function makeAvatar(color, ch, team = -1, tj = null) {   // tj＝球隊球衣（比賽以外才穿）
-  const av = tj && team < 0 ? makeToyAvatar(decodeLook(ch), tj) : makeToyAvatar(decodeLook(ch), teamKit(team));
+  const kitArg = tj && team < 0 ? tj : teamKit(team), look = decodeLook(ch);
+  const av = makeToyAvatar(look, kitArg);
   av.g.scale.setScalar(AV_SCALE);   // 遊戲裡整個人放大一點（維持 Q 版比例；捏臉畫面不放大）
   av.gameKit = teamKit(team);
+  if (REAL_ON && attachReal(av, look, kitArg, 1)) REAL_AVS.add(av);   // 新角色：公仔照舊在算（看不見），新角色每一格跟著它擺姿勢（js/avatar-real.js）
   return av;
+}
+// 畫面要畫之前：場上看得到的新角色都跟著自己的公仔擺好
+function realSync() {
+  if (!REAL_ON) return; const now = performance.now();
+  for (const av of REAL_AVS) {
+    let vis = true, o = av.g; for (; o; o = o.parent) { if (!o.visible) { vis = false; break; } if (o === scene) break; }
+    if (!o) { if (av._rgone == null) av._rgone = now; else if (now - av._rgone > 10000) REAL_AVS.delete(av); continue; } av._rgone = null;
+    if (!vis) continue;
+    const dt = Math.min(0.1, (now - (av._rt || now)) / 1000); av._rt = now;
+    try { driveReal(av, dt); } catch (e) { if (!av._rerr) { av._rerr = 1; console.warn('[real]', e); } }
+  }
 }
 function refreshPeerAppearance(p2) {
   const kit = teamKit(VM.on ? vmTeamOf(p2.id) : -1);

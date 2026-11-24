@@ -1082,6 +1082,7 @@ html.phone-walk .vm-hud { left: 50%; top: env(safe-area-inset-top, 0px); }
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook, kitOf, OPTIONS as LOOK_OPTIONS } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey, readWornJersey } from './js/appearance.js';
+import { preloadReal, attachReal, driveReal } from './js/avatar-real.js';   // 新角色（寫實身體＋VRoid 日系頭）
 import { decodeJersey, CUT_TOP } from './js/jersey.js';
 import { pickServer } from './js/servers.js';   // 選伺服器：房間連哪一台   // 個人球衣 J4：別人送來的球衣代碼
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
@@ -1102,6 +1103,9 @@ try { if (!DEV_LOCAL) await gameAccount.accessToken(); } catch {
   throw new Error('請先登入。');
 }
 await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
+// 新角色：預設就用（2026-11-24 起全部換新角色）；網址 ?real=0 是開發用的退路（舊公仔）。載入失敗也退回公仔
+const REAL_ON = new URLSearchParams(location.search).get('real') !== '0' && await preloadReal();
+const REAL_AVS = new Set();
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -1533,7 +1537,7 @@ function lensUpdate() {
 }
 composer.addPass(new OutputPass());
 composer.addPass(smaa);
-function renderScene() { composer.render(); }
+function renderScene() { realSync(); composer.render(); }
 // 泛光效果開關（系統設定 → 畫面）：關掉＝亮處不暈開，畫面比較清楚、不會濛濛的
 const applyBloom = () => { bloom.enabled = VBSettings.values.bloom !== false; if (window.wakeRender) window.wakeRender(300); };
 applyBloom(); addEventListener('vb-settings-change', applyBloom);
@@ -6372,7 +6376,7 @@ function renderCctv(now) {
   avatar.position.set(walk.x, 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
   const hv = hands.visible; hands.visible = false;
   const src = renderer.domElement; c.cam.aspect = src.width / src.height; c.cam.updateProjectionMatrix();
-  renderer.render(scene, c.cam);
+  realSync(); renderer.render(scene, c.cam);
   const ctx = c.canvas.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, c.canvas.width, c.canvas.height);
   ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, c.canvas.height - 22, c.canvas.width, 22); ctx.fillStyle = '#fff'; ctx.font = '13px monospace';
@@ -6427,7 +6431,7 @@ function renderCamView(now) {
   avatar.position.set(walk.x, walk.sit ? walk.sit.eye - 1.6 : 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
   const hv = hands.visible; hands.visible = false;
   const src = renderer.domElement; camView.cam.aspect = src.width / src.height; camView.cam.updateProjectionMatrix();
-  renderer.render(scene, camView.cam);
+  realSync(); renderer.render(scene, camView.cam);
   // 從整張畫面裁出 16:9 放進小視窗
   const cv = $('cv-canvas'), ctx = cv.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, cv.width, cv.height);
@@ -7840,10 +7844,23 @@ function myWornForNet(now) {
   return NET.worn.v;
 }
 function makeAvatar(color, ch, team = -1, tj = null) {   // tj＝球隊球衣（比賽以外才穿）
-  const av = tj && team < 0 ? makeToyAvatar(decodeLook(ch), tj) : makeToyAvatar(decodeLook(ch), teamKit(team));
+  const kitArg = tj && team < 0 ? tj : teamKit(team), look = decodeLook(ch);
+  const av = makeToyAvatar(look, kitArg);
   av.g.scale.setScalar(AV_SCALE);   // 遊戲裡整個人放大一點（維持 Q 版比例；捏臉畫面不放大）
   av.gameKit = teamKit(team);
+  if (REAL_ON && attachReal(av, look, kitArg, 1)) REAL_AVS.add(av);   // 新角色：公仔照舊在算（看不見），新角色每一格跟著它擺姿勢（js/avatar-real.js）
   return av;
+}
+// 畫面要畫之前：場上看得到的新角色都跟著自己的公仔擺好
+function realSync() {
+  if (!REAL_ON) return; const now = performance.now();
+  for (const av of REAL_AVS) {
+    let vis = true, o = av.g; for (; o; o = o.parent) { if (!o.visible) { vis = false; break; } if (o === scene) break; }
+    if (!o) { if (av._rgone == null) av._rgone = now; else if (now - av._rgone > 10000) REAL_AVS.delete(av); continue; } av._rgone = null;
+    if (!vis) continue;
+    const dt = Math.min(0.1, (now - (av._rt || now)) / 1000); av._rt = now;
+    try { driveReal(av, dt); } catch (e) { if (!av._rerr) { av._rerr = 1; console.warn('[real]', e); } }
+  }
 }
 function refreshPeerAppearance(p2) {
   const kit = teamKit(VM.on ? vmTeamOf(p2.id) : -1);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { preloadAvatars, makeToyAvatar, decodeLook, kitOf, OPTIONS as LOOK_OPTIONS } from './js/avatar-toy.js';
 import { readLook, normalizeLook, teamKit, aiLook, myLookCode, readTeamJersey, readWornJersey } from './js/appearance.js';
+import { preloadReal, attachReal, driveReal } from './js/avatar-real.js';   // 新角色（寫實身體＋VRoid 日系頭）
 import { decodeJersey, CUT_TOP } from './js/jersey.js';
 import { pickServer } from './js/servers.js';   // 選伺服器：房間連哪一台   // 個人球衣 J4：別人送來的球衣代碼
 import { myTitle, myWheel, EMOTES } from './js/progress.js';   // WEB-010：稱號、T 輪盤
@@ -21,6 +22,9 @@ try { if (!DEV_LOCAL) await gameAccount.accessToken(); } catch {
   throw new Error('請先登入。');
 }
 await preloadAvatars(); // 首次建立玩家／AI 之前等待；失敗由模型模組回退。
+// 新角色：預設就用（2026-11-24 起全部換新角色）；網址 ?real=0 是開發用的退路（舊公仔）。載入失敗也退回公仔
+const REAL_ON = new URLSearchParams(location.search).get('real') !== '0' && await preloadReal();
+const REAL_AVS = new Set();
 const GAME_ONLY = true; // Fixed venue; editor code remains isolated from gameplay.
 const CREATOR_SHOT = new URLSearchParams(location.search).get('shot') === 'creator';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

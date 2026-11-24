@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { makeToyAvatar, decodeLook, preloadAvatars, EQUIP, OPTIONS } from './avatar-toy.js';
 import { openCreator } from './creator.js';
+import { makePlayer, syncReal, realReadyOf, preloadReal } from './avatar-real.js';   // 2026-11-24 起畫面上都是新角色（看不見的公仔骨架＋新角色跟著它）
 import { readLook, saveLook, myLookCode, readEquip, saveEquip, readTeamJersey, saveTeamJersey, readWornJersey, BASIC_JERSEYS, wearBasicJersey, readTeamWear, wearTeamJersey } from './appearance.js';
 import { decodeJersey, PALETTE, CUTS } from './jersey.js';
 import { AVP, EMO_KEYS, avMix, emoKeyDuration, emoKeySample, emoPose } from './emote-keys.js';   // T 輪盤動作：跟遊戲同一份（tools/build-emote-keys.cjs 產生）
@@ -31,30 +32,35 @@ export function editAppearance(mode = 'edit') {
   });
 }
 
+let previewQ = Promise.resolve(), previewR = null;
 export function preview(img, code = myLookCode(), opt = {}) {   // opt：ang＝轉幾度（弧度）、w／h＝圖片大小
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  try {
-    const W = opt.w || 240, H = opt.h || 300;
-    renderer.setSize(W, H);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#0B362B');   /* Play One 風格：深綠底 */
-    scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
-    const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
-    const av = makeToyAvatar(decodeLook(code), opt.jersey === undefined ? readWornJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
-    const camera = new THREE.PerspectiveCamera(32, W / H, .05, 20);
-    if (opt.tight) { camera.position.set(.25, 1.0, 2.65); camera.lookAt(0, .8, 0); } else { camera.position.set(.35, 1.0, 2.95); camera.lookAt(0, .78, 0); }   // 角色整個人（含頭頂、帽子）都在預覽圖裡；tight＝裝備面板的大預覽
-    renderer.render(scene, camera); img.src = renderer.domElement.toDataURL();
-  } finally { renderer.dispose(); renderer.forceContextLoss(); }
+  previewQ = previewQ.then(() => previewNow(img, code, opt)).catch((e) => console.warn('[角色預覽]', e));
+  return previewQ;
+}
+async function previewNow(img, code, opt) {
+  if (!img.isConnected && !opt.offscreen) return;
+  await Promise.all([preloadAvatars(), preloadReal()]).catch(() => {});
+  const W = opt.w || 240, H = opt.h || 300;
+  if (!previewR) { previewR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); previewR.outputColorSpace = THREE.SRGBColorSpace; }
+  previewR.setSize(W, H);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(opt.bg || '#0B362B');   /* Play One 風格：深綠底 */
+  scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2));
+  const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
+  const av = makePlayer(decodeLook(code), opt.jersey === undefined ? readWornJersey() || 'orange' : opt.jersey || 'orange'); av.g.rotation.y = opt.ang || 0; scene.add(av.g);   // 含裝備、穿著的球隊球衣
+  syncReal(av); await realReadyOf(av); syncReal(av);
+  const camera = new THREE.PerspectiveCamera(32, W / H, .05, 20);
+  if (opt.tight) { camera.position.set(.25, 1.0, 2.65); camera.lookAt(0, .8, 0); } else { camera.position.set(.35, 1.0, 2.95); camera.lookAt(0, .78, 0); }   // 角色整個人（含頭頂、帽子）都在預覽圖裡；tight＝裝備面板的大預覽
+  previewR.render(scene, camera); img.src = previewR.domElement.toDataURL();
 }
 
 // 置物櫃格子的縮圖：用自己的角色實際穿戴那件東西拍一張（不是圖示）。共用一個畫布，一張一張畫，畫過的記起來。
 // shot：{ at: 'torso'|'hat'|'glasses'|'neck'|'wrist'|'knee', top?, design?, item?, value? }
 const SHOT_CAM = {   // [相機位置, 看的點]（角色站在原點、面向 +z）
-  torso: [[0.25, 1.0, 1.55], [0, 0.9, 0]], hat: [[0.3, 1.62, 1.25], [0, 1.5, 0]], glasses: [[0.18, 1.36, 0.9], [0, 1.32, 0]],
-  neck: [[0.2, 1.2, 1.0], [0, 1.1, 0]], wrist: [[0.85, 0.72, 0.95], [0.3, 0.6, 0]], knee: [[0.3, 0.45, 1.2], [0, 0.38, 0]],
+  torso: [[0.25, 1.05, 1.7], [0, 0.98, 0]], hat: [[0.3, 1.62, 1.15], [0, 1.5, 0]], glasses: [[0.15, 1.46, 0.75], [0, 1.44, 0]],
+  neck: [[0.2, 1.35, 0.9], [0, 1.27, 0]], wrist: [[0.85, 0.72, 0.95], [0.3, 0.6, 0]], knee: [[0.3, 0.45, 1.2], [0, 0.38, 0]],
 };
 const SHOT_CACHE = new Map(); let shotR = null;
-function renderShot(shot) {
+async function renderShot(shot) {
   const look = decodeLook(myLookCode()); let kit = readWornJersey() || 'orange';
   if (shot.at === 'torso') { if (shot.design) kit = { design: shot.design }; else { kit = 'orange'; look.top = shot.top; } }
   else if (shot.item === 'knee') look.knee = shot.value;
@@ -63,17 +69,17 @@ function renderShot(shot) {
   if (!shotR) { shotR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); shotR.setSize(200, 200); shotR.outputColorSpace = THREE.SRGBColorSpace; }
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0B2E25');
   scene.add(new THREE.HemisphereLight('#ffffff', '#67738a', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.6); sun.position.set(2, 4, 4); scene.add(sun);
-  const av = makeToyAvatar(look, kit); scene.add(av.g);
+  const av = makePlayer(look, kit); scene.add(av.g); syncReal(av); await realReadyOf(av); syncReal(av);
   const [p, t] = SHOT_CAM[shot.at] || SHOT_CAM.torso, cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); cam.position.set(...p); cam.lookAt(...t);
   shotR.render(scene, cam); const url = shotR.domElement.toDataURL('image/png');
   SHOT_CACHE.set(key, url); return url;
 }
 async function fillShots(d, items) {
-  try { await preloadAvatars(); } catch {}
+  try { await preloadAvatars(); await preloadReal(); } catch {}
   for (const it of items) {
     if (!it.shot || !d.open) continue;
     const img = d.querySelector(`.eqx-item[data-i="${it.i}"] .eqx-shot`); if (!img) continue;
-    try { img.src = renderShot(it.shot); img.hidden = false; img.closest('.eqx-item').classList.add('has-shot'); } catch (e) { console.warn('[置物櫃] 縮圖畫不出來', e); }
+    try { img.src = await renderShot(it.shot); img.hidden = false; img.closest('.eqx-item').classList.add('has-shot'); } catch (e) { console.warn('[置物櫃] 縮圖畫不出來', e); }
     await new Promise((r) => setTimeout(r, 0));   // 一張一張畫，畫面不卡
   }
 }
@@ -114,13 +120,14 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   const light = new THREE.DirectionalLight('#ffffff', 3); light.position.set(2, 4, 4); scene.add(light);
   const camera = new THREE.PerspectiveCamera(32, 0.75, 0.05, 20); camera.position.set(0.25, 1.0, 2.65); camera.lookAt(0, 0.8, 0);
   // 鏡頭繞著角色轉：左右拖＝繞一圈、上下拖＝從上面／下面看（不會翻過頭頂）
-  let av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
+  let lastCode = null, av = null, yaw = 0.1, pitch = 0.08, drag = null, raf = 0;
   const target = new THREE.Vector3(0, 0.78, 0), DIST0 = 3.0; let dist = DIST0;   // 滾輪縮放遠近（1.2～5 公尺）
   const size = () => { const w = canvas.clientWidth || 300, h = canvas.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   // 自己腳下的香檳金底座，與角色共用鏡頭。
   const partyHalo = slots ? new THREE.Mesh(new THREE.RingGeometry(.28, .38, 64), new THREE.MeshBasicMaterial({ color: '#E5B869', side: THREE.DoubleSide, transparent: true, opacity: .8 })) : null;
   if (partyHalo) { partyHalo.rotation.x = -Math.PI / 2; partyHalo.position.y = .01; scene.add(partyHalo); }
-  let party = [];
+  let party = [], lastMembers = null;
+  preloadReal().then(() => { if (lastMembers) api.setParty(lastMembers); else if (av) api.rebuild(lastCode); }, () => {});   /* 新角色模型載好之前先出現的是公仔：載好就換掉 */
   // 大廳（slots）：拖曳轉「自己的角色」，鏡頭固定（不再繞著轉、也不縮放，角色不會跑出名牌位置）；方向和炫技同步給隊友（onSelfYaw）
   const yaws = [], acts = [];   // 每個站位角色的方向、正在做的炫技 { key, t0, dir }
   let actRaf = 0;
@@ -139,7 +146,7 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
     return true;
   };
   const animate = () => { actRaf = 0; const now = performance.now(); let busy = false; party.forEach((_, i) => { busy = actPose(i, now) || busy; }); draw(); if (busy) actRaf = requestAnimationFrame(animate); };
-  const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
+  const draw = () => { raf = 0; if (!canvas.getClientRects().length || document.hidden) return; size(); for (const a of party) syncReal(a); if (av) syncReal(av); target.y = 0.78 + 0.42 * Math.max(0, Math.min(1, (DIST0 - dist) / (DIST0 - 1.2))); camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist); camera.lookAt(target);
     if (!slots) { renderer.render(scene, camera); return; }
     // 同一個 renderer／scene，以 scissor 畫各站位；手機 slots 只回傳自己。
     // 後面的人先畫、前面的人後畫（只清深度不清顏色），前面的人才會擋住後面的人（6 對 6 的 V 字隊形會重疊）
@@ -176,10 +183,12 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
     setParty(members) {
       // 模型資源可能由 avatar-toy 共用；移除舊節點，避免誤 dispose 共用材質。
       party.forEach(a => scene.remove(a.g));
-      party = members.map((m, i) => makeToyAvatar(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
+      lastMembers = members;
+      party = members.map((m, i) => makePlayer(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
+      party.forEach((a) => realReadyOf(a).then(ask));   /* 頭比較晚載好：好了再畫一次 */
       party.forEach(a => scene.add(a.g)); party.forEach((_, i) => actPose(i, performance.now())); ask();
     },
-    rebuild(code) { if (av) scene.remove(av.g); av = makeToyAvatar(decodeLook(code), readWornJersey() || 'orange'); scene.add(av.g); ask(); },
+    rebuild(code) { lastCode = code; if (av) scene.remove(av.g); av = makePlayer(decodeLook(code), readWornJersey() || 'orange'); scene.add(av.g); realReadyOf(av).then(ask); ask(); },
     redraw: ask,
     dispose() { cancelAnimationFrame(raf); cancelAnimationFrame(actRaf); partyHalo?.geometry.dispose(); partyHalo?.material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
   });

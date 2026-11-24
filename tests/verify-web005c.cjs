@@ -11,15 +11,19 @@ const context = vm.createContext({ localStorage: {
   setItem: (key, value) => storage.set(key, value)
 } });
 const codec = read('js/avatar-toy.js').split('// ---------- 材質')[0].replace(/^import .*;$/gm, '').replace(/export /g, '');
-vm.runInContext(codec + read('js/jersey.js').replace(/^import .*;$/gm, '').replace(/export /g, '') + read('js/appearance.js').replace(/^import .*;$/gm, '').replace(/export /g, ''), context);
+vm.runInContext(read('js/real-look.js').replace(/export /g, '') + codec + read('js/jersey.js').replace(/^import .*;$/gm, '').replace(/export /g, '') + read('js/appearance.js').replace(/^import .*;$/gm, '').replace(/export /g, ''), context);
 const run = source => vm.runInContext(source, context);
 assert.equal(run('needsCreator()'), true);
-const code = run('saveLook({...DEFAULT_LOOK, hair: 3, num: 87})');
-assert.match(code, /^t2[0-9a-z]{9}\d{2}$/);
+const old = run('saveLook({...DEFAULT_LOOK, hair: 3, num: 87})');
+assert.match(old, /^t2[0-9a-z]{9}\d{2}$/);
+assert.equal(run('needsCreator()'), true);   // 舊公仔外觀：要重新建角色
+const code = run('saveLook(lookFromReal({...REAL_DEFAULT, hair: 2, num: 87}))');
+assert.match(code, /^r1[0-9a-z]{9}\d{2}$/);
 assert.equal(storage.get('vb.settings.look'), code);
 assert.equal(run('needsCreator()'), false);
 assert.equal(run('decodeLook(readLook()).num'), 87);
-assert.equal(run('decodeLook(readLook()).hair'), 3);
+assert.equal(run('decodeLook(readLook()).real.hair'), 2);
+assert.equal(run('normalizeLook(readLook())'), code);
 assert.equal(run("normalizeLook('old-character')"), run('encodeLook(DEFAULT_LOOK)'));
 assert.equal(run("normalizeLook('t2zzzzzzzzz99')"), run('encodeLook({...DEFAULT_LOOK,num:99})'));
 assert.equal(run("aiLook('ai12')"), run("aiLook('ai12')"));
@@ -75,7 +79,7 @@ async function introFlow(saved, hash = '') {
     assert.equal(result.status, 0, file + result.stderr);
   }
   const gym = read('gym.html');
-  assert(gym.includes('makeToyAvatar(decodeLook(ch), teamKit(team))'));
+  assert(gym.includes('makeToyAvatar(look, kitArg)') && gym.includes('attachReal(av, look, kitArg, 1)'));   // 新角色跟著看不見的公仔骨架
   assert(gym.includes('const dch = normalizeLook(d.ch);'));
   assert(gym.includes("ch: myChar() || 'none'"));
   assert(gym.includes('refreshPeerAppearance(p2);'));

@@ -370,7 +370,7 @@ function renderCctv(now) {
   avatar.position.set(walk.x, 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
   const hv = hands.visible; hands.visible = false;
   const src = renderer.domElement; c.cam.aspect = src.width / src.height; c.cam.updateProjectionMatrix();
-  renderer.render(scene, c.cam);
+  realSync(); renderer.render(scene, c.cam);
   const ctx = c.canvas.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, c.canvas.width, c.canvas.height);
   ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, c.canvas.height - 22, c.canvas.width, 22); ctx.fillStyle = '#fff'; ctx.font = '13px monospace';
@@ -425,7 +425,7 @@ function renderCamView(now) {
   avatar.position.set(walk.x, walk.sit ? walk.sit.eye - 1.6 : 0, walk.z); avatar.rotation.y = walk.yaw + Math.PI; avatar.visible = true;
   const hv = hands.visible; hands.visible = false;
   const src = renderer.domElement; camView.cam.aspect = src.width / src.height; camView.cam.updateProjectionMatrix();
-  renderer.render(scene, camView.cam);
+  realSync(); renderer.render(scene, camView.cam);
   // 從整張畫面裁出 16:9 放進小視窗
   const cv = $('cv-canvas'), ctx = cv.getContext('2d'), sw = Math.min(src.width, (src.height * 16) / 9), sh = (sw * 9) / 16;
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, cv.width, cv.height);

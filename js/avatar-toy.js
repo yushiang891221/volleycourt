@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { decodeJersey, normalizeJersey, encodeJersey, jerseyColors, drawJerseyTorso, ensureJerseyFonts, jerseyFontsReady, CUT_TOP } from './jersey.js';
+import { decodeReal, encodeReal, REAL_CODE_RE } from './real-look.js';
 
 export const OPTIONS = {
   sex: ['男', '女'],
@@ -22,11 +23,21 @@ export const EXPRESSIONS = { '': '平常', happy: '開心', focus: '專注', str
 const KEYS = ['sex', 'skin', 'hair', 'hairColor', 'eyes', 'top', 'pants', 'knee', 'shoe'];
 export const DEFAULT_LOOK = { v: 2, sex: 0, skin: 1, hair: 0, hairColor: 1, eyes: 0, top: 1, num: 10, pants: 0, knee: 0, shoe: 0 };
 
+// 新角色（r1 代碼，js/real-look.js）：L.real 放新角色的外觀；其他欄位照舊（遊戲看不見的公仔骨架、第一人稱手臂用）
+//   護膝、背號兩邊共用：改 L.knee／L.num 也會寫回新代碼（大廳「球衣與裝備」改護膝就是改 L.knee）
+const K_R2T = [2, 0, 1], K_T2R = [1, 2, 0];   // 新角色護膝 0 不戴、1 黑、2 白 ↔ 公仔 0 黑、1 白、2 不戴
+export function lookFromReal(R, eq) {
+  const o = normLook({ sex: R.sex, skin: R.skin < 6 ? R.skin : [1, 3][R.skin - 6], hair: R.sex ? 4 : 0, hairColor: Math.min(R.hairColor, 5), num: R.num, knee: K_R2T[R.knee] });
+  o.real = { ...R }; if (eq) o.eq = eq; return o;
+}
 export function encodeLook(L) {
-  const eq = L && L.eq; L = normLook(L);
+  const eq = L && L.eq;
+  if (L && L.real) return encodeReal({ ...L.real, num: L.num ?? L.real.num, knee: L.knee != null ? K_T2R[L.knee] : L.real.knee }) + equipSuffix(eq);
+  L = normLook(L);
   return 't2' + KEYS.map((k) => L[k].toString(36)).join('') + String(L.num).padStart(2, '0') + equipSuffix(eq);
 }
 export function decodeLook(code) {
+  if (typeof code === 'string' && REAL_CODE_RE.test(code)) return lookFromReal(decodeReal(code.slice(0, 13)), decodeEquip(code.slice(14)));
   if (typeof code !== 'string' || !/^t2[0-9a-z]{9}\d{2}(~e[0-9a-z]{4})?$/.test(code)) return { ...DEFAULT_LOOK };
   const L = {}; KEYS.forEach((k, i) => (L[k] = parseInt(code[2 + i], 36))); L.num = +code.slice(11, 13);
   const o = normLook(L), eq = decodeEquip(code.slice(14)); if (eq) o.eq = eq;

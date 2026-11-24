@@ -1,0 +1,2467 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>寫實角色捏臉測試</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#E7ECF2;--panel:#FFFFFFee;--ink:#1F2A37;--sub:#6B7785;--acc:#2F6FEB;--line:#D9E0E8}
+html,body{margin:0;height:100%;background:var(--bg);font:14px "Microsoft JhengHei",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+#view{position:absolute;inset:0}
+#panel{position:absolute;right:14px;top:14px;bottom:14px;width:330px;background:var(--panel);border-radius:16px;box-shadow:0 6px 24px #0002;display:flex;flex-direction:column;overflow:hidden}
+#tabs{display:flex;gap:4px;padding:10px 10px 6px;flex-wrap:wrap}
+#tabs button{flex:1;border:0;border-radius:999px;padding:7px 0;background:#EEF2F7;color:var(--ink);font:inherit;cursor:pointer}
+#tabs button.on{background:var(--acc);color:#fff}
+#body{flex:1;overflow:auto;padding:4px 14px 14px}
+h4{margin:14px 0 6px;font-size:13px;color:var(--sub);border-bottom:1px solid var(--line);padding-bottom:4px}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.row>span{width:70px;flex:none;color:var(--sub);font-size:13px}
+.row input[type=range]{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:2px solid var(--line);background:#fff;border-radius:10px;padding:6px 10px;font:inherit;cursor:pointer}
+.chips button.on{border-color:var(--acc);color:var(--acc)}
+.sw{width:28px;height:28px;border-radius:8px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 2px var(--acc)}
+input[type=color]{width:34px;height:30px;border:0;padding:0;background:none;cursor:pointer}
+input[type=number]{width:70px;font:inherit;padding:4px}
+#top{position:absolute;left:14px;top:14px;display:flex;gap:6px}
+#top button{border:0;border-radius:999px;padding:8px 14px;background:#fff;box-shadow:0 2px 8px #0001;font:inherit;cursor:pointer}
+#top button.on{background:var(--acc);color:#fff}
+#msg{position:absolute;left:14px;bottom:14px;color:var(--sub);font-size:12px}
+@media (max-width:700px){#panel{left:8px;right:8px;top:auto;height:48%;width:auto}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<div id="view"></div>
+<div id="top"><button data-sex="m" class="on">男生</button><button data-sex="f">女生</button><button id="spin">轉動：關</button><button id="handcam">看手</button><button id="toon" class="on">動畫風上色</button></div>
+<div id="panel"><div id="tabs"></div><div id="body"></div></div>
+<div id="msg">載入中…</div>
+<script>addEventListener('error',(e)=>{document.getElementById('msg').textContent='錯誤：'+e.message+' @'+e.lineno;});</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as EK from './js/emote-keys.js';   // 遊戲的姿勢參數與舊炫技（同一份資料）
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---------- 場景 ----------
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xE7ECF2);
+const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+cam.position.set(0.6, 1.3, 5.2);
+const ctl = new OrbitControls(cam, renderer.domElement);
+ctl.target.set(0, 1.0, 0); ctl.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.4));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(2, 4, 3); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -1.5, right: 1.5, top: 2.5, bottom: -0.5 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xdfe8ff, 0.7); fill.position.set(-3, 2, -2); scene.add(fill);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(1.6, 48), new THREE.ShadowMaterial({ opacity: 0.18 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+// ---------- 外觀設定 ----------
+const SKIN = ['#FFE3CF', '#F7D2B4', '#EBB894', '#CF9468', '#A06A47', '#6E4632', '#FBE3D3', '#F5D2BC', '#EEC3A4', '#E3B08D', '#D69C78', '#C08560', '#A26B4A', '#86543A', '#6A4030', '#4E2F24'];
+const HAIRC = ['#1E1A18', '#3B2A20', '#5A3C28', '#8A5A35', '#B88A55', '#E0C38A', '#C9C9C9', '#A33A2E', '#2F4FA8', '#E46FA0'];
+const look = {
+  m: { skin: '#F1CDB3', eyeColor: 'brown', brow: 5, browC: '#1C1511', hair: 0, hs: 1, hw: 1, hy: 0, hz: 0, hairP: 0, hairC: '#2B211B', hairTip: '#7A5A40', tipAmt: 0, ah: null, expr: '', face: null, q: 1.1, jersey: '#F4F4F4', trim: '#1F3F8F', num: '#1F3F8F', no: 7, shorts: '#1F2A44' },
+  f: { skin: '#F2C9AE', eyeColor: 'brownlight', brow: 2, browC: '#3B2A20', hair: 5, hs: 1, hw: 1, hy: 0, hz: 0, hairP: 6, hairC: '#3B2A20', hairTip: '#9A6A48', tipAmt: 0, ah: null, expr: '', face: null, q: 1.1, jersey: '#F4F4F4', trim: '#C2264B', num: '#C2264B', no: 3, shorts: '#C2264B' },
+};
+let sex = 'm';
+look.m.face = defaultFace(false); look.f.face = defaultFace(true);
+// 男生預設照使用者給的參考圖（寫實偏日系少年）：眼睛偏下、眼距開、眼型扁長、咖啡灰瞳孔、細八字眉、嘴巴靠近鼻子稍寬
+Object.assign(look.m.face.eye, { y: -0.55, gap: 0.35, sx: 1.35, sy: 0.9, color: '#6B4A30' });
+Object.assign(look.m.face.brow, { style: 0, sy: 1.4, rot: -0.25, y: -0.6, color: '#1E1714' });
+Object.assign(look.m.face.mouth, { y: 0.35, sx: 1.6 });
+look.m.hairMode = 'jp'; look.m.hairC = '#16120F';   // 日系碎瀏海短髮
+look.m.vhead = 0; look.f.vhead = 0; look.m.vhair = 0; look.f.vhair = 0; look.f.hairC = '#3B2A20'; look.f.face.eye.color = '#6B4A30';   // VRoid 頭（官方 CC0）：男生預設碎瀏海
+look.m.neckW = 0.86; look.f.neckW = 0.9;
+let toon = true;   // 預設動畫風（賽璐璐）上色
+const BROW_ORDER = ['eyebrow001', 'eyebrow004', 'eyebrow006', 'eyebrow008', 'eyebrow010', 'eyebrow012'];
+const BROW_NAMES = ['細眉', '平眉', '彎眉', '濃眉', '劍眉', '粗眉'];
+const EYE_COLORS = [['brown', '棕色', '#5A3A22'], ['brownlight', '淺棕', '#8A6038'], ['grey', '灰色', '#7A8088'], ['green', '綠色', '#4E7A3E'], ['bluegreen', '藍綠', '#3E7A78'], ['blue', '藍色', '#3A62A0'], ['lightblue', '淺藍', '#6A9AD0'], ['deepblue', '深藍', '#203A78'], ['ice', '冰藍', '#A0C8E0']];
+const HAIR_ORDER = ['short02', 'short04', 'short01', 'short03', 'afro01', 'ponytail01', 'bob01', 'bob02', 'braid01', 'long01'];
+const HAIR_NAMES = ['短髮', '側分短髮', '平頭', '刺刺短髮', '爆炸頭', '馬尾', '鮑伯頭 A', '鮑伯頭 B', '辮子', '長直髮'];
+
+// ---------- 貼圖工具 ----------
+// 貼圖平均顏色（線性空間），用來把膚色換成玩家選的顏色但保留明暗與紅潤
+function avgColor(tex) {
+  const img = tex.image, c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0, 64, 64);
+  const d = g.getImageData(0, 0, 64, 64).data; const col = new THREE.Color(), sum = new THREE.Color(0, 0, 0); let n = 0;
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 200) continue; col.setRGB(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, THREE.SRGBColorSpace); sum.r += col.r; sum.g += col.g; sum.b += col.b; n++; }
+  return new THREE.Color(sum.r / n, sum.g / n, sum.b / n);
+}
+// 把原本的皮膚／頭髮貼圖變成「灰階細節」，顏色交給玩家選
+function grayDetail(tex, keepAlpha) {
+  const img = tex.image; const w = img.width, h = img.height;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, w, h); const p = d.data;
+  let sum = 0, n = 0;
+  for (let i = 0; i < p.length; i += 4) { if (keepAlpha && p[i + 3] < 128) continue; sum += 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]; n++; }
+  const mean = sum / Math.max(n, 1);
+  for (let i = 0; i < p.length; i += 4) {
+    const l = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+    const v = Math.max(0, Math.min(255, 235 * Math.pow(l / mean, keepAlpha ? 1.0 : 0.12)));
+    p[i] = p[i + 1] = p[i + 2] = v;
+    if (!keepAlpha) p[i + 3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+function canvasTex(w, h) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const t = new THREE.CanvasTexture(c); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return { c, g: c.getContext('2d'), t };
+}
+
+// ---------- 臉：日系動畫風五官（畫在臉片貼圖上，每個部位都能調） ----------
+// 單位：PX＝每弧度像素（沿用舊版），再換算到新頭的正面投影
+const EYE_T = [
+  { n: '插畫眼', illust: true, w: 0.21, h: 0.15, tilt: 0.03, ir: 0.12, iy: 0.0, lid: 0.0 },
+  { n: '圓大眼', w: 0.165, h: 0.2, tilt: 0.0, ir: 0.112, iy: 0.015, lid: 0.0, dbl: true },
+  { n: '銳利眼', w: 0.18, h: 0.115, tilt: 0.1, ir: 0.08, iy: 0.0, lid: 0.0, dbl: false },
+  { n: '半睜眼', w: 0.16, h: 0.15, tilt: 0.05, ir: 0.09, iy: 0.02, lid: 0.42, dbl: false, slit: true },
+  { n: '細長眼', w: 0.19, h: 0.12, tilt: 0.06, ir: 0.082, iy: 0.0, lid: 0.12, dbl: true },
+  { n: '三白眼', w: 0.165, h: 0.14, tilt: 0.04, ir: 0.05, iy: -0.012, lid: 0.0, dbl: false },
+  { n: '圓瞳眼', w: 0.16, h: 0.19, tilt: -0.03, ir: 0.1, iy: 0.0, lid: 0.0, dbl: false, ring: true },
+];
+const BROWS = ['細直眉', '彎眉', '上揚眉', '八字眉', '粗眉'];
+const BROW_P = [{ lw: 0.017, cv: 0.012, tilt: 0.0 }, { lw: 0.02, cv: 0.04, tilt: 0 }, { lw: 0.026, cv: 0.015, tilt: 0.07 }, { lw: 0.022, cv: 0.02, tilt: -0.06 }, { lw: 0.04, cv: 0.012, tilt: 0.03 }];
+const NOSES = ['無', '側邊陰影', '小點', '鼻尖線'];
+const MOUTHS = ['小嘴唇', '小微笑', '平嘴', '開口笑', '不爽', '貓嘴 ω', '張嘴喊'];
+const EXPR = [['', '平常'], ['happy', '開心'], ['focus', '專注'], ['strain', '用力 > <'], ['sad', '難過'], ['wow', '驚訝']];
+function defaultFace(fem) {
+  return {
+    eye: { style: 0, color: fem ? '#8A4A3A' : '#7A4A2A', lash: fem, sx: fem ? 1.28 : 1.12, sy: fem ? 1.6 : 1.4, y: 0, gap: 0, rot: 0 },
+    brow: { style: fem ? 1 : 4, color: fem ? '#3A2A22' : '#2A1E18', sx: 1, sy: 1, y: 0, gap: 0, rot: 0 },
+    nose: { style: 1, color: '#C08A74', sx: 0.8, sy: 0.8, y: 0 },
+    mouth: { style: 1, color: fem ? '#C9606A' : '#A85A50', sx: 1, sy: 1, y: 0, rot: 0 },
+    blush: { on: true, color: '#F58A8A', a: fem ? 0.3 : 0.22, sx: 1, sy: 1, y: 0, gap: 0 },
+  };
+}
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function shade(hex, k) { const n = parseInt(hex.slice(1), 16); const f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; }
+// 日系插畫眼：大虹膜漸層、上睫毛由細到粗＋眼尾翹、雙眼皮線、好幾個高光、淡淡的下睫毛
+function illustEye(x, PX, s, px, py, w, h, T, Ey, eMode, ink) {
+  const lid = (eMode === 'focus' ? 0.22 : 0);
+  const inner = [px - s * w, py + 0.02 * PX], outer = [px + s * w * 1.02, py - T.tilt * PX];
+  const upY = py - h * (1.3 - lid * 1.4), loY = py + h * 1.0;
+  const upper = () => { x.moveTo(inner[0], inner[1]); x.bezierCurveTo(px - s * w * 0.55, upY, px + s * w * 0.45, upY, outer[0], outer[1]); };
+  const shape = () => { x.beginPath(); upper(); x.bezierCurveTo(px + s * w * 0.6, loY, px - s * w * 0.5, loY, inner[0], inner[1]); x.closePath(); };
+  x.save(); shape();
+  const wg = x.createLinearGradient(0, upY, 0, loY); wg.addColorStop(0, '#E9E4EC'); wg.addColorStop(0.45, '#FFFFFF'); wg.addColorStop(1, '#FBF7F7');
+  x.fillStyle = wg; x.fill(); x.clip();
+  const ir = T.ir * PX * (eMode === 'wow' ? 0.65 : 1), ix = px + s * 0.008 * PX, iy = py + T.iy * PX;
+  // 虹膜：上深、下亮，外圈深色邊
+  const g1 = x.createLinearGradient(0, iy - ir * 1.1, 0, iy + ir * 1.1);
+  g1.addColorStop(0, shade(Ey.color, 0.22)); g1.addColorStop(0.35, shade(Ey.color, 0.6)); g1.addColorStop(0.75, Ey.color); g1.addColorStop(1, shade(Ey.color, 1.7));
+  x.fillStyle = g1; x.beginPath(); x.ellipse(ix, iy, ir * 0.86, ir * 1.08, 0, 0, 7); x.fill();
+  x.strokeStyle = shade(Ey.color, 0.25); x.lineWidth = 0.012 * PX; x.stroke();
+  // 下半部亮環
+  const g2 = x.createRadialGradient(ix, iy + ir * 0.55, 0, ix, iy + ir * 0.55, ir * 0.8);
+  g2.addColorStop(0, hexA('#FFFFFF', 0.45)); g2.addColorStop(1, hexA('#FFFFFF', 0));
+  x.fillStyle = g2; x.beginPath(); x.ellipse(ix, iy, ir * 0.86, ir * 1.08, 0, 0, 7); x.fill();
+  // 瞳孔
+  x.fillStyle = shade(Ey.color, 0.15); x.beginPath(); x.ellipse(ix, iy + ir * 0.05, ir * 0.36, ir * 0.48, 0, 0, 7); x.fill();
+  // 上眼皮的影子落在眼白和虹膜上
+  const g3 = x.createLinearGradient(0, upY, 0, upY + h * 0.9); g3.addColorStop(0, 'rgba(60,30,40,0.38)'); g3.addColorStop(1, 'rgba(60,30,40,0)');
+  x.fillStyle = g3; x.fillRect(px - w * 1.2, upY - h, w * 2.4, h * 2);
+  // 高光
+  x.fillStyle = '#fff';
+  x.beginPath(); x.ellipse(ix + s * ir * 0.38, iy - ir * 0.45, ir * 0.26, ir * 0.22, -0.3 * s, 0, 7); x.fill();
+  x.beginPath(); x.arc(ix - s * ir * 0.38, iy + ir * 0.5, ir * 0.09, 0, 7); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.arc(ix + s * ir * 0.05, iy - ir * 0.7, ir * 0.07, 0, 7); x.fill();
+  x.restore();
+  // 上睫毛：由內往外變粗，眼尾往外翹
+  x.fillStyle = ink;
+  x.beginPath(); upper();
+  x.lineTo(outer[0] + s * w * 0.22, outer[1] - h * 0.18);
+  x.lineTo(outer[0] - s * w * 0.02, outer[1] + h * 0.12);
+  x.bezierCurveTo(px + s * w * 0.45, upY + h * 0.32, px - s * w * 0.5, upY + h * 0.18, inner[0] + s * w * 0.06, inner[1] - h * 0.02);
+  x.closePath(); x.fill();
+  if (Ey.lash) {
+    x.strokeStyle = ink; x.lineWidth = 0.014 * PX;
+    for (const k of [0.55, 0.8]) { const bx = px + s * w * k, by = upY + h * (k > 0.7 ? 0.25 : 0.05);
+      x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + s * w * 0.12, by - h * 0.25, bx + s * w * 0.25, by - h * 0.3); x.stroke(); }
+  }
+  // 雙眼皮線
+  x.strokeStyle = 'rgba(90,50,50,0.55)'; x.lineWidth = 0.009 * PX;
+  x.beginPath(); x.moveTo(px - s * w * 0.3, upY + h * 0.02); x.bezierCurveTo(px, upY - h * 0.22, px + s * w * 0.55, upY - h * 0.18, outer[0] - s * w * 0.05, outer[1] - h * 0.18); x.stroke();
+  // 下睫毛（淡、只畫眼尾段）
+  x.strokeStyle = 'rgba(90,50,50,0.55)'; x.lineWidth = 0.008 * PX;
+  x.beginPath(); x.moveTo(outer[0] - s * w * 0.05, outer[1] + h * 0.2); x.bezierCurveTo(px + s * w * 0.5, loY - h * 0.05, px, loY + h * 0.02, px - s * w * 0.35, loY - h * 0.12); x.stroke();
+  if (eMode === 'sad') { x.strokeStyle = '#7CC4F0'; x.lineWidth = 0.02 * PX; x.beginPath(); x.moveTo(px + s * w * 0.5, loY); x.lineTo(px + s * w * 0.55, loY + h * 1.3); x.stroke(); }
+}
+function drawFace(F, L) {
+  const { g: x, c } = F; const W = c.width, H = c.height, P = L.face;
+  x.clearRect(0, 0, W, H);
+  const PX = 1024 / (Math.PI * 2), expr = L.expr, ink = '#2A1A16';
+  x.save();
+  x.translate(W / 2, H * 0.5);
+  x.scale((W / 2) / PX * 1.08, 0.33 * H / PX * 1.08);
+  let ex0 = 0.33 * PX, ey0 = 0.1 * PX, my0 = 0.45 * PX;
+  const HD = F.head;
+  if (HD && HD.eyeL) {
+    const sxs = (W / 2) / PX * 1.08, sys = 0.33 * H / PX * 1.08;
+    const toX = v => W * (v[0] - HD.headC[0]) / (2 * HD.headR[0]) / sxs, toY = v => -H * (v[1] - HD.headC[1]) / (2 * HD.headR[1]) / sys;
+    ex0 = (Math.abs(toX(HD.eyeL)) + Math.abs(toX(HD.eyeR))) / 2; ey0 = (toY(HD.eyeL) + toY(HD.eyeR)) / 2; my0 = toY(HD.mouth);
+  }
+  const local = (ax, ay, rot, sx, sy, fn) => { x.save(); x.translate(ax, ay); x.rotate(rot); x.scale(sx, sy); x.translate(-ax, -ay); fn(); x.restore(); };
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  // 腮紅：動畫風的斜線腮紅
+  const B = P.blush;
+  if (B.on) {
+    for (const s of [-1, 1]) {
+      const bx = s * (0.5 + B.gap * 0.12) * PX, by = (ey0 + (my0 - ey0) * 0.55) - B.y * 0.12 * PX;
+      local(bx, by, 0, B.sx, B.sy, () => {
+        const gr = x.createRadialGradient(bx, by, 0, bx, by, 0.16 * PX);
+        gr.addColorStop(0, hexA(B.color, B.a)); gr.addColorStop(1, hexA(B.color, 0));
+        x.fillStyle = gr; x.beginPath(); x.ellipse(bx, by, 0.16 * PX, 0.09 * PX, 0, 0, 7); x.fill();
+      });
+    }
+  }
+  const Ey = P.eye, T = EYE_T[Ey.style];
+  const ex = ex0 + Ey.gap * 0.1 * PX, ey = ey0 - Ey.y * 0.12 * PX;
+  const eMode = expr ? { happy: 'arc', strain: 'x', sad: 'sad', wow: 'wow', focus: 'focus' }[expr] : '';
+  // 眉毛
+  const Bw = P.brow; let bp = BROW_P[Bw.style], lift = 0;
+  if (expr) { const m = { happy: 'up', sad: 'sad', strain: 'angry', focus: 'angry', wow: 'up' }[expr];
+    if (m === 'angry') bp = { ...bp, tilt: 0.08 }; else if (m === 'sad') bp = { ...bp, tilt: -0.07 }; else lift = -0.05 * PX; }
+  x.strokeStyle = Bw.color;
+  for (const s of [-1, 1]) {
+    const bx = s * (ex / PX + Bw.gap * 0.08) * PX, by = ey - (0.3 + Bw.y * 0.1) * PX + lift, w = 0.15 * PX;
+    local(bx, by, -s * Bw.rot * 0.5, Bw.sx, 1, () => {
+      x.lineWidth = bp.lw * PX * Bw.sy;
+      x.beginPath(); x.moveTo(bx - w * s, by - bp.tilt * PX); x.quadraticCurveTo(bx, by - bp.cv * PX, bx + w * s, by + bp.tilt * PX); x.stroke();
+    });
+  }
+  // 眼睛
+  for (const s of [-1, 1]) {
+    const px = s * ex, py = ey;
+    local(px, py, -s * Ey.rot * 0.5, Ey.sx, Ey.sy, () => {
+      const w = T.w * PX, h = T.h * PX * (eMode === 'wow' ? 1.15 : 1);
+      const inner = [px - s * w, py + 0.012 * PX], outer = [px + s * w, py - T.tilt * PX];
+      if (eMode === 'arc') {   // ^ ^
+        x.strokeStyle = ink; x.lineWidth = 0.035 * PX; x.beginPath(); x.moveTo(inner[0], py + 0.03 * PX); x.quadraticCurveTo(px, py - h * 0.9, outer[0], py + 0.03 * PX); x.stroke(); return;
+      }
+      if (eMode === 'x') {     // > <
+        x.strokeStyle = ink; x.lineWidth = 0.035 * PX; x.beginPath(); x.moveTo(px + s * w * 0.8, py - h * 0.55); x.lineTo(px - s * w * 0.7, py); x.lineTo(px + s * w * 0.8, py + h * 0.55); x.stroke(); return;
+      }
+      if (T.illust) { illustEye(x, PX, s, px, py, w, h, T, Ey, eMode, ink); return; }
+      const lid = T.lid + (eMode === 'focus' ? 0.25 : 0);
+      const upY = py - h * (1.7 - lid * 1.6), loY = py + h * 0.9;
+      const shape = () => { x.beginPath(); x.moveTo(inner[0], inner[1]); x.quadraticCurveTo(px + s * w * 0.1, upY, outer[0], outer[1]); x.quadraticCurveTo(px, loY, inner[0], inner[1]); x.closePath(); };
+      x.save(); shape(); x.fillStyle = '#FBF8F4'; x.fill(); x.clip();
+      // 虹膜：上深下亮的漸層
+      const ir = T.ir * PX * (eMode === 'wow' ? 0.6 : 1), ix = px + s * 0.005 * PX, iy = py + T.iy * PX;
+      const gr = x.createLinearGradient(0, iy - ir, 0, iy + ir);
+      gr.addColorStop(0, shade(Ey.color, 0.35)); gr.addColorStop(0.55, Ey.color); gr.addColorStop(1, shade(Ey.color, 1.5));
+      x.fillStyle = gr; x.beginPath(); x.ellipse(ix, iy, ir * 0.9, ir, 0, 0, 7); x.fill();
+      x.strokeStyle = shade(Ey.color, 0.3); x.lineWidth = 0.01 * PX; x.stroke();
+      x.fillStyle = shade(Ey.color, 0.2);
+      x.beginPath(); if (T.slit) x.ellipse(ix, iy, ir * 0.18, ir * 0.62, 0, 0, 7); else x.ellipse(ix, iy, ir * 0.42, ir * 0.48, 0, 0, 7); x.fill();
+      if (T.ring) { x.strokeStyle = shade(Ey.color, 1.8); x.lineWidth = 0.008 * PX; x.beginPath(); x.arc(ix, iy, ir * 0.7, 0, 7); x.stroke(); }
+      x.fillStyle = '#fff';
+      x.beginPath(); x.ellipse(ix + s * ir * 0.32, iy - ir * 0.42, ir * 0.26, ir * 0.2, 0, 0, 7); x.fill();
+      x.beginPath(); x.arc(ix - s * ir * 0.35, iy + ir * 0.45, ir * 0.1, 0, 7); x.fill();
+      // 上眼皮陰影
+      x.fillStyle = 'rgba(80,50,50,0.18)'; x.beginPath(); x.moveTo(inner[0], inner[1]); x.quadraticCurveTo(px + s * w * 0.1, upY, outer[0], outer[1]); x.lineTo(outer[0], outer[1] + h * 0.35); x.quadraticCurveTo(px, upY + h * 0.6, inner[0], inner[1] + h * 0.2); x.fill();
+      x.restore();
+      // 上睫毛線（粗）＋眼尾
+      x.strokeStyle = ink; x.lineWidth = 0.04 * PX;
+      x.beginPath(); x.moveTo(inner[0] + s * w * 0.1, inner[1] - h * 0.15); x.quadraticCurveTo(px + s * w * 0.1, upY, outer[0], outer[1]); x.lineTo(outer[0] + s * w * 0.18, outer[1] - h * 0.05); x.stroke();
+      if (Ey.lash) {
+        x.lineWidth = 0.022 * PX;
+        x.beginPath(); x.moveTo(outer[0], outer[1]); x.lineTo(outer[0] + s * w * 0.3, outer[1] - h * 0.35); x.stroke();
+        x.beginPath(); x.moveTo(outer[0] - s * w * 0.25, outer[1] - h * 0.45); x.lineTo(outer[0] + s * w * 0.05, outer[1] - h * 0.85); x.stroke();
+      }
+      // 下眼線（細、只畫眼尾那段）
+      x.lineWidth = 0.012 * PX; x.strokeStyle = 'rgba(42,26,22,0.7)';
+      x.beginPath(); x.moveTo(outer[0], outer[1] + h * 0.05); x.quadraticCurveTo(px + s * w * 0.4, loY - h * 0.25, px - s * w * 0.1, loY - h * 0.08); x.stroke();
+      if (T.dbl) { x.lineWidth = 0.01 * PX; x.strokeStyle = 'rgba(42,26,22,0.55)'; x.beginPath(); x.moveTo(px - s * w * 0.3, upY + h * 0.05); x.quadraticCurveTo(px + s * w * 0.2, upY - h * 0.25, outer[0] - s * w * 0.05, outer[1] - h * 0.3); x.stroke(); }
+      if (eMode === 'sad') { x.strokeStyle = '#7CC4F0'; x.lineWidth = 0.02 * PX; x.beginPath(); x.moveTo(px + s * w * 0.5, loY); x.lineTo(px + s * w * 0.55, loY + h * 1.3); x.stroke(); }
+    });
+  }
+  // 鼻子
+  const N = P.nose, ny = ey0 + (my0 - ey0) * 0.62 - N.y * 0.1 * PX;
+  local(0, ny, 0, N.sx, N.sy, () => {
+    x.strokeStyle = N.color; x.fillStyle = N.color; x.lineWidth = 0.014 * PX;
+    if (N.style === 1) { x.beginPath(); x.moveTo(0.03 * PX, ny - 0.1 * PX); x.quadraticCurveTo(0.04 * PX, ny - 0.02 * PX, 0.005 * PX, ny); x.stroke(); }
+    else if (N.style === 2) { x.beginPath(); x.ellipse(0, ny, 0.014 * PX, 0.01 * PX, 0, 0, 7); x.fill(); }
+    else if (N.style === 3) { x.beginPath(); x.moveTo(-0.025 * PX, ny + 0.005 * PX); x.quadraticCurveTo(0, ny + 0.02 * PX, 0.025 * PX, ny + 0.005 * PX); x.stroke(); }
+  });
+  // 嘴巴
+  const Mo = P.mouth;
+  const mouth = expr ? { happy: 'grin', sad: 'pout', strain: 'shout', focus: 'flat', wow: 'shout' }[expr] : ['lips', 'smile', 'flat', 'grin', 'pout', 'cat', 'shout'][Mo.style];
+  const my = my0 - Mo.y * 0.1 * PX, mw = 0.075 * PX;
+  local(0, my, Mo.rot * 0.4, Mo.sx, Mo.sy, () => {
+    x.lineWidth = 0.018 * PX; x.strokeStyle = Mo.color; x.beginPath();
+    if (mouth === 'lips') {
+      const lw = mw * 0.85;
+      x.fillStyle = hexA(Mo.color, 0.55); x.beginPath(); x.moveTo(-lw, my); x.quadraticCurveTo(0, my + 0.05 * PX, lw, my); x.quadraticCurveTo(0, my + 0.012 * PX, -lw, my); x.fill();
+      x.strokeStyle = shade(Mo.color, 0.6); x.lineWidth = 0.012 * PX; x.beginPath(); x.moveTo(-lw * 0.9, my); x.quadraticCurveTo(0, my + 0.008 * PX, lw * 0.9, my); x.stroke();
+      x.fillStyle = 'rgba(255,255,255,0.35)'; x.beginPath(); x.ellipse(0, my + 0.025 * PX, lw * 0.3, 0.008 * PX, 0, 0, 7); x.fill();
+    }
+    else if (mouth === 'smile') { x.moveTo(-mw, my - 0.01 * PX); x.quadraticCurveTo(0, my + 0.035 * PX, mw, my - 0.01 * PX); x.stroke(); }
+    else if (mouth === 'flat') { x.moveTo(-mw * 0.8, my); x.lineTo(mw * 0.8, my); x.stroke(); }
+    else if (mouth === 'grin') { x.fillStyle = '#7A2A25'; x.moveTo(-mw * 1.2, my - 0.02 * PX); x.lineTo(mw * 1.2, my - 0.02 * PX); x.quadraticCurveTo(0, my + 0.14 * PX, -mw * 1.2, my - 0.02 * PX); x.fill(); x.fillStyle = '#E8737A'; x.beginPath(); x.ellipse(0, my + 0.06 * PX, mw * 0.55, 0.025 * PX, 0, 0, 7); x.fill(); x.fillStyle = '#fff'; x.fillRect(-mw * 0.9, my - 0.02 * PX, mw * 1.8, 0.02 * PX); }
+    else if (mouth === 'pout') { x.moveTo(-mw * 0.8, my + 0.02 * PX); x.quadraticCurveTo(0, my - 0.03 * PX, mw * 0.8, my + 0.02 * PX); x.stroke(); }
+    else if (mouth === 'cat') { x.moveTo(-mw, my - 0.015 * PX); x.quadraticCurveTo(-mw * 0.5, my + 0.04 * PX, 0, my); x.quadraticCurveTo(mw * 0.5, my + 0.04 * PX, mw, my - 0.015 * PX); x.stroke(); }
+    else if (mouth === 'shout') { x.fillStyle = '#7A2A25'; x.ellipse(0, my + 0.02 * PX, mw * 0.8, 0.07 * PX, 0, 0, 7); x.fill(); x.fillStyle = '#E8737A'; x.beginPath(); x.ellipse(0, my + 0.06 * PX, mw * 0.5, 0.025 * PX, 0, 0, 7); x.fill(); }
+  });
+  x.restore();
+  F.t.needsUpdate = true;
+}
+
+// ---------- 臉型：在綁定姿勢裡直接改頭部頂點（臉寬、臉長、V 臉、下巴、臉頰） ----------
+function deformHead(arr, base, C, R, F, P) {
+  for (let i = 0; i < arr.length; i += 3) {
+    let x = base[i], y = base[i + 1], z = base[i + 2];
+    const qx = (x - C[0]) / R[0], qy = (y - C[1]) / R[1], qz = (z - C[2]) / R[2];
+    if (qy < -1.7 || qy > 1.3 || Math.abs(qx) > 1.8 || Math.abs(qz) > 1.8) { arr[i] = x; arr[i + 1] = y; arr[i + 2] = z; continue; }
+    const front = sm(-0.5, 0.35, qz), neck = sm(-1.5, -1.0, qy), low = sm(0.35, -0.3, qy), w = front * neck;
+    x += (x - C[0]) * F.width * 0.16 * low * w;                                   // 臉寬
+    const taper = sm(-0.05, -0.95, qy) * w;
+    x = C[0] + (x - C[0]) * (1 - F.vline * 0.4 * taper);                          // V 臉
+    y += (y - C[1]) * F.length * 0.14 * low * w;                                  // 臉長
+    const chinW = sm(-0.45, -1.0, qy) * sm(0.6, 0.0, Math.abs(qx)) * w;
+    y -= F.chin * 0.03 * chinW; z += F.chin * 0.006 * chinW;                      // 下巴長
+    const ch = Math.exp(-(((qy + 0.2) / 0.32) ** 2) - (((Math.abs(qx) - 0.72) / 0.3) ** 2)) * front * neck;
+    x += Math.sign(qx) * F.cheek * 0.01 * ch; z += F.cheek * 0.005 * ch;          // 臉頰
+    // 下巴：照指定的側面輪廓把下半臉往前推（原本從嘴巴就一路斜到脖子，沒有下巴）
+    if (P && qz > -0.2 && qy < -0.1 && qy > -1.2) {
+      let T;
+      if (qy > -0.88) T = 0.99 - 0.14 * sm(-0.15, -0.88, qy);
+      else T = 0.85 - 0.3 * sm(-0.88, -1.02, qy);
+      const pr = P(qy);
+      let ratio = pr > 0.05 ? Math.max(1, T / pr) : 1;
+      ratio = 1 + (ratio - 1) * (F.chinFwd ?? 0) * (1 - sm(-1.02, -1.15, qy)) * sm(-0.2, 0.3, qz);
+      z = C[2] + (z - C[2]) * ratio;
+    }
+    // 下顎線：下巴底下壓成接近水平，下巴和脖子之間才有轉角
+    if (qy < -1.0) {
+      const fz = sm(-0.7, 0.1, qz);
+      const b = (F.jaw ?? 0) * fz * (1 - sm(-1.3, -1.6, qy));
+      const ty = C[1] + R[1] * (-1.02 + (qy + 1.02) * 0.3);
+      y += (ty - y) * b;
+    }
+    arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
+  }
+}
+// 輕 Q 版動漫眼：畫在立體眼球貼圖上（原貼圖兩顆眼睛中心在 (360,152)、(148,362)，虹膜半徑約 58 px）
+let ANIME_EYE = true;
+const ANIME_IRIS = { r: 80, pupil: 30, hx: -0.35, hy: -0.45 };
+function animeEyeCanvas(hex) {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#F3F1EC'; g.fillRect(0, 0, 512, 512);
+  const col = new THREE.Color(hex), dark = col.clone().multiplyScalar(0.35), light = col.clone().lerp(new THREE.Color('#E8B060'), 0.45);
+  const I = ANIME_IRIS;
+  for (const [cx, cy] of [[360, 152], [148, 362]]) {
+    const gr = g.createLinearGradient(cx, cy - I.r, cx, cy + I.r);
+    gr.addColorStop(0, '#' + dark.getHexString()); gr.addColorStop(0.45, '#' + col.getHexString()); gr.addColorStop(1, '#' + light.getHexString());
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, I.r, 0, 7); g.fill();
+    g.lineWidth = 7; g.strokeStyle = '#' + dark.clone().multiplyScalar(0.6).getHexString(); g.stroke();
+    g.fillStyle = '#120C08'; g.beginPath(); g.arc(cx, cy, I.pupil, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(cx + I.hx * I.r, cy + I.hy * I.r, I.r * 0.2, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(cx - I.hx * I.r * 0.8, cy - I.hy * I.r * 0.7, I.r * 0.09, 0, 7); g.fill();
+  }
+  return c;
+}
+// 五官直接改形狀（寫實偏日系）：眼睛整塊放大、鼻子縮小、嘴巴縮小變薄、眉毛加粗。頭型不動
+const FACE_STYLE = { eye: 0.28, ball: 0.1, nose: 0.3, mouth: 0.3, lip: 0.8, brow: 1.8, blush: 0.5 };
+function stylizeFace(arr, H, S, isBrow, isBall) {
+  const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const E = [H.eyeL, H.eyeR], Mo = H.mouth, eyeY = H.eyeL[1];
+  const N = [0, eyeY - 0.55 * (eyeY - Mo[1]), Mo[2] - 0.03];
+  if (isBrow) {   // 眉毛：左右各自以中心上下拉粗
+    for (const sd of [1, -1]) { let cy = 0, c = 0;
+      for (let i = 0; i < arr.length; i += 3) if (Math.sign(arr[i]) === sd) { cy += arr[i + 1]; c++; }
+      if (!c) continue; cy /= c;
+      for (let i = 0; i < arr.length; i += 3) if (Math.sign(arr[i]) === sd) arr[i + 1] = cy + (arr[i + 1] - cy) * S.brow; }
+  }
+  for (let i = 0; i < arr.length; i += 3) {
+    let x = arr[i], y = arr[i + 1], z = arr[i + 2];
+    if (z < H.headC[2]) continue;
+    for (const e of E) {   // 眼睛：眼球＋眼皮一起放大
+      const d = Math.hypot(x - e[0], y - e[1], (z - e[2]) * 0.7), g = 1 - ss(0.017, 0.034, d);
+      if (g > 0) { const k = 1 + (S.eye + (isBall ? S.ball : 0)) * g; x = e[0] + (x - e[0]) * k; y = e[1] + (y - e[1]) * k; z = e[2] + (z - e[2]) * k; }
+    }
+    { const d = Math.hypot(x - N[0], (y - N[1]) * 0.8), g = (1 - ss(0.008, 0.045, d)) * ss(Mo[2] - 0.035, Mo[2] - 0.005, z);
+      if (g > 0) { const k = 1 - S.nose * g; x = N[0] + (x - N[0]) * k; y = N[1] + (y - N[1]) * (1 - S.nose * 0.5 * g); z = N[2] + (z - N[2]) * k; } }
+    { const d = Math.hypot((x - Mo[0]) / 1.6, y - Mo[1]), g = (1 - ss(0.01, 0.022, d)) * ss(Mo[2] - 0.03, Mo[2] - 0.01, z);
+      if (g > 0) { x = Mo[0] + (x - Mo[0]) * (1 - S.mouth * g); y = Mo[1] + (y - Mo[1]) * (1 - S.mouth * g); const zb = Mo[2] - 0.012; z = zb + (z - zb) * (1 - S.lip * g); } }
+    arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
+  }
+}
+function applyFaceShape(M, F) {
+  for (const [o, base] of [[M.parts.Human, M.baseHuman], ...M.headParts]) {
+    const at = o.geometry.attributes.position;
+    deformHead(at.array, base, M.head.headC, M.head.headR, F, M.head.prof);
+    if (M.head.eyeL && !M.face) stylizeFace(at.array, M.head, FACE_STYLE, /^brow_/.test(o.name), o.name === 'eyes');
+    at.needsUpdate = true; o.geometry.computeBoundingSphere();
+  }
+}
+
+// ---------- 動畫風髮束：用參數在頭上長出一束一束的頭髮 ----------
+const HAIR_PRESETS = [
+  { n: '刺蝟頭', front: 0.55, side: 0.45, back: 0.45, spike: 0.7, up: 0.35, vol: 1.15, thick: 1.1, count: 78, part: 0.0, tail: 0 },
+  { n: '齊瀏海', front: 0.95, side: 0.7, back: 0.55, spike: 0.05, up: 0.0, vol: 1.0, thick: 1.0, count: 96, part: 0.0, tail: 0 },
+  { n: '中長髮', front: 1.0, side: 1.35, back: 1.35, spike: 0.1, up: 0.0, vol: 1.05, thick: 1.0, count: 100, part: 0.3, tail: 0 },
+  { n: '蓬鬆翹髮', front: 0.75, side: 0.55, back: 0.5, spike: 0.35, up: 0.15, vol: 1.2, thick: 1.15, count: 84, part: -0.35, tail: 0 },
+  { n: '往上抓', front: 0.45, side: 0.3, back: 0.4, spike: 0.95, up: 1.0, vol: 1.1, thick: 1.25, count: 56, part: 0.0, tail: 0 },
+  { n: '短刺平頭', front: 0.18, side: 0.15, back: 0.15, spike: 0.6, up: 0.4, vol: 1.0, thick: 0.8, count: 120, part: 0.0, tail: 0 },
+  { n: '馬尾', front: 0.85, side: 0.75, back: 0.45, spike: 0.05, up: 0.0, vol: 1.0, thick: 1.0, count: 92, part: 0.25, tail: 1.2 },
+  { n: '長直髮', front: 0.9, side: 1.9, back: 2.3, spike: 0.0, up: 0.0, vol: 1.0, thick: 1.0, count: 110, part: 0.2, tail: 0 },
+  { n: '鮑伯頭', front: 0.9, side: 1.15, back: 1.0, spike: 0.05, up: 0.0, vol: 1.08, thick: 1.05, count: 100, part: 0.0, tail: 0 },
+];
+const sm = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+function hairline(az) { const t = Math.abs(az) / Math.PI; return t < 0.18 ? 0.34 : t < 0.5 ? 0.34 + (0.02 - 0.34) * (t - 0.18) / 0.32 : 0.02 + (-0.62 - 0.02) * (t - 0.5) / 0.5; }
+function rng(seed) { let a = seed | 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function buildHairGeometry(head, H) {
+  const C = new THREE.Vector3(...head.headC), R = new THREE.Vector3(...head.headR);
+  const pos = [], ht = [], idx = [];
+  const rand = rng(1234 + H.count);
+  const vol = H.vol, SHELL = 1.0 + 0.06 * (vol - 0.9);
+  const shellAt = q => head.shell(new THREE.Vector3(q.x / R.x, q.y / R.y, q.z / R.z).normalize());
+  const pushOut = p => { const q = p.clone().sub(C); const k = Math.sqrt((q.x / R.x) ** 2 + (q.y / R.y) ** 2 + (q.z / R.z) ** 2) / (shellAt(q) * SHELL); if (k < 1) p.copy(C).add(q.multiplyScalar(1 / k)); };
+  const enorm = d => new THREE.Vector3(d.x / R.x, d.y / R.y, d.z / R.z).normalize();
+  const UP = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0), X = new THREE.Vector3(1, 0, 0);
+  function clump(p0, n, dir0, len, width, spike, gravity) {
+    const K = 7, seg = len / K; let p = p0.clone(), d = dir0.clone();
+    const rings = [];
+    for (let k = 0; k <= K; k++) {
+      const t = k / K;
+      if (k > 0) {
+        p.add(d.clone().multiplyScalar(seg));
+        if (p.y > C.y - R.y * 0.55) pushOut(p);
+        const nn0 = enorm(p.clone().sub(C));
+        if (d.dot(nn0) < 0 && p.y > C.y - R.y * 0.55) d.addScaledVector(nn0, -d.dot(nn0) * 0.9);
+        if (t > 0.45) d.lerp(nn0.clone().add(UP.clone().multiplyScalar(0.3 * spike)).normalize(), spike * 0.22);
+        d.add(DOWN.clone().multiplyScalar(gravity * (1 - spike) * 0.18)).normalize();
+      }
+      const nn = enorm(p.clone().sub(C));
+      const a = new THREE.Vector3().crossVectors(d, nn); if (a.lengthSq() < 1e-6) a.copy(X); a.normalize();
+      const b = new THREE.Vector3().crossVectors(a, d).normalize();
+      const w = width * Math.pow(1 - t, 0.7 + 0.5 * spike) + 0.0006;
+      const th = w * 0.55;
+      rings.push([p.clone().addScaledVector(a, w), p.clone().addScaledVector(b, th), p.clone().addScaledVector(a, -w), p.clone().addScaledVector(b, -th * 0.6), t]);
+    }
+    const base = pos.length / 3;
+    for (const r of rings) for (let j = 0; j < 4; j++) { pos.push(r[j].x, r[j].y, r[j].z); ht.push(r[4]); }
+    for (let k = 0; k < K; k++) for (let j = 0; j < 4; j++) {
+      const a0 = base + k * 4 + j, a1 = base + k * 4 + (j + 1) % 4, b0 = a0 + 4, b1 = a1 + 4;
+      idx.push(a0, b0, a1, a1, b0, b1);
+    }
+  }
+  // 髮根：黃金角均勻撒在頭上，只留髮際線以上
+  const N = Math.round(H.count * 3.2);
+  for (let i = 0; i < N; i++) {
+    const yv = 1 - 2 * (i + 0.5) / N, r = Math.sqrt(1 - yv * yv), ang = i * 2.399963;
+    const d = new THREE.Vector3(Math.cos(ang) * r, yv, Math.sin(ang) * r);
+    const az = Math.atan2(d.x, d.z), el = Math.asin(d.y);
+    if (el < hairline(az) + 0.14) continue;
+    if (rand() > H.count / (N * 0.42)) continue;
+    const p0 = C.clone().add(new THREE.Vector3(d.x * R.x, d.y * R.y, d.z * R.z).multiplyScalar(head.shell(d) * 1.01));
+    const n = enorm(d);
+    const t = Math.abs(az) / Math.PI;
+    const wf = 1 - sm(0.16, 0.42, t), wb = sm(0.55, 0.8, t), ws = 1 - wf - wb;
+    // 髮尾停的高度（仰角）：瀏海停在眉眼、兩側到臉頰／下巴、後面到後頸；超過頭以下就往下垂
+    const endF = 0.62 - H.front * 0.5, endS = 0.25 - H.side * 0.62, endB = 0.0 - H.back * 0.62;
+    const eEnd = endF * wf + endS * ws + endB * wb;
+    const crown = sm(1.0, 1.4, el);
+    const Ravg = (R.x + R.y + R.z) / 3 * head.shell(d);
+    let len = Math.max(0.025, (el - eEnd) * Ravg * 1.05) + Math.max(0, -0.95 - eEnd) * 0.16;
+    len = len * (1 - crown * 0.35) * (0.88 + rand() * 0.24);
+    // 流向：沿頭皮往下＋往外；瀏海可以往一邊撥
+    const down = DOWN.clone().addScaledVector(n, -DOWN.dot(n)).normalize();
+    const out = new THREE.Vector3(n.x, 0, n.z).normalize();
+    const g = down.clone().addScaledVector(out.clone().addScaledVector(n, -out.dot(n)), 0.35);
+    if (wf > 0.3) g.addScaledVector(X, H.part * 0.7 * wf - Math.sign(d.x || 1) * 0.0);
+    g.normalize();
+    const sp = Math.min(1, H.spike * (0.7 + rand() * 0.6));
+    const tgt = n.clone().multiplyScalar(0.75).addScaledVector(UP, H.up * (0.4 + crown * 0.4) + 0.15).normalize();
+    const dir = g.clone().addScaledVector(n, 0.12).lerp(tgt, (H.up * 0.6 + sp * 0.15) * (0.4 + crown * 0.6 + wf * 0.3)).normalize();
+    const width = 0.03 * H.thick * (0.75 + rand() * 0.5) * (0.85 + 0.15 * vol);
+    clump(p0, n, dir, len, width, sp, 1 + 0.4 * (1 - sp));
+  }
+  // 馬尾
+  if (H.tail > 0) {
+    const tp = C.clone().add(new THREE.Vector3(0, R.y * 0.25, -R.z * 0.98));
+    for (let i = 0; i < 18; i++) {
+      const a = i / 18 * Math.PI * 2, off = new THREE.Vector3(Math.cos(a) * 0.012, Math.sin(a) * 0.012, 0);
+      const dir = new THREE.Vector3(Math.cos(a) * 0.25, -0.35 + Math.sin(a) * 0.2, -0.9).normalize();
+      clump(tp.clone().add(off), new THREE.Vector3(0, 0, -1), dir, 0.16 * H.tail * (0.85 + rand() * 0.3), 0.012 * H.thick, 0, 2.2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('ht', new THREE.Float32BufferAttribute(ht, 1));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(ht.length * 3), 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  // 打底的髮帽（遮住縫隙裡的頭皮）
+  const cap = new THREE.SphereGeometry(1, 48, 32).toNonIndexed();
+  const cp = cap.attributes.position, keep = [];
+  for (let i = 0; i < cp.count; i += 3) {
+    let ok = true;
+    for (let j = 0; j < 3; j++) { const d = new THREE.Vector3().fromBufferAttribute(cp, i + j); if (Math.asin(d.y) < hairline(Math.atan2(d.x, d.z)) - 0.03) ok = false; }
+    if (ok) for (let j = 0; j < 3; j++) { const d = new THREE.Vector3().fromBufferAttribute(cp, i + j); const k = head.shell(d) * 1.012; keep.push(C.x + d.x * R.x * k, C.y + d.y * R.y * k, C.z + d.z * R.z * k); }
+  }
+  const capG = new THREE.BufferGeometry(); capG.setAttribute('position', new THREE.Float32BufferAttribute(keep, 3)); capG.computeVertexNormals();
+  return { geo, capG };
+}
+// ---------- 日系碎瀏海短髮：照設計擺一撮一撮的髮束（瀏海、兩側、鬢角、後面、頭頂、呆毛）＋打底髮帽 ----------
+// 角度：az＝水平角（0＝正前方、正＝角色左手邊），el＝仰角（0＝眼睛高度附近、π/2＝頭頂）。座標跟 Human 網格相同（綁定姿勢）
+const JP_HAIR0 = { bangLen: 0.2, bangW: 0.024, vol: 1.0, side: 1.0, back: 1.0, ahoge: 1, sweep: -0.08, seed: 7 };
+function buildJpHair(head, opt = {}) {
+  const S = { ...JP_HAIR0, ...opt };
+  const C = new THREE.Vector3(...head.headC), R = new THREE.Vector3(...head.headR), rand = rng(1000 + S.seed);
+  const dirOf = (az, el) => new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
+  const surf = (az, el, k = 1) => { const d = dirOf(az, el), s = head.shell(d) * k; return new THREE.Vector3(C.x + d.x * R.x * s, C.y + d.y * R.y * s, C.z + d.z * R.z * s); };
+  const pushOut = (p, k) => { const q = p.clone().sub(C), n = new THREE.Vector3(q.x / R.x, q.y / R.y, q.z / R.z), r = n.length(); const s = head.shell(n.clone().normalize()) * k; if (r < s) p.copy(C).add(q.multiplyScalar(s / r)); return p; };
+  const pos = [], ht = [], idx = [];
+  const J = (a = 1) => (rand() - 0.5) * a;
+  // 一撮髮束：髮根 (az0,el0) → 髮尾 (az1,el1)，中間往外鼓 bulge；寬 w、扁度 flat；kTip＝髮尾離頭皮多遠；layer＝疊的層（越外層離頭越遠）
+  const clump = (az0, el0, az1, el1, o = {}) => {
+    const w0 = (o.w || 0.026) * S.vol, flat = o.flat ?? 0.4, layer = o.layer || 0, N = 12;
+    const P0 = surf(az0, el0, 0.985), P2 = surf(az1, el1, o.kTip ?? 1.07);
+    const P1 = surf((az0 + az1) / 2 + (o.curve || 0), (el0 + el1) / 2 + (o.bulgeEl ?? 0.12), (o.bulge ?? 1.16) * (0.96 + 0.04 * S.vol));
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t;
+      const p = P0.clone().multiplyScalar(a).addScaledVector(P1, b).addScaledVector(P2, c);
+      if (i > 0) pushOut(p, 1.02 + 0.025 * layer + 0.02 * Math.sin(t * Math.PI));
+      pts.push(p);
+    }
+    const base = pos.length / 3;
+    for (let i = 0; i < N; i++) {
+      const t = i / N, p = pts[i], T = pts[i + 1].clone().sub(pts[Math.max(0, i - 1)]).normalize();
+      const out = p.clone().sub(C); out.addScaledVector(T, -out.dot(T)).normalize();
+      const B = new THREE.Vector3().crossVectors(T, out).normalize();
+      const w = w0 * (t < 0.2 ? 0.75 + 1.25 * t : 1.0 * Math.pow((1 - t) / 0.8, 0.85)), h = w * flat;
+      for (let k = 0; k < 6; k++) { const ang = k / 6 * Math.PI * 2; const v = p.clone().addScaledVector(B, Math.cos(ang) * w).addScaledVector(out, Math.sin(ang) * h + h * 0.4); pos.push(v.x, v.y, v.z); ht.push(t); }
+    }
+    const tip = pts[N]; pos.push(tip.x, tip.y, tip.z); ht.push(1);
+    for (let i = 0; i < N - 1; i++) for (let k = 0; k < 6; k++) { const a = base + i * 6 + k, b = base + i * 6 + (k + 1) % 6, c = a + 6, d = b + 6; idx.push(a, c, b, b, c, d); }
+    const tipI = base + N * 6, last = base + (N - 1) * 6;
+    for (let k = 0; k < 6; k++) idx.push(last + k, tipI, last + (k + 1) % 6);
+  };
+  const PI = Math.PI;
+  // 頭頂：從髮旋往四周蓋住頭頂（打底層）
+  for (let j = 0; j < 12; j++) { const a = j / 12 * 2 * PI + J(0.2); clump(a, 1.4, a + J(0.15), 0.72 + J(0.1), { w: 0.04, flat: 0.35, kTip: 1.1, bulge: 1.12 }); }
+  // 後面：蓋到後頸，髮尾尖尖往下
+  for (let j = 0; j <= 10; j++) { const a = PI + (j / 10 - 0.5) * 3.0 + J(0.08); clump(a, 0.75, a + J(0.1), -0.62 * S.back + J(0.12), { w: 0.034, flat: 0.4, kTip: 1.05, bulge: 1.14, layer: 1 }); }
+  // 兩側：從頭頂側邊往下蓋住太陽穴、耳朵上緣
+  for (const sd of [1, -1]) for (let j = 0; j < 5; j++) {
+    const a = sd * (0.75 + j * 0.24) + J(0.06);
+    clump(a, 0.95, a + sd * (0.12 + J(0.06)), (-0.05 - j * 0.07) * S.side + J(0.08), { w: 0.028, flat: 0.4, kTip: 1.06, bulge: 1.16, layer: 1 + (j % 2) });
+  }
+  // 鬢角：耳朵前面細細往下
+  for (const sd of [1, -1]) {
+    clump(sd * 1.22, 0.45, sd * 1.18, -0.42 * S.side, { w: 0.015, flat: 0.45, kTip: 1.02, bulge: 1.05, bulgeEl: 0.0, layer: 2 });
+    clump(sd * 1.36, 0.5, sd * 1.36, -0.3 * S.side, { w: 0.017, flat: 0.45, kTip: 1.02, bulge: 1.06, bulgeEl: 0.0, layer: 2 });
+  }
+  // 頭頂前方的蓬鬆層（讓瀏海上面有份量）
+  for (let j = 0; j < 7; j++) { const a = (j / 6 - 0.5) * 1.9 + J(0.08); clump(a * 0.6, 1.25, a * 1.15, 0.62 + J(0.1), { w: 0.034, flat: 0.38, kTip: 1.16, bulge: 1.2, layer: 2 }); }
+  // 瀏海：一撮一撮垂到眉毛附近，長短不一、髮尾尖、微微往一邊撥
+  const bangs = [-0.62, -0.42, -0.24, -0.08, 0.08, 0.26, 0.44, 0.62];
+  bangs.forEach((a, j) => {
+    const len = S.bangLen + (j % 3 === 1 ? 0.0 : j % 3 === 2 ? 0.07 : 0.035) + J(0.04);
+    clump(a * 0.55 + J(0.05), 1.05, a * 1.05 + S.sweep + J(0.05), len, { w: S.bangW * (1 + J(0.3)), flat: 0.33, kTip: 1.08, bulge: 1.15, bulgeEl: 0.1, layer: 3, curve: J(0.1) });
+  });
+  // 兩撮比較長、落在兩眼之間和眼尾
+  clump(0.05, 1.0, 0.0 + S.sweep, S.bangLen - 0.12, { w: S.bangW * 0.8, flat: 0.33, kTip: 1.09, bulge: 1.14, layer: 4 });
+  clump(-0.5, 0.95, -0.62 + S.sweep, S.bangLen - 0.08, { w: S.bangW * 0.75, flat: 0.33, kTip: 1.08, bulge: 1.12, layer: 4 });
+  // 呆毛
+  if (S.ahoge) { clump(0.25, 1.38, 0.6, 1.5, { w: 0.01, flat: 0.5, kTip: 1.42, bulge: 1.32, bulgeEl: 0.25, layer: 3 }); clump(-0.1, 1.42, -0.5, 1.48, { w: 0.008, flat: 0.5, kTip: 1.32, bulge: 1.26, bulgeEl: 0.2, layer: 3 }); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('ht', new THREE.Float32BufferAttribute(ht, 1));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(ht.length * 3), 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  // 打底髮帽：髮際線以上的頭皮蓋一層（髮束之間不會露頭皮）
+  const hl = az => { const a = Math.abs(az); return a < 0.7 ? 0.62 : a < 1.2 ? 0.62 - (a - 0.7) * 0.5 : a < 1.75 ? 0.37 : a < 2.4 ? 0.37 - (a - 1.75) * 0.9 : -0.22 - (a - 2.4) * 0.45; };
+  const cap = [], GA = 64, GE = 24;
+  const cp = (i, j) => { const az = -PI + i / GA * 2 * PI, e0 = hl(az), el = e0 + (PI / 2 - e0) * j / GE; return surf(az, el, 1.012); };
+  for (let i = 0; i < GA; i++) for (let j = 0; j < GE; j++) { const a = cp(i, j), b = cp(i + 1, j), c = cp(i, j + 1), d = cp(i + 1, j + 1); cap.push(...a.toArray(), ...c.toArray(), ...b.toArray(), ...b.toArray(), ...c.toArray(), ...d.toArray()); }
+  const capG = new THREE.BufferGeometry(); capG.setAttribute('position', new THREE.Float32BufferAttribute(cap, 3)); capG.computeVertexNormals();
+  return { geo, capG };
+}
+function colorHair(geo, L) {
+  const c0 = new THREE.Color(L.hairC), c1 = new THREE.Color(L.hairTip), ht = geo.attributes.ht.array, col = geo.attributes.color.array, tmp = new THREE.Color();
+  for (let i = 0; i < ht.length; i++) {
+    const t = ht[i];
+    tmp.copy(c0).multiplyScalar(0.78 + 0.22 * Math.min(1, t * 2)).lerp(c1, Math.max(0, (t - 0.45) / 0.55) * L.tipAmt);
+    col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b;
+  }
+  geo.attributes.color.needsUpdate = true;
+}
+
+// ---------- 球衣／球褲 ----------
+function drawJersey(J, L) {
+  const { g, c } = J; const W = c.width, H = c.height;
+  g.fillStyle = L.jersey; g.fillRect(0, 0, W, H);
+  g.fillStyle = L.trim;
+  g.fillRect(0, 0, W, H * 0.035);              // 領口
+  if (J.trimU) J.trimU.uTrim.value.set(L.trim);   // 下擺滾邊、側邊線由材質畫（jerseyTrim），貼圖只畫領口和號碼
+  g.fillStyle = L.num; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `900 ${H * 0.36}px "Arial Black",Impact,sans-serif`;
+  g.fillText(String(L.no), W * 0.75, H * 0.38);              // 正面
+  g.font = `900 ${H * 0.52}px "Arial Black",Impact,sans-serif`;
+  g.fillText(String(L.no), W * 0.25, H * 0.42);              // 背面
+  J.t.needsUpdate = true;
+}
+function drawShorts(S, L) {
+  const { g, c } = S; const W = c.width, H = c.height;
+  g.fillStyle = L.shorts; g.fillRect(0, 0, W, H);
+  g.fillStyle = L.trim;
+  g.fillRect(0, 0, W, H * 0.06);
+  for (const u of [0.5, 1.0, 0.0]) g.fillRect(u * W - W * 0.015, 0, W * 0.03, H);
+  S.t.needsUpdate = true;
+}
+
+// ---------- 球衣滾邊（下擺）、側邊線：不畫在貼圖上（貼圖下擺三角面高低不齊、側邊剛好是貼圖接縫，會鋸齒斷掉），
+//   改成材質依每個點在身上的位置畫：下擺＝離下擺多高、側邊線＝繞身體的角度（每個像素算，邊緣平滑）
+function jerseyTrim(M) {
+  const o = M.parts.jersey; if (!o) return;
+  const g = o.geometry, pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, n = pos.count;
+  const bn = o.skeleton.bones.map(b => b.name);
+  const tp = new Float32Array(n * 3), tt = new Float32Array(n);
+  let y0 = 1e9, y1 = -1e9, cz = 0, cn = 0;
+  for (let i = 0; i < n; i++) {
+    let arm = 0; for (let k = 0; k < 4; k++) if (/upperarm|lowerarm|hand/.test(bn[si.getComponent(i, k)] || '')) arm += sw.getComponent(i, k);
+    tt[i] = 1 - arm; const y = pos.getY(i); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    if (arm < 0.2) { cz += pos.getZ(i); cn++; }
+  }
+  cz /= Math.max(1, cn);
+  for (let i = 0; i < n; i++) { tp[i * 3] = pos.getX(i); tp[i * 3 + 1] = pos.getY(i); tp[i * 3 + 2] = pos.getZ(i) - cz; }
+  g.setAttribute('tp', new THREE.BufferAttribute(tp, 3)); g.setAttribute('tt', new THREE.BufferAttribute(tt, 1));
+  // 下擺邊緣（只被一個三角面用到的邊、而且在下面）最高的那一點 → 滾邊上緣從那裡再往上一段（上緣是一條平線）
+  let edgeTop = y0; { const idx = g.index.array, cnt = new Map(), key = (a, b) => a < b ? a * 1e7 + b : b * 1e7 + a;
+    const yOf = i => pos.getY(i);
+    for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) { const a = idx[t + k], b = idx[t + (k + 1) % 3], kk = key(a, b); cnt.set(kk, (cnt.get(kk) || 0) + 1); }
+    for (const [kk, c] of cnt) if (c === 1) { const a = Math.floor(kk / 1e7), b = kk % 1e7; for (const v of [a, b]) { const y = yOf(v); if (y < y0 + (y1 - y0) * 0.12) edgeTop = Math.max(edgeTop, y); } } }
+  const U = M.jerTrimU = { uTrim: { value: new THREE.Color() }, uHem: { value: edgeTop + (y1 - y0) * 0.022 }, uEdge: { value: (y1 - y0) * 0.0025 }, uSide: { value: 0.07 } };
+  for (const mat of [o.userData.std || o.material, o.userData.toon].filter(Boolean)) {
+    mat.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader = `attribute vec3 tp;
+attribute float tt;
+varying vec3 vTp;
+varying float vTt;
+` + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+ vTp = tp; vTt = tt;`);
+      sh.fragmentShader = `uniform vec3 uTrim;
+uniform float uHem, uEdge, uSide;
+varying vec3 vTp;
+varying float vTt;
+` + sh.fragmentShader.replace('#include <map_fragment>',
+        `#include <map_fragment>
+        float ang = atan(vTp.x, vTp.z);
+        float sideD = abs(abs(ang) - 1.5708);
+        float side = (1.0 - smoothstep(uSide - 0.012, uSide + 0.012, sideD)) * smoothstep(0.6, 0.85, vTt);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uTrim, side);   /* 下擺不畫滾邊（使用者決定拿掉） */`);
+    };
+    mat.customProgramCacheKey = () => 'jerseyTrim'; mat.needsUpdate = true;
+  }
+}
+// ---------- 球衣放鬆一點、下擺慣性、舉手拉起 ----------
+// 放鬆：沿法線往外推（胸口約 0.6 cm、越往下擺越多到約 1.8 cm，下擺有一點外擴）；袖子不動
+function jerseyLoosen(M) {
+  const o = M.parts.jersey; if (!o || o.userData.loose) return; o.userData.loose = 1;
+  M.root.updateMatrixWorld(true);
+  const g = o.geometry, pos = g.attributes.position, nor = g.attributes.normal, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, n = pos.count;
+  const bn = o.skeleton.bones.map(b => b.name), perM = 1 / o.matrixWorld.getMaxScaleOnAxis();   // 一公尺＝幾個網格單位
+  let y0 = 1e9, y1 = -1e9; for (let i = 0; i < n; i++) { const y = pos.getY(i); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const H = y1 - y0, sway = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let arm = 0; for (let k = 0; k < 4; k++) if (/upperarm|lowerarm|hand/.test(bn[si.getComponent(i, k)] || '')) arm += sw.getComponent(i, k);
+    const low = 1 - Math.max(0, Math.min(1, (pos.getY(i) - y0) / (H * 0.6)));   // 下擺 1、胸口以上 0
+    const push = (0.006 + 0.012 * low) * (1 - arm) * perM;
+    pos.setXYZ(i, pos.getX(i) + nor.getX(i) * push, pos.getY(i), pos.getZ(i) + nor.getZ(i) * push);
+    sway[i] = low * low * (1 - arm);   // 會晃的程度：下擺最多、往上漸少
+  }
+  pos.needsUpdate = true; g.computeBoundingSphere();
+  g.setAttribute('sway', new THREE.BufferAttribute(sway, 1));
+}
+// 每格：下擺像掛在身上的布，用「彈簧＋重力」追骨盆。站著時布本來就有一點下垂；
+//   起跳往上加速＝下擺稍微被往下拖、空中（自由落下）＝下垂消失、下擺微微飄起、落地＝往下甩再彈回；舉手時下擺被往上拉一點
+const CLOTH = { k: 140, c: 9, gain: 0.3, max: 0.022 };
+function clothUpdate(M, dt) {
+  const o = M.parts.jersey; if (!o || !M.swayU || dt <= 0) return;
+  const p = wpos(M.bones.pelvis, new THREE.Vector3()), sag = 9.8 / CLOTH.k;
+  const S = M.cloth || (M.cloth = { s: p.clone(), v: new THREE.Vector3() });
+  if (dt > 0.2 || S.s.distanceTo(p) > 1) { S.s.copy(p); S.s.y -= sag; S.v.set(0, 0, 0); }
+  for (let t = dt; t > 1e-6; t -= 1 / 120) {   // 小步算才穩
+    const h = Math.min(t, 1 / 120);
+    const a = p.clone().sub(S.s).multiplyScalar(CLOTH.k).addScaledVector(S.v, -CLOTH.c); a.y -= 9.8;
+    S.v.addScaledVector(a, h); S.s.addScaledVector(S.v, h);
+  }
+  const lag = S.s.clone().sub(p); lag.y += sag; lag.multiplyScalar(CLOTH.gain);
+  const L = lag.length(); if (L > 1e-6) lag.multiplyScalar(CLOTH.max * Math.tanh(L / CLOTH.max) / L);   // 軟上限：再大也只動約 2 cm
+  // 舉手：上臂高過水平越多，下擺往上拉越多（兩手都舉最多約 1.5 cm）
+  let lift = 0; for (const s of ['l', 'r']) { const d = wpos(M.bones['lowerarm_' + s], new THREE.Vector3()).sub(wpos(M.bones['upperarm_' + s], new THREE.Vector3())).normalize(); lift += Math.max(0, d.y); }
+  lag.y += 0.0075 * lift;
+  // 世界座標 → 球衣網格自己的座標
+  M.swayU.value.copy(lag.applyMatrix3(new THREE.Matrix3().setFromMatrix4(o.matrixWorld).invert()));
+}
+// 材質加上下擺位移（球衣本身＋它的外框線都要加，不然外框會跟衣服分開）
+function swayShader(M) {
+  const o = M.parts.jersey; if (!o) return;
+  M.swayU = { value: new THREE.Vector3() };
+  const inject = vs => 'attribute float sway;\nuniform vec3 uSway;\n' + vs.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n transformed += uSway * sway;');
+  for (const mat of [o.userData.std || o.material, o.userData.toon, ...M.outlines.filter(l => l.userData.of === o).map(l => l.material)].filter(Boolean)) {
+    const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+    mat.onBeforeCompile = (sh, r) => { if (prev) prev.call(mat, sh, r); sh.uniforms.uSway = M.swayU; sh.vertexShader = inject(sh.vertexShader); };
+    mat.customProgramCacheKey = () => key + '+sway'; mat.needsUpdate = true;
+  }
+}
+
+// ---------- 配件：項鍊（有慣性）、護腕、眼鏡、帽子（跟舊公仔同一套選項，選擇存在 L.eq） ----------
+const ACC = { neck: ['不戴', '項鍊（銀）', '項鍊（金）'], wrist: ['不戴', '護腕（白）', '護腕（黑）'], glasses: ['不戴', '粗框（黑）', '細框（金）', '運動墨鏡'], hat: ['不戴', '運動帽（黑）', '運動帽（白）'] };
+const accToon = (c, extra = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: TOON_RAMP, ...extra });
+// 物件掛到骨頭底下：給世界座標的位置、方向，換算成骨頭底下的相對位置
+function hangOn(bone, obj, wp, wq) {
+  bone.updateMatrixWorld(true);
+  const m = new THREE.Matrix4().compose(wp, wq || new THREE.Quaternion(), new THREE.Vector3(1, 1, 1));
+  m.premultiply(bone.matrixWorld.clone().invert()); m.decompose(obj.position, obj.quaternion, obj.scale); bone.add(obj);
+}
+// 站姿下量好位置做出來（只做一次）
+function buildAcc(M) {
+  if (M.acc) return M.acc;
+  const save = M.skel.bones.map(b => b.quaternion.clone()); resetPose(M); mvStop(M); M.root.updateMatrixWorld(true);
+  const P = n => wpos(M.bones[n], new THREE.Vector3()), A = M.acc = {};
+  const rq = M.root.getWorldQuaternion(new THREE.Quaternion()), sc = M.sx === 'f' ? 0.93 : 1;
+  const X = new THREE.Vector3(1, 0, 0).applyQuaternion(rq), Z = new THREE.Vector3(0, 0, 1).applyQuaternion(rq);   // root 的左右、前後（角色朝 +Z）
+  // 項鍊：脖子根部繞一圈；後面貼後頸、前面垂到胸口；高度＝那一點往下最上層的衣服／皮膚表面
+  {
+    const neck = P('neck_01'), cloth = [M.parts.jersey, M.parts.Human].filter(Boolean), v = new THREE.Vector3(), surf = [];
+    for (const o of cloth) { o.skeleton.update(); const n = o.geometry.attributes.position.count; for (let k = 0; k < n; k++) { o.getVertexPosition(k, v).applyMatrix4(o.matrixWorld); if (v.y < neck.y - 0.012 && v.y > neck.y - 0.25 && Math.hypot(v.x - neck.x, v.z - neck.z) < 0.16) surf.push(v.clone()); } }
+    const top = (x, z) => { let b = -1e9; for (const s of surf) if (Math.abs(s.x - x) < 0.011 && Math.abs(s.z - z) < 0.011) b = Math.max(b, s.y); return b; };
+    const N = 40, rest = [];
+    for (let k = 0; k < N; k++) {   // 角度 0＝正前方
+      const a = k / N * Math.PI * 2, f = (1 + Math.cos(a)) / 2, r = (0.078 + 0.045 * f * f) * sc;
+      const q = neck.clone().addScaledVector(X, Math.sin(a) * r).addScaledVector(Z, Math.cos(a) * r);
+      let y = top(q.x, q.z); if (y < -1e8) y = neck.y - 0.02 - 0.06 * f; q.y = y + 0.005; rest.push(q);
+    }
+    // 像真的鍊子垂掛：往兩邊平均、受一點重力，但不低於底下的表面
+    const floor = rest.map(q => q.y);
+    for (let it = 0; it < 60; it++) { const ys = rest.map(q => q.y); for (let k = 0; k < N; k++) rest[k].y = Math.max(floor[k], (ys[(k + N - 1) % N] + ys[(k + 1) % N]) / 2 - 0.0012); }
+    const back = rest[N / 2].clone(), g = new THREE.Group(), piv = new THREE.Group(); g.add(piv); hangOn(M.bones.spine_03, g, back, rq);   // 以後頸那點為軸：前面往上飄＝整圈繞後頸轉
+    const inv = new THREE.Matrix4().compose(back, rq, new THREE.Vector3(1, 1, 1)).invert(), local = rest.map(q => q.clone().applyMatrix4(inv));
+    A.neckMat = [null, accToon(0xD9DDE3), accToon(0xE8B94A)];
+    A.chain = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(local, true), 120, 0.0028, 6, true), A.neckMat[1]); piv.add(A.chain);
+    A.tag = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.0035, 20), A.neckMat[1]);
+    A.tag.position.copy(local[0]).add(new THREE.Vector3(0, -0.015, 0.004)); A.tag.rotation.x = Math.PI / 2 - 0.25; piv.add(A.tag);
+    for (const m of [A.chain, A.tag]) { m.castShadow = true; m.frustumCulled = false; }
+    A.neck = g; A.pivot = piv; A.ns = { a: 0, v: 0, py: null, vy: 0 };
+  }
+  // 護腕：前臂靠手腕那一段一圈，半徑照那段手臂的粗細量
+  A.wristMat = [null, accToon(0xF4F4F0, { side: THREE.DoubleSide }), accToon(0x22252B, { side: THREE.DoubleSide })]; A.wrist = [];
+  { const H = M.parts.Human, si = H.geometry.attributes.skinIndex, sw = H.geometry.attributes.skinWeight, bn = H.skeleton.bones.map(b => b.name), v = new THREE.Vector3(); H.skeleton.update();
+    for (const s of ['l', 'r']) {
+      const e = P('lowerarm_' + s), w = P('hand_' + s), d = w.clone().sub(e), len = d.length(); d.normalize();
+      let rad = 0; for (let k = 0; k < si.count; k++) { let ok = 0; for (let j = 0; j < 4; j++) if (bn[si.getComponent(k, j)] === 'lowerarm_' + s && sw.getComponent(k, j) > 0.4) ok = 1; if (!ok) continue;
+        H.getVertexPosition(k, v).applyMatrix4(H.matrixWorld); const t = v.clone().sub(e).dot(d) / len; if (t < 0.72 || t > 0.95) continue; rad = Math.max(rad, v.clone().sub(e).addScaledVector(d, -t * len).length()); }
+      if (!rad) rad = 0.032; rad += 0.003;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad * 1.04, len * 0.2, 24, 1, true), A.wristMat[1]); m.castShadow = true; m.frustumCulled = false;
+      hangOn(M.bones['lowerarm_' + s], m, e.clone().addScaledVector(d, len * 0.82), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d)); A.wrist.push(m);
+    }
+  }
+  M.skel.bones.forEach((b, k) => b.quaternion.copy(save[k])); M.root.updateMatrixWorld(true);
+  return A;
+}
+// 眼鏡、帽子：掛在 VRoid 頭的 holder 上（VRoid 自己的座標：朝 -Z、單位公尺）；眼睛位置從虹膜量、頭頂從頭髮量
+function buildHeadAcc(V0) {
+  if (V0.acc) return V0.acc;
+  const iris = V0.meshes.face.find(m => m.userData.kind === 'iris'), skin = V0.meshes.face.find(m => m.userData.kind === 'skin'); if (!iris || !skin) return null;
+  const p = iris.geometry.attributes.position, Le = new THREE.Vector3(), Re = new THREE.Vector3(), v = new THREE.Vector3(); let nl = 0, nr = 0;
+  for (let k = 0; k < p.count; k++) { v.fromBufferAttribute(p, k); if (v.x > 0) { Le.add(v); nl++; } else { Re.add(v); nr++; } }
+  Le.multiplyScalar(1 / nl); Re.multiplyScalar(1 / nr);
+  skin.geometry.computeBoundingBox(); const sb = skin.geometry.boundingBox;
+  // 臉的半寬：眼睛高度那一圈皮膚最外面（整個皮膚網格含脖子、隱藏的點，不能直接用外框）
+  let hw = 0; { const a = skin.geometry.attributes.position, ey = (Le.y + Re.y) / 2; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); if (Math.abs(v.y - ey) < 0.015 && v.z < Le.z + 0.12) hw = Math.max(hw, Math.abs(v.x)); } if (!hw) hw = Math.abs(Le.x) * 1.7; }
+  const eyeD = Le.distanceTo(Re), G = new THREE.Group(); V0.holder.add(G);
+  const glasses = kind => {
+    const g = new THREE.Group(), r = eyeD * 0.34, th = r * (kind === 2 ? 0.05 : 0.1), z = Math.min(Le.z, Re.z) - eyeD * 0.3;
+    const frameM = accToon(kind === 2 ? 0xD4A940 : 0x1C1C20), lensM = new THREE.MeshBasicMaterial({ color: kind === 3 ? 0x182030 : 0xDDEEFF, transparent: true, opacity: kind === 3 ? 0.82 : 0.12, depthWrite: false, side: THREE.DoubleSide });
+    const sx = kind === 3 ? 1.15 : 1.05, sy = kind === 3 ? 0.72 : 0.8;
+    for (const c of [Le, Re]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, th, 8, 32), frameM); ring.scale.set(sx, sy, 1); ring.position.set(c.x, c.y, z); g.add(ring);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(r, 32), lensM); lens.scale.set(sx, sy, 1); lens.position.set(c.x, c.y, z); lens.renderOrder = 20; g.add(lens);
+      // 鏡腳：鏡框外側往後到耳朵（臉的寬度）
+      const s = Math.sign(c.x), ox = c.x + s * r * sx, ax = s * hw * 1.02, az = z + hw * 1.3, ln = Math.hypot(ax - ox, az - z);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(th * 1.4, th * 1.6, ln), frameM); arm.position.set((ox + ax) / 2, c.y + r * 0.2, (z + az) / 2); arm.rotation.y = Math.atan2(ax - ox, az - z); g.add(arm);
+    }
+    const br = new THREE.Mesh(new THREE.TorusGeometry(Math.max(r * 0.2, eyeD / 2 - r * sx), th * 0.8, 6, 16, Math.PI), frameM); br.position.set((Le.x + Re.x) / 2, (Le.y + Re.y) / 2 + r * 0.1, z); g.add(br);
+    g.visible = false; G.add(g); return g;
+  };
+  // 帽子：頭髮在頭頂那部分的大小 → 半顆橢圓球的帽身＋前面的帽簷
+  const hb = new THREE.Box3(), cy = (sb.min.y + sb.max.y) / 2;
+  for (const h of V0.meshes.hair) { if (h.userData.ears) continue; const a = h.geometry.attributes.position; for (let k = 0; k < a.count; k++) { v.fromBufferAttribute(a, k); if (v.y > cy) hb.expandByPoint(v); } }
+  if (hb.isEmpty()) hb.copy(sb);
+  const hc = hb.getCenter(new THREE.Vector3()), hs = hb.getSize(new THREE.Vector3());
+  const hat = col => {
+    const g = new THREE.Group(), m = accToon(col, { side: THREE.DoubleSide }), ey = (Le.y + Re.y) / 2, base = ey + (hb.max.y - ey) * 0.38, ch = (hb.max.y - base) * 0.92;   /* 帽身底在眉毛上面、頂端稍微壓到頭髮 */
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), m); crown.scale.set(hs.x * 0.5, ch, hs.z * 0.52); crown.position.set(hc.x, base, hc.z); g.add(crown);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.006, 32, 1, false, Math.PI * 0.55, Math.PI * 0.9), m); brim.scale.set(hs.x * 0.5, 1, hs.z * 0.85); brim.position.set(hc.x, base + 0.004, hc.z); brim.rotation.x = -0.12; g.add(brim);
+    for (const o of [crown, brim]) { o.castShadow = true; o.frustumCulled = false; }
+    g.visible = false; G.add(g); return g;
+  };
+  return (V0.acc = { glasses: [null, glasses(1), glasses(2), glasses(3)], hat: [null, hat(0x1C1C20), hat(0xF2F2F0)] });
+}
+function accApply(M, L) {
+  const eq = L.eq || (L.eq = { neck: 0, wrist: 0, glasses: 0, hat: 0 }), A = buildAcc(M);
+  A.neck.visible = !!eq.neck; if (eq.neck) A.chain.material = A.tag.material = A.neckMat[eq.neck];
+  for (const w of A.wrist) { w.visible = !!eq.wrist; if (eq.wrist) w.material = A.wristMat[eq.wrist]; }
+  const vh = L.vhead ?? -1, vhr = L.vhair ?? vh;
+  if (M.vroid) for (const k in M.vroid) {
+    const H = +k === vh || +k === vhr ? buildHeadAcc(M.vroid[k]) : M.vroid[k].acc; if (!H) continue;
+    H.glasses.forEach((g, i) => g && (g.visible = +k === vh && i === eq.glasses));
+    H.hat.forEach((g, i) => g && (g.visible = +k === vhr && i === eq.hat));
+  }
+}
+// 每格：項鍊照舊版的物理——彈簧＋阻尼；身體往上加速（起跳、落地）＝壓回胸口；自由落下＝前面往上飄
+function accUpdate(M, dt) {
+  const A = M.acc; if (!A || !A.neck.visible || dt <= 0) return;
+  const S = A.ns, y = wpos(M.bones.spine_03, new THREE.Vector3()).y;
+  if (dt > 0.2 || S.py == null) { S.py = y; S.vy = 0; S.a = 0; S.v = 0; return; }
+  const vy = (y - S.py) / dt, acc = (vy - S.vy) / dt; S.py = y; S.vy = vy;
+  const drive = -Math.max(-30, Math.min(30, acc)) * 0.6;
+  for (let t = dt; t > 1e-6; t -= 1 / 120) { const h = Math.min(t, 1 / 120);
+    S.v += (-12 * S.a - 3 * S.v + (Math.abs(acc) > 2 ? drive : 0)) * h; S.a += S.v * h;
+    if (S.a < 0) { S.a = 0; S.v = S.v < 0 ? -S.v * 0.3 : S.v; } if (S.a > 0.9) { S.a = 0.9; S.v = 0; } }
+  A.pivot.rotation.x = -S.a;
+}
+// ---------- 賽璐璐上色、外框線 ----------
+const TOON_RAMP = (() => { const d = new Uint8Array([178, 168, 172, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 2, 1);   /* 兩階：亮面＋一層偏暖的影子 */ t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+function outlineMat(w, skinned) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x2A1E1C, side: THREE.BackSide });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = skinned
+      ? sh.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>\n transformed += normalize(objectNormal) * ${w.toFixed(5)};`)
+      : sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n transformed += normalize(normal) * ${w.toFixed(5)};`);
+  };
+  return m;
+}
+function makeOutline(o, w) {
+  const m = o.isSkinnedMesh ? new THREE.SkinnedMesh(o.geometry, outlineMat(w, true)) : new THREE.Mesh(o.geometry, outlineMat(w, false));
+  if (o.isSkinnedMesh) m.bind(o.skeleton, o.bindMatrix);
+  m.position.copy(o.position); m.quaternion.copy(o.quaternion); m.scale.copy(o.scale);
+  m.frustumCulled = false; o.parent.add(m); m.userData.of = o;
+  return m;
+}
+
+// ---------- 載入模型 ----------
+const loader = new GLTFLoader();
+const models = {};
+const TARGET_H = { m: 1.88, f: 1.74 };
+async function loadModel(s) {
+  const gl = await loader.loadAsync(`assets/models/real_${s}.glb?v=14`);
+  const root = gl.scene;
+  const parts = {}; let skel = null;
+  root.traverse(o => {
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; parts[o.name] = o; if (o.skeleton) skel = o.skeleton; }
+  });
+  // 身高統一
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(parts.Human);
+  const k = TARGET_H[s] / (box.max.y - box.min.y);
+  root.scale.setScalar(k);
+  root.position.y = -box.min.y * k;
+  // 站在地板上要看鞋底：身體網格被鞋子蓋住的腳掌已經刪掉，最低只到腳踝，只看身體會讓鞋子陷進地板約 20 cm
+  if (parts.shoes) { root.updateMatrixWorld(true); const sb = new THREE.Box3().setFromObject(parts.shoes); root.position.y -= sb.min.y; }
+  const M = { root, parts, skel, sx: s };
+  // 材質
+  const skinTex = parts.Human.material.map;
+  skinTex.colorSpace = THREE.SRGBColorSpace;
+  const skinMat = new THREE.MeshStandardMaterial({ map: skinTex, roughness: 0.62, metalness: 0 });
+  M.skinAvg = avgColor(skinTex);
+  parts.Human.material = skinMat; M.skinMat = skinMat;
+  M.hairs = [];
+  for (const [name, o] of Object.entries(parts)) {
+    if (!name.startsWith('hair_')) continue;
+    o.material = new THREE.MeshStandardMaterial({ map: grayDetail(o.material.map, true), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.55 });
+    o.userData.std = o.material; o.userData.toon = new THREE.MeshToonMaterial({ map: o.material.map, alphaTest: 0.45, side: THREE.DoubleSide, gradientMap: TOON_RAMP });
+    M.hairs.push(o);
+  }
+  M.hairs.sort((a, b) => a.name.localeCompare(b.name));
+  M.hairs = HAIR_ORDER.map(n => parts['hair_' + n] || null);
+  for (const h of M.hairs) {
+    if (!h) continue;
+    const pos = h.geometry.attributes.position;
+    h.userData.base = pos.array.slice();
+    h.geometry.computeBoundingBox();
+    h.userData.box = h.geometry.boundingBox.clone();
+  }
+  if (parts.face) {
+    M.face = canvasTex(1024, 1024);
+    parts.face.material = new THREE.MeshStandardMaterial({ map: M.face.t, transparent: true, depthWrite: false, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    parts.face.castShadow = false; parts.face.renderOrder = 2;
+  }
+  // 立體眼球、睫毛、眉毛
+  M.eyeTex = {};
+  if (parts.face) { for (const k of ['eyes', 'lashes']) if (parts[k]) parts[k].visible = false; }   // Q版：五官畫在臉片上，立體眼球睫毛收起來
+  if (parts.eyes) { parts.eyes.material = new THREE.MeshStandardMaterial({ map: parts.eyes.material.map, roughness: 0.12, metalness: 0 }); parts.eyes.castShadow = false; }
+  if (parts.lashes) { parts.lashes.material = new THREE.MeshStandardMaterial({ map: parts.lashes.material.map, alphaTest: 0.35, side: THREE.DoubleSide, color: 0x2a1c18, roughness: 0.8 }); parts.lashes.castShadow = false; }
+  M.brows = BROW_ORDER.map(n => parts['brow_' + n] || null);
+  for (const b of M.brows) if (b) { b.material = new THREE.MeshStandardMaterial({ map: grayDetail(b.material.map, true), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.8 }); b.castShadow = false; }
+  M.jer = canvasTex(1024, 512); M.jer.t.wrapS = THREE.RepeatWrapping;
+  parts.jersey.material = new THREE.MeshStandardMaterial({ map: M.jer.t, roughness: 0.75, side: THREE.DoubleSide });
+  M.sho = canvasTex(512, 256); M.sho.t.wrapS = THREE.RepeatWrapping;
+  parts.shorts.material = new THREE.MeshStandardMaterial({ map: M.sho.t, roughness: 0.8, side: THREE.DoubleSide });
+  // 骨頭
+  M.bones = {}; for (const b of skel.bones) { M.bones[b.name] = b; b.userData.rest = b.quaternion.clone(); }
+  M.head = await (await fetch(`assets/models/real_${s}.json?v=14`)).json();
+  M.baseHuman = parts.Human.geometry.attributes.position.array.slice();
+  M.headParts = ['face', 'eyes', 'lashes', ...BROW_ORDER.map(n => 'brow_' + n)].map(n => parts[n]).filter(Boolean).map(o => [o, o.geometry.attributes.position.array.slice()]);
+  {
+    // 原本臉的側面輪廓：每 0.05 一格，中線最前面的位置（以頭的半徑為單位）
+    const C = M.head.headC, Rr = M.head.headR, b = M.baseHuman, bins = {};
+    for (let i = 0; i < b.length; i += 3) {
+      if (Math.abs(b[i]) > 0.008) continue;
+      const qy = (b[i + 1] - C[1]) / Rr[1], qz = (b[i + 2] - C[2]) / Rr[2];
+      if (qz < 0) continue;
+      const k = Math.round(qy * 20); bins[k] = Math.max(bins[k] ?? 0, qz);
+    }
+    M.head.prof = qy => { const f = qy * 20, k0 = Math.floor(f), t = f - k0; const a = bins[k0], c = bins[k0 + 1]; if (a == null) return c ?? 0; if (c == null) return a; return a + (c - a) * t; };
+  }
+  M.computeShell = () => {
+    const C = M.head.headC, Rr = M.head.headR, a = parts.Human.geometry.attributes.position;
+    const GA = 48, GE = 24, grid = new Float32Array(GA * GE).fill(1);
+    for (let i = 0; i < a.count; i++) {
+      const x = (a.getX(i) - C[0]) / Rr[0], y = (a.getY(i) - C[1]) / Rr[1], z = (a.getZ(i) - C[2]) / Rr[2];
+      if (y < -0.35) continue;
+      const k = Math.hypot(x, y, z); if (k > 1.6) continue;
+      const az = Math.atan2(x, z), el = Math.asin(y / k);
+      if (Math.abs(az) > 1.1 && Math.abs(az) < 2.05 && el < 0.32) continue;   // 耳朵
+      const gi = Math.min(GA - 1, Math.floor((az + Math.PI) / (2 * Math.PI) * GA)), gj = Math.min(GE - 1, Math.floor((el + Math.PI / 2) / Math.PI * GE));
+      grid[gj * GA + gi] = Math.max(grid[gj * GA + gi], k);
+    }
+    const g2 = grid.slice();
+    for (let j = 0; j < GE; j++) for (let i = 0; i < GA; i++) {
+      let m = grid[j * GA + i];
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const jj = j + dj; if (jj < 0 || jj >= GE) continue; m = Math.max(m, grid[jj * GA + (i + di + GA) % GA]); }
+      g2[j * GA + i] = m;
+    }
+    M.head.shell = d => { const az = Math.atan2(d.x, d.z), el = Math.asin(Math.max(-1, Math.min(1, d.y)));
+      const gi = Math.min(GA - 1, Math.floor((az + Math.PI) / (2 * Math.PI) * GA)), gj = Math.min(GE - 1, Math.floor((el + Math.PI / 2) / Math.PI * GE)); return g2[gj * GA + gi]; };
+  };
+  M.computeShell();
+  if (M.face) M.face.head = M.head;
+  // 腮紅：兩頰用頂點顏色疊一層淡粉紅（乘在皮膚貼圖上）。有臉片（Q版畫五官）時腮紅畫在臉片上
+  if (!parts.face) { const g = parts.Human.geometry, pa = g.attributes.position, n = pa.count, col = new Float32Array(n * 3), H = M.head;
+    const ey = H.eyeL[1], my = H.mouth[1];
+    for (let i = 0; i < n; i++) {
+      const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i); let w = 0;
+      if (z > H.headC[2]) for (const sx of [1, -1]) {
+        const d = Math.hypot((x - sx * H.eyeL[0] * 1.15) / 1.3, y - (ey - (ey - my) * 0.42));
+        w = Math.max(w, Math.exp(-((d / 0.02) ** 2)));
+      }
+      const b = FACE_STYLE.blush * w; col[i * 3] = 1; col[i * 3 + 1] = 1 - b * 0.9; col[i * 3 + 2] = 1 - b * 0.8;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); skinMat.vertexColors = true; }
+  root.updateMatrixWorld(true);
+  M.handRest = {};
+  for (const sd of ['l', 'r']) {
+    const { fd, n } = palmFrame(M, sd);
+    const qi = M.bones['hand_' + sd].getWorldQuaternion(new THREE.Quaternion()).invert();
+    const fl = fd.clone().applyQuaternion(qi).normalize();
+    const nl = n.clone().applyQuaternion(qi); nl.addScaledVector(fl, -nl.dot(fl)).normalize();
+    M.handRest[sd] = { fl, nl };
+  }
+  // 動畫風：每個網格都準備一份賽璐璐材質，另外加外框線（背面往外推）
+  M.outlines = [];
+  for (const name of ['Human', 'jersey', 'shorts', 'shoes', 'face']) {
+    const o = parts[name]; if (!o) continue;
+    const std = o.material;
+    const tm = new THREE.MeshToonMaterial({ map: name === 'Human' ? null : (std.map || null),   /* 動畫風皮膚＝純色，不要寫實貼圖的斑塊 */ color: std.color ? std.color.clone() : 0xffffff, gradientMap: TOON_RAMP, transparent: std.transparent, depthWrite: std.depthWrite, side: std.side,
+      polygonOffset: std.polygonOffset, polygonOffsetFactor: std.polygonOffsetFactor, polygonOffsetUnits: std.polygonOffsetUnits });
+    o.userData.std = std; o.userData.toon = tm;
+    if (name !== 'face') M.outlines.push(makeOutline(o, 0.0022));
+  }
+  jerseyLoosen(M); jerseyTrim(M); swayShader(M);
+  // 髮束掛在頭骨頭底下（跟著頭動）
+  root.updateMatrixWorld(true);
+  M.hairGroup = new THREE.Group(); M.hairGroup.matrixAutoUpdate = false;
+  M.hairGroup.matrix.copy(M.bones.head.matrixWorld).invert().multiply(parts.Human.parent.matrixWorld);
+  M.bones.head.add(M.hairGroup);
+  M.hairStd = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, side: THREE.DoubleSide });
+  M.hairToon = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: TOON_RAMP, side: THREE.DoubleSide });
+  M.capStd = new THREE.MeshStandardMaterial({ roughness: 0.7, side: THREE.DoubleSide }); M.capToon = new THREE.MeshToonMaterial({ gradientMap: TOON_RAMP, side: THREE.DoubleSide });
+  M.hairMesh = new THREE.Mesh(new THREE.BufferGeometry(), M.hairToon); M.hairMesh.castShadow = true;
+  M.capMesh = new THREE.Mesh(new THREE.BufferGeometry(), M.capToon);
+  M.hairLine = new THREE.Mesh(new THREE.BufferGeometry(), outlineMat(0.0028, false));
+  M.hairGroup.add(M.capMesh, M.hairMesh, M.hairLine);
+  makeGear(M);
+  return M;
+}
+
+// ---------- 手勢與手臂姿勢 ----------
+const FINGERS = ['index', 'middle', 'ring', 'pinky'];
+const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+function wpos(b, out) { return b.getWorldPosition(out); }
+function resetPose(M) { for (const b of M.skel.bones) b.quaternion.copy(b.userData.rest); M.root.updateMatrixWorld(true); }
+// 手腕翻轉分給前臂：手相對前臂沿前臂軸的扭轉，有 k 比例改由前臂來轉（手的位置、方向完全不變），避免手腕皮膚擰成麻花
+function spreadTwist(M, s, k) {
+  const fa = M.bones['lowerarm_' + s], hd = M.bones['hand_' + s];
+  const axis = hd.position.clone().normalize();
+  const delta = hd.quaternion.clone().multiply(hd.userData.rest.clone().invert());
+  const d = delta.x * axis.x + delta.y * axis.y + delta.z * axis.z;
+  let ang = 2 * Math.atan2(d, delta.w); ang = Math.atan2(Math.sin(ang), Math.cos(ang));   // 限制在 ±180°（走近路；不然左手會多繞一圈、手肘擰壞）
+  const tk = new THREE.Quaternion().setFromAxisAngle(axis, ang * k);
+  fa.quaternion.multiply(tk); hd.quaternion.premultiply(tk.clone().invert());
+  M.root.updateMatrixWorld(true);
+}
+// 讓骨頭（從自己到子骨頭的方向）指向世界方向 dir
+function aim(M, name, child, dir) {
+  const b = M.bones[name], c = M.bones[child];
+  b.updateMatrixWorld(true);
+  const p = wpos(b, new THREE.Vector3()), q = wpos(c, new THREE.Vector3());
+  const cur = q.sub(p).normalize();
+  const rot = new THREE.Quaternion().setFromUnitVectors(cur, dir.clone().normalize());
+  const bw = b.getWorldQuaternion(new THREE.Quaternion());
+  const pw = b.parent.getWorldQuaternion(new THREE.Quaternion());
+  b.quaternion.copy(pw.invert().multiply(rot.multiply(bw)));
+  b.updateMatrixWorld(true);
+}
+// 繞「世界軸」轉某根骨頭 ang 弧度
+function rotWorld(b, axis, ang) {
+  const bw = b.getWorldQuaternion(new THREE.Quaternion());
+  const local = axis.clone().applyQuaternion(bw.clone().invert()).normalize();
+  b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(local, ang));
+  b.updateMatrixWorld(true);
+}
+// 手掌朝向：用食指、小指、中指根部算掌心方向（朝身體那側＝掌心）
+function palmFrame(M, s) {
+  const h = wpos(M.bones['hand_' + s], new THREE.Vector3());
+  const mid = wpos(M.bones['middle_01_' + s], new THREE.Vector3());
+  const idx = wpos(M.bones['index_01_' + s], new THREE.Vector3());
+  const pk = wpos(M.bones['pinky_01_' + s], new THREE.Vector3());
+  const fd = mid.clone().sub(h).normalize();
+  const across = idx.clone().sub(pk).normalize();
+  let n = new THREE.Vector3().crossVectors(fd, across).normalize();
+  // 拇指在掌心那側：拇指根部偏向的方向就是掌心
+  const th = wpos(M.bones['thumb_02_' + s], new THREE.Vector3()).sub(h);
+  if (n.dot(th) < 0) n.negate();
+  return { fd, across, n };
+}
+const HANDS = {
+  natural: { curl: [0.28, 0.32, 0.22], spread: 0.02, thumb: [0.15, 0.2], tspread: 0.1 },
+  bump:    { curl: [0.38, 0.35, 0.22], spread: -0.12, thumb: [0.0, 0.0], tspread: -0.45 },
+  set:     { curl: [0.32, 0.3, 0.2], spread: 0.16, thumb: [0.1, 0.25], tspread: 0.45 },
+  spike:   { curl: [0.06, 0.06, 0.04], spread: 0.08, thumb: [0.0, 0.05], tspread: 0.25 },
+  block:   { curl: [0.02, 0.02, 0.0], spread: 0.26, thumb: [0.0, 0.0], tspread: 0.55 },
+};
+function poseHand(M, s, P) {
+  const { n, fd, across } = palmFrame(M, s);
+  const k = Math.sign(new THREE.Vector3().crossVectors(n, fd).dot(across)) || 1;
+  const spreadOf = { index: 1, middle: 0, ring: -0.6, pinky: -1.2 };
+  for (const f of FINGERS) {
+    const b1 = M.bones[`${f}_01_${s}`];
+    rotWorld(b1, n, k * P.spread * spreadOf[f]);
+    // 鉸鏈軸：這根手指的方向 × 掌心方向（三節共用）
+    const fdir0 = wpos(M.bones[`${f}_02_${s}`], new THREE.Vector3()).sub(wpos(b1, new THREE.Vector3())).normalize();
+    const axis = new THREE.Vector3().crossVectors(fdir0, n).normalize();
+    for (let i = 1; i <= 3; i++) rotWorld(M.bones[`${f}_0${i}_${s}`], axis, P.curl[i - 1] * (f === 'pinky' ? 1.15 : 1));
+  }
+  const t1 = M.bones[`thumb_01_${s}`];
+  rotWorld(t1, n, k * P.tspread);
+  for (let i = 2; i <= 3; i++) {
+    const b = M.bones[`thumb_0${i}_${s}`];
+    const p = wpos(b, new THREE.Vector3());
+    const dir = i < 3 ? wpos(M.bones['thumb_03_' + s], new THREE.Vector3()).sub(p).normalize() : fd.clone();
+    rotWorld(b, new THREE.Vector3().crossVectors(dir, n).normalize(), P.thumb[i - 2]);
+  }
+}
+// 雙骨 IK：肩膀到手腕對準目標點，手肘往 pole 方向彎
+function ikArm(M, s, target, pole) {
+  const up = M.bones['upperarm_' + s], lo = M.bones['lowerarm_' + s], ha = M.bones['hand_' + s];
+  M.root.updateMatrixWorld(true);
+  const S = wpos(up, new THREE.Vector3()), E = wpos(lo, new THREE.Vector3()), Wr = wpos(ha, new THREE.Vector3());
+  const a = S.distanceTo(E), b = E.distanceTo(Wr);
+  const d = target.clone().sub(S); const L = Math.min(d.length(), (a + b) * 0.995); d.normalize();
+  const cosA = Math.max(-1, Math.min(1, (a * a + L * L - b * b) / (2 * a * L))), sinA = Math.sqrt(1 - cosA * cosA);
+  const pp = pole.clone().addScaledVector(d, -pole.dot(d)).normalize();
+  const elbow = S.clone().addScaledVector(d, cosA * a).addScaledVector(pp, sinA * a);
+  aim(M, 'upperarm_' + s, 'lowerarm_' + s, elbow.clone().sub(S));
+  const E2 = wpos(lo, new THREE.Vector3());
+  aim(M, 'lowerarm_' + s, 'hand_' + s, S.clone().addScaledVector(d, L).sub(E2));
+}
+// 手掌朝向：手指方向 f、掌心方向 n（世界座標）
+function orientHand(M, s, f, n) {
+  const ha = M.bones['hand_' + s], R0 = M.handRest[s];
+  const ft = f.clone().normalize(), nt = n.clone().addScaledVector(ft, -n.dot(ft)).normalize();
+  const mL = new THREE.Matrix4().makeBasis(R0.fl, R0.nl, new THREE.Vector3().crossVectors(R0.fl, R0.nl));
+  const mT = new THREE.Matrix4().makeBasis(ft, nt, new THREE.Vector3().crossVectors(ft, nt));
+  const q = new THREE.Quaternion().setFromRotationMatrix(mT.multiply(mL.transpose()));
+  const pw = ha.parent.getWorldQuaternion(new THREE.Quaternion());
+  ha.quaternion.copy(pw.invert().multiply(q)); ha.updateMatrixWorld(true);
+}
+// ---- 手的碰撞：把手掌、每節手指當成膠囊，算兩隻手之間的最小距離（避免穿模） ----
+function segDist(p1, q1, p2, q2) {
+  const d1 = q1.clone().sub(p1), d2 = q2.clone().sub(p2), r = p1.clone().sub(p2);
+  const a = d1.dot(d1), e = d2.dot(d2), f = d2.dot(r);
+  let sP, tP;
+  if (a < 1e-12 && e < 1e-12) return r.length();
+  if (a < 1e-12) { sP = 0; tP = Math.max(0, Math.min(1, f / e)); }
+  else {
+    const c = d1.dot(r);
+    if (e < 1e-12) { tP = 0; sP = Math.max(0, Math.min(1, -c / a)); }
+    else {
+      const bb = d1.dot(d2), den = a * e - bb * bb;
+      sP = den !== 0 ? Math.max(0, Math.min(1, (bb * f - c * e) / den)) : 0;
+      tP = (bb * sP + f) / e;
+      if (tP < 0) { tP = 0; sP = Math.max(0, Math.min(1, -c / a)); }
+      else if (tP > 1) { tP = 1; sP = Math.max(0, Math.min(1, (bb - c) / a)); }
+    }
+  }
+  return p1.clone().addScaledVector(d1, sP).sub(p2.clone().addScaledVector(d2, tP)).length();
+}
+function fingerCaps(M, s, f, r = 0.0085) {
+  const P = i => wpos(M.bones[`${f}_0${i}_${s}`], new THREE.Vector3());
+  const p1 = P(1), p2 = P(2), p3 = P(3), tip = p3.clone().addScaledVector(p3.clone().sub(p2), 0.85);
+  return [[p1, p2, r], [p2, p3, r], [p3, tip, r * 0.9]];
+}
+function handCaps(M, s, opt = {}) {
+  const P = n => wpos(M.bones[n + '_' + s], new THREE.Vector3());
+  const h = P('hand'), caps = [[h, P('index_01'), 0.013], [h, P('middle_01'), 0.013], [h, P('pinky_01'), 0.013], [P('index_01'), P('pinky_01'), 0.011]];
+  if (!opt.noFingers) for (const f of FINGERS) caps.push(...fingerCaps(M, s, f));
+  if (!opt.noThumb) caps.push(...fingerCaps(M, s, 'thumb', 0.009));
+  return caps;
+}
+function capsGap(A, B) {
+  let m = 1e9;
+  for (const [a1, a2, ra] of A) for (const [b1, b2, rb] of B) m = Math.min(m, segDist(a1, a2, b1, b2) - ra - rb);
+  return m;
+}
+const BUMP = {};
+const MV = { name: null, t: 0, speed: 1, paused: false };   // 正在播的動作
+// 墊球：兩個掌心都朝上，左手疊在右手掌心上（緊貼）；兩手腕在中間並排、手稍微往內斜讓兩個手掌上下對齊；
+// 四指伸平併攏；兩個大拇指都翻到最上面（左手掌心上方）並排朝前。手臂伸直、肩膀內收。
+function bumpPose(M) {
+  M.root.updateMatrixWorld(true);
+  const rot = M.root.quaternion;
+  const fwd = V(0, 0, 1).applyQuaternion(rot), upv = V(0, 1, 0), left = V(1, 0, 0).applyQuaternion(rot);
+  resetPose(M);
+  const SL0 = wpos(M.bones.upperarm_l, new THREE.Vector3());
+  const Lr = SL0.distanceTo(wpos(M.bones.lowerarm_l, new THREE.Vector3())) + wpos(M.bones.lowerarm_l, new THREE.Vector3()).distanceTo(wpos(M.bones.hand_l, new THREE.Vector3()));
+  const saveQ = () => M.skel.bones.map(b => b.quaternion.clone());
+  const loadQ = q => { M.skel.bones.forEach((b, i) => b.quaternion.copy(q[i])); M.root.updateMatrixWorld(true); };
+  const P = n => wpos(M.bones[n], new THREE.Vector3());
+  const armLen = s2 => P('upperarm_' + s2).distanceTo(P('lowerarm_' + s2)) + P('lowerarm_' + s2).distanceTo(P('hand_' + s2));
+  // 高度、左右位置給定，往前推到剛好一個手臂長（手臂伸直）
+  const reachPoint = (s2, down, lat) => {
+    const S = P('upperarm_' + s2), L = armLen(s2);
+    const m0 = P('upperarm_l').add(P('upperarm_r')).multiplyScalar(0.5);
+    let lo = 0, hi = 2 * L;
+    for (let i = 0; i < 30; i++) { const t = (lo + hi) / 2; const W = m0.clone().addScaledVector(upv, -down).addScaledVector(left, lat).addScaledVector(fwd, t); if (W.distanceTo(S) < L) lo = t; else hi = t; }
+    return m0.clone().addScaledVector(upv, -down).addScaledVector(left, lat).addScaledVector(fwd, lo);
+  };
+  const straightArm = (s2, W) => { const S = P('upperarm_' + s2); aim(M, 'upperarm_' + s2, 'lowerarm_' + s2, W.clone().sub(S)); aim(M, 'lowerarm_' + s2, 'hand_' + s2, W.clone().sub(S)); };
+  const fingerDir = () => P('hand_l').sub(P('lowerarm_l')).normalize().add(P('hand_r').sub(P('lowerarm_r')).normalize()).normalize().addScaledVector(upv, -0.45).normalize();
+  // 四指併攏：只看左右方向，每根手指的指尖跟旁邊那根左右相距約 1.6 cm（模型手指寬度），手指貼在一起
+  const adduct = s2 => {
+    const h = P('hand_' + s2), fd = P('middle_01_' + s2).sub(h).normalize();
+    const { n } = palmFrame(M, s2);
+    const lat = new THREE.Vector3().crossVectors(n, fd).normalize();
+    const tipOf = fn => { const a = P(fn + '_02_' + s2), b = P(fn + '_03_' + s2); return b.clone().addScaledVector(b.clone().sub(a), 0.85); };
+    for (const [fn, nb] of [['index', 'middle'], ['ring', 'middle'], ['pinky', 'ring']]) {
+      const bone = M.bones[fn + '_01_' + s2], q0 = bone.quaternion.clone();
+      const side = Math.sign(P(fn + '_01_' + s2).sub(P(nb + '_01_' + s2)).dot(lat)) || 1;
+      const latAt = ang => { bone.quaternion.copy(q0); rotWorld(bone, n, ang); M.root.updateMatrixWorld(true); return tipOf(fn).sub(tipOf(nb)).dot(lat) * side; };
+      let best = 0, bestErr = 1e9;
+      for (let ang = -0.4; ang <= 0.4; ang += 0.005) { const e = Math.abs(latAt(ang) - 0.016); if (e < bestErr) { bestErr = e; best = ang; } }
+      latAt(best);
+    }
+  };
+  const flatFingers = s2 => {
+    for (const fn of FINGERS) {                                                                // 四指伸平（抵銷靜止時的微彎）
+      const { n } = palmFrame(M, s2);
+      const fd = P(`${fn}_02_${s2}`).sub(P(`${fn}_01_${s2}`)).normalize();
+      const ax = new THREE.Vector3().crossVectors(fd, n).normalize();
+      // 每一節都量它偏離手掌平面多少，就轉回多少（四根手指在同一個平面上，不會有的翹起來）
+      for (let i = 1; i <= 3; i++) {
+        M.root.updateMatrixWorld(true);
+        const cur = P(`${fn}_0${i}_${s2}`);
+        const nxt = i < 3 ? P(`${fn}_0${i + 1}_${s2}`) : cur.clone().addScaledVector(cur.clone().sub(P(`${fn}_02_${s2}`)), 1);
+        const d = nxt.sub(cur).normalize();
+        rotWorld(M.bones[`${fn}_0${i}_${s2}`], ax, -Math.asin(Math.max(-1, Math.min(1, d.dot(n)))));
+      }
+    }
+    M.root.updateMatrixWorld(true);
+    adduct(s2);
+    // 四指從指根一起往對方那一側偏，讓兩隻手的四指重疊（只動手指，手掌不動）
+    { const { n } = palmFrame(M, s2), inward = left.clone().multiplyScalar(s2 === 'l' ? -1 : 1);
+      const mt = P('middle_03_' + s2), b0 = P('middle_01_' + s2);
+      const test = new THREE.Vector3().crossVectors(n, mt.clone().sub(b0)).dot(inward);   // 繞 n 正轉時指尖往 inward 的分量
+      const ang = (test >= 0 ? 1 : -1) * FINGER_SWING;
+      for (const fn of FINGERS) rotWorld(M.bones[`${fn}_01_${s2}`], n, ang);
+      M.root.updateMatrixWorld(true); }
+  };
+  // 手掌左右並排不疊（小指側靠在一起）；四指併攏伸平、往內斜交叉，只有手指那段疊在一起
+  const FINGER_SWING = 0.5;   // 四指往對方偏的角度（越大重疊越多）
+  let SIDE = 0.1, ROLL = 0; const CROSS = BUMP.cross != null ? BUMP.cross : 0.02;   /* 兩個手掌往內斜的角度（V 字，越小手腕越靠近；使用者要手腕內收：0.5→0.2→0.02 幾乎平行） */
+  const place = lift => {
+    resetPose(M);
+    const PRO = BUMP.pro != null ? BUMP.pro : 0.7;   // 肩膀往前內收的角度（使用者要多收：0.32→0.6→0.7）
+    rotWorld(M.bones.clavicle_l, upv, -PRO); rotWorld(M.bones.clavicle_r, upv, PRO);       // 肩膀往前內收
+    M.root.updateMatrixWorld(true);
+    const down = 0.62 * Lr;
+    straightArm('r', reachPoint('r', down, -SIDE * Lr));
+    straightArm('l', reachPoint('l', down - lift, SIDE * Lr));
+    M.root.updateMatrixWorld(true);
+    const f = fingerDir();
+    // 兩個掌心都朝上，而且兩個手掌平面互相平行（共用同一個掌心方向），手指才能平平地貼在一起
+    const fr = f.clone().applyAxisAngle(upv, CROSS), fl = f.clone().applyAxisAngle(upv, -CROSS);
+    const nC = new THREE.Vector3().crossVectors(fr, fl).normalize(); if (nC.dot(upv) < 0) nC.negate();
+    // 掌心下半部往內包：兩隻手各自沿手指方向往內捲 ROLL（大拇指那側往中間靠）
+    const rollN = (fx, inward) => { const a = nC.clone().applyAxisAngle(fx, ROLL), b = nC.clone().applyAxisAngle(fx, -ROLL); return a.dot(inward) >= b.dot(inward) ? a : b; };
+    orientHand(M, 'r', fr, rollN(fr, left.clone()));
+    orientHand(M, 'l', fl, rollN(fl, left.clone().negate()));
+    flatFingers('r'); flatFingers('l');
+  };
+  // 給定往內包的角度，算出兩手位置、左手高度、大拇指（兩根整根平行貼緊朝前）
+  const solve = () => {
+    // 0) 兩手距離：手掌（不含手指）剛好靠在一起、不疊
+    { let lo = 0.0, hi = 0.3;
+      for (let it = 0; it < 14; it++) {
+        SIDE = (lo + hi) / 2; place(0);
+        const g = capsGap(handCaps(M, 'l', { noThumb: true, noFingers: true }), handCaps(M, 'r', { noThumb: true, noFingers: true }));
+        if (g > 0.003) hi = SIDE; else lo = SIDE;
+      }
+      SIDE = hi; }
+    // 1) 左手稍微抬高：左手四指剛好疊在右手四指上（不穿模）
+    let lift = 0;
+    for (; lift < 0.1; lift += 0.002) { place(lift); if (capsGap(handCaps(M, 'l', { noThumb: true }), handCaps(M, 'r', { noThumb: true })) > 0) break; }
+    if (ROLL > 0) {
+      // 摺起來的版本：大拇指根部往兩根中間靠（左右各 1.05 cm 剛好貼著），第二、三節順著前臂朝前 → 兩根整根平行
+      const f = fingerDir();
+      const latAx = new THREE.Vector3().crossVectors(upv, f).normalize();
+      const latL = latAx.dot(left) > 0 ? latAx : latAx.negate();
+      const q0 = saveQ();
+      let best = null, bestScore = -1e9, info = null;
+      for (let h = -0.01; h <= 0.05; h += 0.004) for (let fw = 0; fw <= 0.04; fw += 0.01) {
+        loadQ(q0);
+        const Qc = P('thumb_01_l').add(P('thumb_01_r')).multiplyScalar(0.5).addScaledVector(upv, h).addScaledVector(f, fw);
+        for (const [s2, sd] of [['l', 1], ['r', -1]]) {
+          aim(M, 'thumb_01_' + s2, 'thumb_02_' + s2, Qc.clone().addScaledVector(latL, sd * 0.0105).sub(P('thumb_01_' + s2)));
+          M.root.updateMatrixWorld(true);
+          aim(M, 'thumb_02_' + s2, 'thumb_03_' + s2, f);
+          M.bones['thumb_03_' + s2].quaternion.identity(); M.root.updateMatrixWorld(true);
+        }
+        const tl = fingerCaps(M, 'l', 'thumb', 0.009), tr = fingerCaps(M, 'r', 'thumb', 0.009);
+        const g = Math.min(capsGap(tl.slice(1), handCaps(M, 'r', { noThumb: true })), capsGap(tr.slice(1), handCaps(M, 'l', { noThumb: true })),
+                           capsGap(tl.slice(1), handCaps(M, 'l', { noThumb: true })) + 0.004, capsGap(tr.slice(1), handCaps(M, 'r', { noThumb: true })) + 0.004,
+                           capsGap(tl, tr) + 0.002);
+        const d2 = P('thumb_02_l').distanceTo(P('thumb_02_r')), d3 = P('thumb_03_l').distanceTo(P('thumb_03_r'));
+        const score = (g >= 0 ? 10 : g * 100) - Math.abs(d2 - 0.021) * 30 - Math.abs(d3 - 0.021) * 30 - Math.abs(h) * 2;
+        if (score > bestScore) { bestScore = score; best = saveQ(); info = { roll: ROLL, side: SIDE, lift, h, fw, gap: g, knuckleDist: d2, tipDist: d3, score }; }
+      }
+      return { q: best, info };
+    }
+    // 2) 兩個大拇指收進來：蓋在手指交疊處上方並排朝前（左右各偏 0.95 cm），找最不穿模的高度（確認版）
+    const f = fingerDir();
+    const latAx = new THREE.Vector3().crossVectors(upv, f).normalize();
+    const latL = latAx.dot(left) > 0 ? latAx : latAx.negate();
+    const palmTop = P('middle_01_l').add(P('middle_01_r')).multiplyScalar(0.5);
+    const q0 = saveQ();
+    const put = (s2, goal, rise) => {
+      const B = P('thumb_01_' + s2);
+      const mid = B.clone().lerp(goal, 0.45).addScaledVector(upv, rise);
+      aim(M, 'thumb_01_' + s2, 'thumb_02_' + s2, mid.sub(B));
+      M.root.updateMatrixWorld(true);
+      aim(M, 'thumb_02_' + s2, 'thumb_03_' + s2, goal.clone().addScaledVector(f, 0.02).sub(P('thumb_02_' + s2)));
+      M.bones['thumb_03_' + s2].quaternion.identity(); M.root.updateMatrixWorld(true);
+    };
+    let best = null, bestScore = -1e9, info = null;
+    for (let h = 0.015; h <= 0.05; h += 0.003) for (let rise = 0; rise <= 0.04; rise += 0.01) {
+      loadQ(q0);
+      put('l', palmTop.clone().addScaledVector(upv, h).addScaledVector(latL, 0.0095), rise);
+      put('r', palmTop.clone().addScaledVector(upv, h).addScaledVector(latL, -0.0095), rise);
+      const tl = fingerCaps(M, 'l', 'thumb', 0.009), tr = fingerCaps(M, 'r', 'thumb', 0.009);
+      const g = Math.min(capsGap(tl, handCaps(M, 'r', { noThumb: true })), capsGap(tr.slice(1), handCaps(M, 'l', { noThumb: true })),
+                         capsGap(tl.slice(1), handCaps(M, 'l', { noThumb: true })) + 0.004, capsGap(tr.slice(1), handCaps(M, 'r', { noThumb: true })) + 0.004,
+                         capsGap(tl, tr) + 0.002);
+      const d3 = P('thumb_03_l').distanceTo(P('thumb_03_r')), d2 = P('thumb_02_l').distanceTo(P('thumb_02_r'));
+      const score = (g >= 0 ? 10 : g * 100) - d3 * 20 - h * 5;
+      if (score > bestScore) { bestScore = score; best = saveQ(); info = { roll: ROLL, side: SIDE, lift, h, rise, gap: g, knuckleDist: d2, tipDist: d3, score }; }
+    }
+    return { q: best, info };
+  };
+  // 往內包的角度從 0 慢慢加，直到兩根大拇指整根並排貼緊（中心相距 ≤ 2.6 cm）且不穿模
+  let pick = null;
+  const rolls = BUMP.roll != null ? [BUMP.roll] : [0];   // 預設不往內包＝使用者確認版
+  for (ROLL of rolls) {
+    const r = solve();
+    if (!pick || r.info.score > pick.info.score) pick = r;
+    if (r.info.gap >= 0 && r.info.knuckleDist <= 0.026 && r.info.tipDist <= 0.026) { pick = r; break; }
+  }
+  loadQ(pick.q);
+  spreadTwist(M, 'l', 0.65); spreadTwist(M, 'r', 0.65);   /* 手掌翻上來的扭轉 65% 由前臂轉（原本 144° 全擠在手腕） */
+  // 左手大拇指從根部往上抬，抬到不穿進自己手掌、也不碰右手和右手大拇指為止（使用者：左手拇指穿模，往上抬一點）
+  { const b = M.bones.thumb_01_l, tip0 = P('thumb_03_l'), dir = tip0.clone().sub(P('thumb_01_l')).normalize();
+    const ax = new THREE.Vector3().crossVectors(dir, upv).normalize();
+    const q0 = b.quaternion.clone(); rotWorld(b, ax, 0.05); M.root.updateMatrixWorld(true);
+    if (P('thumb_03_l').y < tip0.y) ax.negate();
+    b.quaternion.copy(q0); M.root.updateMatrixWorld(true);
+    const gap = () => { const tl = fingerCaps(M, 'l', 'thumb', 0.009), tr = fingerCaps(M, 'r', 'thumb', 0.009);
+      return Math.min(capsGap(tl.slice(1), handCaps(M, 'l', { noThumb: true })), capsGap(tl, tr), capsGap(tl, handCaps(M, 'r', { noThumb: true }))); };
+    for (let a = 0; gap() < 0.001 && a < 0.4; a += 0.01) { rotWorld(b, ax, 0.01); M.root.updateMatrixWorld(true); } }
+  M.bumpSide = pick.info.side; M.bumpLift = pick.info.lift;
+  M.bumpThumb = pick.info;
+}
+
+// 手臂：方向以角色為準（+z 前、+y 上、+x 角色左手邊）
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const ARMS = {
+  natural: { l: [V(0.18, -1, 0.02), V(0.08, -1, 0.18)] },
+  bump:    { l: [V(-0.15, -0.55, 0.82), V(-0.25, -0.4, 0.88)] },
+  set:     { l: [V(0.45, 0.4, 0.7), V(-0.75, 0.6, 0.15), V(-0.3, 0.85, -0.35)] },
+  spike:   { l: [V(0.3, 0.6, 0.75), V(0.15, 0.7, 0.7)], r: [V(-0.12, 1, -0.05), V(-0.05, 1, 0.12)] },
+  block:   { l: [V(0.12, 1, 0.22), V(0.06, 1, 0.28)] },
+};
+function applyPose(M, name) {
+  MV.name = null; mvStop(M);
+  resetPose(M);
+  if (name === 'bump') {
+    bumpPose(M);
+    M.root.updateMatrixWorld(true);
+    return;
+  }
+  const A = ARMS[name];
+  const rot = M.root.quaternion;
+  for (const s of ['l', 'r']) {
+    const set = A[s] || (s === 'r' ? A.l.map(v => V(-v.x, v.y, v.z)) : A.l);
+    aim(M, 'upperarm_' + s, 'lowerarm_' + s, set[0].clone().applyQuaternion(rot));
+    aim(M, 'lowerarm_' + s, 'hand_' + s, set[1].clone().applyQuaternion(rot));
+    // 手腕順著前臂
+    aim(M, 'hand_' + s, 'middle_01_' + s, (set[2] || set[1]).clone().applyQuaternion(rot));
+  }
+  if (name === 'bump' || name === 'natural' || name === 'set' || name === 'block') {
+    // 墊球／舉球：膝蓋微彎
+  }
+  for (const s of ['l', 'r']) poseHand(M, s, HANDS[name]);
+  M.root.updateMatrixWorld(true);
+}
+
+// ---------- 動作：全身關鍵影格（舉球、扣球、攔網、撲球、炫技） ----------
+// 每個關鍵姿勢用函式擺好（身體、腳 IK、手臂、手型），擷取成每根骨頭的角度＋人整體的位移/翻轉，播放時平滑內插。
+// 手臂向量用「往外為正」：x＝往身體外側、y＝往上、z＝往前（左右手自動鏡像）。
+function mvFrame(M) { const r = M.root.quaternion; return { fwd: V(0, 0, 1).applyQuaternion(r), up: V(0, 1, 0).applyQuaternion(r), left: V(1, 0, 0).applyQuaternion(r) }; }
+function mvC(M, s, x, y, z) { const F = mvFrame(M); return F.left.clone().multiplyScalar(s === 'l' ? x : -x).addScaledVector(F.up, y).addScaledVector(F.fwd, z); }
+function mvSetRoot(M, r = {}) {
+  if (M.rootBase == null) M.rootBase = { y: M.root.position.y, z: M.root.position.z, x: M.root.position.x };
+  if (M.yaw0 == null) M.yaw0 = M.root.rotation.y;
+  M.root.rotation.order = 'YXZ';
+  M.root.rotation.set(r.pitch || 0, M.yaw0 + (r.yaw || 0), r.roll || 0);   // roll：往側邊倒（正＝往角色右邊倒）
+  const fy = V(Math.sin(M.yaw0), 0, Math.cos(M.yaw0)), lx = V(Math.cos(M.yaw0), 0, -Math.sin(M.yaw0));
+  M.root.position.set(M.rootBase.x + fy.x * (r.z || 0) + lx.x * (r.x || 0), M.rootBase.y + (r.y || 0), M.rootBase.z + fy.z * (r.z || 0) + lx.z * (r.x || 0));
+  M.root.updateMatrixWorld(true);
+  if (r.pitch || r.roll) {   // 往前翻／側倒的支點在腰的高度（離地約 0.9 m），不是腳底：撲出去時以重心為中心倒下，不用把整個人壓進地板
+    const q = M.root.quaternion.clone();
+    M.root.rotation.set(0, M.yaw0 + (r.yaw || 0), 0); M.root.updateMatrixWorld(true);   // 先在沒翻轉時找腰的位置
+    const W = new THREE.Vector3(M.root.position.x, 0.9 + (r.y || 0), M.root.position.z);   // 地板＝世界 y 0
+    const L = M.root.worldToLocal(W.clone());
+    M.root.quaternion.copy(q); M.root.updateMatrixWorld(true);
+    M.root.position.add(W.sub(M.root.localToWorld(L))); M.root.updateMatrixWorld(true);   // 翻轉後把腰補回原位
+  }
+}
+function mvRest(M) {   // 站姿時雙腳的位置與方向（相對 root）
+  if (M.footRest) return;
+  M.pelvisRest = M.bones.pelvis.position.clone();
+  resetPose(M); mvSetRoot(M, {});
+  const rq = M.root.getWorldQuaternion(new THREE.Quaternion()).invert();
+  M.footRest = {};
+  for (const s of ['l', 'r']) M.footRest[s] = { p: M.root.worldToLocal(wpos(M.bones['foot_' + s], new THREE.Vector3())), q: rq.clone().multiply(M.bones['foot_' + s].getWorldQuaternion(new THREE.Quaternion())) };
+}
+// 身體：down 骨盆往下、fwd 往前（公尺）；lean 上身前傾（負＝後仰）、twist 轉身（正＝往左轉）、bend 側彎、hip 骨盆前傾、head 低頭
+function mvBody(M, o = {}) {
+  const F = mvFrame(M), pv = M.bones.pelvis;
+  pv.position.copy(M.pelvisRest); M.root.updateMatrixWorld(true);
+  const W = wpos(pv, new THREE.Vector3()).addScaledVector(F.up, -(o.down || 0)).addScaledVector(F.fwd, o.fwd || 0).addScaledVector(F.left, o.side || 0);
+  pv.position.copy(pv.parent.worldToLocal(W)); M.root.updateMatrixWorld(true);
+  if (o.hip) rotWorld(pv, F.left, o.hip);
+  if (o.hipTwist) rotWorld(pv, F.up, o.hipTwist);   // 骨盆轉向（扣球：髖先轉、帶動上身）
+  for (const n of ['spine_01', 'spine_02', 'spine_03']) {
+    if (o.lean) rotWorld(M.bones[n], F.left, o.lean / 3);
+    if (o.twist) rotWorld(M.bones[n], F.up, o.twist / 3);
+    if (o.bend) rotWorld(M.bones[n], F.fwd, o.bend / 3);
+  }
+  if (o.head) rotWorld(M.bones.head, F.left, o.head);
+  if (o.headTurn) rotWorld(M.bones.head, F.up, o.headTurn);
+  M.root.updateMatrixWorld(true);
+}
+// 腳：雙骨 IK，腳掌目標＝站姿位置＋位移（fwd/up/side 公尺，side 往外為正），toe＝腳尖往下（踮腳/伸腳背）
+function mvLeg(M, s, o = {}) {
+  const F = mvFrame(M), th = M.bones['thigh_' + s], ca = M.bones['calf_' + s], fo = M.bones['foot_' + s];
+  M.root.updateMatrixWorld(true);
+  const T = M.root.localToWorld(M.footRest[s].p.clone()).addScaledVector(F.fwd, o.fwd || 0).addScaledVector(F.up, o.up || 0).add(F.left.clone().multiplyScalar((s === 'l' ? 1 : -1) * (o.side || 0)));
+  const H = wpos(th, new THREE.Vector3()), K = wpos(ca, new THREE.Vector3()), Fo = wpos(fo, new THREE.Vector3());
+  const a = H.distanceTo(K), b = K.distanceTo(Fo);
+  const d = T.clone().sub(H); const L = Math.min(d.length(), (a + b) * 0.999); d.normalize();
+  const cosA = Math.max(-1, Math.min(1, (a * a + L * L - b * b) / (2 * a * L))), sinA = Math.sqrt(1 - cosA * cosA);
+  const pole = F.fwd.clone().add(F.left.clone().multiplyScalar((s === 'l' ? 1 : -1) * (o.knee ?? 0.15)));
+  const pp = pole.addScaledVector(d, -pole.dot(d)).normalize();
+  aim(M, 'thigh_' + s, 'calf_' + s, d.clone().multiplyScalar(cosA * a).addScaledVector(pp, sinA * a));
+  aim(M, 'calf_' + s, 'foot_' + s, H.clone().addScaledVector(d, L).sub(wpos(ca, new THREE.Vector3())));
+  // 腳掌：維持站姿方向（踩平），再依 toe 往下壓
+  const want = M.root.getWorldQuaternion(new THREE.Quaternion()).multiply(M.footRest[s].q);
+  if (o.toe) want.premultiply(new THREE.Quaternion().setFromAxisAngle(F.left, o.toe));
+  fo.quaternion.copy(fo.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(want));
+  M.root.updateMatrixWorld(true);
+}
+function mvLegs(M, o = {}) { M._legs = JSON.parse(JSON.stringify(o)); mvLeg(M, 'l', { ...o, ...(o.l || {}) }); mvLeg(M, 'r', { ...o, ...(o.r || {}) }); }
+// 手臂：上臂、前臂方向（往外為正的角色座標），shrug＝聳肩（舉高手時肩膀跟著抬）
+function mvArm(M, s, u, l, shrug = 0) {
+  const F = mvFrame(M);
+  if (shrug) rotWorld(M.bones['clavicle_' + s], F.fwd, (s === 'l' ? 1 : -1) * shrug);
+  aim(M, 'upperarm_' + s, 'lowerarm_' + s, mvC(M, s, ...u));
+  aim(M, 'lowerarm_' + s, 'hand_' + s, mvC(M, s, ...l));
+}
+// 手掌：手指方向 f、掌心方向 n（往外為正的角色座標），再把扭轉分給前臂
+function mvHand(M, s, f, n, shape) {
+  if (f && n) { orientHand(M, s, mvC(M, s, ...f), mvC(M, s, ...n)); spreadTwist(M, s, 0.6); }
+  if (shape) poseHand(M, s, typeof shape === 'string' ? HANDS[shape] : shape);
+  M.root.updateMatrixWorld(true);
+}
+// 手掌放到頭附近某點（IK）：dx 往外、dy 往上、dz 往前（相對頭骨頭位置）
+function mvReach(M, s, dx, dy, dz, pole) {
+  M.root.updateMatrixWorld(true);
+  const h = wpos(M.bones.head, new THREE.Vector3());
+  ikArm(M, s, h.clone().add(mvC(M, s, dx, dy, dz)), mvC(M, s, ...(pole || [1, -0.4, -0.2])));
+}
+HANDS.fist = { curl: [1.35, 1.45, 1.1], spread: -0.05, thumb: [0.55, 0.5], tspread: -0.3 };
+HANDS.flat = { curl: [0.02, 0.02, 0.0], spread: 0.04, thumb: [0.0, 0.0], tspread: 0.15 };
+HANDS.relax = { curl: [0.28, 0.32, 0.22], spread: 0.02, thumb: [0.15, 0.2], tspread: 0.1 };
+const READY = M => { mvBody(M, { down: 0.12, lean: 0.25, head: -0.15 }); mvLegs(M, { side: 0.08, knee: 0.2 });
+  for (const s of ['l', 'r']) { mvArm(M, s, [0.25, -0.75, 0.55], [0.1, -0.35, 0.95]); mvHand(M, s, null, null, 'relax'); } };
+const SET0 = M => { mvBody(M, { down: 0.1, lean: 0.1, head: -0.25 }); mvLegs(M, { side: 0.08 });
+  for (const s of ['l', 'r']) { mvReach(M, s, 0.085, 0.13, 0.13); mvHand(M, s, [-0.25, 0.8, -0.45], [0.05, 0.55, 0.85], 'set'); } };
+const SET1 = M => { mvBody(M, { down: 0.2, lean: 0.12, head: -0.3 }); mvLegs(M, { side: 0.08 });
+  for (const s of ['l', 'r']) { mvReach(M, s, 0.085, 0.09, 0.12); mvHand(M, s, [-0.25, 0.75, -0.55], [0.05, 0.6, 0.8], 'set'); } };
+const BLOCK0 = M => { mvBody(M, { down: 0.1, lean: 0.05 }); mvLegs(M, { side: 0.1 });
+  for (const s of ['l', 'r']) { mvReach(M, s, 0.16, -0.08, 0.32, [1, -0.6, 0]); mvHand(M, s, [0.05, 0.95, 0.2], [0, 0, 1], 'block'); } };
+const MOVES = {
+  set: { n: '舉球', keys: [
+    [0, {}, SET0],
+    [0.4, {}, SET1],
+    [0.7, {}, M => { mvBody(M, { down: 0.0, lean: -0.05, head: -0.3 }); mvLegs(M, { side: 0.08, toe: 0.35 });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.12, 0.85, 0.3], [0.05, 0.9, 0.35], 0.25); mvHand(M, s, [-0.1, 0.9, 0.3], [0.05, 0.3, 0.95], 'set'); } }],
+    [0.9, {}, M => { mvBody(M, { down: 0.0, lean: -0.05, head: -0.3 }); mvLegs(M, { side: 0.08, toe: 0.25 });   // 球送出去：手臂停在推出去的高度，只有手腕往外翻（不是往前壓，不然像攔網）
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.12, 0.85, 0.3], [0.06, 0.9, 0.35], 0.25); mvHand(M, s, [0.4, 0.85, 0.2], [0.55, 0.05, 0.85], { curl: [0.12, 0.12, 0.08], spread: 0.22, thumb: [0.05, 0.1], tspread: 0.5 }); } }],
+    [1.6, {}, SET0],
+  ] },
+  spike: { n: '扣球', flow: true, keys: [
+    [0, {}, READY],
+    [0.35, {}, M => { mvBody(M, { down: 0.32, lean: 0.6, head: -0.35 }); mvLegs(M, { side: 0.1, knee: 0.25, l: { fwd: 0.12 } });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.2, 0.15, -0.97], [0.12, 0.26, -0.96]); mvHand(M, s, null, null, 'relax'); } }],   // 雙手往後擺到約 100°（比水平再高一點）
+    [0.55, { y: 0.15 }, M => { mvBody(M, { down: 0.02, lean: 0.05, head: -0.2 }); mvLegs(M, { side: 0.08, toe: 0.6, l: { fwd: 0.12 }, r: { fwd: -0.12 } });   // 起跳：維持斜站（左前右後），腳不滑
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.1, 0.75, 0.65], [0.05, 0.8, 0.6], 0.15); mvHand(M, s, null, null, 'relax'); } }],
+    // 空中拉弓：腰部以上轉側身約 90°（骨盆 -0.6、上身再 -1.0，右肩完全在後面）；左手（瞄準手）在身體中線往前上方指；右手肘彎、往後拉過耳朵
+    [0.85, { y: 0.62 }, M => { mvBody(M, { down: 0.05, lean: -0.4, hipTwist: -0.6, twist: -1.0, head: 0.15, headTurn: 1.2 }); mvLegs(M, { side: 0.06, toe: 0.8, knee: 0.1, l: { fwd: -0.28, up: 0.35 }, r: { fwd: -0.38, up: 0.45 } });
+      mvArm(M, 'l', [-0.12, 0.72, 0.68], [-0.1, 0.75, 0.65], 0.2); mvHand(M, 'l', [-0.05, 0.7, 0.7], [0.1, 0.0, 1.0], 'flat');
+      mvArm(M, 'r', [0.75, 0.38, -0.55], [-0.2, 0.95, -0.15], 0.3); mvHand(M, 'r', [-0.15, 0.9, -0.35], [0.35, 0.2, 0.9], 'spike'); }],
+    // 維持拉弓（遊戲裡跳起來按左鍵才扣；沒按之前在空中一直維持：腳往後、身體往後仰、上半身側身）
+    [1.15, { y: 0.74 }, M => { mvBody(M, { down: 0.05, lean: -0.4, hipTwist: -0.6, twist: -1.0, head: 0.15, headTurn: 1.2 }); mvLegs(M, { side: 0.06, toe: 0.8, knee: 0.1, l: { fwd: -0.28, up: 0.35 }, r: { fwd: -0.38, up: 0.45 } });
+      mvArm(M, 'l', [-0.12, 0.72, 0.68], [-0.1, 0.75, 0.65], 0.2); mvHand(M, 'l', [-0.05, 0.7, 0.7], [0.1, 0.0, 1.0], 'flat');
+      mvArm(M, 'r', [0.75, 0.38, -0.55], [-0.2, 0.95, -0.15], 0.3); mvHand(M, 'r', [-0.15, 0.9, -0.35], [0.35, 0.2, 0.9], 'spike'); }],
+    // 揮臂 1：髖先往前轉（上身還留在側身，手不動）
+    [1.2, { y: 0.77 }, M => { mvBody(M, { down: 0.05, lean: -0.38, hipTwist: 0.0, twist: -1.55, head: 0.12, headTurn: 1.25 }); mvLegs(M, { side: 0.06, toe: 0.8, knee: 0.1, l: { fwd: -0.25, up: 0.32 }, r: { fwd: -0.35, up: 0.42 } });
+      mvArm(M, 'l', [-0.12, 0.65, 0.75], [-0.1, 0.6, 0.8], 0.2); mvHand(M, 'l', [-0.05, 0.6, 0.8], [0.1, 0.0, 1.0], 'flat');
+      mvArm(M, 'r', [0.75, 0.38, -0.55], [-0.2, 0.95, -0.15], 0.3); mvHand(M, 'r', [-0.15, 0.9, -0.35], [0.35, 0.2, 0.9], 'spike'); }],
+    // 揮臂 2：手肘先帶起來（往上往前抬到比肩高），前臂還垂在頭後、手腕往後扳；肩膀開始轉
+    [1.23, { y: 0.78 }, M => { mvBody(M, { down: 0.05, lean: -0.3, hipTwist: 0.08, twist: -0.75, head: 0.08, headTurn: 0.7 }); mvLegs(M, { side: 0.06, toe: 0.75, knee: 0.1, l: { fwd: -0.22, up: 0.28 }, r: { fwd: -0.3, up: 0.36 } });
+      mvArm(M, 'l', [0.0, 0.3, 0.95], [-0.25, 0.25, 0.93]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [0.5, 0.82, -0.05], [0.05, -0.2, -0.98], 0.35); mvHand(M, 'r', [0.05, -0.6, -0.8], [0.25, -0.35, 0.9], 'spike'); }],
+    // 揮臂 3：肩膀轉正，上臂往前上方；前臂還留在後面（手在頭後）
+    [1.26, { y: 0.79 }, M => { mvBody(M, { down: 0.04, lean: -0.1, hipTwist: 0.12, twist: -0.15, head: 0.0, headTurn: 0.25 }); mvLegs(M, { side: 0.06, toe: 0.7, l: { fwd: -0.18, up: 0.24 }, r: { fwd: -0.24, up: 0.3 } });
+      mvArm(M, 'l', [0.15, -0.2, 0.97], [-0.2, -0.1, 0.97]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [0.2, 0.92, 0.33], [0.0, 0.45, -0.9], 0.35); mvHand(M, 'r', [0.0, 0.2, -0.98], [0.1, -0.6, 0.8], 'spike'); }],
+    // 揮臂 4：前臂甩出去（手腕還往後扳著）
+    [1.28, { y: 0.8 }, M => { mvBody(M, { down: 0.04, lean: 0.12, hipTwist: 0.15, twist: 0.1, head: -0.1 }); mvLegs(M, { side: 0.06, toe: 0.65, l: { fwd: -0.14, up: 0.18 }, r: { fwd: -0.18, up: 0.24 } });
+      mvArm(M, 'l', [0.2, -0.45, 0.65], [0.05, -0.5, 0.85]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [-0.05, 0.96, 0.28], [-0.08, 0.98, 0.12], 0.35); mvHand(M, 'r', [-0.05, 0.85, -0.5], [0.0, 0.5, 0.86], 'spike'); }],
+    // 揮臂 5：擊球——手臂伸直在最高點前方，手腕往前下壓、手掌包住球
+    [1.3, { y: 0.8 }, M => { mvBody(M, { down: 0.04, lean: 0.35, hipTwist: 0.18, twist: 0.3, head: -0.2 }); mvLegs(M, { side: 0.06, toe: 0.6, l: { fwd: -0.1, up: 0.15 }, r: { fwd: -0.15, up: 0.2 } });
+      mvArm(M, 'l', [0.2, -0.55, 0.4], [0.05, -0.6, 0.6]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [-0.08, 0.95, 0.3], [-0.1, 0.9, 0.42], 0.35); mvHand(M, 'r', [-0.1, 0.35, 0.93], [0, -0.6, 0.55], 'spike'); }],
+    // 揮臂 6：手腕、手掌繼續往下壓（手掌朝下），手臂開始往下
+    [1.34, { y: 0.76 }, M => { mvBody(M, { down: 0.04, lean: 0.45, hipTwist: 0.2, twist: 0.35, head: -0.25 }); mvLegs(M, { side: 0.06, toe: 0.55, l: { fwd: -0.1, up: 0.12 }, r: { fwd: -0.12, up: 0.16 } });
+      mvArm(M, 'l', [0.25, -0.75, 0.1], [0.1, -0.8, 0.4]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [-0.15, 0.7, 0.7], [-0.2, 0.45, 0.87], 0.25); mvHand(M, 'r', [-0.15, -0.5, 0.85], [0, -0.85, -0.5], 'spike'); }],
+    // 收手：右手揮到身體左側
+    [1.45, { y: 0.55 }, M => { mvBody(M, { down: 0.05, lean: 0.5, hipTwist: 0.2, twist: 0.35, head: -0.3 }); mvLegs(M, { side: 0.07, toe: 0.4 });
+      mvArm(M, 'l', [0.3, -0.85, -0.2], [0.15, -0.9, 0.2]); mvHand(M, 'l', null, null, 'relax');
+      mvArm(M, 'r', [-0.35, -0.55, 0.75], [-0.4, -0.75, 0.4]); mvHand(M, 'r', null, null, 'relax'); }],
+    [1.7, {}, M => { mvBody(M, { down: 0.3, lean: 0.45, head: -0.25 }); mvLegs(M, { side: 0.1, knee: 0.25 });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.35, -0.65, 0.5], [0.2, -0.5, 0.8]); mvHand(M, s, null, null, 'relax'); } }],
+    [2.3, {}, READY],
+  ] },
+  block: { n: '攔網', keys: [
+    [0, {}, BLOCK0],
+    [0.3, {}, M => { mvBody(M, { down: 0.28, lean: 0.12 }); mvLegs(M, { side: 0.1, knee: 0.22 });
+      for (const s of ['l', 'r']) { mvReach(M, s, 0.16, -0.12, 0.3, [1, -0.6, 0]); mvHand(M, s, [0.05, 0.95, 0.2], [0, 0, 1], 'block'); } }],
+    [0.55, { y: 0.45 }, M => { mvBody(M, { down: 0.0, lean: 0.08 }); mvLegs(M, { side: 0.07, toe: 0.65 });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.1, 0.9, 0.38], [0.06, 0.85, 0.5], 0.35); mvHand(M, s, [0.05, 0.75, 0.65], [0, -0.55, 0.85], 'block'); } }],
+    [0.75, { y: 0.55 }, M => { mvBody(M, { down: 0.0, lean: 0.15 }); mvLegs(M, { side: 0.07, toe: 0.7 });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.08, 0.8, 0.58], [0.04, 0.7, 0.72], 0.35); mvHand(M, s, [0.05, 0.6, 0.8], [0, -0.75, 0.6], 'block'); } }],
+    [1.05, {}, M => { mvBody(M, { down: 0.26, lean: 0.12 }); mvLegs(M, { side: 0.1, knee: 0.22 });   // 落地：手還在頭上（跟準備姿勢用同一種 IK 擺法，收手時兩手才會一樣直直放下來）
+      for (const s of ['l', 'r']) { mvReach(M, s, 0.17, 0.32, 0.28, [1, -0.6, 0]); mvHand(M, s, [0.05, 0.95, 0.2], [0, 0, 1], 'block'); } }],
+    [1.3, {}, M => { mvBody(M, { down: 0.18, lean: 0.08 }); mvLegs(M, { side: 0.1, knee: 0.2 });
+      for (const s of ['l', 'r']) { mvReach(M, s, 0.17, 0.1, 0.3, [1, -0.6, 0]); mvHand(M, s, [0.05, 0.95, 0.2], [0, 0, 1], 'block'); } }],
+    [1.6, {}, BLOCK0],
+  ] },
+  dive: { n: '撲球', flow: true, keys: [   // 魚躍撲救（使用者給的順序）：重心壓低胸口貼大腿 → 往前跳 → 雙手先把球接起來 → 手肘先著地 → 胸口 → 腰、髖 → 大腿 → 撐起來
+    [0, {}, READY],
+    [0.2, { z: 0.12 }, M => { mvBody(M, { down: 0.18, lean: 0.45, fwd: 0.08, head: -0.4 }); mvLegs(M, { side: 0.1, knee: 0.25, r: { fwd: 0.3, up: 0.06 }, l: { fwd: -0.15, toe: 0.3 } });   // 右腳往前跨
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.15, -0.6, 0.78], [0.08, -0.35, 0.93]); mvHand(M, s, null, null, 'relax'); } }],
+    [0.45, { z: 0.25, legFloor: true }, M => { mvBody(M, { down: 0.56, lean: 1.35, fwd: 0.22, head: -1.15 }); mvLegs(M, { side: 0.1, knee: 0.25, r: { fwd: 0.45 }, l: { fwd: -0.45, toe: 0.6 } });   // 弓箭步壓低：前腳彎、後腳伸直，胸口貼近前腳大腿
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.15, -0.5, 0.85], [0.08, -0.3, 0.95]); mvHand(M, s, null, null, 'relax'); } lookForward(M); }],
+    [0.57, { z: 0.5, pitch: 0.45, pelvisY: 0.56, legFloor: true }, M => { mvBody(M, { down: 0.25, lean: 1.0, head: -1.0 }); mvLegs(M, { side: 0.1, toe: 0.95, r: { fwd: 0.2, up: 0.3 }, l: { fwd: -0.85 } });   // 後腳（左）往後伸直用腳尖蹬地、前腳膝蓋抬起離地   // 從前腳蹬出去（重心繼續往下往前）
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.1, 0.1, 0.99], [0.05, 0.2, 0.98]); mvHand(M, s, null, null, 'flat'); } lookForward(M); }],
+    [0.62, { z: 0.62, pitch: 0.7, pelvisY: 0.5, air: 0.04 }, M => { mvBody(M, { down: 0.1, lean: 0.75, head: -0.95 }); mvLegs(M, { side: 0.1, toe: 0.95, r: { fwd: 0.05, up: 0.25 }, l: { fwd: -0.85 } });   // 後腳剛蹬離地面
+      bumpArms(M, 1.4); lookForward(M); }],
+    [0.68, { z: 0.8, pitch: 0.95, pelvisY: 0.52, air: 0.12 },   // 接到球：全身在空中
+      M => { mvBody(M, { down: 0.0, lean: 0.45, head: -0.9 }); mvLegs(M, { side: 0.08, toe: 0.8, fwd: -0.15, up: 0.3 });   // 往前跳出去，手往前伸
+      bumpArms(M, 1.55); lookForward(M); }],   // 跳出去：手合起來（跟正常墊球一樣），平台往前抬
+    [0.95, { z: 1.35, pitch: 1.3, pelvisY: 0.44, air: 0.12 },   // 接完球：還在空中
+      M => { mvBody(M, { down: 0.0, lean: 0.0, head: -0.95 }); mvLegs(M, { side: 0.08, toe: 0.9, fwd: -0.1, up: 0.2 });   // 空中：雙手先把球接起來
+      bumpArms(M, 1.9); lookForward(M); }],   // 空中：合起來的手往前伸出去接球
+    [1.25, { z: 1.7, pitch: 1.3, ground: true, air: 0.12 }, M => { mvBody(M, { down: 0.0, lean: -0.15, head: -0.9 }); mvLegs(M, { side: 0.1, toe: 1.3, l: { fwd: -0.15 }, r: { fwd: -0.2 } });   // 手肘先著地（胸口還沒碰地）
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.15, 0.3, 0.94], [-0.12, 0.95, 0.28]); mvHand(M, s, null, null, 'flat'); } lookForward(M); }],   // 手肘先著地，前臂往前、兩手還靠在一起
+    [1.43, { z: 1.95, pitch: 1.72, ground: true, air: 0.12 }, M => { mvBody(M, { down: 0.0, lean: -0.2, head: -1.0 }); mvLegs(M, { side: 0.1, toe: 1.45, fwd: -0.3, up: 0.15 });   // 胸口先著地，胸口以下還在空中（頭比腳低一點，手平放不撐高）
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.6, 0.8, 0.0], [0.1, 0.99, -0.03]); mvHand(M, s, null, null, 'flat'); } lookForward(M); }],
+    [1.63, { z: 2.2, pitch: 1.6, ground: true, air: 0.1 },   // 腰、髖著地，膝蓋和腳還在空中
+      M => { mvBody(M, { down: 0.0, lean: -0.1, head: -1.0 }); mvLegs(M, { side: 0.1, toe: 1.5, fwd: -0.15, up: 0.05 });   // 腰、髖貼地往前滑
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.6, 0.8, 0.0], [0.1, 0.99, -0.03]); mvHand(M, s, null, null, 'flat'); } lookForward(M); }],
+    [1.9, { z: 2.4, pitch: 1.57, pelvisY: 0.145 },   // 最後膝蓋和腳才著地
+      M => { mvBody(M, { down: 0.0, lean: 0.0, head: -1.0 }); mvLegs(M, { side: 0.1, toe: 1.55 });   // 大腿貼地
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.6, 0.8, 0.0], [0.1, 0.99, -0.03]); mvHand(M, s, null, null, 'flat'); } lookForward(M); }],
+    [2.33, { z: 3.25, pitch: 0.55 }, M => { mvBody(M, { down: 0.5, lean: 0.3, head: -0.3 }); mvLegs(M, { side: 0.12, knee: 0.3, r: { fwd: -0.3 } });   // 雙手撐地、跪起
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.3, -0.7, 0.6], [0.2, -0.8, 0.5]); mvHand(M, s, null, null, 'relax'); } }],
+    [2.83, { z: 3.5 }, READY],
+    [3.1, { z: 3.55 }, READY],
+  ] },
+  backset: { n: '炫技：背傳', keys: [
+    [0, {}, SET0],
+    [0.4, {}, SET1],
+    [0.75, {}, M => { mvBody(M, { down: 0.0, lean: -0.55, head: 0.35, hip: -0.15 }); mvLegs(M, { side: 0.08, toe: 0.4, l: { fwd: 0.05 } });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.12, 0.9, -0.2], [0.05, 0.85, -0.5], 0.3); mvHand(M, s, [-0.1, 0.6, -0.8], [0.05, 0.75, 0.4], 'set'); } }],
+    [0.95, {}, M => { mvBody(M, { down: 0.0, lean: -0.5, head: 0.4, hip: -0.15 }); mvLegs(M, { side: 0.08, toe: 0.3 });
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.1, 0.8, -0.45], [0.05, 0.65, -0.75], 0.3); mvHand(M, s, [0.0, 0.3, -0.95], [0, 0.9, 0.2], 'flat'); } }],
+    [1.7, {}, SET0],
+  ] },
+  spin: { n: '炫技：轉身跳慶祝', keys: [
+    [0, {}, READY],
+    [0.3, {}, M => { mvBody(M, { down: 0.3, lean: 0.35 }); mvLegs(M, { side: 0.1, knee: 0.25 });
+      mvArm(M, 'r', [0.3, -0.6, -0.7], [0.2, -0.3, 0.9]); mvHand(M, 'r', null, null, 'fist');
+      mvArm(M, 'l', [0.3, -0.75, -0.4], [0.3, -0.75, -0.4]); mvHand(M, 'l', null, null, 'fist'); }],
+    [0.65, { y: 0.55, yaw: Math.PI }, M => { mvBody(M, { down: 0.05, lean: -0.15, head: 0.2 }); mvLegs(M, { side: 0.05, toe: 0.7, l: { up: 0.25, fwd: 0.1 }, r: { up: 0.08 } });
+      mvArm(M, 'r', [0.15, 0.95, 0.1], [0.08, 0.98, 0.05], 0.45); mvHand(M, 'r', null, null, 'fist');
+      mvArm(M, 'l', [0.85, -0.3, 0.3], [0.2, 0.75, 0.6]); mvHand(M, 'l', null, null, 'fist'); }],
+    [0.95, { y: 0.2, yaw: Math.PI * 2 }, M => { mvBody(M, { down: 0.05, lean: -0.1, head: 0.1 }); mvLegs(M, { side: 0.06, toe: 0.4 });
+      mvArm(M, 'r', [0.15, 0.95, 0.1], [0.08, 0.98, 0.05], 0.45); mvHand(M, 'r', null, null, 'fist');
+      mvArm(M, 'l', [0.85, -0.3, 0.3], [0.2, 0.75, 0.6]); mvHand(M, 'l', null, null, 'fist'); }],
+    [1.15, { yaw: Math.PI * 2 }, M => { mvBody(M, { down: 0.28, lean: 0.3 }); mvLegs(M, { side: 0.1, knee: 0.25 });
+      mvArm(M, 'r', [0.5, -0.2, 0.6], [0.0, 0.95, 0.2]); mvHand(M, 'r', null, null, 'fist');
+      mvArm(M, 'l', [0.3, -0.85, 0.2], [0.3, -0.85, 0.2]); mvHand(M, 'l', null, null, 'fist'); }],
+    [1.6, { yaw: Math.PI * 2 }, M => { mvBody(M, { down: 0.15, lean: 0.1 }); mvLegs(M, { side: 0.1 });
+      mvArm(M, 'r', [0.7, -0.5, 0.3], [0.1, 0.4, -0.9]); mvHand(M, 'r', null, null, 'fist');
+      mvArm(M, 'l', [0.3, -0.85, 0.2], [0.3, -0.85, 0.2]); mvHand(M, 'l', null, null, 'relax'); }],
+    [2.2, { yaw: Math.PI * 2 }, READY],
+  ] },
+};
+// 墊球、蹲下、蹲下接球：手型直接用 bumpPose（使用者確認的定案手型，不改），身體、腳另外擺
+//   bumpPose 一開始會把骨頭轉回原位，所以先擺手、再擺身體和腳（上身前傾時兩手一起跟著，手型不變）
+const CROUCH = M => { mvBody(M, { down: 0.4, fwd: -0.2, lean: 0.75, head: -0.65 }); mvLegs(M, { side: 0.16, knee: 0.35 });   // 屁股往後坐（膝蓋不超過腳尖太多），上身前傾、頭抬起來看前面
+  for (const s of ['l', 'r']) { mvArm(M, s, [0.3, -0.6, 0.7], [0.15, -0.2, 0.95]); mvHand(M, s, null, null, 'relax'); } };
+const BUMPK = (down, lean, toe = 0) => M => { bumpPose(M); mvBody(M, { down, fwd: -down * 0.45, lean: lean + down * 0.4, head: -0.3 - lean * 0.3 }); /* 蹲越低屁股越往後坐 */ mvLegs(M, { side: 0.12, knee: 0.3, toe }); lookAtIncoming(M); };   // 頭看前方來球
+MOVES.bump = { n: '墊球', keys: [
+  [0, {}, READY],
+  [0.35, {}, BUMPK(0.16, 0.3)],
+  [0.6, {}, BUMPK(0.04, 0.18, 0.15)],
+  [1.2, {}, BUMPK(0.06, 0.2)],
+  [1.7, {}, READY],
+] };
+MOVES.crouch = { n: '蹲下', keys: [
+  [0, {}, READY],
+  [0.5, {}, CROUCH],
+  [1.6, {}, CROUCH],
+  [2.1, {}, READY],
+] };
+MOVES.crouchBump = { n: '蹲下接球', keys: [
+  [0, {}, CROUCH],
+  [0.35, {}, BUMPK(0.42, 0.55)],
+  [0.65, {}, BUMPK(0.28, 0.42, 0.1)],
+  [1.3, {}, BUMPK(0.3, 0.45)],
+  [1.8, {}, CROUCH],
+] };
+MOVES.dive.n = '撲球（魚躍）';
+{ const all = { ...MOVES }; for (const k in MOVES) delete MOVES[k];   // 排順序：接球類放最前面
+  for (const k of ['bump', 'bumpL', 'bumpR', 'crouchBump', 'crouch', 'set', 'spike', 'block', 'dive', 'rollL', 'rollR']) MOVES[k] = all[k];
+  for (const k in all) if (!(k in MOVES)) MOVES[k] = all[k]; }
+// 往左／往右接球（照遊戲 avRecvPose 的規則）：定案墊球手型，上身轉向球、往旁邊側彎（球那側的肩膀高、另一側低），球那側的腳往旁邊跨、重心移過去
+//   sd＝1 球在右邊、-1 球在左邊
+function bumpSideKeys(sd) {
+  const B = sd > 0 ? 'r' : 'l', O = sd > 0 ? 'l' : 'r';
+  const K = (down, lean, toe = 0) => M => { bumpArms(M); mvBody(M, { down, lean, twist: -sd * 0.35, bend: -sd * 0.22, side: -sd * 0.12, head: -0.3 - lean * 0.3, headTurn: -sd * 0.25 });
+    mvLegs(M, { knee: 0.3, toe, [B]: { side: 0.32, fwd: 0.05 }, [O]: { side: 0.02 } }); lookAtIncoming(M, -sd * 0.9); };   // 頭看前方偏球那側的來球
+  return [[0, {}, READY], [0.35, { x: -sd * 0.12 }, K(0.22, 0.32)], [0.6, { x: -sd * 0.15 }, K(0.1, 0.2, 0.15)], [1.2, { x: -sd * 0.15 }, K(0.12, 0.22)], [1.7, {}, READY]];
+}
+MOVES.bumpR = { n: '墊球（往右）', keys: bumpSideKeys(1) };
+MOVES.bumpL = { n: '墊球（往左）', keys: bumpSideKeys(-1) };
+// 側撲滾翻（照遊戲 sideLunge → sideFall → sideRoll → sideTuck → kneel）：球那側的腳往旁邊大跨一步蹲很低、另一腳伸直，雙手併攏往下伸 →
+//   坐到球那側的屁股上、手往球伸 → 往後滾成仰躺、腳翹起來 → 縮成一團從肩膀翻過去 → 跪起 → 站起（一路往球那邊移）
+function sideRollKeys(sd) {
+  const B = sd > 0 ? 'r' : 'l', O = sd > 0 ? 'l' : 'r', X = v => -sd * v, TWO_PI = Math.PI * 2;
+  return [
+    [0, {}, READY],
+    [0.3, { x: X(0.3) }, M => { mvBody(M, { down: 0.5, lean: 0.45, bend: sd * 0.4, twist: -sd * 0.35, side: X(0.12), head: -0.35 });   // 側向大跨步蹲低
+      mvLegs(M, { knee: 0.3, [B]: { side: 0.55, fwd: 0.05 }, [O]: { side: 0.15 } }); bumpArms(M, 0.2); lookForward(M); }],
+    [0.55, { x: X(0.75), roll: sd * 1.05, ground: true }, M => { mvBody(M, { down: 0.1, lean: 0.35, twist: -sd * 0.2, head: -0.2 });   // 坐到球那側的屁股、手往球伸
+      mvLegs(M, { knee: 0.3, fwd: 0.25, up: 0.2 });
+      mvArm(M, B, [0.15, 0.95, 0.2], [0.05, 0.98, 0.15], 0.3); mvHand(M, B, null, null, 'flat');
+      mvArm(M, O, [0.3, -0.2, 0.9], [-0.4, 0.3, 0.85]); mvHand(M, O, null, null, 'relax'); }],
+    [0.8, { x: X(0.95), roll: sd * 0.55, pitch: -1.3, ground: true }, M => { mvBody(M, { down: 0.0, lean: 0.5, head: -0.5 });   // 往後滾成仰躺、腳翹起來
+      mvLegs(M, { knee: 0.2, fwd: 0.45, up: 0.55 });
+      mvArm(M, B, [0.4, 0.85, 0.1], [0.1, 0.95, 0.1], 0.2); mvHand(M, B, null, null, 'flat');
+      mvArm(M, O, [0.5, -0.4, 0.6], [0.2, -0.2, 0.9]); mvHand(M, O, null, null, 'flat'); }],
+    [1.05, { x: X(1.1), roll: sd * 0.8, pitch: -2.4, ground: true }, M => { mvBody(M, { down: 0.0, lean: 1.05, head: -0.7 });   // 縮成一團（抱緊）、腳從球那側的肩膀翻過去
+      mvLegs(M, { knee: 0.25, fwd: 0.6, up: 0.85 });
+      for (const s of [B, O]) { mvArm(M, s, [0.5, 0.6, -0.4], [0.2, 0.5, -0.8]); mvHand(M, s, null, null, 'flat'); } }],
+    [1.18, { x: X(1.2), roll: sd * 0.5, pitch: -3.6, ground: true }, M => { mvBody(M, { down: 0.0, lean: 1.1, head: -0.6 });   // 翻過肩膀（倒過來的那一下也貼著地）
+      mvLegs(M, { knee: 0.25, fwd: 0.55, up: 0.85 });
+      for (const s of [B, O]) { mvArm(M, s, [0.4, 0.3, -0.85], [0.15, -0.2, -0.95]); mvHand(M, s, null, null, 'flat'); } }],
+    [1.35, { x: X(1.3), pitch: -TWO_PI, ground: true }, M => { mvBody(M, { down: 0.55, lean: 0.35, head: -0.2 });   // 跪起，雙手撐地
+      mvLegs(M, { knee: 0.25, fwd: -0.35 });
+      for (const s of [B, O]) { mvArm(M, s, [0.25, -0.75, 0.6], [0.1, -0.85, 0.5]); mvHand(M, s, null, null, 'relax'); } }],
+    [1.85, { x: X(1.4), pitch: -TWO_PI }, READY],
+    [2.2, { x: X(1.4), pitch: -TWO_PI }, READY],
+  ];
+}
+MOVES.rollR = { n: '側撲滾翻（往右）', flow: true, floor: true, keys: sideRollKeys(1) };
+MOVES.rollL = { n: '側撲滾翻（往左）', flow: true, floor: true, keys: sideRollKeys(-1) };
+// 炫技：跳發球＝拿球 → 左手往上拋 → 接扣球的助跑、起跳、揮臂、落地
+// 攻擊／跳發的助跑步法（右撇子）：左 → 右（從左到右跨很大一步）→ 左（右先落地、左很快跟上，小步、斜站在右腳左前方）
+//   z0＝左腳落地時人的位置；回傳三個關鍵姿勢 [時間差, 位移, 函式]；head＝低頭（負＝抬頭看球）
+function approachSteps(z0, head = -0.3) {
+  return [
+    [0, { z: z0 }, M => { mvBody(M, { down: 0.18, lean: 0.4, head }); mvLegs(M, { side: 0.08, knee: 0.2, l: { fwd: 0.25 }, r: { fwd: -0.45, toe: 0.5 } });   // 左腳落地
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.2, -0.85, 0.45], [0.1, -0.65, 0.75]); mvHand(M, s, null, null, 'relax'); } }],
+    [0.25, { z: z0 + 1.15 }, M => { mvBody(M, { down: 0.28, lean: 0.55, hipTwist: -0.2, head: head - 0.1 }); mvLegs(M, { side: 0.1, knee: 0.25, r: { fwd: 0.3 }, l: { fwd: -0.85, toe: 0.7 } });   // 右腳跨很大一步落地（左腳還在後面蹬），雙手往後擺
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.2, 0.0, -0.98], [0.12, 0.12, -0.99]); mvHand(M, s, null, null, 'relax'); } }],
+    [0.32, { z: z0 + 1.45 }, M => { mvBody(M, { down: 0.32, lean: 0.55, hipTwist: -0.35, twist: -0.15, head: head - 0.15 }); mvLegs(M, { side: 0.1, knee: 0.25, l: { fwd: 0.25, side: 0.06 }, r: { fwd: 0.0, side: 0.02 } });   // 左腳很快跟上：小步，斜站在右腳左前方；雙手擺到約 100°
+      for (const s of ['l', 'r']) { mvArm(M, s, [0.2, 0.15, -0.97], [0.12, 0.26, -0.96]); mvHand(M, s, null, null, 'relax'); } }],
+  ];
+}
+// 扣球加上助跑：READY → 左 → 右（大步）→ 左（小步）→ 起跳（原本 0.55 的起跳以後整段往後挪 0.3 秒、一路往前）
+const SPIKE_UP = 0.85, SPIKE_HIT = 1.6;   // 起跳、擊球的時間
+{ const K = MOVES.spike.keys;
+  const tail = K.filter(k => k[0] >= 0.55).map(([t, r, fn]) => [t + 0.3, { ...r, z: (r.z || 0) + 2.02 + Math.min(0.5, (t - 0.55) * 0.6) }, fn]);
+  MOVES.spike.keys = [K[0], ...approachSteps(0.45).map(([dt, r, fn]) => [0.3 + dt, r, fn]), ...tail]; }
+const JS_OFF = 0.8;   // 跳發球：扣球的起跳（SPIKE_UP）以後整段往後挪幾秒（拋得高，要等球）
+MOVES.jumpserve = { n: '炫技：跳發球', flow: true, keys: [   // 右撇子跳發：左手移到身體中線往正上方高拋（頭看球）→ 拋完才開始走：左（大步）→ 右左（靠近、幾乎同時）→ 起跳 → 拉弓 → 揮臂
+  [0, {}, M => { mvBody(M, { down: 0.05, lean: 0.1, head: -0.1 }); mvLegs(M, { side: 0.08, r: { fwd: -0.2 } });   // 拿球
+    mvArm(M, 'l', [0.2, -0.6, 0.75], [-0.3, -0.05, 0.95]); mvHand(M, 'l', [-0.2, 0.1, 0.95], [0, 1, 0], 'set');
+    mvArm(M, 'r', [0.2, -0.85, 0.3], [0.1, -0.7, 0.6]); mvHand(M, 'r', null, null, 'relax'); }],
+  [0.25, {}, M => { mvBody(M, { down: 0.1, lean: 0.12, head: 0.0 }); mvLegs(M, { side: 0.08, knee: 0.2, r: { fwd: -0.2 } });   // 左手移到身體中線、往下帶（準備往上送）
+    mvArm(M, 'l', [-0.12, -0.45, 0.88], [-0.25, -0.15, 0.95]); mvHand(M, 'l', [-0.2, 0.0, 0.98], [0, 1, 0], 'set');
+    mvArm(M, 'r', [0.2, -0.9, 0.2], [0.1, -0.8, 0.4]); mvHand(M, 'r', null, null, 'relax'); }],
+  [0.45, {}, M => { mvBody(M, { down: 0.0, lean: -0.12, head: -0.6 }); mvLegs(M, { side: 0.08, toe: 0.35, r: { fwd: -0.2 } });   // 從中線往正上方把手伸直、高高拋出去，頭抬起來看球
+    mvArm(M, 'l', [-0.3, 0.88, 0.36], [-0.2, 0.9, 0.38], 0.35); mvHand(M, 'l', [-0.05, 0.9, 0.42], [0, -0.2, 1], 'flat');   // 往前上方送
+    mvArm(M, 'r', [0.25, -0.85, -0.3], [0.2, -0.85, -0.1]); mvHand(M, 'r', null, null, 'relax'); }],
+  [0.8, {}, M => { mvBody(M, { down: 0.02, lean: -0.08, head: -0.65 }); mvLegs(M, { side: 0.08, r: { fwd: -0.2 } });   // 手慢慢放下，抬頭看球往上飛
+    mvArm(M, 'l', [-0.05, 0.55, 0.82], [-0.05, 0.4, 0.9], 0.1); mvHand(M, 'l', null, null, 'relax');
+    mvArm(M, 'r', [0.25, -0.85, -0.2], [0.2, -0.85, 0.0]); mvHand(M, 'r', null, null, 'relax'); }],
+  [1.05, {}, M => { mvBody(M, { down: 0.08, lean: 0.15, head: -0.55 }); mvLegs(M, { side: 0.08, r: { fwd: -0.15 } });   // 準備起步，還在看球
+    for (const s of ['l', 'r']) { mvArm(M, s, [0.2, -0.9, 0.3], [0.1, -0.8, 0.5]); mvHand(M, s, null, null, 'relax'); } }],
+  ...approachSteps(0.75, -0.6).map(([dt, r, fn]) => [1.2 + dt, r, fn]),   // 拋完看球，再走：左 → 右（大步）→ 左（小步）
+  ...MOVES.spike.keys.filter(k => k[0] >= SPIKE_UP).map(([t, r, fn]) => [t + JS_OFF, { ...r, z: 2.32 + Math.min(0.6, (t - SPIKE_UP) * 0.7) }, fn]),   // 起跳以後接扣球（空中繼續往前飄）
+] };
+// 抬頭看前面：算出臉現在朝哪裡，把脖子（45%）和頭（55%）往上抬到臉朝前方稍微往下（down 弧度），最多抬 maxUp
+function lookForward(M, down = 0.17, maxUp = 1.25) {
+  M.root.updateMatrixWorld(true);
+  if (!M.headRestRel) {   // 站姿時頭相對 root（只看水平轉向）的方向
+    const save = M.skel.bones.map(b => b.quaternion.clone()), rp = M.root.position.clone(), rq = M.root.quaternion.clone();
+    resetPose(M); M.root.rotation.set(0, M.yaw0 || 0, 0); M.root.updateMatrixWorld(true);
+    M.headRestRel = M.root.quaternion.clone().invert().multiply(M.bones.head.getWorldQuaternion(new THREE.Quaternion()));
+    M.skel.bones.forEach((b, k) => b.quaternion.copy(save[k])); M.root.position.copy(rp); M.root.quaternion.copy(rq); M.root.updateMatrixWorld(true);
+  }
+  const yawQ = new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), M.yaw0 || 0);
+  const delta = M.bones.head.getWorldQuaternion(new THREE.Quaternion()).multiply(yawQ.clone().multiply(M.headRestRel).invert());
+  const face = V(0, 0, 1).applyQuaternion(yawQ).applyQuaternion(delta);
+  const below = Math.atan2(-face.y, Math.hypot(face.x, face.z));   // 臉往下幾弧度
+  const up = Math.max(0, Math.min(maxUp, below - down)); if (up <= 0) return;
+  const axis = V(1, 0, 0).applyQuaternion(yawQ);   // 水平的左右軸
+  rotWorld(M.bones.neck_01, axis, -up * 0.45); rotWorld(M.bones.head, axis, -up * 0.55);
+  M.root.updateMatrixWorld(true);
+}
+// 看向某一點（球）：算出臉現在的方向，脖子（45%）和頭（55%）一起轉到臉對準那一點；最多轉 maxAng 弧度
+function lookAtPoint(M, target, maxAng = 1.3) {
+  lookForward(M, 0, 0);   // 只是確保 M.headRestRel 已算好（maxUp 0 不會轉）
+  M.root.updateMatrixWorld(true);
+  const yawQ = new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), M.yaw0 || 0);
+  const delta = M.bones.head.getWorldQuaternion(new THREE.Quaternion()).multiply(yawQ.clone().multiply(M.headRestRel).invert());
+  const face = V(0, 0, 1).applyQuaternion(yawQ).applyQuaternion(delta).normalize();
+  const want = target.clone().sub(wpos(M.bones.head, new THREE.Vector3())).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(face, want);
+  let ang = 2 * Math.acos(Math.min(1, Math.abs(q.w))); if (ang < 1e-3) return;
+  const axis = V(q.x, q.y, q.z).normalize(); if (q.w < 0) axis.negate();
+  ang = Math.min(ang, maxAng);
+  rotWorld(M.bones.neck_01, axis, ang * 0.45); rotWorld(M.bones.head, axis, ang * 0.55);
+  M.root.updateMatrixWorld(true);
+}
+// 接球時看前方來球（球從前面飛過來）：前方 3 m、比頭低 0.6 m；side＝往球那側偏（正＝角色左邊）
+function lookAtIncoming(M, side = 0) {
+  const F = mvFrame(M), h = wpos(M.bones.head, new THREE.Vector3());
+  const fwd = V(Math.sin(M.yaw0 || 0), 0, Math.cos(M.yaw0 || 0)), left = V(Math.cos(M.yaw0 || 0), 0, -Math.sin(M.yaw0 || 0));
+  lookAtPoint(M, h.addScaledVector(fwd, 3).addScaledVector(left, side).add(V(0, -0.6, 0)));
+}
+// 腳不穿進地板：腳踝低於 8 cm（腳尖 3 cm）就把那隻腳用 IK 往上抬到剛好貼地（膝蓋往前）
+function legsAboveFloor(M) {
+  const F = mvFrame(M);
+  for (const s of ['l', 'r']) {
+    M.root.updateMatrixWorld(true);
+    const fo = wpos(M.bones['foot_' + s], new THREE.Vector3()), ba = wpos(M.bones['ball_' + s], new THREE.Vector3());
+    const kn = wpos(M.bones['calf_' + s], new THREE.Vector3());
+    const need = Math.max(0.08 - fo.y, 0.03 - ba.y, (0.06 - kn.y) * 1.5); if (need <= 0) continue;
+    const th = M.bones['thigh_' + s], ca = M.bones['calf_' + s];
+    const H = wpos(th, new THREE.Vector3()), K = wpos(ca, new THREE.Vector3()), a = H.distanceTo(K), b = K.distanceTo(fo);
+    const T = fo.clone(); T.y += need;
+    const d = T.clone().sub(H); const L = Math.min(d.length(), (a + b) * 0.999); d.normalize();
+    const cosA = Math.max(-1, Math.min(1, (a * a + L * L - b * b) / (2 * a * L))), sinA = Math.sqrt(1 - cosA * cosA);
+    const pole = F.fwd.clone(); const pp = pole.addScaledVector(d, -pole.dot(d)).normalize();
+    const footQ = M.bones['foot_' + s].getWorldQuaternion(new THREE.Quaternion());
+    aim(M, 'thigh_' + s, 'calf_' + s, d.clone().multiplyScalar(cosA * a).addScaledVector(pp, sinA * a));
+    aim(M, 'calf_' + s, 'foot_' + s, H.clone().addScaledVector(d, L).sub(wpos(ca, new THREE.Vector3())));
+    const fb = M.bones['foot_' + s]; fb.quaternion.copy(fb.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(footQ));
+  }
+  M.root.updateMatrixWorld(true);
+}
+// 定案墊球手臂（肩、上臂、前臂、手、手指的相對角度）記下來，別的動作可以直接套（手臂跟著上身轉，手型不變）
+function bumpArms(M, raise = 0) {
+  if (!M.bumpArmQ) {
+    const save = M.skel.bones.map(b => b.quaternion.clone()); resetPose(M); mvSetRoot(M, {}); bumpPose(M);
+    M.bumpArmQ = M.skel.bones.map((b, k) => /clavicle|upperarm|lowerarm|hand|thumb|index|middle|ring|pinky/.test(b.name) ? [k, b.quaternion.clone()] : null).filter(Boolean);
+    M.skel.bones.forEach((b, k) => b.quaternion.copy(save[k]));
+  }
+  for (const [k, q] of M.bumpArmQ) M.skel.bones[k].quaternion.copy(q);
+  M.root.updateMatrixWorld(true);
+  if (raise) { const F = mvFrame(M); for (const s of ['l', 'r']) rotWorld(M.bones['upperarm_' + s], F.left, -raise); M.root.updateMatrixWorld(true); }   // 整個平台往前抬（兩手繞同一條軸轉，手型不變）
+}
+// 把動作的每個關鍵姿勢擷取成骨頭角度（每個模型各算一次，之後重用）
+function mvBuild(M, name) {
+  M.mvCache = M.mvCache || {};
+  if (M.mvCache[name]) return M.mvCache[name];
+  mvRest(M);
+  const keys = MOVES[name].keys.map(([t, r, fn]) => {
+    resetPose(M); mvSetRoot(M, r); M.bones.pelvis.position.copy(M.pelvisRest); M.root.updateMatrixWorld(true);
+    fn(M);
+    const rr = { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0, ...r };
+    if (r.footGround) {   // 腳還踩在地上推（蹬出去）：把人上下移到最低的腳剛好在地板上
+      M.root.updateMatrixWorld(true); const lo = Math.min(...['foot_l', 'foot_r', 'ball_l', 'ball_r'].map(n => wpos(M.bones[n], new THREE.Vector3()).y - (/ball/.test(n) ? 0.03 : 0.08)));
+      rr.y = (r.y || 0) - lo; delete rr.footGround;
+    }
+    if (r.chestY != null) {   // 指定胸口高度（魚躍蹬出去：胸口不再抬高）
+      M.root.updateMatrixWorld(true); rr.y = (r.y || 0) + r.chestY - wpos(M.bones.spine_03, new THREE.Vector3()).y; delete rr.chestY;
+    }
+    if (r.pelvisY != null) {   // 指定骨盆高度（魚躍：重心一路往下，不會先彈高）
+      M.root.updateMatrixWorld(true); rr.y = (r.y || 0) + r.pelvisY - wpos(M.bones.pelvis, new THREE.Vector3()).y; delete rr.pelvisY;
+    }
+    if (r.ground) {   // 貼地：把人抬到胸口、頭、手、腳都剛好在地板上方（不穿進地板）
+      M.root.updateMatrixWorld(true);
+      const need = [['pelvis', 0.13], ['spine_02', 0.13], ['spine_03', 0.14], ['head', 0.13], ['hand_l', 0.04], ['hand_r', 0.04], ['lowerarm_l', 0.05], ['lowerarm_r', 0.05], ['calf_l', 0.07], ['calf_r', 0.07], ['foot_l', 0.05], ['foot_r', 0.05]];
+      let lift = -1e9; for (const [n, h] of need) { if (r.air && /calf|foot/.test(n)) continue; lift = Math.max(lift, h - wpos(M.bones[n], new THREE.Vector3()).y); }
+      rr.y = (r.y || 0) + lift; delete rr.ground;
+    }
+    if (r.air) {   // 腿要在空中（膝蓋、腳離地至少 air 公尺）：太低就把腿往後上方抬（臀部以上著地前，膝蓋和腳都不碰地）
+      delete rr.air; mvSetRoot(M, rr);
+      for (let k = 0; k < 30 && M._legs; k++) {
+        M.root.updateMatrixWorld(true);
+        const lo = Math.min(...['calf_l', 'calf_r', 'foot_l', 'foot_r', 'ball_l', 'ball_r'].map(n => wpos(M.bones[n], new THREE.Vector3()).y - (/calf/.test(n) ? 0.06 : /ball/.test(n) ? 0.03 : 0.06)));
+        if (lo >= r.air) break;
+        const o = M._legs; o.fwd = (o.fwd || 0) - 0.04; for (const sd of ['l', 'r']) if (o[sd] && o[sd].fwd != null) o[sd].fwd -= 0.04;
+        mvLegs(M, o);
+      }
+    }
+    if (r.legFloor) { delete rr.legFloor; mvSetRoot(M, rr); legsAboveFloor(M); }
+    return { t, r: rr, q: M.skel.bones.map(b => b.quaternion.clone()), pp: M.bones.pelvis.position.clone() };
+  });
+  mvSetRoot(M, {}); resetPose(M); M.bones.pelvis.position.copy(M.pelvisRest);
+  keys.flow = !!MOVES[name].flow;
+  return (M.mvCache[name] = keys);
+}
+function mvApply(M, keys, t) {
+  const T = keys[keys.length - 1].t; t = ((t % T) + T) % T;
+  let i = 0; while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
+  const A = keys[i], B = keys[i + 1], u0 = Math.min(1, (t - A.t) / (B.t - A.t)), u = keys.flow ? u0 : u0 * u0 * (3 - 2 * u0);
+  M.skel.bones.forEach((b, k) => b.quaternion.copy(A.q[k]).slerp(B.q[k], u));
+  M.bones.pelvis.position.lerpVectors(A.pp, B.pp, u);
+  const r = {};
+  if (keys.flow) {   // 連續動作：整個人的位移／翻轉用 Catmull-Rom 穿過每一格（不在每格停）
+    const K0 = keys[Math.max(0, i - 1)], K3 = keys[Math.min(keys.length - 1, i + 2)], w = u0, w2 = w * w, w3 = w2 * w;
+    for (const k of ['x', 'y', 'pitch', 'yaw', 'roll']) r[k] = A.r[k] + (B.r[k] - A.r[k]) * u0;   // 高度、翻轉等速（曲線會衝過頭）
+    { const p0 = K0.r.z, p1 = A.r.z, p2 = B.r.z, p3 = K3.r.z;   // 往前的距離用曲線（一路往前、不在每格停）
+      r.z = 0.5 * (2 * p1 + (-p0 + p2) * w + (2 * p0 - 5 * p1 + 4 * p2 - p3) * w2 + (-p0 + 3 * p1 - 3 * p2 + p3) * w3); }
+  } else for (const k of ['x', 'y', 'z', 'pitch', 'yaw', 'roll']) r[k] = A.r[k] + (B.r[k] - A.r[k]) * u;
+  mvSetRoot(M, r);
+}
+function mvStop(M) { if (window.__SERVE && window.__SERVE.ball) window.__SERVE.ball.visible = false;
+  return mvStop0(M); }
+function mvStop0(M) { if (M.footRest) { mvSetRoot(M, {}); M.bones.pelvis.position.copy(M.pelvisRest); } }
+
+// ---------- 護膝、襪子：從身體網格取膝蓋／小腿那一圈，往外推一點做成外殼（綁同一副骨架，跟著動） ----------
+function makeGear(M) {
+  const H = M.parts.Human, g = H.geometry, pos = M.baseHuman, nor = g.attributes.normal, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  const bn = H.skeleton.bones.map(b => b.name), n = si.count;
+  const wOf = (i, name) => { let w = 0; for (let k = 0; k < 4; k++) if (bn[si.getComponent(i, k)] === name) w += sw.getComponent(i, k); return w; };
+  // 每條腿：膝蓋高度＝大腿、小腿權重都有的頂點平均；腳踝高度＝小腿網格最低處
+  const leg = {};
+  for (const sd of ['l', 'r']) {
+    let ky = 0, kc = 0, ay = 1e9;
+    for (let i = 0; i < n; i++) {
+      const th = wOf(i, 'thigh_' + sd), ca = wOf(i, 'calf_' + sd), fo = wOf(i, 'foot_' + sd);
+      if (th > 0.3 && ca > 0.3) { ky += pos[i * 3 + 1]; kc++; }
+      if (ca + fo > 0.6) ay = Math.min(ay, pos[i * 3 + 1]);   // 腳踝＝小腿網格最低處（腳被鞋子蓋住、頂點已刪）
+    }
+    leg[sd] = { knee: ky / kc, ankle: ay };
+  }
+  const side = i => (pos[i * 3] > 0 ? 'l' : 'r');
+  const legW = i => { const sd = side(i); return wOf(i, 'thigh_' + sd) + wOf(i, 'calf_' + sd) + wOf(i, 'foot_' + sd); };
+  // 外殼：挑出範圍（放寬一點）內的三角面，往外推 off；邊緣用材質依綁定姿勢高度 gy 裁成平滑直線（lo～hi）
+  const clipMat = (m, lo, hi) => { m.onBeforeCompile = sh => {
+      sh.uniforms.uLo = { value: lo }; sh.uniforms.uHi = { value: hi };
+      sh.vertexShader = 'attribute float gy;\nvarying float vGy;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vGy = gy;');
+      sh.fragmentShader = 'varying float vGy;\nuniform float uLo, uHi;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vGy < uLo || vGy > uHi) discard;');
+    }; return m; };
+  const shell = (lo, hi, off) => {
+    const ng = new THREE.BufferGeometry();
+    const P = new Float32Array(n * 3), GY = new Float32Array(n);
+    for (let i = 0; i < n; i++) { GY[i] = pos[i * 3 + 1]; for (let k = 0; k < 3; k++) P[i * 3 + k] = pos[i * 3 + k] + nor.array[i * 3 + k] * off; }
+    ng.setAttribute('position', new THREE.BufferAttribute(P, 3)); ng.setAttribute('gy', new THREE.BufferAttribute(GY, 1));
+    ng.setAttribute('normal', nor); ng.setAttribute('skinIndex', si); ng.setAttribute('skinWeight', sw);
+    const mg = (hi - lo) * 0.25, ok = i => legW(i) > 0.5 && pos[i * 3 + 1] > lo - mg && pos[i * 3 + 1] < hi + mg;
+    const idx = g.index.array, out = [];
+    for (let t = 0; t < idx.length; t += 3) if (ok(idx[t]) && ok(idx[t + 1]) && ok(idx[t + 2])) out.push(idx[t], idx[t + 1], idx[t + 2]);
+    ng.setIndex(out);
+    const std = clipMat(new THREE.MeshStandardMaterial({ roughness: 0.8 }), lo, hi), toonM = clipMat(new THREE.MeshToonMaterial({ gradientMap: TOON_RAMP }), lo, hi);
+    const m = new THREE.SkinnedMesh(ng, std); m.bind(H.skeleton, H.bindMatrix); m.castShadow = true; m.frustumCulled = false;
+    m.userData.std = std; m.userData.toon = toonM;
+    H.parent.add(m); return m;
+  };
+  const span = leg.l.knee - leg.l.ankle;   // 小腿長（模型單位）
+  M.gearLeg = leg; M.gearSpan = span;
+  const K = (leg.l.knee + leg.r.knee) / 2, A = (leg.l.ankle + leg.r.ankle) / 2;
+  M.knee = shell(K - span * 0.17, K + span * 0.13, span * 0.03);
+  M.socks = [0.2, 0.45, 0.78].map(h => shell(A - span * 0.3, A + span * h, span * 0.022));
+}
+// ---------- 轉接層：遊戲公仔的關節參數（js/emote-keys.js 的 AVP／EMO_KEYS 格式）→ 新角色的骨頭 ----------
+// 參數（跟 gym.html avDrive 一樣）：sh[i]＝[肩前後擺（負＝往前往上）, 往外張]、el 肘彎、hip 髖往前、kn 膝彎、hab 腿往外張、
+//   sp 脊椎前彎、tw 轉身、lean 側彎、head＝[低頭, 轉頭]、ankle 腳踝、shy 聳肩；i＝0 右、1 左；move＝[往旁邊, 往前]（公尺）
+const TOY_V = new THREE.Vector3();
+function driveToy(M, P, move = [0, 0], emo = null) {
+  mvRest(M);
+  if (!M.toyRest) {   // 站姿時：上身（spine_03）相對 root 的方向、腳最低點高度
+    resetPose(M); mvSetRoot(M, {}); M.root.updateMatrixWorld(true);
+    const rq = M.root.getWorldQuaternion(new THREE.Quaternion()).invert();
+    M.toyRest = { sp3: rq.multiply(M.bones.spine_03.getWorldQuaternion(new THREE.Quaternion())), footY: Math.min(...['foot_l', 'foot_r', 'ball_l', 'ball_r'].map(n => wpos(M.bones[n], TOY_V).y)) };
+  }
+  resetPose(M); M.bones.pelvis.position.copy(M.pelvisRest);
+  mvSetRoot(M, { z: move[1] || 0 });
+  let F = mvFrame(M);
+  if (move[0]) { M.root.position.addScaledVector(F.left, move[0]); M.root.updateMatrixWorld(true); }
+  const sp = P.sp || 0, tw = P.tw || 0, lean = P.lean || 0, hd = P.head || [0, 0];
+  for (const n of ['spine_01', 'spine_02', 'spine_03']) { rotWorld(M.bones[n], F.left, sp / 3); rotWorld(M.bones[n], F.up, tw / 3); rotWorld(M.bones[n], F.fwd, lean / 3); }
+  M.root.updateMatrixWorld(true);
+  rotWorld(M.bones.head, F.left, -sp * 0.6 + hd[0]); rotWorld(M.bones.head, F.up, hd[1]);
+  // 上身的方向（手臂跟著上身轉）
+  const rootQ = M.root.getWorldQuaternion(new THREE.Quaternion());
+  const T = M.bones.spine_03.getWorldQuaternion(new THREE.Quaternion()).multiply(rootQ.clone().multiply(M.toyRest.sp3).invert());
+  const toR = v => F.left.clone().multiplyScalar(v.x).addScaledVector(F.up, v.y).addScaledVector(F.fwd, v.z);
+  const toT = v => toR(v).applyQuaternion(T);
+  const E = new THREE.Euler(), Mx = new THREE.Matrix4();
+  for (const [i, s] of [[0, 'r'], [1, 'l']]) {
+    const sx = i === 0 ? -1 : 1, sh = P.sh[i], el = P.el[i];
+    if (P.shy && P.shy[i]) rotWorld(M.bones['clavicle_' + s], F.fwd, (s === 'l' ? 1 : -1) * P.shy[i] * 3);
+    Mx.makeRotationFromEuler(E.set(sh[0], 0, sx * sh[1], 'XYZ'));
+    aim(M, 'upperarm_' + s, 'lowerarm_' + s, toT(V(0, -1, 0).applyMatrix4(Mx)));
+    const lo = toT(V(0, -Math.cos(el), Math.sin(el)).applyMatrix4(Mx));
+    aim(M, 'lowerarm_' + s, 'hand_' + s, lo); aim(M, 'hand_' + s, 'middle_01_' + s, lo);
+    armClear(M, s, toT);
+    poseHand(M, s, HANDS.relax);
+  }
+  if (emo && CLAP_EMO[emo]) { const C = CLAP_EMO[emo]; clapHands(M, C, toT); poseHand(M, C.mover, HANDS.flat); poseHand(M, C.fixed, HANDS.flat); }
+  for (const [i, s] of [[0, 'r'], [1, 'l']]) {
+    const sx = i === 0 ? -1 : 1, kn = P.kn[i];
+    Mx.makeRotationFromEuler(E.set(-P.hip[i], 0, sx * ((P.hab && P.hab[i]) || 0), 'XYZ'));
+    aim(M, 'thigh_' + s, 'calf_' + s, toR(V(0, -1, 0).applyMatrix4(Mx)));
+    aim(M, 'calf_' + s, 'foot_' + s, toR(V(0, -Math.cos(kn), -Math.sin(kn)).applyMatrix4(Mx)));
+    const fo = M.bones['foot_' + s], want = rootQ.clone().multiply(M.footRest[s].q);
+    const ank = (P.ankle && P.ankle[i]) || 0; if (ank) want.premultiply(new THREE.Quaternion().setFromAxisAngle(F.left, ank));
+    fo.quaternion.copy(fo.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(want));
+  }
+  // 腳貼地：最低的腳回到站姿時的高度
+  M.root.updateMatrixWorld(true);
+  const lo = Math.min(...['foot_l', 'foot_r', 'ball_l', 'ball_r'].map(n => wpos(M.bones[n], TOY_V).y));
+  M.root.position.y += M.toyRest.footY - lo; M.root.updateMatrixWorld(true);
+}
+// 手臂不穿進身體：上身當成橢圓柱（spine_01 → neck_01），手肘、上臂中段、前臂中段、手腕在裡面就把那一節往前轉，直到貼著外面
+//   （遊戲的 Q 版公仔身體很細，手往內收 80° 也不會碰到；新角色是寫實比例，要擋）
+const ARM_CLEAR = { rx: 0.2, rz: 0.15 };   // 橢圓半徑（公尺，已含手臂粗細）：左右、前後
+function armClear(M, s, toT) {
+  const L = toT(V(1, 0, 0)).normalize(), Fw = toT(V(0, 0, 1)).normalize();
+  const A = wpos(M.bones.spine_01, new THREE.Vector3()), B = wpos(M.bones.neck_01, new THREE.Vector3()), ax = B.clone().sub(A), len = ax.length(); ax.normalize();
+  const inside = P => { const t = Math.max(0, Math.min(len, P.clone().sub(A).dot(ax))); const o = P.clone().sub(A).addScaledVector(ax, -t); return Math.hypot(o.dot(L) / ARM_CLEAR.rx, o.dot(Fw) / ARM_CLEAR.rz) < 1; };
+  const P = n => wpos(M.bones[n + '_' + s], new THREE.Vector3());
+  const fix = (bone, from, to, pts) => {
+    for (let k = 0; k < 40; k++) {
+      M.root.updateMatrixWorld(true);
+      if (!pts().some(inside)) return;
+      const d = P(to).sub(P(from)).normalize(), axis = new THREE.Vector3().crossVectors(d, Fw);
+      if (axis.lengthSq() < 1e-6) return;
+      rotWorld(M.bones[bone + '_' + s], axis.normalize(), 0.05);   // 這一節往前轉一點
+    }
+  };
+  fix('upperarm', 'upperarm', 'lowerarm', () => [P('lowerarm'), P('upperarm').lerp(P('lowerarm'), 0.6)]);
+  fix('lowerarm', 'lowerarm', 'hand', () => [P('hand'), P('lowerarm').lerp(P('hand'), 0.5)]);
+  M.root.updateMatrixWorld(true);
+}
+// 拍手：會動的手靠近固定的手時，用 IK 把它貼到固定那隻手的手掌上（掌心對掌心），不會穿過去交叉
+//   （遊戲公仔手短、身體細，原本的角度剛好拍到；新角色比例不同，要另外對準）
+const CLAP_EMO = { yaotou: { fixed: 'l', mover: 'r' } };
+function clapHands(M, C, toT) {
+  M.root.updateMatrixWorld(true);
+  const P = n => wpos(M.bones[n], new THREE.Vector3());
+  const hc = s => P('hand_' + s).lerp(P('middle_01_' + s), 0.55);
+  const c0 = hc(C.fixed), cm = hc(C.mover), d = c0.distanceTo(cm);
+  const w = Math.max(0, Math.min(1, (0.32 - d) / 0.16)); if (w <= 0) return;
+  const ww = w * w * (3 - 2 * w);
+  let { n } = palmFrame(M, C.fixed); if (n.dot(cm.clone().sub(c0)) < 0) n = n.clone().negate();   // 固定那隻手朝向會動那隻手的那一面
+  const contact = c0.clone().addScaledVector(n, 0.03);
+  const goal = cm.clone().lerp(contact, ww).add(P('hand_' + C.mover).sub(cm));   // 手掌中心對到接觸點（換算回手腕位置）
+  ikArm(M, C.mover, goal, toT(V(C.mover === 'l' ? 1 : -1, -0.6, -0.3)));
+  if (ww > 0.5) {   // 掌心對掌心：會動那隻手的掌心朝固定那隻手，手指朝上前方
+    const f = toT(V(0, 0.8, 0.6)); f.addScaledVector(n, -f.dot(n)).normalize();
+    orientHand(M, C.mover, f, n.clone().negate());
+    M.root.updateMatrixWorld(true);
+    const off = hc(C.mover).sub(contact); M.root.updateMatrixWorld(true);
+    ikArm(M, C.mover, P('hand_' + C.mover).sub(off), toT(V(C.mover === 'l' ? 1 : -1, -0.6, -0.3)));
+    orientHand(M, C.mover, f, n.clone().negate());
+  }
+  M.root.updateMatrixWorld(true);
+}
+// 舊的炫技、互動動作（跟遊戲同一份資料）
+const EMO_MOVES = { gouxiong: '狗熊哆嗦毛', yaotou: '搖頭晃腦', langzi: '浪子踢球', shanshen: '閃身步', hi5: '擊掌', taunt: '嘲諷' };
+const EMO_FILL = p => EK.avMix(p, p, 0);   // 補齊欄位
+function emoDur(k) { return EK.EMO_KEYS[k] ? EK.emoKeyDuration(k) + 0.5 : k === 'hi5' ? 2.6 : 3; }
+function emoAt(k, t) {
+  if (EK.EMO_KEYS[k]) { const s = EK.emoKeySample(k, Math.min(t, EK.emoKeyDuration(k))); return { pose: EMO_FILL(s.pose), move: s.move }; }
+  const A = EK.AVP;
+  if (k === 'hi5') { const P = t < 1.0 ? A.hi5Up : t < 1.5 ? EK.avMix(A.hi5Up, A.hi5Two, (t - 1) / 0.5) : t < 1.7 ? EK.avMix(A.hi5Two, A.hi5Hit, (t - 1.5) / 0.2) : EK.avMix(A.hi5Hit, A.idle, (t - 1.7) / 0.6); return { pose: EMO_FILL(P), move: [0, 0] }; }
+  return { pose: EMO_FILL(EK.emoPose(k, t)), move: [0, 0] };
+}
+for (const [k, n] of Object.entries(EMO_MOVES)) MOVES['emo_' + k] = { n: '舊炫技：' + n, emo: k };
+// 走路／跑步：照 gym.html avDrive 的步伐公式（速度 v 公尺/秒；原地踏步，不往前移）
+function gaitDur(v) { const w = Math.max(0, Math.min(1, (v - 1.6) / 2.4)); return 2 * (1.25 + 1.4 * w) / v; }   // 兩個完整步伐
+function gaitAt(v, t) {
+  const w = Math.max(0, Math.min(1, (v - 1.6) / 2.4)), on = Math.max(0, Math.min(1, v / 0.8)), stride = 1.25 + 1.4 * w;
+  const gp = t * Math.PI * 2 * v / stride, I = EMO_FILL(EK.AVP.idle), P = JSON.parse(JSON.stringify(I));
+  const A = on * (0.36 + 0.36 * w), armA = on * (0.28 + 0.6 * w);
+  for (let i = 0; i < 2; i++) {
+    const ph = gp + i * Math.PI, s = Math.sin(ph), c = Math.cos(ph);
+    P.hip[i] = I.hip[i] + A * s;
+    P.kn[i] = I.kn[i] + on * ((0.3 + 1.15 * w) * Math.pow(Math.max(0, Math.cos(ph + 0.45)), 1.6) + (0.06 + 0.22 * w) * Math.max(0, -c));
+    P.sh[i][0] = I.sh[i][0] - armA * Math.sin(ph + Math.PI);
+    P.sh[i][1] = I.sh[i][1] + on * 0.06 * w;
+    P.el[i] = I.el[i] + on * (0.18 + 1.25 * w) + 0.12 * w * Math.max(0, Math.sin(ph + Math.PI));
+    P.ankle[i] = on * (0.2 + 0.4 * w) * Math.max(0, -s) * (c > 0 ? 1 : 0.35);
+  }
+  P.sp = I.sp + 0.1 * w * on + 0.08 * w * on; P.tw = -on * (0.16 + 0.1 * w) * Math.sin(gp); P.head = [-0.1 * w * on - 0.06 * w * on, 0];
+  return { pose: P, move: [0, 0] };
+}
+for (const [k, n, v] of [['walk', '走路', 1.3], ['jog', '慢跑', 3.0], ['run', '快跑', 5.2]]) MOVES['gait_' + k] = { n, gait: v };
+// 動作的長度、某個時間點的姿勢（關鍵影格動作、舊炫技、走路跑步都用這兩個）
+function mvDurOf(M, name) { const m = MOVES[name]; if (m.emo) return emoDur(m.emo); if (m.gait) return gaitDur(m.gait); const K = mvBuild(M, name); return K[K.length - 1].t; }
+const FLOOR_PTS = [['pelvis', 0.12], ['spine_02', 0.12], ['spine_03', 0.13], ['head', 0.12], ['neck_01', 0.08], ['hand_l', 0.03], ['hand_r', 0.03], ['lowerarm_l', 0.04], ['lowerarm_r', 0.04], ['upperarm_l', 0.06], ['upperarm_r', 0.06], ['calf_l', 0.06], ['calf_r', 0.06], ['foot_l', 0.05], ['foot_r', 0.05]];
+function floorGuard(M) {   // 播放時任何一格最低的部位低於地板，就把整個人往上抬（內插的中間格也不會穿進地板）
+  M.root.updateMatrixWorld(true);
+  let lift = 0; for (const [n, h] of FLOOR_PTS) lift = Math.max(lift, h - wpos(M.bones[n], new THREE.Vector3()).y);
+  if (lift > 0) { M.root.position.y += lift; M.root.updateMatrixWorld(true); }
+}
+function mvPoseAt(M, name, t) {
+  const m = MOVES[name];
+  if (m.emo || m.gait) { const T = mvDurOf(M, name), u = ((t % T) + T) % T, s = m.emo ? emoAt(m.emo, u) : gaitAt(m.gait, u); driveToy(M, s.pose, s.move, m.emo); }
+  else mvApply(M, mvBuild(M, name), t);
+  if (m.floor) floorGuard(M);
+}
+
+// ---------- VRoid 頭（官方 CC0 範例）：只取臉＋頭髮，固定在我們的頭骨頭上；原本的頭縮進去藏起來 ----------
+// 每款都是 VRoid 官方 CC0 範例，用 art/vroid/trim_head.py 裁成只有頭（約 2 MB）
+const VROID_HEADS = {
+  m: [
+    { n: '碎瀏海', fn: '臉型', url: 'assets/models/vroid/hairsample_male.glb' },
+    { n: '短平頭', url: 'assets/models/vroid/base_male.glb' },
+    { n: '層次短髮', url: 'assets/models/vroid/sakurada_fumiriya.glb' },
+  ],
+  f: [
+    { n: '鮑伯', fn: '臉型 1', url: 'assets/models/vroid/avatarsample_d.glb' },
+    { n: '蓬鬆短髮', fn: '臉型 2', url: 'assets/models/vroid/avatarsample_e.glb' },
+    { n: '長髮側馬尾', fn: '臉型 3', url: 'assets/models/vroid/avatarsample_g.glb' },
+    { n: '齊瀏海長直髮', fn: '臉型 4', url: 'assets/models/vroid/sendagaya_shino.glb' },
+    { n: '雙馬尾（貓耳）', fn: '臉型 5', url: 'assets/models/vroid/hairsample_female.glb' },
+    { n: '短平頭', fn: '臉型 6', url: 'assets/models/vroid/base_female.glb' },
+    { n: '短鮑伯', url: 'assets/models/vroid/avatarsample_d_darkness.glb' },   /* 精靈耳長在臉上 → 不當臉型，只用它的頭髮 */
+    { n: '短髮（髮夾）', fn: '貓耳臉型', ears: 'HAIR_03', url: 'assets/models/vroid/avatarsample_f.glb' },
+  ],
+};
+const VROID_CACHE = {};
+async function loadVroid(url) {
+  if (VROID_CACHE[url]) return VROID_CACHE[url];
+  const g = await new GLTFLoader().loadAsync(url);
+  const s = g.scene; s.updateMatrixWorld(true);
+  const face = [], hairGroups = new Map(); let skinBox = new THREE.Box3();
+  s.traverse(o => {
+    if (!o.isMesh) return;
+    const mname = o.material.name || '';
+    if (/^Facebaked/.test(o.name)) {
+      face.push({ geo: o.geometry, mat: o.material, kind: /SKIN/.test(mname) ? 'skin' : /FaceBrow/.test(mname) ? 'brow' : /EyeWhite/.test(mname) ? 'white' : /EyeIris/.test(mname) ? 'iris' : /Highlight/.test(mname) ? 'hl' : 'line', morph: o.morphTargetInfluences ? o : null });
+      if (/Face_00_SKIN/.test(mname) && o.geometry.index) { const p = o.geometry.attributes.position, ix = o.geometry.index.array, v = new THREE.Vector3(); for (let k = 0; k < ix.length; k++) skinBox.expandByPoint(v.fromBufferAttribute(p, ix[k])); }
+    } else if (/HAIR/i.test(mname) && o.geometry.index) {   // 頭髮：Hair 網格的 100 多片，加上身體網格裡的 HairBack（同一組頂點的合在一起）
+      const key = o.geometry.attributes.position; let gp = hairGroups.get(key); if (!gp) hairGroups.set(key, gp = { src: o, idx: [] }); gp.idx.push(...o.geometry.index.array);
+    }
+  });
+  // 頭髮 100 多片共用同一組頂點 → 合成一個網格（一次畫完）
+  const hair = [...hairGroups.values()].map(({ src, idx }) => { const hg = new THREE.BufferGeometry(); for (const k of ['position', 'normal', 'uv']) if (src.geometry.attributes[k]) hg.setAttribute(k, src.geometry.attributes[k]); hg.setIndex(idx); return { geo: hg, mat: src.material, name: src.name, mname: src.material.name || '' }; });
+  return (VROID_CACHE[url] = { face, hair, skinBox });
+}
+function vroidMat(m, kind) {
+  const t = new THREE.MeshToonMaterial({ map: m.map || null, color: 0xffffff, gradientMap: TOON_RAMP, transparent: !!m.transparent, alphaTest: m.alphaTest || 0, depthWrite: !m.transparent, side: m.side });
+  if (t.map) t.map.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+// 原本 MakeHuman 頭的頂點（頭骨頭權重大的）縮到頭中心，藏在新頭裡面
+function hideMpHead(M, on) {
+  const H = M.parts.Human;
+  if (!M.baseHuman0) {
+    M.baseHuman0 = M.baseHuman.slice();
+    const si = H.geometry.attributes.skinIndex, sw = H.geometry.attributes.skinWeight, hb = H.skeleton.bones.findIndex(b => b.name === 'head');
+    M.mpHeadIdx = []; const c = new THREE.Vector3(); let n = 0;
+    for (let i = 0; i < si.count; i++) { let w = 0; for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === hb) w += sw.getComponent(i, k); if (w > 0.5) { M.mpHeadIdx.push(i); c.x += M.baseHuman0[i * 3]; c.y += M.baseHuman0[i * 3 + 1]; c.z += M.baseHuman0[i * 3 + 2]; n++; } }
+    M.mpHeadC = c.multiplyScalar(1 / n);
+    // 縮到頭的下後方、脖子裡面（不能靠近臉，不然外框會把縮成一點的頂點撐成小黑點）
+    { let y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9; for (const i of M.mpHeadIdx) { const y = M.baseHuman0[i * 3 + 1], z = M.baseHuman0[i * 3 + 2]; y0 = Math.min(y0, y); y1 = Math.max(y1, y); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+      M.mpHeadC.y = y0 + (y1 - y0) * 0.12; M.mpHeadC.z = z0 + (z1 - z0) * 0.4; }
+    M.baseHumanHid = M.baseHuman0.slice();
+    for (const i of M.mpHeadIdx) { M.baseHumanHid[i * 3] = M.mpHeadC.x; M.baseHumanHid[i * 3 + 1] = M.mpHeadC.y; M.baseHumanHid[i * 3 + 2] = M.mpHeadC.z; }
+  }
+  const want = on ? M.baseHumanHid : M.baseHuman0;
+  if (M.baseHuman !== want) { M.baseHuman = want; M.faceKey = null; }
+}
+// 把第 i 款 VRoid 頭接到 M 的頭骨頭上（第一次呼叫時量好位置大小）
+async function attachVroid(M, i) {
+  M.vroid = M.vroid || {};
+  if (M.vroid[i]) return M.vroid[i];
+  const V = await loadVroid(VROID_HEADS[M.sx][i].url);
+  // 量原本頭的大小、中心（站姿、世界座標）
+  const save = M.skel.bones.map(b => b.quaternion.clone()); resetPose(M); mvStop && mvStop(M); M.root.updateMatrixWorld(true);
+  const H = M.parts.Human, box = new THREE.Box3(), v = new THREE.Vector3();
+  if (!M.mpHeadBox) {
+    hideMpHead(M, false); applyFaceShape(M, look[M === models.f ? 'f' : 'm'].fshape || {}); M.root.updateMatrixWorld(true); H.skeleton.update();
+    for (const k of M.mpHeadIdx) { H.getVertexPosition(k, v); box.expandByPoint(v.applyMatrix4(H.matrixWorld)); }
+    M.mpHeadBox = box.clone();
+  }
+  const mb = M.mpHeadBox, sb = V.skinBox;
+  const s = (mb.max.y - mb.min.y) / (sb.max.y - sb.min.y) * (VROID_ADJ.scale || 1);
+  const cm = mb.getCenter(new THREE.Vector3()), cv = sb.getCenter(new THREE.Vector3());
+  cm.y += (mb.max.y - mb.min.y) * (VROID_ADJ.dy || 0); cm.z += (mb.max.y - mb.min.y) * (VROID_ADJ.dz || 0);
+  const rq = M.root.getWorldQuaternion(new THREE.Quaternion()).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));   // VRM 0.x 朝 -Z，轉過來
+  const D = new THREE.Matrix4().compose(cm, rq, new THREE.Vector3(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-cv.x, -cv.y, -cv.z));
+  const hb = M.bones.head; hb.updateMatrixWorld(true);
+  const holder = new THREE.Group(); holder.matrixAutoUpdate = false; holder.matrix.copy(hb.matrixWorld.clone().invert().multiply(D));
+  const order = { skin: 0, white: 1, iris: 2, brow: 3, line: 3, hl: 4 };
+  const meshes = { face: [], hair: [] };
+  for (const f of V.face) {
+    const m = new THREE.Mesh(f.geo, vroidMat(f.mat, f.kind)); m.renderOrder = 10 + order[f.kind]; m.frustumCulled = false; m.userData.kind = f.kind;
+    if (f.geo.morphAttributes.position) { m.morphTargetInfluences = new Array(f.geo.morphAttributes.position.length).fill(0); }
+    holder.add(m); meshes.face.push(m);
+  }
+  const earsKey = VROID_HEADS[M.sx][i].ears;
+  meshes.hair = V.hair.map(h => { const m = new THREE.Mesh(h.geo, vroidMat(h.mat)); m.userData.ears = !!(earsKey && h.mname.includes(earsKey)); m.material.map = grayDetail(h.mat.map, true); m.material.needsUpdate = true; m.frustumCulled = false; m.castShadow = true; holder.add(m); M.outlines.push(makeOutline(m, 0.0016)); M.outlines[M.outlines.length - 1].userData.vroid = i; return m; });
+  hb.add(holder);
+  M.skel.bones.forEach((b, k) => b.quaternion.copy(save[k])); M.root.updateMatrixWorld(true);
+  return (M.vroid[i] = { holder, meshes });
+}
+const VROID_ADJ = { scale: 1.0, dy: 0.0, dz: 0.0 };   // 位置大小微調（相對頭高）
+
+// ---------- 套用外觀 ----------
+function applyLook(M, L) {
+  const q = L.q, nk = 1 + (q - 1) * 0.3, hd = 1 + (q - 1) * 0.3;
+  const nw = L.neckW ?? 1;   // 脖子粗細（只縮前後左右，頭維持原比例）
+  M.bones.neck_01.scale.set(nk * nw, nk, nk * nw);
+  M.bones.head.scale.set(q / (nk * nw), q / nk, q / (nk * nw));
+  for (const sd of ['l', 'r']) M.bones['hand_' + sd].scale.setScalar(hd);
+  { const want = new THREE.Color(L.skin), a = M.skinAvg; M.skinMat.color.setRGB(want.r / a.r, want.g / a.g, want.b / a.b); }
+  if (M.parts.Human.userData.toon) { M.parts.Human.userData.std.color.copy(M.skinMat.color); M.parts.Human.userData.toon.color.set(L.skin); }
+  // 賽璐璐／一般上色切換
+  for (const name of ['Human', 'jersey', 'shorts', 'shoes', 'face']) {
+    const o = M.parts[name]; if (!o || !o.userData.toon) continue;
+    const want = toon ? o.userData.toon : o.userData.std;
+    if (name === 'Human' && toon) { want.map = null; want.color.set(L.skin); }   // 動畫風皮膚：純色
+    else { want.map = o.userData.std.map; want.color.copy(o.userData.std.color); }
+    if (want.userData.hadMap !== !!want.map) { want.userData.hadMap = !!want.map; want.needsUpdate = true; }
+    if (o.material !== want) o.material = want;
+  }
+  // 鞋子貼圖右下角是鞋子附的短襪 → 換成襪子顏色（保留羅紋明暗）
+  const sockKey = L.sock ? L.sockC : 'skin' + L.skin;
+  if (M.parts.shoes && M.shoeSockC !== sockKey) {
+    const sh = M.parts.shoes, std = sh.userData.std || sh.material, src = (M.shoeImg = M.shoeImg || std.map && std.map.image);
+    if (src && src.width) {
+      M.shoeSockC = sockKey;
+      const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0);
+      const X0 = Math.floor(c.width * 0.76), Y0 = Math.floor(c.height * 0.845), d = x.getImageData(X0, Y0, c.width - X0, c.height - Y0), A = d.data;
+      let mean = 0; for (let i = 0; i < A.length; i += 4) mean += A[i] + A[i + 1] + A[i + 2]; mean /= A.length / 4 * 3;
+      const col = new THREE.Color(L.sock ? L.sockC : L.skin).getRGB({}, THREE.SRGBColorSpace), flat = !L.sock;
+      for (let i = 0; i < A.length; i += 4) { const k = flat ? 1 : (A[i] + A[i + 1] + A[i + 2]) / 3 / mean; A[i] = Math.min(255, col.r * 255 * k); A[i + 1] = Math.min(255, col.g * 255 * k); A[i + 2] = Math.min(255, col.b * 255 * k); }
+      x.putImageData(d, X0, Y0);
+      const t = new THREE.CanvasTexture(c); t.flipY = std.map.flipY; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = std.map.wrapS; t.wrapT = std.map.wrapT;
+      std.map = t; std.needsUpdate = true; if (sh.userData.toon) { sh.userData.toon.map = t; sh.userData.toon.needsUpdate = true; }
+    }
+  }
+  if (M.knee) {
+    const gear = [[M.knee, L.knee, L.kneeC], ...M.socks.map((m, i) => [m, L.sock === i + 1, L.sockC])];
+    for (const [m, on, c] of gear) { m.visible = !!on; m.material = toon ? m.userData.toon : m.userData.std; m.material.color.set(c); }
+  }
+  accApply(M, L);
+  for (const ol of M.outlines) ol.visible = toon && ol.userData.of.visible;
+  const vh = L.vhead ?? -1;   // VRoid 頭（-1＝用原本的頭）
+  hideMpHead(M, vh >= 0);
+  // 臉型變了：改頂點、重量頭殼、頭髮重長
+  const fk = JSON.stringify(L.fshape);
+  if (M.faceKey !== fk) { M.faceKey = fk; applyFaceShape(M, L.fshape); M.computeShell(); M.hairKey = null; }
+  // 頭髮：用 MakeHuman 的寫實髮型（動畫髮束先關掉）
+  // hairMode＝'anime'：用動畫髮束產生器（HAIR_PRESETS[hairP]＋ah 微調），寫實髮型藏起來
+  const animeHair = L.hairMode === 'anime' || L.hairMode === 'jp';
+  M.hairGroup.visible = animeHair;
+  if (animeHair) {
+    const H = L.hairMode === 'jp' ? { jp: 1, ...(L.jp || {}) } : { ...HAIR_PRESETS[L.hairP], ...(L.ah || {}) }, key = JSON.stringify(H) + '|' + M.faceKey;
+    if (M.hairKey !== key) { M.hairKey = key; const { geo, capG } = L.hairMode === 'jp' ? buildJpHair(M.head, L.jp || {}) : buildHairGeometry(M.head, H); M.hairMesh.geometry.dispose(); M.hairMesh.geometry = geo; M.hairLine.geometry = geo; M.capMesh.geometry.dispose(); M.capMesh.geometry = capG; }
+    colorHair(M.hairMesh.geometry, L);
+    M.hairMesh.material = toon ? M.hairToon : M.hairStd; M.capMesh.material = toon ? M.capToon : M.capStd; M.capMesh.material.color.set(L.hairC).multiplyScalar(0.8);
+    M.hairLine.visible = toon;
+  }
+  M.hairs.forEach((h, i) => {
+    if (!h) return;
+    h.visible = !animeHair && i === L.hair; if (h.userData.toon) h.material = toon ? h.userData.toon : h.userData.std; h.material.color.set(L.hairC);
+    if (!h.visible) return;
+    // 頭髮調整：大小、寬度（左右＋前後）、高低、前後（在綁定姿勢的座標裡改頂點）
+    const key = [L.hs, L.hw, L.hy, L.hz].join();
+    if (h.userData.key === key) return; h.userData.key = key;
+    const b = h.userData.box, base = h.userData.base, arr = h.geometry.attributes.position.array;
+    const c = new THREE.Vector3(); b.getCenter(c); const size = new THREE.Vector3(); b.getSize(size);
+    const sx = L.hs * L.hw, sy = L.hs, sz = L.hs * L.hw, oy = L.hy * 0.06 * size.y, oz = L.hz * 0.06 * size.y;
+    for (let k = 0; k < arr.length; k += 3) {
+      arr[k] = c.x + (base[k] - c.x) * sx;
+      arr[k + 1] = c.y + (base[k + 1] - c.y) * sy + oy;
+      arr[k + 2] = c.z + (base[k + 2] - c.z) * sz + oz;
+    }
+    h.geometry.attributes.position.needsUpdate = true;
+    h.geometry.computeVertexNormals(); h.geometry.computeBoundingSphere();
+  });
+  if (M.face) drawFace(M.face, L);
+  M.jer.trimU = M.jerTrimU; drawJersey(M.jer, L); drawShorts(M.sho, L);
+  // 眼睛顏色、眉毛款式與顏色
+  if (M.parts.eyes) {
+    const nm = (ANIME_EYE ? 'anime_' : '') + L.eyeColor;
+    if (!M.eyeTex[nm]) {
+      let t;
+      if (ANIME_EYE) t = new THREE.CanvasTexture(animeEyeCanvas((EYE_COLORS.find(e => e[0] === L.eyeColor) || EYE_COLORS[0])[2]));
+      else t = new THREE.TextureLoader().load(`assets/models/eyes/${L.eyeColor}.jpg`);
+      t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; M.eyeTex[nm] = t; }
+    if (M.parts.eyes.material.map !== M.eyeTex[nm]) { M.parts.eyes.material.map = M.eyeTex[nm]; M.parts.eyes.material.needsUpdate = true; }
+  }
+  M.brows.forEach((b, i) => { if (!b) return; b.visible = !M.face && i === L.brow; b.material.color.set(L.browC); });
+  const vhr = L.vhair ?? vh;   // 髮型（用哪一款的頭髮）
+  if (M.vroid) for (const k in M.vroid) {
+    const V = M.vroid[k], isF = +k === vh, isH = +k === vhr; V.holder.visible = vh >= 0 && (isF || isH);
+    for (const m of V.meshes.face) m.visible = isF;
+    for (const m of V.meshes.hair) { m.visible = m.userData.ears ? isF : isH; m.material.color.set(L.hairC); }
+  }
+  for (const ol of M.outlines) if (ol.userData.vroid != null) ol.visible = toon && ol.userData.of.visible && M.vroid[ol.userData.vroid].holder.visible;
+  if (vh >= 0) {
+    const need = [vh, vhr].filter(k => !(M.vroid && M.vroid[k]));
+    if (need.length) { if (!M.vLoading) { M.vLoading = true; (async () => { for (const k of need) await attachVroid(M, k); M.vLoading = false; update(); })(); } }
+    else {
+      const V = M.vroid[vh];
+      const want = new THREE.Color(L.skin), base = new THREE.Color('#F7E2CE');   // VRoid 臉原本的膚色 → 換成玩家選的膚色（跟脖子一樣）
+      for (const m of V.meshes.face) {
+        if (m.userData.kind === 'skin') m.material.color.setRGB(want.r / base.r, want.g / base.g, want.b / base.b);
+        if (m.userData.kind === 'brow') { if (!m.userData.gray) { m.userData.gray = 1; m.material.map = grayDetail(m.material.map, true); m.material.needsUpdate = true; } m.material.color.set(L.hairC).multiplyScalar(0.9); }   // 眉毛跟髮色
+        if (m.userData.kind === 'iris') { if (!m.userData.gray) { m.userData.gray = 1; m.material.map = grayDetail(m.material.map, true); m.material.needsUpdate = true; } m.material.color.set(L.face.eye.color).multiplyScalar(1.6); }
+      }
+    }
+    for (const k of ['face', 'eyes', 'lashes']) if (M.parts[k]) M.parts[k].visible = false;
+    M.brows.forEach(b => b && (b.visible = false)); M.hairs.forEach(h => h && (h.visible = false)); M.hairGroup.visible = false;
+  } else if (M.parts.face) M.parts.face.visible = true;
+  // 臉片顏色跟皮膚無關（透明貼圖），不用改
+}
+
+// ---------- 介面 ----------
+const TABS = [['face', '臉'], ['hair', '頭髮'], ['body', '身體'], ['outfit', '球衣'], ['hand', '手勢']];
+let tab = 'face', pose = 'natural', ftab = 'shape';
+const FTABS = [['shape', '臉型'], ['eye3', '眼睛'], ['brow3', '眉毛']];
+const FTABS_OLD = [['shape', '臉型'], ['eye', '眼睛'], ['brow', '眉毛'], ['nose', '鼻子'], ['mouth', '嘴巴'], ['blush', '腮紅'], ['expr', '表情']];
+const tabsEl = document.getElementById('tabs'), bodyEl = document.getElementById('body');
+function el(tag, attrs = {}, kids = []) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'text') e.textContent = v; else e.setAttribute(k, v); } for (const k of kids) e.append(k); return e; }
+function chips(opts, cur, fn) { return el('div', { class: 'chips' }, opts.map((t, i) => el('button', { class: i === cur ? 'on' : '', text: t, onclick: () => { fn(i); render(); } }))); }
+function swatches(list, cur, fn) {
+  const row = el('div', { class: 'chips' }, list.map(c => el('button', { class: 'sw' + (c.toLowerCase() === cur.toLowerCase() ? ' on' : ''), style: `background:${c}`, onclick: () => { fn(c); render(); } })));
+  const pick = el('input', { type: 'color', value: cur, oninput: e => { fn(e.target.value); update(); } });
+  row.append(pick); return row;
+}
+function slider(label, v, min, max, fn) {
+  return el('div', { class: 'row' }, [el('span', { text: label }), el('input', { type: 'range', min, max, step: 0.01, value: v, oninput: e => { fn(+e.target.value); update(); } })]);
+}
+function color(label, v, fn) { return el('div', { class: 'row' }, [el('span', { text: label }), el('input', { type: 'color', value: v, oninput: e => { fn(e.target.value); update(); } })]); }
+function render() {
+  const L = look[sex];
+  tabsEl.replaceChildren(...TABS.map(([k, t]) => el('button', { class: k === tab ? 'on' : '', text: t, onclick: () => { tab = k; render(); } })));
+  const B = [];
+  if (tab === 'face') {
+    const P = L.face;
+    const F = VROID_HEADS[sex].map((h, i) => [h.fn, i]).filter(x => x[0]);
+    if ((L.vhead ?? -1) < 0 || !VROID_HEADS[sex][L.vhead].fn) L.vhead = F[0][1];
+    B.push(el('h4', { text: '臉型' }), chips(F.map(x => x[0]), F.findIndex(x => x[1] === L.vhead), i => L.vhead = F[i][1]));
+    if ((L.vhead ?? -1) >= 0) {
+      B.push(el('h4', { text: '瞳孔顏色' }), swatches(['#6B4A30', '#3E2A1E', '#8A6A3A', '#4A5A6A', '#3A6A9A', '#3E7A50', '#8A3A4A', '#5A3A7A'], L.face.eye.color, c => L.face.eye.color = c));
+      B.push(el('p', { style: 'color:#6B7785;font-size:12px', text: '臉是 VRoid 官方 CC0 範例模型；五官形狀固定，可以換瞳孔顏色。髮型、髮色在「頭髮」分頁，膚色在「身體」分頁。' }));
+      bodyEl.replaceChildren(...B); update(); return;
+    }
+    B.push(el('div', { class: 'chips', style: 'margin-top:4px' }, FTABS.map(([k, t]) => el('button', { class: k === ftab ? 'on' : '', text: t, onclick: () => { ftab = k; render(); } }))));
+    const part = P[ftab];
+    const adj = (keys) => {
+      const L2 = { sx: ['寬', 0.5, 1.8], sy: [ftab === 'brow' ? '粗細' : '高', 0.5, 1.8], y: ['上下', -1, 1], gap: ['間距', -1, 1], rot: ['角度', -1, 1] };
+      return keys.map(k => slider(L2[k][0], part[k], L2[k][1], L2[k][2], v => part[k] = v));
+    };
+    if (ftab === 'shape') {
+      const S = L.fshape;
+      B.push(el('h4', { text: '臉型' }), slider('臉寬', S.width, -1, 1, v => S.width = v), slider('臉長', S.length, -1, 1, v => S.length = v),
+        slider('尖下巴', S.vline, -0.5, 1, v => S.vline = v), slider('下巴長度', S.chin, -1, 1, v => S.chin = v), slider('臉頰', S.cheek, -1, 1, v => S.cheek = v));
+      B.push(el('div', { class: 'chips', style: 'margin-top:12px' }, [el('button', { text: '臉型重設', onclick: () => { L.fshape = { ...FSHAPE0[sex] }; render(); } })]));
+    } else if (ftab === 'eye3') {
+      B.push(el('h4', { text: '眼睛顏色' }), el('div', { class: 'chips' }, EYE_COLORS.map(([k, t, c]) => el('button', { class: L.eyeColor === k ? 'on' : '', html: '', onclick: () => { L.eyeColor = k; render(); } }, [el('span', { style: `display:inline-block;width:12px;height:12px;border-radius:50%;background:${c};margin-right:6px;vertical-align:-1px` }), t]))));
+    } else if (ftab === 'brow3') {
+      B.push(el('h4', { text: '眉毛款式' }), chips(BROW_NAMES, L.brow, i => L.brow = i), el('h4', { text: '眉毛顏色' }), swatches(HAIRC, L.browC, c => L.browC = c));
+    } else if (ftab === 'eye') {
+      B.push(el('h4', { text: '款式' }), chips(EYE_T.map(e => e.n), part.style, i => part.style = i), el('h4', { text: '睫毛' }), chips(['無', '有'], part.lash ? 1 : 0, i => part.lash = !!i));
+      B.push(el('h4', { text: '顏色與調整' }), color('瞳孔顏色', part.color, c => part.color = c), ...adj(['sx', 'sy', 'y', 'gap', 'rot']));
+    } else if (ftab === 'brow') {
+      B.push(el('h4', { text: '款式' }), chips(BROWS, part.style, i => part.style = i));
+      B.push(el('h4', { text: '顏色與調整' }), color('眉毛顏色', part.color, c => part.color = c), ...adj(['sx', 'sy', 'y', 'gap', 'rot']));
+    } else if (ftab === 'nose') {
+      B.push(el('h4', { text: '款式' }), chips(NOSES, part.style, i => part.style = i));
+      B.push(el('h4', { text: '顏色與調整' }), color('顏色', part.color, c => part.color = c), ...adj(['sx', 'sy', 'y']));
+    } else if (ftab === 'mouth') {
+      B.push(el('h4', { text: '款式' }), chips(MOUTHS, part.style, i => part.style = i));
+      B.push(el('h4', { text: '顏色與調整' }), color('顏色', part.color, c => part.color = c), ...adj(['sx', 'sy', 'y', 'rot']));
+    } else if (ftab === 'blush') {
+      B.push(el('h4', { text: '腮紅' }), chips(['關', '開'], part.on ? 1 : 0, i => part.on = !!i), color('顏色', part.color, c => part.color = c),
+        slider('濃淡', part.a, 0.1, 0.8, v => part.a = v), ...adj(['sx', 'sy', 'y', 'gap']));
+    } else if (ftab === 'expr') {
+      B.push(el('h4', { text: '表情（遊戲裡按 T 換）' }), chips(EXPR.map(e => e[1]), EXPR.findIndex(e => e[0] === L.expr), i => L.expr = EXPR[i][0]));
+    }
+    if (!['shape', 'expr', 'eye3', 'brow3'].includes(ftab)) B.push(el('div', { class: 'chips', style: 'margin-top:12px' }, [el('button', { text: '這個部位重設', onclick: () => { L.face[ftab] = defaultFace(sex === 'f')[ftab] || L.face[ftab]; render(); } })]));
+  } else if (tab === 'hair') {
+    if ((L.vhead ?? -1) >= 0) {
+      B.push(el('h4', { text: '髮型' }), chips(VROID_HEADS[sex].map(h => h.n), L.vhair ?? L.vhead, i => L.vhair = i));
+      B.push(el('h4', { text: '髮色' }), swatches(HAIRC, L.hairC, c => L.hairC = c));
+      bodyEl.replaceChildren(...B); update(); return;
+    }
+    B.push(el('h4', { text: '髮型' }), chips(HAIR_NAMES, L.hair, i => L.hair = i));
+    B.push(el('h4', { text: '髮色' }), swatches(HAIRC, L.hairC, c => L.hairC = c));
+    B.push(el('h4', { text: '調整' }), slider('大小', L.hs, 0.9, 1.15, v => L.hs = v), slider('寬度', L.hw, 0.9, 1.15, v => L.hw = v),
+      slider('高低', L.hy, -1, 1, v => L.hy = v), slider('前後', L.hz, -1, 1, v => L.hz = v));
+    B.push(el('div', { class: 'chips', style: 'margin-top:12px' }, [el('button', { text: '調整重設', onclick: () => { Object.assign(L, { hs: 1, hw: 1, hy: 0, hz: 0 }); render(); } })]));
+  } else if (tab === 'body') {
+    B.push(el('h4', { text: 'Q 版程度（頭變大）' }), slider('頭大小', L.q, 1.0, 1.9, v => L.q = v));
+    B.push(el('h4', { text: '膚色' }), swatches(SKIN, L.skin, c => L.skin = c));
+    B.push(el('p', { style: 'color:#6B7785;font-size:12px', text: '身材固定：男生 188 cm、女生 174 cm（不影響數值）。' }));
+  } else if (tab === 'outfit') {
+    B.push(el('h4', { text: '背號' }), el('div', { class: 'row' }, [el('span', { text: '號碼' }), el('input', { type: 'number', min: 0, max: 99, value: L.no, oninput: e => { L.no = Math.max(0, Math.min(99, +e.target.value | 0)); update(); } })]));
+    B.push(el('h4', { text: '顏色' }), color('球衣', L.jersey, c => L.jersey = c), color('飾條', L.trim, c => L.trim = c), color('號碼', L.num, c => L.num = c), color('球褲', L.shorts, c => L.shorts = c));
+    B.push(el('h4', { text: '護膝' }), chips(['不戴', '戴'], L.knee ? 1 : 0, i => L.knee = i === 1), color('護膝顏色', L.kneeC, c => L.kneeC = c));
+    B.push(el('h4', { text: '襪子' }), chips(['不穿', '短襪', '中筒', '長襪'], L.sock, i => L.sock = i), color('襪子顏色', L.sockC, c => L.sockC = c));
+    const eq = L.eq || (L.eq = { neck: 0, wrist: 0, glasses: 0, hat: 0 });
+    for (const [k, t] of [['neck', '項鍊'], ['wrist', '護腕'], ['glasses', '眼鏡'], ['hat', '帽子']]) B.push(el('h4', { text: t }), chips(ACC[k], eq[k], i => eq[k] = i));
+  } else if (tab === 'hand') {
+    B.push(el('h4', { text: '動作（自動重播）' }), chips(Object.values(MOVES).map(m => m.n), Object.keys(MOVES).indexOf(MV.name), i => { MV.name = Object.keys(MOVES)[i]; MV.t = 0; render(); }));
+    B.push(el('h4', { text: '排球手勢' }), chips(['自然', '墊球', '舉球', '扣球', '攔網'], ['natural', 'bump', 'set', 'spike', 'block'].indexOf(pose), i => { pose = ['natural', 'bump', 'set', 'spike', 'block'][i]; applyPose(models[sex], pose); }));
+    B.push(el('p', { style: 'color:#6B7785;font-size:12px', text: '按左上「看手」可以拉近看手指。' }));
+  }
+  bodyEl.replaceChildren(...B);
+  update();
+}
+function update() { const M = models[sex]; if (M) applyLook(M, look[sex]); }
+
+document.querySelectorAll('#top [data-sex]').forEach(b => b.onclick = () => {
+  sex = b.dataset.sex;
+  document.querySelectorAll('#top [data-sex]').forEach(x => x.classList.toggle('on', x === b));
+  for (const k in models) models[k].root.visible = k === sex;
+  const L = look[sex]; 
+  applyPose(models[sex], pose);
+  render();
+});
+document.getElementById('toon').onclick = e => { toon = !toon; e.target.classList.toggle('on', toon); update(); };
+let spin = false;
+document.getElementById('spin').onclick = e => { spin = !spin; e.target.textContent = '轉動：' + (spin ? '開' : '關'); };
+let handCam = false;
+document.getElementById('handcam').onclick = e => {
+  handCam = !handCam; e.target.classList.toggle('on', handCam);
+  if (handCam) { const p = wpos(models[sex].bones.hand_l, new THREE.Vector3()); ctl.target.copy(p); cam.position.copy(p).add(V(0.35, 0.15, 0.75)); }
+  else { ctl.target.set(0, 1.0, 0); cam.position.set(0.6, 1.3, 5.2); }
+};
+
+// ---------- 開始 ----------
+look.m.ah = { ...HAIR_PRESETS[0] }; look.f.ah = { ...HAIR_PRESETS[6] };
+const FSHAPE0 = { m: { width: -0.35, length: -0.5, vline: 0.6, chin: 0, cheek: 0, chinFwd: 0, jaw: 0 }, f: { width: 0, length: 0, vline: 0.2, chin: 0, cheek: 0, chinFwd: 0, jaw: 0 } };
+look.m.fshape = { ...FSHAPE0.m }; look.f.fshape = { ...FSHAPE0.f };
+for (const k of ['m', 'f']) Object.assign(look[k], { knee: true, kneeC: '#26262B', sock: 2, sockC: '#F4F4F4' });   // 護膝、襪子（0 不穿、1 短、2 中、3 長）
+const [mm, ff] = await Promise.all([loadModel('m'), loadModel('f')]);
+models.m = mm; models.f = ff;
+scene.add(mm.root, ff.root); ff.root.visible = false;
+applyPose(mm, pose); applyPose(ff, pose);
+render();
+document.getElementById('msg').textContent = '拖曳轉視角、滾輪縮放';
+window.__real = { ARM_CLEAR, renderer, scene, VROID_ADJ, attachVroid, loadVroid, VROID_HEADS, BUMP, MV, MOVES, mvBuild, mvApply, mvStop, FACE_STYLE, applyFaceShape, capsGap, handCaps, fingerCaps, models, look, applyPose, THREE, cam, ctl, HP: HAIR_PRESETS, rerender: () => render(), update: () => update(), sim: (name, t1, step = 1 / 60) => { const M = models[sex]; for (let t = 0; t <= t1 + 1e-9; t += step) { mvPoseAt(M, name, t); M.root.updateMatrixWorld(true); clothUpdate(M, step); accUpdate(M, step); } return M; }, setSex: s => document.querySelector(`#top [data-sex="${s}"]`).click(), setTab: t => { tab = t; render(); }, setPose: p => { pose = p; applyPose(models[sex], p); } };
+// 開發用：同一個角色套幾組不同外觀設定，把頭部特寫並排畫成一張（調臉用）。vs＝[{ 路徑: 值 }]，例如 { 'face.eye.y': -0.3, 'fshape.vline': 0.6 }
+window.__real.faceShot = (vs, yaw = 0.35, who = sex) => {
+  const M = models[who], L = look[who], W = 360, H = 400;
+  const get = (o, k) => k.split('.').reduce((a, x) => a[x], o), set = (o, k, v) => { const ks = k.split('.'), last = ks.pop(); ks.reduce((a, x) => a[x], o)[last] = v; };
+  const cv = document.createElement('canvas'); cv.width = W * vs.length; cv.height = H; const g = cv.getContext('2d');
+  const old = renderer.getSize(new THREE.Vector2()), oa = cam.aspect; renderer.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix();
+  vs.forEach((v, i) => {
+    const bak = {}; for (const k in v) { const o = get(L, k); bak[k] = o === undefined ? undefined : JSON.parse(JSON.stringify(o)); set(L, k, v[k]); }
+    applyLook(M, L); M.root.updateMatrixWorld(true);
+    const h = wpos(M.bones.head, new THREE.Vector3()); const tg = h.clone().add(new THREE.Vector3(0, 0.07, 0));
+    cam.position.copy(tg).add(new THREE.Vector3(Math.sin(yaw) * 0.75, 0.02, Math.cos(yaw) * 0.75)); cam.lookAt(tg);
+    renderer.render(scene, cam); g.drawImage(renderer.domElement, 0, 0, W, H, i * W, 0, W, H);
+    g.fillStyle = '#000'; g.font = '18px sans-serif'; g.fillText(String(i + 1), i * W + 8, 22);
+    for (const k in bak) set(L, k, bak[k]);
+  });
+  applyLook(M, L); renderer.setSize(old.x, old.y, false); cam.aspect = oa; cam.updateProjectionMatrix();
+  let im = document.getElementById('__sh'); if (!im) { im = document.createElement('img'); im.id = '__sh'; im.style.cssText = 'position:fixed;left:0;top:0;width:100vw;z-index:99;background:#fff'; document.body.appendChild(im); }
+  im.src = cv.toDataURL(); return 'ok';
+};
+// 開發用：把某個動作的幾個時間點畫成一排連續格（檢查動作用）。cp＝相機位置、tg＝看哪裡
+window.__real.sheet = (k, ts, cp = [6.5, 1.5, 0.6], tg = [0, 1.25, 0.6], who = sex) => {
+  const M = models[who]; MV.name = null; const W = 300, H = 420;
+  const cv = document.createElement('canvas'); cv.width = W * ts.length; cv.height = H; const g = cv.getContext('2d');
+  const old = renderer.getSize(new THREE.Vector2()), oa = cam.aspect;
+  renderer.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); cam.position.set(...cp); cam.lookAt(new THREE.Vector3(...tg));
+  ts.forEach((t, i) => { mvPoseAt(M, k, t); if (MOVES[k].flow) legsAboveFloor(M); if (typeof serveBall === 'function') serveBall(k === 'jumpserve' ? M : null, t); M.root.updateMatrixWorld(true); renderer.render(scene, cam); g.drawImage(renderer.domElement, 0, 0, W, H, i * W, 0, W, H); g.fillStyle = '#000'; g.font = '20px sans-serif'; g.fillText(t.toFixed(2), i * W + 8, 24); });
+  renderer.setSize(old.x, old.y, false); cam.aspect = oa; cam.updateProjectionMatrix();
+  let im = document.getElementById('__sh'); if (!im) { im = document.createElement('img'); im.id = '__sh'; im.style.cssText = 'position:fixed;left:0;top:0;width:100vw;z-index:99;background:#fff'; document.body.appendChild(im); }
+  im.src = cv.toDataURL(); return 'ok';
+};
+// ---------- 動作預覽模式：avatar-real.html?moves ----------
+if (new URLSearchParams(location.search).has('moves')) {
+  document.title = '動作預覽';
+  document.getElementById('panel').style.display = 'none';
+  for (const id of ['spin', 'handcam']) document.getElementById(id).style.display = 'none';
+  const DESC = { bumpL: '球在左邊：上身轉向左、右肩低左肩高、左腳往旁邊跨（遊戲同規則）', bumpR: '球在右邊：上身轉向右、左肩低右肩高、右腳往旁邊跨（遊戲同規則）', rollL: '左腳往旁邊大跨步蹲低 → 坐到左屁股、手往球伸 → 往後滾仰躺 → 從左肩翻過去 → 跪起站起', rollR: '右腳往旁邊大跨步蹲低 → 坐到右屁股、手往球伸 → 往後滾仰躺 → 從右肩翻過去 → 跪起站起', bump: '準備 → 雙手合成平台（定案手型）→ 膝蓋往上送 → 回準備', crouch: '準備 → 蹲低（腳張開、上身前傾）→ 停住 → 站起來', crouchBump: '蹲著 → 合手成平台 → 往上送 → 回蹲姿', set: '手在額頭前 → 蹲 → 往上推 → 手腕往外翻（球送出去）', spike: '助跑左 → 右（大步）→ 左（小步）→ 起跳 → 空中拉弓 → 手肘帶揮臂 → 落地', block: '手在肩前 → 蹲 → 跳起雙手往上往前伸 → 落地',
+    dive: '一腳往前跨、弓箭步壓低胸口貼大腿 → 往前跳 → 雙手先接球 → 手肘著地 → 胸口 → 腰髖 → 大腿 → 撐起', backset: '舉球姿勢 → 後仰把球往後推', spin: '蹲 → 起跳空中轉一圈握拳 → 落地', jumpserve: '拿球 → 拋球 → 助跑起跳 → 空中揮臂 → 落地' };
+  const css = document.createElement('style');
+  css.textContent = `#mvp{position:absolute;left:12px;right:12px;bottom:12px;background:#fffffff2;border-radius:16px;box-shadow:0 6px 24px #0002;padding:12px 14px;font-size:14px;color:#1d2733}
+    #mvp .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0}
+    #mvp button{border:0;border-radius:999px;padding:8px 14px;background:#EEF1F5;font-size:14px;cursor:pointer;color:#1d2733}
+    #mvp button.on{background:#2F6FEB;color:#fff}
+    #mvp input[type=range]{flex:1;min-width:160px}
+    #mvp .lab{color:#6B7785;font-size:12px;min-width:44px}
+    #mvp .desc{color:#475260;font-size:13px;margin:2px 0 6px}`;
+  document.head.appendChild(css);
+  const box = document.createElement('div'); box.id = 'mvp'; document.body.appendChild(box);
+  const mk = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); kids.forEach(k => e.append(k)); return e; };
+  const CAMS = { 斜前: [4.4, 1.9, 5.0], 正面: [0, 1.6, 6.4], 側面: [6.6, 1.5, 0], 背面: [0, 1.8, -6.2], 俯視: [1.6, 6.8, 3.2] }, TY = 0.55;   /* TY：鏡頭看的高度（低一點，人才會在控制面板上方） */
+  let camName = '斜前', follow = true;
+  const keysBtns = mk('div', { className: 'row' }), info = mk('div', { className: 'desc' });
+  const playBtn = mk('button', { textContent: '暫停' });
+  const tl = mk('input', { type: 'range', min: 0, max: 1000, value: 0 }), tlab = mk('span', { className: 'lab', textContent: '0.00 秒' });
+  const sp = mk('div', { className: 'row' }), cams = mk('div', { className: 'row' });
+  const setCam = () => { const c = CAMS[camName], M = models[sex], P = M ? wpos(M.bones.pelvis, new THREE.Vector3()) : new THREE.Vector3(0, 1, 0);
+    const T = follow ? new THREE.Vector3(P.x, TY, P.z) : new THREE.Vector3(0, TY, 0.4); ctl.target.copy(T); cam.position.set(T.x + c[0], c[1], T.z + c[2]); ctl.update(); };
+  const pick = k => { MV.name = k; MV.t = 0; MV.paused = false; draw(); setCam(); };
+  function draw() {
+    keysBtns.replaceChildren(...Object.entries(MOVES).map(([k, m]) => mk('button', { className: MV.name === k ? 'on' : '', textContent: m.n, onclick: () => pick(k) })));
+    info.textContent = MV.name ? MOVES[MV.name].n + '：' + (DESC[MV.name] || '') : '';
+    playBtn.textContent = MV.paused ? '播放' : '暫停';
+    sp.replaceChildren(mk('span', { className: 'lab', textContent: '速度' }), ...[0.25, 0.5, 1, 1.5].map(v => mk('button', { className: MV.speed === v ? 'on' : '', textContent: v + 'x', onclick: () => { MV.speed = v; draw(); } })),
+      mk('button', { textContent: '上一格', onclick: () => { MV.paused = true; MV.t = Math.max(0, MV.t - 1 / 30); draw(); } }),
+      mk('button', { textContent: '下一格', onclick: () => { MV.paused = true; MV.t += 1 / 30; draw(); } }));
+    cams.replaceChildren(mk('span', { className: 'lab', textContent: '鏡頭' }), ...Object.keys(CAMS).map(n => mk('button', { className: camName === n ? 'on' : '', textContent: n, onclick: () => { camName = n; draw(); setCam(); } })),
+      mk('button', { className: follow ? 'on' : '', textContent: '跟著人', onclick: () => { follow = !follow; draw(); setCam(); } }));
+  }
+  playBtn.onclick = () => { MV.paused = !MV.paused; draw(); };
+  tl.oninput = () => { if (!MV.name) return; MV.paused = true; MV.t = tl.value / 1000 * mvDurOf(models[sex], MV.name); draw(); };
+  const heads = mk('div', { className: 'row' });
+  const hairs = mk('div', { className: 'row' });
+  const drawHeads = () => { const L = look[sex], H = VROID_HEADS[sex];
+    heads.replaceChildren(mk('span', { className: 'lab', textContent: '臉型' }), ...H.map((h, i) => [h.fn, i]).filter(x => x[0]).map(([t, i]) => mk('button', { className: L.vhead === i ? 'on' : '', textContent: t, onclick: () => { L.vhead = i; update(); drawHeads(); } })));
+    hairs.replaceChildren(mk('span', { className: 'lab', textContent: '髮型' }), ...H.map((h, i) => mk('button', { className: (L.vhair ?? L.vhead) === i ? 'on' : '', textContent: h.n, onclick: () => { L.vhair = i; update(); drawHeads(); } }))); };
+  drawHeads(); document.querySelectorAll('#top [data-sex]').forEach(b => b.addEventListener('click', () => setTimeout(drawHeads, 60)));
+  box.append(keysBtns, info, mk('div', { className: 'row' }, [playBtn, tl, tlab]), sp, cams, heads, hairs);
+  MV.onFrame = (M, T) => {
+    const t = ((MV.t % T) + T) % T;
+    if (document.activeElement !== tl) tl.value = Math.round(t / T * 1000);
+    tlab.textContent = t.toFixed(2) + ' 秒';
+    if (follow) { const P = wpos(M.bones.pelvis, new THREE.Vector3()), want = new THREE.Vector3(P.x, TY, P.z), c = CAMS[camName];
+      ctl.target.lerp(want, 0.08); cam.position.lerp(new THREE.Vector3(ctl.target.x + c[0], c[1], ctl.target.z + c[2]), 0.08); }
+  };
+  document.querySelectorAll('#top [data-sex]').forEach(b => b.addEventListener('click', () => setTimeout(() => { if (MV.name) setCam(); }, 50)));
+  draw(); pick('spike');
+}
+// 跳發球預覽的球：左手拿球 → 拋起（真實重力）→ 起跳最高、手伸最高時剛好落到右手被扣 → 往前下方飛出去（＝剛好在完美時機扣到）
+const SERVE = { toss: 0.45, hit: SPIKE_HIT + JS_OFF, cache: {} };   // 擊球＝扣球的擊球格＋ JS_OFF
+{ const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#F2C230'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#2B55B5'; for (let i = 0; i < 3; i++) g.fillRect(i * 86 + 22, 0, 32, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  SERVE.ball = new THREE.Mesh(new THREE.SphereGeometry(0.105, 24, 16), new THREE.MeshToonMaterial({ map: t, gradientMap: TOON_RAMP }));
+  SERVE.ball.castShadow = true; SERVE.ball.visible = false; scene.add(SERVE.ball); }
+function serveBall(M, t) {
+  const B = SERVE.ball; if (!M) { B.visible = false; return; }
+  const P = n => wpos(M.bones[n], new THREE.Vector3());
+  let C = SERVE.cache[M.sx];
+  if (!C) {   // 拋出點（左手）、擊球點（右手掌前上方）→ 反推拋球初速
+    mvPoseAt(M, 'jumpserve', SERVE.toss); const p0 = P('middle_01_l'); p0.y += 0.09;
+    mvPoseAt(M, 'jumpserve', SERVE.hit); const F = mvFrame(M); const p1 = P('middle_01_r').addScaledVector(F.up, 0.05).addScaledVector(F.fwd, 0.1);
+    const T = SERVE.hit - SERVE.toss, v0 = p1.clone().sub(p0).multiplyScalar(1 / T); v0.y += 0.5 * 9.8 * T;
+    C = SERVE.cache[M.sx] = { p0, p1, v0, fwd: V(Math.sin(M.yaw0 || 0), 0, Math.cos(M.yaw0 || 0)) };
+    mvPoseAt(M, 'jumpserve', t);
+  }
+  const T = mvDurOf(M, 'jumpserve'), u = ((t % T) + T) % T;
+  B.visible = true; B.rotation.x += 0.15;
+  if (u < SERVE.toss) { B.position.copy(P('middle_01_l')); B.position.y += 0.09; }
+  else if (u < SERVE.hit) { const d = u - SERVE.toss; B.position.copy(C.p0).addScaledVector(C.v0, d); B.position.y -= 4.9 * d * d; }
+  else { const d = u - SERVE.hit; if (d > 0.45) { B.visible = false; return; } B.position.copy(C.p1).addScaledVector(C.fwd, 22 * d); B.position.y += -3 * d - 4.9 * d * d; }
+}
+window.__real.serve = SERVE; window.__SERVE = SERVE;
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  const sdt = MV.name ? (MV.paused ? 0 : dt * MV.speed) : dt;   /* 衣服、項鍊的物理用動作的時間（暫停就不動） */
+  if (spin && !MV.name) for (const k in models) models[k].root.rotation.y += dt * 0.6;
+  if (MV.name) { if (!MV.paused) MV.t += dt * MV.speed; const M = models[sex]; mvPoseAt(M, MV.name, MV.t); if (MOVES[MV.name].flow) legsAboveFloor(M); serveBall(MV.name === 'jumpserve' ? M : null, MV.t); if (MV.onFrame) MV.onFrame(M, mvDurOf(M, MV.name)); }
+  { const M = models[sex]; if (M) { M.root.updateMatrixWorld(true); clothUpdate(M, sdt); accUpdate(M, sdt); } }
+  ctl.update(); renderer.render(scene, cam);
+});
+</script>
+</body></html>

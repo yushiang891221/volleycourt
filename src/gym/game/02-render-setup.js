@@ -97,7 +97,7 @@ function lensUpdate() {
 }
 composer.addPass(new OutputPass());
 composer.addPass(smaa);
-function renderScene() { composer.render(); }
+function renderScene() { realSync(); composer.render(); }
 // 泛光效果開關（系統設定 → 畫面）：關掉＝亮處不暈開，畫面比較清楚、不會濛濛的
 const applyBloom = () => { bloom.enabled = VBSettings.values.bloom !== false; if (window.wakeRender) window.wakeRender(300); };
 applyBloom(); addEventListener('vb-settings-change', applyBloom);

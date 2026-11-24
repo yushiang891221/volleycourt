@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(root, 'js/auth.js'), 'utf8').replace(
   "import { SUPABASE_URL, SUPABASE_ANON_KEY } from './auth-config.js';",
   "const SUPABASE_URL = '', SUPABASE_ANON_KEY = '';"
 );
-const look = 't201010100010';
+const look = 'r101010101010';   // 2026-11-24 起外觀只認新角色代碼（r1）
 function fake(profile = { id: 'A', nickname: null, appearance: null }) {
   const state = { profile: { ...profile }, updates: [], signedIn: true, fail: false, oauth: null };
   return { state, client: {
@@ -50,6 +50,8 @@ function fake(profile = { id: 'A', nickname: null, appearance: null }) {
   }
   assert.equal(auth.validAppearance(look), true);
   assert.equal(auth.validAppearance('legacy'), false);
+  assert.equal(auth.validAppearance('t201010100010'), false);   // 舊公仔代碼：要重新建角色
+  assert.equal(auth.profileStep({ nickname: '球友', appearance: 't201010100010' }), 'creator');
   assert.deepEqual(auth.migrationPatch({ id: 'A', nickname: '雲端', appearance: look }, { nickname: '本機', appearance: look }), {});
   assert.deepEqual(auth.migrationPatch({ id: 'A' }, { owner: 'B', nickname: '乙方', appearance: look }), {});
   assert.deepEqual(auth.migrationPatch({ id: 'A' }, { nickname: 'x', appearance: 'old' }), {});

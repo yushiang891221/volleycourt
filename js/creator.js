@@ -1,26 +1,35 @@
-// 捏臉畫面：建帳號時第一次進來、之後從「角色資訊 → 調整外觀」進來。
+// 建角色畫面（2026-11-24 起是新角色：寫實身體＋日系頭）：建帳號、舊角色要重建時進來，之後從「角色資訊 → 調整外觀」進來。
 // openCreator({ look, background, mode: 'create' | 'edit', onDone(look), onCancel() }) → 回傳 close()。
+//   look／onDone 的 look 都是 decodeLook() 的格式（look.real＝新角色外觀），存檔用 saveLook(look) 會變成 r1 代碼。
 // 左邊：排球場上的角色（可以拖曳轉身、滾輪拉近）；右邊：部位格子 → 樣式格子，直接點選。
+// 人物：看不見的公仔骨架擺姿勢，新角色跟著它（js/avatar-real.js），縮成跟以前公仔差不多高，鏡頭、背景照片不用改。
 import * as THREE from 'three';
-import { preloadAvatars, makeToyAvatar, OPTIONS, DEFAULT_LOOK, KITS, EXPRESSIONS, PREVIEW_POSES, applyStaticPose, setExpression, randomLook } from './avatar-toy.js';
+import { preloadAvatars, KITS, PREVIEW_POSES, applyStaticPose, lookFromReal } from './avatar-toy.js';
+import { preloadReal, makePlayer, syncReal, realReadyOf } from './avatar-real.js';
+import { REAL_OPTIONS, REAL_DEFAULT, faceList, hairList, normReal, randomReal } from './real-look.js';
 
 const CATS = [
   { k: 'sex', name: '性別', shot: 'bust' },
-  { k: 'skin', name: '膚色', swatch: true, shot: 'head', names: ['很淺', '淺', '自然', '小麥', '深', '很深'] },
+  { k: 'face', name: '臉型', shot: 'face' },
   { k: 'hair', name: '髮型', shot: 'head' },
-  { k: 'hairColor', name: '髮色', swatch: true, shot: 'head', names: ['黑', '深棕', '棕', '金', '紅', '灰'] },
-  { k: 'eyes', name: '眼睛', shot: 'face' },
-  { k: 'pants', name: '褲子', shot: 'legs' },
-  { k: 'shoe', name: '球鞋', swatch: true, shot: 'shoe', names: ['紅', '白', '黑', '藍'] },
+  { k: 'hairColor', name: '髮色', swatch: true, shot: 'head', names: ['黑', '深棕', '棕', '淺棕', '金棕', '金', '灰', '紅', '藍', '粉紅'] },
+  { k: 'skin', name: '膚色', swatch: true, shot: 'head', names: ['很淺', '淺', '自然', '小麥', '深', '很深', '淺粉', '淺小麥'] },
+  { k: 'eyeColor', name: '瞳孔', swatch: true, shot: 'face', names: ['棕', '深棕', '琥珀', '灰', '藍', '綠', '紅', '紫'] },
+  { k: 'knee', name: '護膝', shot: 'legs' },
+  { k: 'sock', name: '襪子', shot: 'legs' },
+  { k: 'sockColor', name: '襪子顏色', swatch: true, shot: 'legs', names: ['白', '黑', '紅', '藍', '橘'] },
   { k: 'num', name: '背號', shot: 'back' },
   { k: 'preview', name: '預覽', shot: 'full' },
 ];
-// 鏡頭：[相機位置, 看的點]（角色站在原點、面向 +z）
+const OPTS = { sex: REAL_OPTIONS.sex, knee: REAL_OPTIONS.knee, sock: REAL_OPTIONS.sock };
+// 鏡頭：[相機位置, 看的點]（角色站在原點、面向 +z；新角色縮成約 1.45 公尺高，頭在 1.4）
 const SHOTS = {
-  full: [[0, 1.1, 4.2], [0, 0.85, 0]], head: [[0.45, 1.45, 1.35], [0, 1.4, 0]], face: [[0.12, 1.36, 0.95], [0, 1.34, 0]],
-  bust: [[0.5, 1.2, 2.2], [0, 1.12, 0]], torso: [[0.6, 0.95, 1.9], [0, 0.88, 0]], legs: [[0.55, 0.5, 1.75], [0, 0.42, 0]],
-  shoe: [[0.55, 0.28, 0.95], [0, 0.07, 0.05]], back: [[-0.4, 1.0, -2.2], [0, 0.9, 0]],
+  full: [[0, 1.1, 4.2], [0, 0.85, 0]], head: [[0.45, 1.5, 1.4], [0, 1.43, 0]], face: [[0.12, 1.45, 0.9], [0, 1.44, 0]],
+  bust: [[0.5, 1.3, 2.3], [0, 1.2, 0]], torso: [[0.6, 1.05, 2.0], [0, 0.98, 0]], legs: [[0.55, 0.45, 1.6], [0, 0.32, 0]],
+  shoe: [[0.55, 0.28, 0.95], [0, 0.07, 0.05]], back: [[-0.4, 1.05, -2.4], [0, 0.95, 0]],
 };
+// 女生比較矮（174 比 188）：鏡頭高度跟著降（全身照不變，跟背景照片對齊）
+const shotFor = (key, sex) => { const [p, t] = SHOTS[key], k = sex && key !== 'full' ? 0.925 : 1; return [[p[0], p[1] * k, p[2]], [t[0], t[1] * k, t[2]]]; };
 
 const CSS = `
 .cc{position:fixed;inset:0;z-index:50;display:flex;font:15px "Microsoft JhengHei","PingFang TC",sans-serif;color:#3B2A1E;background:#E8DCCB;user-select:none}
@@ -99,30 +108,37 @@ function lights(scene, shadow) {
   scene.add(sun); const fill = new THREE.DirectionalLight(shadow ? '#E8EEFC' : '#FFE6CC', 0.8); fill.position.set(-3, 2, 3); scene.add(fill);
 }
 
-// ---------- 格子縮圖：離屏畫一次，存成圖片 ----------
-class Thumbs {   // 用主畫面的畫布畫縮圖（只開一個 3D 畫布），畫完複製到小圖
+// ---------- 格子縮圖：離屏畫一次，存成圖片（新角色的頭是另外載的，要等它好了才拍） ----------
+class Thumbs {   // 用主畫面的畫布畫縮圖（只開一個 3D 畫布），畫完複製到小圖；一張一張排隊畫
   constructor(renderer) {
     this.r = renderer; this.S = 192; this.c = document.createElement('canvas'); this.c.width = this.c.height = this.S; this.x = this.c.getContext('2d');
-    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#F4ECE1'); lights(this.scene, false); this.cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); this.cache = new Map();
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#F4ECE1'); lights(this.scene, false); this.cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); this.cache = new Map(); this.q = Promise.resolve();
   }
   shot(look, kit, shotKey, pose) {
     const key = JSON.stringify([look, kit, shotKey, pose || '']); if (this.cache.has(key)) return this.cache.get(key);
-    const av = makeToyAvatar(look, kit); applyStaticPose(av, PREVIEW_POSES[pose || 'idle']); this.scene.add(av.g);
-    const [p, t] = SHOTS[shotKey]; this.cam.position.set(...p); this.cam.lookAt(...t);
-    const r = this.r, dpr = r.getPixelRatio(), S = this.S, sz = r.getSize(new THREE.Vector2());
-    const small = r.domElement.width < S || r.domElement.height < S;   // 視窗太小（最小化、隱藏）時先把畫布撐開，不然複製會出錯
-    if (small) r.setSize(Math.max(sz.x, S / dpr), Math.max(sz.y, S / dpr), false);
-    r.setScissorTest(true); r.setViewport(0, 0, S / dpr, S / dpr); r.setScissor(0, 0, S / dpr, S / dpr);
-    r.render(this.scene, this.cam);
-    this.x.clearRect(0, 0, S, S); this.x.drawImage(r.domElement, 0, r.domElement.height - S, S, S, 0, 0, S, S);
-    r.setScissorTest(false); if (small) r.setSize(sz.x, sz.y, false); r.setViewport(0, 0, sz.x, sz.y);
-    const url = this.c.toDataURL('image/png'); this.scene.remove(av.g); this.cache.set(key, url); return url;
+    const job = this.q.then(async () => {
+      const av = makePlayer(lookFromReal(look), kit); applyStaticPose(av, PREVIEW_POSES[pose || 'idle']); this.scene.add(av.g);
+      syncReal(av); await realReadyOf(av); syncReal(av);
+      const [p, t] = shotFor(shotKey, look.sex); this.cam.position.set(...p); this.cam.lookAt(...t);
+      const r = this.r, dpr = r.getPixelRatio(), S = this.S, sz = r.getSize(new THREE.Vector2());
+      const small = r.domElement.width < S || r.domElement.height < S;   // 視窗太小（最小化、隱藏）時先把畫布撐開，不然複製會出錯
+      if (small) r.setSize(Math.max(sz.x, S / dpr), Math.max(sz.y, S / dpr), false);
+      r.setScissorTest(true); r.setViewport(0, 0, S / dpr, S / dpr); r.setScissor(0, 0, S / dpr, S / dpr);
+      r.render(this.scene, this.cam);
+      this.x.clearRect(0, 0, S, S); this.x.drawImage(r.domElement, 0, r.domElement.height - S, S, S, 0, 0, S, S);
+      r.setScissorTest(false); if (small) r.setSize(sz.x, sz.y, false); r.setViewport(0, 0, sz.x, sz.y);
+      this.scene.remove(av.g); return this.c.toDataURL('image/png');
+    });
+    this.q = job.catch(() => {}); this.cache.set(key, job); return job;
   }
   dispose() {}
 }
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const img = (url, cls = '') => { const i = document.createElement('img'); i.src = BLANK; if (cls) i.className = cls; url.then((u) => { i.src = u; }, () => {}); return i; };
 
-export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/creator-bg.jpg', mode = 'create', onDone, onCancel } = {}) {
-  let L = { ...DEFAULT_LOOK, ...look }, kit = 'orange', pose = 'idle', expr = '', cat = 'hair', av = null, yaw = 0.35, zoom = 0;
+export function openCreator({ look = null, background = 'assets/img/creator-bg.jpg', mode = 'create', onDone, onCancel } = {}) {
+  let L = normReal(look && look.real ? { ...look.real, num: look.num ?? look.real.num } : { ...REAL_DEFAULT, sex: look && look.sex ? 1 : 0, num: look && look.num != null ? look.num : REAL_DEFAULT.num });
+  let kit = 'orange', pose = 'idle', cat = 'face', av = null, yaw = 0.35, zoom = 0;
   if (!document.getElementById('cc-css')) { const st = document.createElement('style'); st.id = 'cc-css'; st.textContent = CSS; document.head.appendChild(st); }
   const root = document.createElement('div'); root.className = 'cc';
   root.innerHTML = `<div class="cc-stage"><div class="cc-title">${mode === 'create' ? '建立你的角色' : '調整外觀'}</div><div class="cc-tip">拖曳可以轉動角色・滾輪拉近</div></div>
@@ -140,25 +156,18 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
   const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.25 }));
   shadowFloor.rotation.x = -Math.PI / 2; shadowFloor.receiveShadow = true; scene.add(shadowFloor);
   const backgroundImage = new Image();
-  backgroundImage.onload = () => {
-    if (!root.isConnected) return;
-    stage.style.backgroundImage = `url(${JSON.stringify(backgroundImage.src)})`;
-    stage.dataset.background = 'photo';
-  };
+  backgroundImage.onload = () => { if (!root.isConnected) return; stage.style.backgroundImage = `url(${JSON.stringify(backgroundImage.src)})`; stage.dataset.background = 'photo'; };
   backgroundImage.onerror = () => {
     if (!root.isConnected) return;
-    stage.dataset.background = 'fallback';
-    scene.remove(shadowFloor);
-    scene.background = new THREE.Color('#E8DCCB'); scene.fog = new THREE.Fog('#E8DCCB', 12, 30);
-    buildCourt(scene);
+    stage.dataset.background = 'fallback'; scene.remove(shadowFloor);
+    scene.background = new THREE.Color('#E8DCCB'); scene.fog = new THREE.Fog('#E8DCCB', 12, 30); buildCourt(scene);
   };
   backgroundImage.src = background || '';
   const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 60);
   const resize = () => { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   const ro = new ResizeObserver(resize); ro.observe(stage); resize();
   const thumbs = new Thumbs(renderer);
-  // 所有主舞台鏡頭沿用拍照位置，以同一個裁切窗同步放大照片與 3D。
-  // 保留 SHOTS 給格子縮圖，避免改動格子呈現。
+  // 所有主舞台鏡頭沿用拍照位置，以同一個裁切窗同步放大照片與 3D
   const photoCamera = new THREE.PerspectiveCamera(32, 16 / 9, 0.05, 60);
   photoCamera.position.set(...SHOTS.full[0]); photoCamera.lookAt(...SHOTS.full[1]); photoCamera.updateMatrixWorld();
   const focus = new THREE.Vector3();
@@ -166,8 +175,8 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
 
   const rebuild = () => {
     if (av) scene.remove(av.g);
-    av = makeToyAvatar(L, kit); applyStaticPose(av, PREVIEW_POSES[pose]); if (expr) setExpression(av, expr);
-    av.g.traverse((o) => { if (o.isMesh) o.castShadow = true; }); scene.add(av.g);
+    av = makePlayer(lookFromReal(L), kit); applyStaticPose(av, PREVIEW_POSES[pose]);
+    av.g.traverse((o) => { if (o.isMesh && o.visible) o.castShadow = true; }); scene.add(av.g);
   };
   const shotOf = () => (zoom > 0.5 ? 'head' : CATS.find((c) => c.k === cat).shot);
   // 拖曳轉身、滾輪拉近
@@ -177,35 +186,32 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
   renderer.domElement.addEventListener('pointerup', () => (drag = null));
   renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); zoom = Math.max(0, Math.min(1, zoom + (e.deltaY < 0 ? 0.5 : -0.5))); }, { passive: false });
 
-  const set = (k, v) => { L[k] = v; if (k === 'pants' && v === 1) L.knee = 2; if (k === 'sex' && (L.hair >= 4) !== !!v) L.hair = (L.hair % 4) + (v ? 4 : 0); rebuild(); drawCats(); drawGrid(); };   /* 換性別時髮型換到同性別同位置 */
+  const set = (k, v) => { L = normReal({ ...L, [k]: v }); rebuild(); drawCats(); drawGrid(); };   /* 換性別時臉型、髮型自動換成那個性別有的 */
   function cellsFor(c) {
-    const out = [], base = { ...L };
-    if (c.k === 'preview') return null;
-    const n = OPTIONS[c.k].length;
-    for (let i = 0; i < n; i++) {
-      if (c.k === 'hair' && (i >= 4) !== !!L.sex) continue;   /* 男生只列男髮型 0–3，女生只列 4–7 */
-      const lk = { ...base, [c.k]: i }; if (c.k === 'pants' && i === 1) lk.knee = 2; if (c.k === 'sex' && (lk.hair >= 4) !== !!i) lk.hair = (lk.hair % 4) + (i ? 4 : 0);   /* 性別縮圖用該性別的髮型 */
-      out.push({ i, label: c.names ? c.names[i] : OPTIONS[c.k][i], color: c.swatch ? OPTIONS[c.k][i] : null, img: c.swatch ? null : () => thumbs.shot(lk, kit, c.shot === 'bust' ? 'bust' : c.k === 'eyes' ? 'face' : c.shot), off: c.k === 'knee' && L.pants === 1 && i !== 2 });
-    }
-    return out;
+    if (c.k === 'preview' || c.k === 'num') return null;
+    const list = c.k === 'face' ? faceList(L.sex) : c.k === 'hair' ? hairList(L.sex) : (c.swatch ? REAL_OPTIONS[c.k] : OPTS[c.k]).map((n, i) => [n, i]);
+    return list.map(([label, i]) => {
+      const lk = normReal({ ...L, [c.k]: i });
+      return { i, label: c.swatch ? c.names[i] : label, color: c.swatch ? REAL_OPTIONS[c.k][i] : null, img: c.swatch ? null : () => thumbs.shot(lk, kit, c.shot), off: c.k === 'sockColor' && !L.sock };
+    });
   }
   function drawCats() {
     catsEl.innerHTML = '';
     for (const c of CATS) {
       const el = document.createElement('div'); el.className = 'cc-cat' + (c.k === cat ? ' on' : '');
-      let ic;
-      if (c.k === 'num') ic = `<div class="ic">${L.num}</div>`;
-      else if (c.k === 'preview') ic = `<div class="ic">▶</div>`;
-      else if (c.swatch) ic = `<div class="ic"><div style="width:30px;height:30px;border-radius:50%;background:${OPTIONS[c.k][L[c.k]]};box-shadow:inset 0 -4px 8px #0002"></div></div>`;
-      else ic = `<img src="${thumbs.shot(L, kit, c.k === 'eyes' ? 'face' : c.shot)}">`;
-      el.innerHTML = ic + c.name; el.onclick = () => { cat = c.k; zoom = 0; drawCats(); drawGrid(); };
+      if (c.k === 'num') el.innerHTML = `<div class="ic">${L.num}</div>`;
+      else if (c.k === 'preview') el.innerHTML = `<div class="ic">▶</div>`;
+      else if (c.swatch) el.innerHTML = `<div class="ic"><div style="width:30px;height:30px;border-radius:50%;background:${REAL_OPTIONS[c.k][L[c.k]]};box-shadow:inset 0 -4px 8px #0002"></div></div>`;
+      else el.appendChild(img(thumbs.shot(L, kit, c.shot)));
+      el.append(c.name); el.onclick = () => { cat = c.k; zoom = 0; drawCats(); drawGrid(); };
       catsEl.appendChild(el);
     }
   }
-  function cell(html, on, onclick, off) { const el = document.createElement('div'); el.className = 'cc-opt' + (on ? ' on' : '') + (off ? ' off' : ''); el.innerHTML = html; el.onclick = onclick; gridEl.appendChild(el); return el; }
+  function cell(content, on, onclick, off) { const el = document.createElement('div'); el.className = 'cc-opt' + (on ? ' on' : '') + (off ? ' off' : ''); if (typeof content === 'string') el.innerHTML = content; else el.append(...content); el.onclick = onclick; gridEl.appendChild(el); return el; }
+  const label = (t) => { const s = document.createElement('span'); s.textContent = t; return s; };
   function drawGrid() {
     const c = CATS.find((x) => x.k === cat); gridEl.innerHTML = '';
-    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換表情、動作' : c.k === 'knee' && L.pants === 1 ? '穿長褲時不戴護膝' : ''}</small>`;
+    hEl.innerHTML = `${c.name}<small>${c.k === 'preview' ? '遊戲中按 T 換動作' : c.k === 'face' ? '臉的五官是固定的，髮型另外選' : c.k === 'sockColor' && !L.sock ? '沒穿襪子' : ''}</small>`;
     if (c.k === 'num') {
       const box = document.createElement('div'); box.className = 'cc-num';
       box.innerHTML = `<div class="big">${L.num}</div><div class="cc-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '清除', 0, '⌫'].map((d) => `<b data-d="${d}">${d}</b>`).join('')}</div><div class="cc-sub">背號 0～99，印在球衣前後</div>`;
@@ -217,23 +223,21 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
     if (c.k === 'preview') {
       const sub = (t) => { const d = document.createElement('div'); d.className = 'cc-sub'; d.textContent = t; gridEl.appendChild(d); };
       sub('隊服（開賽時自動分配，這裡只是看看）');
-      for (const k in KITS) cell(`<img src="${thumbs.shot(L, k, 'torso')}"><span>${KITS[k].name}</span>`, kit === k, () => { kit = k; rebuild(); drawCats(); drawGrid(); });
-      sub('表情');
-      for (const k in EXPRESSIONS) cell(`<div class="tx">${{ '': '•‿•', happy: '^ ^', focus: '•_•', strain: '&gt; &lt;', sad: 'T T', wow: 'o o' }[k]}</div><span>${EXPRESSIONS[k].replace(/[<>]/g, '').trim()}</span>`, expr === k, () => { expr = k; rebuild(); drawGrid(); });
+      for (const k in KITS) cell([img(thumbs.shot(L, k, 'torso')), label(KITS[k].name)], kit === k, () => { kit = k; rebuild(); drawCats(); drawGrid(); });
       sub('動作');
-      for (const k in PREVIEW_POSES) cell(`<img src="${thumbs.shot(L, kit, 'full', k)}"><span>${PREVIEW_POSES[k].name}</span>`, pose === k, () => { pose = k; rebuild(); drawGrid(); });
+      for (const k in PREVIEW_POSES) cell([img(thumbs.shot(L, kit, 'full', k)), label(PREVIEW_POSES[k].name)], pose === k, () => { pose = k; rebuild(); drawGrid(); });
       return;
     }
-    for (const o of cellsFor(c)) cell(o.color ? `<div class="sw" style="background:${o.color}"></div><span>${o.label}</span>` : `<img src="${o.img()}"><span>${o.label}</span>`, L[c.k] === o.i, () => set(c.k, o.i), o.off);
+    for (const o of cellsFor(c)) cell(o.color ? `<div class="sw" style="background:${o.color}"></div><span>${o.label}</span>` : [img(o.img()), label(o.label)], L[c.k] === o.i, () => set(c.k, o.i), o.off);
   }
-  root.querySelector('.cc-rand').onclick = () => { L = randomLook(Math.floor(Math.random() * 1e9)); rebuild(); drawCats(); drawGrid(); };
-  root.querySelector('.cc-done').onclick = () => { close(); onDone && onDone({ ...L }); };
+  root.querySelector('.cc-rand').onclick = () => { L = randomReal(Math.floor(Math.random() * 1e9)); rebuild(); drawCats(); drawGrid(); };
+  root.querySelector('.cc-done').onclick = () => { close(); onDone && onDone(lookFromReal(L)); };
   const cancel = root.querySelector('.cc-cancel'); if (cancel) cancel.onclick = () => { close(); onCancel && onCancel(); };
 
   const panel = root.querySelector('.cc-panel'); panel.inert = true;
   hEl.textContent = '角色載入中…';
   (async () => {
-    await preloadAvatars();
+    await preloadAvatars(); await preloadReal();
     if (!alive) return;
     rebuild(); drawCats(); drawGrid(); panel.inert = false;
   })();
@@ -242,7 +246,7 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
   (function loop(now) {
     if (!alive) return; requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000 || 0)); last = now;
-    const [p, t] = SHOTS[shotOf()], k = 1 - Math.exp(-dt * 6);
+    const [p, t] = shotFor(shotOf(), L.sex), k = 1 - Math.exp(-dt * 6);
     const shot = shotOf();
     const targetZoom = shot === 'full' ? 1 : 4.2 / Math.hypot(p[0] - t[0], p[1] - t[1], p[2] - t[2]);
     focus.set(...t).project(photoCamera);
@@ -255,11 +259,11 @@ export function openCreator({ look = DEFAULT_LOOK, background = 'assets/img/crea
     camera.setViewOffset(2560, 1440, ox, oy, w / scale, h / scale);
     stage.style.backgroundSize = `${2560 * scale}px ${1440 * scale}px`;
     stage.style.backgroundPosition = `${-ox * scale}px ${-oy * scale}px`;
-    if (av) { av.g.rotation.y += (yaw + (shot === 'back' ? Math.PI : 0) - av.g.rotation.y) * k; av.spine.rotation.z = Math.sin(now / 900) * 0.012; }
+    if (av) { av.g.rotation.y += (yaw + (shot === 'back' ? Math.PI : 0) - av.g.rotation.y) * k; av.spine.rotation.z = Math.sin(now / 900) * 0.012; syncReal(av, dt); }
     renderer.render(scene, camera);
   })(last);
 
-  window.__cc = { renderer, scene, camera, get av() { return av; } };
+  window.__cc = { renderer, scene, camera, get av() { return av; }, get look() { return L; } };
   function close() { alive = false; backgroundImage.onload = backgroundImage.onerror = null; shadowFloor.geometry.dispose(); shadowFloor.material.dispose(); ro.disconnect(); renderer.dispose(); thumbs.dispose(); root.remove(); }
   return close;
 }

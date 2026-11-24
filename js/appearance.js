@@ -1,5 +1,6 @@
 import { encodeLook, decodeLook, randomLook, decodeEquip, encodeEquip } from './avatar-toy.js';
 import { decodeJersey, CUTS, CUT_TOP } from './jersey.js';
+import { encodeReal, randomReal } from './real-look.js';
 
 export const LOOK_KEY = 'vb.settings.look';
 export const normalizeLook = code => encodeLook(decodeLook(code));
@@ -12,7 +13,8 @@ export function saveLook(look) {
   try { dispatchEvent(new Event('vb-look-change')); } catch {}   // 大廳角色卡重畫
   return code;
 }
-export const needsCreator = () => !readLook();
+// 2026-11-24 起換新角色：存的外觀不是新代碼（r1，舊的公仔是 t2）就要重新建角色
+export const needsCreator = () => !/^r1[0-9a-z]{9}\d{2}$/.test(readLook() || '');
 // 裝備（帽子、眼鏡、項鍊、護腕）：先存在這台電腦；護膝還是外觀的一部分
 export const EQUIP_KEY = 'vb.settings.equip';
 export function readEquip() { try { return decodeEquip(localStorage.getItem(EQUIP_KEY) || '') || {}; } catch { return {}; } }
@@ -84,5 +86,5 @@ export const teamKit = team => team === 1 ? 'blue' : 'orange';
 export function aiLook(id) {
   let seed = 0;
   for (const char of String(id)) seed = (Math.imul(seed, 31) + char.charCodeAt(0)) >>> 0;
-  return encodeLook(randomLook(seed));
+  return encodeReal(randomReal(seed));   // 電腦球員也是新角色
 }
