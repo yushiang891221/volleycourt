@@ -124,7 +124,7 @@ function poseHand(B, s, P) {
 // 公仔關節 → 新角色骨頭（世界方向照公仔轉，再乘站姿校正）
 const MAP = [['legs', 0, 'thigh_r'], ['knees', 0, 'calf_r'], ['feet', 0, 'foot_r'], ['legs', 1, 'thigh_l'], ['knees', 1, 'calf_l'], ['feet', 1, 'foot_l'],
   ['arms', 0, 'upperarm_r'], ['elbows', 0, 'lowerarm_r'], ['hands', 0, 'hand_r'], ['arms', 1, 'upperarm_l'], ['elbows', 1, 'lowerarm_l'], ['hands', 1, 'hand_l']];
-const FLOOR = [['pelvis', 0.12], ['spine_02', 0.12], ['spine_03', 0.13], ['head', 0.12], ['neck_01', 0.08], ['hand_l', 0.03], ['hand_r', 0.03], ['lowerarm_l', 0.04], ['lowerarm_r', 0.04], ['upperarm_l', 0.06], ['upperarm_r', 0.06], ['calf_l', 0.06], ['calf_r', 0.06]];
+const FLOOR = [['clavicle_l', 0.08], ['clavicle_r', 0.08], ['thigh_l', 0.09], ['thigh_r', 0.09], ['spine_01', 0.12], ['pelvis', 0.12], ['spine_02', 0.12], ['spine_03', 0.13], ['head', 0.12], ['neck_01', 0.08], ['hand_l', 0.03], ['hand_r', 0.03], ['lowerarm_l', 0.04], ['lowerarm_r', 0.04], ['upperarm_l', 0.06], ['upperarm_r', 0.06], ['calf_l', 0.06], ['calf_r', 0.06]];
 
 async function loadTpl(s) {
   const gl = await new GLTFLoader().loadAsync(asset(`assets/models/real_${s}.glb?v=14`));
@@ -479,9 +479,11 @@ export function driveReal(av, dt) {
   root.updateMatrixWorld(true);
   const gy = gp.y + 0.022; let low = Infinity;
   for (const [n, r] of FLOOR) low = Math.min(low, wpos(B[n], V2).y - r * ds);
+  // 日系頭比原本的頭大：頭的中心在頭骨頭往頭頂方向約 11 cm、半徑約 14 cm（側滾翻倒過來時頭頂才不會穿進地板）
+  { const hp = wpos(B.head, V1), up = V2.copy(hp).sub(wpos(B.neck_01, new THREE.Vector3())).normalize(); low = Math.min(low, hp.y + up.y * 0.11 * ds - 0.14 * ds); }
   for (const n of ['foot_l', 'foot_r', 'ball_l', 'ball_r']) low = Math.min(low, wpos(B[n], V2).y - T.footR[n] * ds);
   const need = gy - low;   // 要往上（正）或往下（負）移多少，最低點才剛好貼地
-  if (jy < 0.03) R.offY = R.offY == null ? need : R.offY + (need - R.offY) * Math.min(1, dt * 20);
+  if (jy < 0.03) R.offY = R.offY == null || need > R.offY ? need : R.offY + (need - R.offY) * Math.min(1, dt * 20);   /* 穿進地板：馬上推上來；往下貼回地面才慢慢來 */
   else R.offY = Math.max(R.offY ?? 0, need);   // 空中：維持起跳前的差，但不穿進地板
   root.position.y += R.offY / gs; root.updateMatrixWorld(true);
   // 6. 衣服下擺、項鍊的慣性
