@@ -11,7 +11,7 @@ const save = (key, value) => { try { localStorage.setItem(key, value); } catch {
 const mobile = matchMedia('(pointer: coarse), (max-width: 819px)');
 const demo = new URLSearchParams(location.search).get('lobbydemo');
 // 2026-11-24：大廳背景是可以走動的球館，鋪滿整頁（js/lobby-gym.js）；網址 ?lobbygym=0 照舊用照片＋站位角色
-const gymMode = window.top === window && new URLSearchParams(location.search).get('lobbygym') !== '0';   /* 手機也用（2026-11-24 使用者：手機大廳也要是正式打的球館） */   /* 被放在框框裡時不要再放球館（不會一層套一層） */
+const gymMode = window.top === window && !matchMedia('(pointer: coarse)').matches && new URLSearchParams(location.search).get('lobbygym') !== '0';   /* 手機先不用：2026-11-24 手機同時跑大廳＋整座球館會卡死（球館卡在 20%、整頁不能點），等做輕量版再開 */   /* 被放在框框裡時不要再放球館（不會一層套一層） */
 let mode = demo === '6' ? '6v6' : demo === '2' ? '2v2' : read('po.lobby.mode', '2v2');
 if (!['2v2', '6v6'].includes(mode)) mode = '2v2';
 let partyId = null;
