@@ -1749,7 +1749,7 @@ function tpBegin(dt) {
   if (!TP.av) { TP.avCh = myChar(); TP.av = makeAvatar(NET.color || '#F2B705', TP.avCh, VM.on ? vmTeamOf(vmMe()) : -1, VM.on ? null : readWornJersey()); scene.add(TP.av.g); if (!TP.ball) { TP.ball = newBallMesh(); scene.add(TP.ball); } }
   const av = TP.av, k = 1 - Math.exp(-dt * 14), E = camera.position.clone(), air = walk.air ? walk.air.y : 0;
   // 我的人形：位置、朝向、跑步擺腿、手臂姿勢（跟別人看到的一樣）
-  av.g.visible = true; av.g.position.set(walk.x, 0, walk.z);
+  av.g.visible = true; av.g.position.set(walk.sit ? walk.sit.x : walk.x, 0, walk.sit ? walk.sit.z : walk.z);   /* 坐著：畫在座位上（裁判椅、沙發），不是站起來前的位置 */
   av.realSeat = walk.sit ? walk.sit.eye - 0.62 : null;   /* 坐著：新角色的髖放在座位高度（眼睛高度往下約 62 cm） */ av.g.rotation.order = 'YXZ'; av.g.rotation.y = walk.yaw + Math.PI; av.g.rotation.x = 0; av.fall = (walk.dive && walk.dive.t > 0.06) || walk.down > 0.25 ? { a: 1, d: walk.diveDir || 0, fish: !!walk.diveFish, t: walk.dive ? walk.dive.t : 0.45 + (0.75 - walk.down) } : null; av.body.position.y += (air - av.body.position.y) * 0.6;
   const v = walk.vel || [0, 0], sp = walk.air ? 0 : Math.hypot(v[0], v[1]); av.phase += dt * Math.min(12, sp * 5.5);
   avDrive(av, ...myAvPose(), sp, air > 0.05);
@@ -1761,7 +1761,15 @@ function tpBegin(dt) {
   const cp = Math.cos(walk.pitch), f = new THREE.Vector3(-Math.sin(walk.yaw) * cp, Math.sin(walk.pitch), -Math.cos(walk.yaw) * cp);
   const pos = E.clone().addScaledVector(f, -3.0); pos.y += 0.85; pos.x += Math.cos(walk.yaw) * 0.6; pos.z -= Math.sin(walk.yaw) * 0.6;
   const P = outlinePoly(), xs = P.map((q) => q[0]), zs = P.map((q) => q[1]);
-  pos.x = clamp(pos.x, Math.min(...xs) + 0.3, Math.max(...xs) - 0.3); pos.z = clamp(pos.z, Math.min(...zs) + 0.3, Math.max(...zs) - 0.3); pos.y = clamp(pos.y, 0.5, state.building.H - 0.3);
+  const inX = (x) => clamp(x, Math.min(...xs) + 0.3, Math.max(...xs) - 0.3), inZ = (z) => clamp(z, Math.min(...zs) + 0.3, Math.max(...zs) - 0.3);
+  // 坐著、背後就是牆（靠牆的沙發）：鏡頭擺到前面看著自己，不然會卡在牆裡什麼都看不到（2026-11-25 使用者回報）
+  if (walk.sit && Math.hypot(inX(pos.x) - pos.x, inZ(pos.z) - pos.z) > 0.4) {
+    const fh = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
+    pos.copy(E).addScaledVector(fh, 2.6); pos.y = E.y + 0.35; pos.x += Math.cos(walk.yaw) * 0.5; pos.z -= Math.sin(walk.yaw) * 0.5;
+    pos.x = inX(pos.x); pos.z = inZ(pos.z); camera.position.copy(pos); camera.lookAt(E.x, E.y - 0.45, E.z); camera.updateMatrixWorld(true);
+    return true;
+  }
+  pos.x = inX(pos.x); pos.z = inZ(pos.z); pos.y = clamp(pos.y, 0.5, state.building.H - 0.3);
   camera.position.copy(pos); camera.lookAt(E.clone().addScaledVector(f, 2.5)); camera.updateMatrixWorld(true);
   return true;
 }

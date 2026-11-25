@@ -79,9 +79,20 @@ function targetFromHits(hits, maxD) {
   return null;
 }
 function pickTargets(ray, maxD) { return targetFromHits(ray.intersectObjects([itemsGroup, zonesGroup, ballsGroup, buildingGroup], true), maxD); }
+// 第三人稱（大廳球館、按 P）：攝影機在身後幾公尺、沒有準星，從攝影機中心打射線常常打不到旁邊的東西
+//   改從人物眼睛往面向的方向打一排射線（左右、往下幾條），靠近飲水機、沙發、裁判椅就會出現「按 F」提示（2026-11-25 使用者回報）
+const TP_FOCUS_DIRS = [[0, -0.2], [0, -0.55], [0.35, -0.35], [-0.35, -0.35], [0, 0.3], [0.3, 0.25], [-0.3, 0.25], [0.7, -0.4], [-0.7, -0.4], [0, -0.9], [0.6, 0.2], [-0.6, 0.2]];   /* 往上幾條：裁判椅座位約 2 m 高、下面是空的框架 */
+function tpFocus() {
+  const o = new THREE.Vector3(walk.x, (walk.sit ? EYE * 0.6 : EYE) + Math.max(0, (walk.air && walk.air.y) || 0), walk.z), d = new THREE.Vector3();
+  for (const [yo, pt] of TP_FOCUS_DIRS) {
+    const yw = walk.yaw + yo; d.set(-Math.sin(yw) * Math.cos(pt), Math.sin(pt), -Math.cos(yw) * Math.cos(pt));
+    centerRay.set(o, d); const f = pickTargets(centerRay, 2.2); if (f) return f;
+  }
+  return null;
+}
 function updateFocus() {
   centerRay.setFromCamera(new THREE.Vector2(0, 0), camera);
-  walk.focus = walk.spike ? null : pickTargets(centerRay, 3.4);
+  walk.focus = walk.spike ? null : tpActive() ? tpFocus() : pickTargets(centerRay, 3.4);
   // 球很小，準星不一定對得準：走到球旁邊 1.5 m 內、大概面向它，也算看著它
   if (!walk.spike && !walk.hold && (!walk.focus || walk.focus.kind !== 'item')) {
     const fx = -Math.sin(walk.yaw), fz = -Math.cos(walk.yaw); let best = null;
