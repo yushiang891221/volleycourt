@@ -466,10 +466,12 @@ function vbJump(kind, held = false, go = false) {   // held＝用空白鍵／跳
   if (block) { pose = 'block'; hands.visible = true; }
   else if (!walk.hold && !walk.charge && !walk.swing) { pose = 'jumpUp'; hands.visible = true; a.arms = true; }   // 第一人稱擺臂：雙手往前上方甩，接著在空中拉弓
   if (SETM.m && !SETM.m.all) setMenuClose(false);   // 起跳了：舉球轉盤收掉（不會搶走攻擊的點擊）
+  if (!block && VB.setSpot) VB.setSpot.jumped = true;   // 這一球已經起跳攻擊過：落地後跑動不再擺助跑的手（2026-11-25 使用者：扣完落地還在擺臂）
   if (!block && walk.chargeArm && walk.chargeArmGround) { walk.chargeArm = null; walk.chargeArmGround = false; vbChargeStart('jump'); }   // 起跳前就按住左鍵：起跳那一刻開始蓄力
 }
 // 放開空白鍵：還在往上就提早收（往上的速度剩 35%、往下掉快 35%）；按住＝跳滿（高度跟以前一樣）
 function vbJumpRelease() {
+  return;   /* 2026-11-25 使用者：長按太難 → 改回原本：按一下就跳滿，放開不會提早落下（下面保留舊做法） */
   if (walk.jumpPrep) { if (walk.jumpPrep.held) walk.jumpPrep.rel = true; return; }   // 前搖中就放開：照樣起跳，但一離地就收（小跳）
   const a = walk.air; if (!a || !a.held || a.cut) return;
   a.cut = true; if (a.vy <= 0) { a.g *= 1.35; } else { a.vy *= 0.35; a.g *= 1.35; }
@@ -1698,7 +1700,7 @@ function tpActive() { if (!walk.on || window.__rkOn || RP.on || (walk.sit && !LO
 // 我現在的全身姿勢：[姿勢, 這一格靠近的比例]
 // 助跑：有舉過來的球、你正往攻擊點跑（4 m 內、有速度）→ 手往後擺的程度（越接近攻擊點擺越後面）
 function vbApproachK() {
-  const sp = VB.setSpot; if (walk.air || walk.swing || walk.hold || !sp || performance.now() > sp.until || !balls.includes(sp.b)) return 0;
+  const sp = VB.setSpot; if (walk.air || walk.swing || walk.hold || !sp || sp.jumped || performance.now() > sp.until || !balls.includes(sp.b)) return 0;
   const d = Math.hypot(sp.x - walk.x, sp.z - walk.z), v = walk.vel ? Math.hypot(walk.vel[0], walk.vel[1]) : 0;
   return d < 4 ? clamp((4.2 - d) / 2.4, 0, 1) * clamp((v - 1.0) / 1.2, 0, 1) : 0;
 }
