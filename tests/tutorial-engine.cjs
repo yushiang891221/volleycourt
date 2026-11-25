@@ -53,7 +53,7 @@ function engine() {
     camera: new Object3D(), scene: new Object3D(), ballsGroup: new Object3D(), balls: [],
     VM: { on: false }, NET: { on: false }, VB: { ts: 0.7, assist: true, dt: 1 / 60 },
     VBSettings: { values: { cameraAssist: true } },
-    EYE: 1.62, BALL_R: 0.105, JUMP_G: 8.4, JS_REL: 0.32, JS_GO: 0.62, JS_UP: 1.05, NETS: { men: { h: 2.43 } },
+    EYE: 1.62, BALL_R: 0.105, JUMP_G: 8.4, JS_REL: 0.32, JS_GO: 0.5, JS_UP: 1.5, NETS: { men: { h: 2.43 } },
     VB_REACH: { atk: 1, recv: 0.95, set: 0.9 }, SETM: {}, SET_DEF: { 1: 'high', 2: 'quick', 3: 'high' },
     CHG: { sw0: 0.72, sw1: 0.88, over: 1, max: 1.2 },
     RECV_CROUCH: { crouchDy: -0.5, crouchDT: 0.15 }, BLK_FX: {},

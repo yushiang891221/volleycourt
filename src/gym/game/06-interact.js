@@ -1058,7 +1058,7 @@ function startServe(type = 'std') {
 }
 // ---- 跳發／跳飄：拿著球按空白鍵＝拋球（往前上方拋高），自動跑兩步起跳；在空中按左鍵＝跳發（重、上旋下墜）、右鍵＝跳飄（不轉、會飄）
 //      球最好打的時候：你跳到最高點、球剛好掉到手的高度（球會發亮）；拋了沒打到＝發球失誤
-const JS_REL = 0.32, JS_GO = 0.62, JS_UP = 1.05;   // 跳發：球出手、開始助跑、起跳的時間（秒）
+const JS_REL = 0.32, JS_GO = 0.5, JS_UP = 1.5;   // 跳發：球出手、開始走、起跳的時間（秒）（2026-11-25 使用者：拋高一點、先小碎步再左右左 → 起跳延到 1.5 秒）
 function startJumpServe() {
   if (walk.emote?.keyframes) return;
   if (walk.serve || walk.jserve || walk.air || walk.sit || !walk.hold) return;
@@ -1088,7 +1088,9 @@ function updateJumpServe(dt) {
     else b.position.set(s.from.x + s.v0.x * tf, s.from.y + s.v0.y * tf - 4.9 * tf * tf, s.from.z + s.v0.z * tf);
     b.rotation.y += dt * 4;
     // 拋完看球，JS_GO 秒才開始助跑（左大步 → 右左很快跟上），JS_UP 秒起跳；這樣跳到最高點時球剛好掉到手的高度
-    if (t > JS_GO && t < JS_UP && !walk.air) { const sp = s.appr / (JS_UP - JS_GO), [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
+    // 每一段走多遠（照腳步：小碎步走一點點、左大步、右大步、左小步併上）；腳踩在地上的時候身體才往前，不會像在地上滑
+    const JS_MOVE = [[0.5, 0.86, 0.15], [0.86, 1.12, 0.4], [1.12, 1.34, 0.45], [1.34, 1.5, 0.15]], seg = JS_MOVE.find((m) => t >= m[0] && t < m[1]);
+    if (seg && !walk.air) { const sp = (s.appr / 1.15) * seg[2] / (seg[1] - seg[0]), [nx, nz] = collide(walk.x + s.fwd.x * sp * dt, walk.z + s.fwd.z * sp * dt); walk.x = nx; walk.z = nz; vbServeZone(); }   // 助跑（距離已經算好，不會超過底線）
     if (!s.jumped && t >= JS_UP) { s.jumped = true; walk.air = { y: 0, vy: s.vy, vx: s.fwd.x * 0.55, vz: s.fwd.z * 0.55, block: false, serve: true, t: 0 }; staPay('jserve'); if (walk.chargeArm) { const k2 = walk.chargeArm; walk.chargeArm = null; vbChargeStart(k2); } }
     walk.pitch += (0.32 - walk.pitch) * (1 - Math.exp(-dt * 3));
     // 時機提示：球進到手邊就發亮

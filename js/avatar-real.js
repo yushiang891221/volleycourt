@@ -608,7 +608,7 @@ export function driveReal(av, dt) {
       for (const sd of ['l', 'r']) { if (!F0[sd]) continue;
         const l = wpos(B['hand_' + sd]).sub(wpos(B['lowerarm_' + sd])).normalize(), k = fw * Math.max(0, Math.min(1, (l.y - 0.25) / 0.35));
         if (k < 0.01) continue;
-        const sx = sd === 'l' ? 1 : -1, f = V(sx * 0.08, 1, 0.12).applyQuaternion(gq2).normalize(), n = V(0, 0.1, 1).applyQuaternion(gq2);
+        const f = l.clone(), n = V(0, 0.1, 1).applyQuaternion(gq2);   /* 手指順著前臂（2026-11-25 使用者：手腕往後折到平，人體折不到）：只沿前臂轉，讓掌心盡量朝前 */
         const Rr = T.handRest[sd], nt = n.addScaledVector(f, -n.dot(f)).normalize();
         const mL = new THREE.Matrix4().makeBasis(Rr.fl, Rr.nl, new THREE.Vector3().crossVectors(Rr.fl, Rr.nl)), mT = new THREE.Matrix4().makeBasis(f, nt, new THREE.Vector3().crossVectors(f, nt));
         const want = new THREE.Quaternion().setFromRotationMatrix(mT.multiply(mL.transpose())), cur = B['hand_' + sd].getWorldQuaternion(new THREE.Quaternion());
@@ -616,6 +616,15 @@ export function driveReal(av, dt) {
       }
       if (!face && fw < 0.02) R.faceLast = null;
     }
+  }
+  // 4a3. 手腕不能折太多（2026-11-25 使用者：揮臂時指球的左手手腕往後折到跟前臂垂直，人體折不到）
+  //   手指方向和前臂方向的夾角最多約 35°，超過就把手往前臂方向轉回來（墊球另外套定案手型，不在這裡管）
+  if (tk !== 'bump') for (const sd of ['l', 'r']) {
+    const hb = B['hand_' + sd], l = wpos(hb).sub(wpos(B['lowerarm_' + sd])).normalize(), hq = hb.getWorldQuaternion(new THREE.Quaternion());
+    const fd = T.handRest[sd].fl.clone().applyQuaternion(hq).normalize(), ang = Math.acos(Math.max(-1, Math.min(1, fd.dot(l)))), MAX = 0.6;
+    if (ang <= MAX) continue;
+    const fix = new THREE.Quaternion().setFromUnitVectors(fd, l).multiply(hq);
+    setWorldQ(hb, hq.slerp(fix, (ang - MAX) / ang));
   }
   // 4b. 墊球：套使用者確認的定案手型（avatar-real.html 的 bumpPose，存在 assets/models/bump_pose.json：雙手掌心朝上並排、手指交疊、大拇指抬起、手腕靠攏）
   //   手型相對上身固定；整個平台繞兩肩連線轉到公仔手的方向（球的高度），兩隻手的相對位置完全不變

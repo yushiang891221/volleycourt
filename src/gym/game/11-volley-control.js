@@ -1718,10 +1718,14 @@ function myAvPose() {
     if (!s2.done) { const base = walk.air ? vbAirPose() : avMix(AVP.idle, AVP.airUp, 0.85); return [walk.air ? avMix(base, AVP.spikeElbow, Math.min(1, s2.t / 0.14)) : base, fast]; }   /* 按下揮臂到碰到球之間：手肘先往前帶（2026-11-25 使用者：手肘先帶、再依序甩出去） */
     const e2 = s2.t - s2.doneT; return [e2 < 0.07 ? AVP.spikeHit : avMix(AVP.spikeHit, AVP.spikeFollow, (e2 - 0.07) / 0.2), 0.6];
   }
-  if (walk.jserve && !walk.jserve.hit && !walk.air) {   // 跳發：中線高拋 → 看球 → 助跑（雙手往後擺、蹲）
-    const t = walk.jserve.t, ap = { ...AVP.approach, head: [-0.45, 0] };
-    return [t < 0.16 ? avMix(AVP.hold, AVP.jsPrep, t / 0.16) : t < JS_REL ? avMix(AVP.jsPrep, AVP.jsToss, (t - 0.16) / (JS_REL - 0.16)) : t < JS_GO ? avMix(AVP.jsToss, AVP.jsWatch, (t - JS_REL) / (JS_GO - JS_REL)) : avMix(AVP.jsWatch, ap, Math.min(1, (t - JS_GO) / (JS_UP - JS_GO - 0.08))), t < JS_REL ? 0.6 : 0.4];
+  if (walk.jserve && !walk.jserve.hit && !walk.air) {   // 跳發：中線高拋 → 看球 → 小碎步 → 左（大）→ 右（大、雙手往後）→ 左併上（照 06-interact 的 JS_MOVE 時間）
+    const t = walk.jserve.t, ap = { ...AVP.approach, head: [-0.45, 0], gait: 0 };
+    const K = [[0, AVP.hold], [0.16, AVP.jsPrep], [JS_REL, AVP.jsToss], [0.5, AVP.jsWatch], [0.62, AVP.jsShufR], [0.74, AVP.jsShufL], [0.86, AVP.jsShufR], [1.12, AVP.jsStepL], [1.34, AVP.jsStepR], [1.46, ap]];
+    let i = 0; while (i < K.length - 1 && t >= K[i + 1][0]) i++;
+    const a = K[i], b = K[Math.min(i + 1, K.length - 1)], u = b === a ? 1 : clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
+    return [avMix(a[1], b[1], u * u * (3 - 2 * u)), t < JS_REL ? 0.6 : 0.5];
   }
+
   if (walk.serve) { const t2 = walk.serve.t; return [t2 < 0.5 ? AVP.serveToss : t2 < 0.62 ? avMix(AVP.serveToss, AVP.spikeHit, (t2 - 0.5) / 0.12) : avMix(AVP.spikeHit, avMix(AVP.spikeFollow, AVP.idle, 0.3), (t2 - 0.62) / 0.25), 0.5]; }
   if (walk.jumpPrep) return [AVP.approach, fast];   // 第三人稱前搖：蹲低、雙手甩到後面
   if (walk.air) return [vbAirPose(), 0.6];
