@@ -131,8 +131,7 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
   // 自己腳下的香檳金底座，與角色共用鏡頭。
   const partyHalo = slots ? new THREE.Mesh(new THREE.RingGeometry(.28, .38, 64), new THREE.MeshBasicMaterial({ color: '#E5B869', side: THREE.DoubleSide, transparent: true, opacity: .8 })) : null;
   if (partyHalo) { partyHalo.rotation.x = -Math.PI / 2; partyHalo.position.y = .01; scene.add(partyHalo); }
-  let party = [], lastMembers = null;
-  preloadReal().then(() => { if (lastMembers) api.setParty(lastMembers); else if (av) api.rebuild(lastCode); }, () => {});   /* 新角色模型載好之前先出現的是公仔：載好就換掉 */
+  let party = [], lastMembers = null, partyGen = 0, avGen = 0;
   // 大廳（slots）：拖曳轉「自己的角色」，鏡頭固定（不再繞著轉、也不縮放，角色不會跑出名牌位置）；方向和炫技同步給隊友（onSelfYaw）
   const yaws = [], acts = [];   // 每個站位角色的方向、正在做的炫技 { key, t0, dir }
   let actRaf = 0;
@@ -187,13 +186,26 @@ export function livePreview(old, bg = '#0B362B', slots = null) {   // slots：�
     playEmote(i, key, dir = 1) { if (!party[i]) return; acts[i] = { key, dir, t0: performance.now(), dur: EMO_KEYS[key] ? emoKeyDuration(key) : key === 'taunt' ? 1.6 : key === 'hi5' ? 2.5 : 1.1 }; if (!actRaf) actRaf = requestAnimationFrame(animate); },
     setParty(members) {
       // 模型資源可能由 avatar-toy 共用；移除舊節點，避免誤 dispose 共用材質。
-      party.forEach(a => scene.remove(a.g));
-      lastMembers = members;
-      party = members.map((m, i) => makePlayer(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
-      party.forEach((a) => realReadyOf(a).then(ask));   /* 頭比較晚載好：好了再畫一次 */
-      party.forEach(a => scene.add(a.g)); party.forEach((_, i) => actPose(i, performance.now())); ask();
+      // 2026-11-25 使用者：每次打開都先看到舊公仔 → 新角色模型、頭都載好才換上（換之前先留著上一組，不會閃）
+      lastMembers = members; const seq = ++partyGen;
+      preloadReal().catch(() => {}).then(() => {
+        if (seq !== partyGen) return;
+        const next = members.map((m, i) => makePlayer(decodeLook(m.look || myLookCode()), i === 0 ? readWornJersey() || 'orange' : 'orange'));
+        return Promise.all(next.map(realReadyOf)).then(() => {
+          if (seq !== partyGen) return;
+          party.forEach(a => scene.remove(a.g)); party = next;
+          party.forEach(a => scene.add(a.g)); party.forEach((_, i) => actPose(i, performance.now())); ask();
+        });
+      }).catch((e) => console.warn('[角色看板] 載入失敗', e));
     },
-    rebuild(code) { lastCode = code; if (av) scene.remove(av.g); av = makePlayer(decodeLook(code), readWornJersey() || 'orange'); scene.add(av.g); realReadyOf(av).then(ask); ask(); },
+    rebuild(code) {   // 同上：新角色載好才換上，不先畫公仔
+      lastCode = code; const seq = ++avGen;
+      preloadReal().catch(() => {}).then(() => {
+        if (seq !== avGen) return;
+        const next = makePlayer(decodeLook(code), readWornJersey() || 'orange');
+        return realReadyOf(next).then(() => { if (seq !== avGen) return; if (av) scene.remove(av.g); av = next; scene.add(av.g); ask(); });
+      }).catch((e) => console.warn('[角色預覽] 載入失敗', e));
+    },
     redraw: ask,
     dispose() { cancelAnimationFrame(raf); cancelAnimationFrame(actRaf); partyHalo?.geometry.dispose(); partyHalo?.material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
   });
