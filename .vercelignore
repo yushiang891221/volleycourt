@@ -13,3 +13,5 @@ assets/data/criteria.json
 assets/data/map.json
 assets/data/venues.json
 src/
+# 沒有任何網頁用到的影片（15.7 MB）：不放上網站，省 Vercel 部署空間（2026-11-25）
+assets/video/rally-demo.mp4

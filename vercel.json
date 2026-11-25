@@ -1,5 +1,6 @@
 {
   "cleanUrls": false,
+  "git": { "deploymentEnabled": { "game-site": false, "planning-site": false } },
   "crons": [{ "path": "/api/feedback", "schedule": "0 1 * * *" }],
   "functions": { "api/feedback.js": { "maxDuration": 300 } },
   "headers": [
