@@ -9455,7 +9455,7 @@ function fxDrop(g) { if (g.parent) g.parent.remove(g); rpDispose(g); }
 function closeReplay() {
   if (!RP.on) return;
   if (RP.recorder && RP.recorder.state !== 'inactive') RP.recorder.stop();
-  for (const tr of RP.trails.values()) for (const mm of [tr.glow, tr.core]) if (mm) { mm.geometry.dispose(); mm.material.dispose(); }
+  for (const tr of RP.trails.values()) { for (const mm of [tr.glow, tr.core]) if (mm) { mm.geometry.dispose(); mm.material.dispose(); } if (tr.halo) { tr.halo.parent && tr.halo.parent.remove(tr.halo); tr.halo.material.dispose(); } }
   RP.on = false; scene.remove(RP.g); rpDispose(RP.g); RP.g = null; if (RP.hud) { camera.remove(RP.hud); rpDispose(RP.hud); RP.hud = null; }
   ballsGroup.visible = true; for (const p2 of NET.peers.values()) p2.av.g.visible = true; hands.visible = !!walk.hold;
   rpLive(true);
@@ -9482,6 +9482,27 @@ function rpSounds(A) {
   }
   for (const b of A.bounces) if (b.t > t0 && b.t <= t1) sfx('floor', 0.9, posAt(b.x, BALL_R, b.z));
 }
+// 重播的球路：錄影每 0.033 秒才記一點，快的扣球兩點差 80 cm，直接連線會有稜角、鋸齒（2026-11-25 使用者回報）
+//   → 用時間參數的三次曲線（Hermite）接起來：切線＝前後兩點的速度；碰地板、碰手這種急轉彎（前後方向差超過 60°）不圓角，保留轉折
+const _rpA = new THREE.Vector3(), _rpB = new THREE.Vector3(), _rpM1 = new THREE.Vector3(), _rpM2 = new THREE.Vector3();
+function rpTan(T, i, out) {   // 第 i 點的速度（公尺／秒）
+  const a = T[i - 1], c = T[i + 1], b = T[i];
+  const vIn = a && !a.held && b.t > a.t ? _rpA.set((b.x - a.x) / (b.t - a.t), (b.y - a.y) / (b.t - a.t), (b.z - a.z) / (b.t - a.t)) : null;
+  const vOut = c && !c.held && c.t > b.t ? _rpB.set((c.x - b.x) / (c.t - b.t), (c.y - b.y) / (c.t - b.t), (c.z - b.z) / (c.t - b.t)) : null;
+  if (vIn && vOut) { const L = vIn.length() * vOut.length(); if (L > 1e-6 && vIn.dot(vOut) / L < 0.5) return null; return out.copy(vIn).add(vOut).multiplyScalar(0.5); }
+  return null;
+}
+function rpCurve(T, i, u, out) {   // T[i] → T[i+1] 這段的 u（0～1）位置
+  const a = T[i], b = T[i + 1], h = b.t - a.t;
+  if (!(h > 0)) return out.set(a.x, a.y, a.z);
+  const lin = _rpA.set((b.x - a.x) / h, (b.y - a.y) / h, (b.z - a.z) / h);
+  const m1 = rpTan(T, i, _rpM1) || _rpM1.copy(lin); const lx = lin.x, ly = lin.y, lz = lin.z;
+  const m2 = rpTan(T, i + 1, _rpM2) || _rpM2.set(lx, ly, lz);
+  const u2 = u * u, u3 = u2 * u, h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+  return out.set(h00 * a.x + h10 * h * m1.x + h01 * b.x + h11 * h * m2.x, Math.max(BALL_R, h00 * a.y + h10 * h * m1.y + h01 * b.y + h11 * h * m2.y), h00 * a.z + h10 * h * m1.z + h01 * b.z + h11 * h * m2.z);
+}
+function rpTrackIdx(T, t) { let lo = 0, hi = T.length - 1; if (hi < 1 || t < T[0].t) return -1; if (t >= T[hi].t) return hi; while (hi - lo > 1) { const md = (lo + hi) >> 1; if (T[md].t <= t) lo = md; else hi = md; } return lo; }
+const RP_TRAIL_CAP = 900;
 function updateReplay(dt) {
   const A = RP.A;
   if (RP.hl) hlPace();
@@ -9511,6 +9532,8 @@ function updateReplay(dt) {
     const q = f1.b.find((r2) => r2[0] === id) || [id, x, y, z];
     let m = RP.ballsM.get(id); if (!m) { m = sk ? rkBallMesh(sk) : newBallMesh(); RP.g.add(m); RP.ballsM.set(id, m); }
     m.visible = true; m.position.set(x + (q[1] - x) * k, y + (q[2] - y) * k, z + (q[3] - z) * k); live.add(id);
+    { const TT = A.tracks.get(id), j = TT ? rpTrackIdx(TT, RP.t) : -1;   /* 球也照同一條曲線走（以前兩點之間直線移動，球路有稜角） */
+      if (j >= 0 && j < TT.length - 1 && !TT[j].held && !TT[j + 1].held) rpCurve(TT, j, clamp((RP.t - TT[j].t) / (TT[j + 1].t - TT[j].t), 0, 1), m.position); }
     if (sk === 'bd') { if (Math.hypot(q[1] - x, q[2] - y, q[3] - z) > 1e-3) m.lookAt(m.position.x + (q[1] - x), m.position.y + (q[2] - y), m.position.z + (q[3] - z)); }
     else if (spin > 0 && m.position.y > BALL_R + 0.03) {   // 照錄下來的轉速轉（上旋：轉軸水平、跟飛行方向垂直）；沒記轉速的（飄球、好的舉球）不轉
       const vx = q[1] - x, vz = q[3] - z, h = Math.hypot(vx, vz);
@@ -9518,16 +9541,28 @@ function updateReplay(dt) {
     }
     // 軌跡：跟比賽中一樣的光帶（外層柔光＋亮芯），從這顆球最近一次被碰到開始畫，2 秒內的路
     const T = A.tracks.get(id) || [], hit = A.hits.filter((h0) => h0.t <= RP.t && h0.t > RP.t - 2 && T.some((p0) => Math.abs(p0.t - h0.t) < 0.05 && Math.hypot(p0.x - h0.x, p0.y - h0.y, p0.z - h0.z) < 0.6)).pop();
-    const from = Math.max(RP.t - 2, hit ? hit.t : -1), pts = T.filter((p0) => p0.t <= RP.t && p0.t >= from && !p0.held);
+    const from = Math.max(RP.t - 2, hit ? hit.t : -1);
     let tr = RP.trails.get(id);
-    if (!tr) { tr = { glow: vbTrailMesh(), core: vbTrailMesh(true), T: { pts: [], col: vbTrailColor(1), fade: 1 } }; RP.g.add(tr.glow, tr.core); RP.trails.set(id, tr); }
-    const step = Math.max(1, Math.ceil(pts.length / (TRAIL.max - 2)));
-    tr.T.pts = pts.filter((_, i) => i % step === 0).map((p0) => ({ p: vbTrailAt(new THREE.Vector3(p0.x, p0.y, p0.z)), t: p0.t * 1000 }));
-    if (tr.T.pts.length) tr.T.pts.push({ p: vbTrailAt(m.position), t: RP.t * 1000 });
+    if (!tr) { const col = vbTrailColor(1); tr = { glow: vbTrailMesh(false, RP_TRAIL_CAP), core: vbTrailMesh(true, RP_TRAIL_CAP), halo: vbHaloSprite(col), T: { pts: [], col, fade: 1 } }; RP.g.add(tr.glow, tr.core, tr.halo); RP.trails.set(id, tr); }
+    // 光帶：沿著曲線每 6 cm 左右一點（一段最多切 16 份），點數超過上限就整體放寬間距
+    const out = [], i0 = Math.max(0, rpTrackIdx(T, from)), i1 = rpTrackIdx(T, RP.t);
+    if (i1 >= 0) {
+      let segs = 0; for (let i = i0; i < i1; i++) segs += clamp(Math.ceil(Math.hypot(T[i + 1].x - T[i].x, T[i + 1].y - T[i].y, T[i + 1].z - T[i].z) / 0.06), 1, 16);
+      const sc = Math.min(1, (RP_TRAIL_CAP - 4) / Math.max(1, segs));
+      for (let i = i0; i < i1; i++) {
+        if (T[i].t < from || T[i].held || T[i + 1].held) continue;
+        const nn = Math.max(1, Math.round(clamp(Math.ceil(Math.hypot(T[i + 1].x - T[i].x, T[i + 1].y - T[i].y, T[i + 1].z - T[i].z) / 0.06), 1, 16) * sc));
+        for (let s2 = 0; s2 < nn; s2++) { const u = s2 / nn; out.push({ p: vbTrailAt(rpCurve(T, i, u, new THREE.Vector3())), t: (T[i].t + (T[i + 1].t - T[i].t) * u) * 1000 }); }
+      }
+      if (out.length) out.push({ p: vbTrailAt(m.position), t: RP.t * 1000 });
+    }
+    tr.T.pts = out;
+    // 光圈：重播也畫（以前重播沒有光圈，光帶前端是平平切掉的一截，看起來不是圓的）
+    tr.halo.visible = out.length > 1; if (tr.halo.visible) { tr.halo.position.copy(out[out.length - 1].p); tr.halo.scale.setScalar(2 * TRAIL.haloR); tr.halo.material.opacity = clamp((tr.halo.position.distanceTo(camera.position) - 0.5) / 1.5, 0, 1) * 0.9; }
     vbTrailBuild(tr.T, tr.glow, TRAIL.haloR, 0.85, 0, RP.t * 1000, true);
     vbTrailBuild(tr.T, tr.core, TRAIL.haloR * 0.45, 0.2, 0.15, RP.t * 1000, true);
   }
-  for (const [id, m] of RP.ballsM) if (!live.has(id)) { m.visible = false; const tr = RP.trails.get(id); if (tr) tr.glow.visible = tr.core.visible = false; }
+  for (const [id, m] of RP.ballsM) if (!live.has(id)) { m.visible = false; const tr = RP.trails.get(id); if (tr) tr.glow.visible = tr.core.visible = tr.halo.visible = false; }
   for (const mk of RP.marks) { const age = RP.t - mk.t; mk.o.visible = age >= 0 && age < mk.life; if (mk.o.visible && mk.o.material) mk.o.material.opacity = Math.min(1, 1.4 - age / mk.life); }
   // 鏡頭
   if (RP.view === 'hl') { try { hlCamera(); } catch (e) { console.error('[得分精華] 鏡頭出錯', e); hlAbort(); return; } }
@@ -10894,15 +10929,15 @@ function vbHaloSprite(col) {
   sp.onBeforeRender = function () { const m = this.userData.ballMesh, P = m && m.userData.drawAt; if (P && m.userData.drawF === frameNo) { this.position.copy(P); this.updateMatrixWorld(); this.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, this.matrixWorld); } };
   return sp;
 }
-function vbTrailMesh(add) {
-  const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
+function vbTrailMesh(add, cap) {
+  const n = cap || TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
   for (let i = 0; i < n - 1; i++) I.set([2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2], i * 6);
   for (let i = 0; i < n; i++) uv.set([i / (n - 1), 0, i / (n - 1), 1], i * 4);
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 8), 4).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.setDrawRange(0, 0);
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, alphaMap: vbTrailTex(), depthWrite: false, side: THREE.DoubleSide, toneMapped: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending }));
-  m.frustumCulled = false; m.renderOrder = add ? 13 : 12; m.visible = false; m.userData.noPick = true; scene.add(m); return m;
+  m.frustumCulled = false; m.renderOrder = add ? 13 : 12; m.visible = false; m.userData.noPick = true; m.userData.cap = n; scene.add(m); return m;
 }
 function vbTrailStart(b, q) {
   if (!b || !b.m) return;
@@ -10944,7 +10979,7 @@ function vbTrailStep(dt) {
   }
 }
 function vbTrailBuild(T, m, W, A, white, now, replay) {   // replay＝重播自己畫的光帶（現場的光帶在重播時藏起來）
-  const P = T.pts, n = P.length, geo = m.geometry, cam = camera.position;
+  const P = T.pts, n = Math.min(P.length, m.userData.cap || TRAIL.max), geo = m.geometry, cam = camera.position;
   m.visible = (replay || !RP.on) && n >= 2; if (!m.visible) return;
   const pa = geo.attributes.position.array, ca = geo.attributes.color.array, c = T.col;
   const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;

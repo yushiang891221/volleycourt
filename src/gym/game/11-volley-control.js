@@ -132,15 +132,15 @@ function vbHaloSprite(col) {
   sp.onBeforeRender = function () { const m = this.userData.ballMesh, P = m && m.userData.drawAt; if (P && m.userData.drawF === frameNo) { this.position.copy(P); this.updateMatrixWorld(); this.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, this.matrixWorld); } };
   return sp;
 }
-function vbTrailMesh(add) {
-  const n = TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
+function vbTrailMesh(add, cap) {
+  const n = cap || TRAIL.max, geo = new THREE.BufferGeometry(), I = new Uint16Array((n - 1) * 6), uv = new Float32Array(n * 4);
   for (let i = 0; i < n - 1; i++) I.set([2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2], i * 6);
   for (let i = 0; i < n; i++) uv.set([i / (n - 1), 0, i / (n - 1), 1], i * 4);
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 8), 4).setUsage(THREE.DynamicDrawUsage));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.setDrawRange(0, 0);
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, alphaMap: vbTrailTex(), depthWrite: false, side: THREE.DoubleSide, toneMapped: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending }));
-  m.frustumCulled = false; m.renderOrder = add ? 13 : 12; m.visible = false; m.userData.noPick = true; scene.add(m); return m;
+  m.frustumCulled = false; m.renderOrder = add ? 13 : 12; m.visible = false; m.userData.noPick = true; m.userData.cap = n; scene.add(m); return m;
 }
 function vbTrailStart(b, q) {
   if (!b || !b.m) return;
@@ -182,7 +182,7 @@ function vbTrailStep(dt) {
   }
 }
 function vbTrailBuild(T, m, W, A, white, now, replay) {   // replay＝重播自己畫的光帶（現場的光帶在重播時藏起來）
-  const P = T.pts, n = P.length, geo = m.geometry, cam = camera.position;
+  const P = T.pts, n = Math.min(P.length, m.userData.cap || TRAIL.max), geo = m.geometry, cam = camera.position;
   m.visible = (replay || !RP.on) && n >= 2; if (!m.visible) return;
   const pa = geo.attributes.position.array, ca = geo.attributes.color.array, c = T.col;
   const r = c.r + (1 - c.r) * white, g = c.g + (1 - c.g) * white, bl = c.b + (1 - c.b) * white;
